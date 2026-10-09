@@ -57,7 +57,7 @@ There is no website yet and no search. What exists is the ground that they will 
 | Google models: one call to Gemini 3.8 Flash and one embedding call | The code and its proof script are written and tested through the real Google library with the network replaced. **Not run for real yet:** it needs a Google Cloud project. |
 | Lists: the ETHGlobal collector | The collector is written and tested on invented pages. **Never run on a live site.** It refuses a live run until the maintainer has given the list of prize pages, the contact address, and two real pages saved by hand to check its page shape. |
 
-The tests (257 of them) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+The tests (259 of them on 9 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
 
 What does not exist yet: the parser, the cards, the checks of the ledger and of the code, the search, the website, the register, and the tests that measure the quality of the AI fields.
 
@@ -68,14 +68,14 @@ You need Python 3.11, Git and Docker Desktop. On Windows:
 ```text
 python -m venv .venv
 .venv\Scripts\python -m pip install -c constraints.txt -e ".[dev]"
-copy .env.example .env
+copy .env.example .env        (only if you have no .env yet; do not copy over an existing one)
 docker compose up -d --wait db
 .venv\Scripts\python -m hackathon_memory.db migrate
 .venv\Scripts\python -m pytest
 .venv\Scripts\python -m hackathon_memory.setup_check
 ```
 
-On Linux or macOS, use `.venv/bin/python` and `cp`. Fill `.env` with your own values: it is never committed. Put a password of your choice in `POSTGRES_PASSWORD`; it only protects your own copy of the database.
+On Linux or macOS, use `.venv/bin/python` and `cp`. Fill `.env` with your own values: it is never committed. Put a password of your choice in `POSTGRES_PASSWORD`; it only protects your own copy of the database. The database keeps the password it was first created with: if you change it later, run `docker compose down -v` once (this deletes the local database) and start it again.
 
 `setup_check` says which of your setup steps are done and what blocks each proof. It prints no value. The proofs run with `python -m proofs.database`, `python -m proofs.hedera_write` and `python -m proofs.google_models`. Each one writes a dated result file to `proofs/results/`. `python -m hackathon_memory.collect ethglobal --plan` shows what the collector would read, without sending a request.
 

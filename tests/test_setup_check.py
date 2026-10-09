@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 from hackathon_memory.settings import Settings
 from hackathon_memory.setup_check import blockers, latest_result, render, report
 
@@ -136,3 +138,39 @@ def test_the_report_reads_as_a_page(tmp_path: Path) -> None:
     assert text.startswith("Setup check. No value of .env is printed.")
     assert "What blocks each proof of Gate A:" in text
     assert "TO DO" in text
+
+
+def test_a_wrong_database_password_is_told_apart_from_a_stopped_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import psycopg
+
+    from hackathon_memory import setup_check
+
+    def refuse(*_a: object, **_k: object) -> None:
+        raise psycopg.OperationalError(
+            'connection failed: FATAL:  password authentication failed for user "hackathon"'
+        )
+
+    monkeypatch.setattr(setup_check.psycopg, "connect", refuse)
+    ok, note = setup_check.probe_database(settings(tmp_path, postgres_password=CANARY))
+    assert ok is False
+    assert "refuses the password" in note
+    assert "docker compose down -v" in note
+    assert CANARY not in note
+
+    def unreachable(*_a: object, **_k: object) -> None:
+        raise psycopg.OperationalError("connection refused")
+
+    monkeypatch.setattr(setup_check.psycopg, "connect", unreachable)
+    ok, note = setup_check.probe_database(settings(tmp_path, postgres_password=CANARY))
+    assert ok is False
+    assert "start Docker Desktop" in note
+
+
+def test_no_password_is_reported_before_any_connection(tmp_path: Path) -> None:
+    from hackathon_memory.setup_check import probe_database
+
+    ok, note = probe_database(settings(tmp_path))
+    assert ok is False
+    assert "POSTGRES_PASSWORD is empty" in note

@@ -45,8 +45,14 @@ def probe_database(settings: Settings) -> tuple[bool, str]:
     try:
         with psycopg.connect(conninfo, connect_timeout=3):
             return True, "the local database answers"
-    except psycopg.OperationalError:
-        # The text of this error can hold connection details, so it is not shown.
+    except psycopg.OperationalError as error:
+        # The text of this error can hold connection details, so it is read here and never shown.
+        if "password authentication failed" in str(error):
+            return False, (
+                "the database refuses the password in .env: it was created with another one. "
+                "To start again (this deletes the local database): docker compose down -v, "
+                "then docker compose up -d --wait db"
+            )
         return False, "no answer: start Docker Desktop, then run: docker compose up -d --wait db"
 
 
