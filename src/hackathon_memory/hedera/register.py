@@ -155,6 +155,24 @@ def create_topic(
     )
 
 
+def _running_hash(receipt: object) -> bytes:
+    """The running hash of the topic after this message.
+
+    `receipt.topic_running_hash` is broken in hiero-sdk-python 0.2.10: it asks the protobuf
+    whether a bytes field is "present", and a bytes field has no presence, so it raises
+    ValueError every time. The first live run found this on 9 October 2026:
+    the message was on the ledger, and the library failed when the receipt was read. So the
+    protobuf is read directly.
+    """
+    proto = getattr(receipt, "_receipt_proto", None)
+    if proto is not None:
+        return bytes(proto.topicRunningHash)
+    try:
+        return receipt.topic_running_hash or b""  # type: ignore[attr-defined]
+    except (AttributeError, ValueError):
+        return b""
+
+
 def submit_message(client: Client, topic_id: str, payload: bytes) -> MessageSubmitted:
     transaction = message_transaction(topic_id, payload)
     try:
@@ -165,10 +183,9 @@ def submit_message(client: Client, topic_id: str, payload: bytes) -> MessageSubm
         raise RegisterError(
             f"The network refused the message: {name or type(error).__name__}", name
         ) from None
-    running_hash = receipt.topic_running_hash or b""
     return MessageSubmitted(
         topic_id=topic_id,
         sequence_number=int(receipt.topic_sequence_number),
         transaction_id=response.transaction_id.to_string(),
-        running_hash=running_hash.hex(),
+        running_hash=_running_hash(receipt).hex(),
     )

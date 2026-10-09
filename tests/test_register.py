@@ -16,8 +16,10 @@ from hiero_sdk_python.consensus.topic_message_submit_transaction import (
     TopicMessageSubmitTransaction,
 )
 from hiero_sdk_python.exceptions import MaxAttemptsError, PrecheckError, ReceiptStatusError
+from hiero_sdk_python.hapi.services import basic_types_pb2, transaction_receipt_pb2
 from hiero_sdk_python.response_code import ResponseCode
 from hiero_sdk_python.transaction.transaction_id import TransactionId
+from hiero_sdk_python.transaction.transaction_receipt import TransactionReceipt
 
 from hackathon_memory.hedera import register
 from hackathon_memory.hedera.keys import load_operator_key, public_key_hex
@@ -144,10 +146,23 @@ def test_the_testnet_is_the_only_network_for_writing() -> None:
 # ------------------------------------------------------------------ the answers of the network
 
 
+def real_receipt() -> TransactionReceipt:
+    """The library's own receipt object, built from protobuf as the network would send it.
+
+    A hand-made stand-in hid a bug of the library until the first live run.
+    """
+    proto = transaction_receipt_pb2.TransactionReceipt(
+        topicSequenceNumber=7, topicRunningHash=bytes.fromhex("0a0b")
+    )
+    proto.topicID.CopyFrom(basic_types_pb2.TopicID(topicNum=5555))
+    return TransactionReceipt(proto)
+
+
 class FakeReceipt:
-    topic_id = TopicId.from_string("0.0.5555")
-    topic_sequence_number = 7
-    topic_running_hash = bytes.fromhex("0a0b")
+    """Kept as a name for the tests below: it now gives the real receipt."""
+
+    def __new__(cls) -> TransactionReceipt:  # type: ignore[misc]
+        return real_receipt()
 
 
 class FakeResponse:
@@ -235,3 +250,17 @@ def test_a_message_that_is_too_long_never_reaches_the_network(
     with pytest.raises(RegisterError):
         submit_message(StubClient(), "0.0.5555", b"x" * 5000)  # type: ignore[arg-type]
     assert calls == []
+
+
+def test_the_library_cannot_read_the_running_hash_of_a_receipt() -> None:
+    """The bug found by the first live run. If this test fails, the library was fixed: simplify
+    `_running_hash` in register.py."""
+    receipt = real_receipt()
+    with pytest.raises(ValueError, match="presence"):
+        receipt.topic_running_hash  # noqa: B018
+    assert receipt.topic_sequence_number == 7  # the neighbouring property works
+
+
+def test_our_code_reads_the_running_hash_from_the_protobuf() -> None:
+    assert register._running_hash(real_receipt()) == bytes.fromhex("0a0b")
+    assert register._running_hash(object()) == b""  # a receipt of another shape does not crash
