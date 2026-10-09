@@ -21,6 +21,19 @@ from hackathon_memory.settings import Settings
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.fixture(autouse=True)
+def no_setting_in_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts without any setting in the environment.
+
+    A value on the machine (a POSTGRES_PASSWORD set by CI, a COLLECT_ETHGLOBAL=on in a shell) must
+    not change what a test does. A test that needs a setting passes it itself. The database tests
+    read the real environment once, in the session fixture below, which is created before this
+    one (a fixture of a wider scope always comes first).
+    """
+    for name in (*Settings.model_fields, "database_url"):
+        monkeypatch.delenv(name.upper(), raising=False)
+
+
 @pytest.fixture(scope="session")
 def server_conninfo() -> str:
     """The local PostgreSQL server. Holds a password: never print it."""
