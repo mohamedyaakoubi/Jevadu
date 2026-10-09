@@ -4,7 +4,7 @@ One place that knows every project sent to a Hedera hackathon: what it claimed, 
 
 > **State on 9 October 2026:** design and documents only. No code yet. Everything below is the plan. This page will say plainly what works as soon as something does.
 >
-> The terms of DoraHacks ask for written permission before its pages are collected. I asked for it. Until the answer comes, no program reads DoraHacks.
+> **Where the data comes from.** Every site was asked before any program reads it. ETHGlobal allowed its showcase in writing, for the projects with a Hedera prize. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
 ## Why
 
