@@ -82,7 +82,8 @@ def run(services: Services | None = None, settings: Settings | None = None) -> i
         print(
             "Blocked: HEDERA_OPERATOR_ID and HEDERA_OPERATOR_KEY are empty in .env.\n"
             "Create a free test account at portal.hedera.com (design 15, step 1), then put the\n"
-            "account id and the DER encoded private key in .env. Never paste them into a chat."
+            "account id and the DER encoded private key in .env. Never paste them into a chat.\n"
+            "The steps are in README.md (step 1)."
         )
         return 3
 
