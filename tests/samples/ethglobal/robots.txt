@@ -1,0 +1,8 @@
+# INVENTED SAMPLE. Not taken from any real site.
+User-agent: *
+Allow: /
+Disallow: /private/
+Disallow: /*?draft=
+
+User-agent: BadBot
+Disallow: /

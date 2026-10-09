@@ -57,6 +57,9 @@ src = ["src", "."]
 # S: security rules, because design rule 9 forbids secrets in code.
 select = ["E", "F", "I", "B", "UP", "S"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["hackathon_memory", "proofs", "fakes"]
+
 [tool.ruff.lint.per-file-ignores]
 # Tests may use assert, and may hold fake passwords that protect nothing.
 "tests/**" = ["S101", "S105", "S106"]
