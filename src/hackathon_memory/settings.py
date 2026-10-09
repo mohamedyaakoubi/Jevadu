@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # Optional. When set, it replaces the four POSTGRES lines above.
     database_url: SecretStr = SecretStr("")
 
+    # Where collected pages are kept. The folder is ignored by git (design section 5.3).
+    data_dir: str = Field("data", json_schema_extra=_PUBLIC)
+
     # The promises made to the sites (design section 5.7)
     collector_name: str = Field("", json_schema_extra=_PUBLIC)
     collector_contact_email: SecretStr = SecretStr("")
