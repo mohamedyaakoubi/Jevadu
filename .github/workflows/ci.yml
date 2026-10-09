@@ -1,5 +1,6 @@
 # Tests on every push to a phase branch or to main, and on every pull request.
 # One job, so that the monthly minutes of a private repository last.
+# The first run (9 October 2026) took 54 seconds.
 #
 # The actions are pinned by commit, with the tag in a comment: a tag can be moved, a commit cannot.
 # The tags were read with `git ls-remote` on 9 October 2026. They are the newest tags of the
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # not ubuntu-latest: that label moves to Ubuntu 26 on 19 October 2026
     timeout-minutes: 10
 
     services:
