@@ -50,7 +50,7 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests", "proofs"]
+src = ["src", "."]
 
 [tool.ruff.lint]
 # E, F: errors. I: import order. B: likely bugs. UP: old syntax.
