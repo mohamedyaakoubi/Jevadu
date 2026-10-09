@@ -1,0 +1,35 @@
+# Secrets. Design rule 9: they live only in .env.
+.env
+.env.*
+# Names only, never a value. Without this line ".env.*" above would hide it.
+!.env.example
+# Google key files, in case one is saved next to the code by mistake.
+*-key.json
+service-account*.json
+
+# Collected pages and everything built from them (design 5.3).
+# They can be rebuilt with one command, so they do not belong in git.
+# They are also other people's text: a test set in evals/ keeps the address and the
+# fingerprint of each page, and the page itself only when its site or licence allows it
+# (design 13.1).
+data/
+
+# A working plan for one session stays out of git.
+/WORKING-PLAN*.md
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Editors and systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
