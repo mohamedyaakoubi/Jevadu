@@ -57,7 +57,7 @@ There is no website yet and no search. What exists is the ground that they will 
 | Google models: the two Gemini layers (Gemini 3.1 Pro reads the pages, Gemini 3.8 Flash does the search) and one embedding call | **Passed** on the real service. Both models returned a valid form for one real text, and the embeddings have the right size. The result file is in `proofs/results/`. |
 | Lists: the ETHGlobal collector | The collector, and a three-request "look", are written and tested on invented pages. **Never run on a live site.** A live run is refused until the maintainer has given the list of prize pages and a yes, and until its page shape has been checked on a real page (the look, or two pages saved by hand). |
 
-The tests (317 of them on 10 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+The tests (343 of them on 10 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
 
 What does not exist yet: the parser, the cards, the checks of the ledger and of the code, the search, the website, the register, and the tests that measure the quality of the AI fields.
 
@@ -77,7 +77,7 @@ docker compose up -d --wait db
 
 On Linux or macOS, use `.venv/bin/python` and `cp`. Fill `.env` with your own values: it is never committed. Put a password of your choice in `POSTGRES_PASSWORD`; it only protects your own copy of the database. The database keeps the password it was first created with: if you change it later, run `docker compose down -v` once (this deletes the local database) and start it again.
 
-`setup_check` says which of your setup steps are done and what blocks each proof. It prints no value. The proofs run with `python -m proofs.database`, `python -m proofs.hedera_write` and `python -m proofs.google_models`. Each one writes a dated result file to `proofs/results/`. `python -m hackathon_memory.collect ethglobal --plan` shows what the collector would read, without sending a request.
+`setup_check` says which of your setup steps are done and what blocks each proof. It prints no value. The proofs run with `python -m proofs.database`, `python -m proofs.hedera_write` and `python -m proofs.google_models`. Each one writes a dated result file to `proofs/results/`. `python -m hackathon_memory.collect ethglobal --plan` shows what the collector would read, without sending a request. `python -m hackathon_memory.secret_scan` looks for the secrets of your `.env` in every commit, in the commit messages and authors, and in the files git would pick up. It prints the name of each setting and never a value. It is the check for launch gate 8.
 
 ## The event
 
