@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -60,3 +61,68 @@ def test_every_sample_page_says_that_it_is_invented() -> None:
     for path in samples:
         start = path.read_text(encoding="utf-8")[:400]
         assert "INVENTED" in start, f"{path.relative_to(ROOT)} does not start with INVENTED"
+
+
+# ---------------------------------------------------------------- no secret in the repository
+
+SECRET_SHAPES = {
+    "a private key block": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    "a Google refresh token": re.compile(r"1//0[0-9A-Za-z_-]{40,}"),
+    "a Google access token": re.compile(r"ya29\.[0-9A-Za-z_-]{20,}"),
+    "a Google API key": re.compile(r"AIza[0-9A-Za-z_-]{35}"),
+    "a GitHub token": re.compile(
+        r"\b(?:ghp|gho|ghu|ghs|ghr)_[0-9A-Za-z]{36,}|github_pat_[0-9A-Za-z_]{40,}"
+    ),
+    "a Hedera Ed25519 private key": re.compile(r"302e020100300506032b657004220420[0-9a-fA-F]{64}"),
+    "a Hedera ECDSA private key": re.compile(
+        r"3030020100300706052b8104000a04220420[0-9a-fA-F]{64}"
+    ),
+}
+
+
+def find_secret_shapes(text: str) -> list[str]:
+    """The names of the secret shapes that appear in `text`. Never the secret itself."""
+    return [name for name, shape in SECRET_SHAPES.items() if shape.search(text)]
+
+
+def test_the_scanner_finds_planted_secrets() -> None:
+    # The fakes are built here, piece by piece, so this file holds no secret shape itself.
+    planted = {
+        "a private key block": "-----BEGIN " + "PRIVATE KEY-----\nabc\n",
+        "a Google refresh token": "1//0" + "a" * 50,
+        "a Google access token": "ya29." + "b" * 30,
+        "a Google API key": "AIza" + "c" * 35,
+        "a GitHub token": "ghp_" + "d" * 40,
+        "a Hedera Ed25519 private key": "302e020100300506032b657004220420" + "e" * 64,
+        "a Hedera ECDSA private key": "3030020100300706052b8104000a04220420" + "f" * 64,
+    }
+    for name, text in planted.items():
+        assert name in find_secret_shapes(f"before {text} after"), name
+    assert find_secret_shapes("a normal sentence, 0.0.12345 and a short 302e0201 prefix") == []
+
+
+def test_no_tracked_file_holds_something_that_looks_like_a_secret() -> None:
+    """Launch gate 8: no secret is in the repository. This runs on every push."""
+    listing = git("ls-files", "-z")
+    assert listing.returncode == 0
+    offenders: list[str] = []
+    for name in filter(None, listing.stdout.split("\0")):
+        path = ROOT / name
+        if not path.is_file() or path.stat().st_size > 2_000_000:
+            continue
+        found = find_secret_shapes(path.read_bytes().decode("utf-8", errors="ignore"))
+        offenders.extend(f"{name}: {kind}" for kind in found)
+    assert offenders == []  # the names of files and kinds, never the secrets
+
+
+def test_google_sign_in_files_are_ignored_by_git() -> None:
+    names = [
+        "application_default_credentials.json",
+        "client_secret_1234.json",
+        "my-key.json",
+        "service-account-prod.json",
+        "private.pem",
+        "something-credentials.json",
+    ]
+    for name in names:
+        assert git("check-ignore", "--quiet", name).returncode == 0, f"git does not ignore {name}"
