@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 9 October 2026:** Phase A has started. The project setup, the settings, the local database and its migration runner exist and are tested. Nothing else works yet. Everything below, apart from those parts, is the plan. This page will say plainly what works as soon as something does.
+> **State on 9 October 2026:** Phase A is built and tested, and Gate A is not passed yet. See "What works today" below. Everything on this page apart from that is the plan.
 >
 > **Where the data comes from.** Every site was asked before any program reads it. ETHGlobal allowed its showcase in writing, for the projects with a Hedera prize. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
@@ -45,6 +45,39 @@ It may read pages, give them structure and find similar ideas. It may not give a
 Solana's hackathon organiser built this idea for Solana: [Colosseum Copilot](https://github.com/colosseumorg/colosseum-copilot). Its own page says its records show "what teams submitted, not what they run today". We found nothing like it for Hedera, and the check on the ledger is what we add.
 
 Many tools score hackathon submissions with AI. This tool does not score.
+
+## What works today
+
+There is no website yet and no search. What exists is the ground that they will stand on, and four small proofs that it holds.
+
+| Proof of Gate A | State on 9 October 2026 |
+|---|---|
+| Database: PostgreSQL with pgvector answers a vector query | **Passed.** 3,000 vectors of 3,072 numbers, the right neighbours first, an exact search in 27 ms. The result file is in `proofs/results/`. |
+| Hedera write: a topic with no admin key, a message, read back from the ledger | The code and its proof script are written and tested against an in-memory ledger. **Not run on the real network yet:** it needs a free Hedera test account. |
+| Google models: one call to Gemini 3.8 Flash and one embedding call | The code and its proof script are written and tested through the real Google library with the network replaced. **Not run for real yet:** it needs a Google Cloud project. |
+| Lists: the ETHGlobal collector | The collector is written and tested on invented pages. **Never run on a live site.** It refuses a live run until the maintainer has given the list of prize pages, the contact address, and two real pages saved by hand to check its page shape. |
+
+The tests (257 of them) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+
+What does not exist yet: the parser, the cards, the checks of the ledger and of the code, the search, the website, the register, and the tests that measure the quality of the AI fields.
+
+## Run it
+
+You need Python 3.11, Git and Docker Desktop. On Windows:
+
+```text
+python -m venv .venv
+.venv\Scripts\python -m pip install -c constraints.txt -e ".[dev]"
+copy .env.example .env
+docker compose up -d --wait db
+.venv\Scripts\python -m hackathon_memory.db migrate
+.venv\Scripts\python -m pytest
+.venv\Scripts\python -m hackathon_memory.setup_check
+```
+
+On Linux or macOS, use `.venv/bin/python` and `cp`. Fill `.env` with your own values: it is never committed. Put a password of your choice in `POSTGRES_PASSWORD`; it only protects your own copy of the database.
+
+`setup_check` says which of your setup steps are done and what blocks each proof. It prints no value. The proofs run with `python -m proofs.database`, `python -m proofs.hedera_write` and `python -m proofs.google_models`. Each one writes a dated result file to `proofs/results/`. `python -m hackathon_memory.collect ethglobal --plan` shows what the collector would read, without sending a request.
 
 ## The event
 
