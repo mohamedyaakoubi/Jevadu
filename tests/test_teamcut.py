@@ -127,3 +127,33 @@ def test_a_name_in_the_projects_own_text_makes_that_page_unsafe_to_save() -> Non
 def test_both_kinds_of_failure_are_a_kind_of_cut_failed() -> None:
     assert issubclass(TeamShapeChanged, CutFailed)
     assert issubclass(TeamTextRemains, CutFailed)
+
+
+# ------------------------------------------------------------ what the rewrite changes (Q20)
+
+
+@pytest.mark.parametrize("name", ["project_zed_widget.html", "project_mango_ledger.html"])
+def test_the_page_is_written_again_but_text_links_and_tags_stay_the_same(name: str) -> None:
+    """The wording of design rule 5 rests on this test.
+
+    The page is not saved byte for byte: the parser writes it again. This test compares the
+    saved page with the original after the team part was removed by plain string slicing, and
+    shows that the visible text, the links and the order of the tags are the same.
+    """
+    import re
+
+    from bs4 import BeautifulSoup
+
+    raw = sample(name).decode("utf-8")
+    by_hand = re.sub(r'<section id="team">.*?</section>\s*', "", raw, flags=re.S)
+    by_hand = re.sub(r'\s*<meta name="author"[^>]*>', "", by_hand)
+    saved, _ = cut(raw)
+
+    before = BeautifulSoup(by_hand, "lxml")
+    after = BeautifulSoup(saved.decode("utf-8"), "lxml")
+    assert " ".join(before.get_text().split()) == " ".join(after.get_text().split())
+    assert [a["href"] for a in before.find_all("a", href=True)] == [
+        a["href"] for a in after.find_all("a", href=True)
+    ]
+    assert [t.name for t in before.find_all(True)] == [t.name for t in after.find_all(True)]
+    assert saved.decode("utf-8").lower().startswith("<!doctype html")  # the case may change

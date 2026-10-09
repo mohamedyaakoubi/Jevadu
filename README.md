@@ -25,7 +25,7 @@ Hedera has run at least 12 big hackathons since 2018, with more than 2,100 proje
 
 ## How it works
 
-1. **Collect.** A program reads the public project pages of past hackathons and saves them unchanged. It does this only where the site's terms allow it or the site said yes in writing.
+1. **Collect.** A program reads the public project pages of past hackathons and saves them, without the part that shows the team members. It does this only where the site's terms allow it or the site said yes in writing.
 2. **Parse.** Ordinary code pulls out the name, the links, the Hedera IDs and the titled sections. No AI.
 3. **Read.** An LLM gives every project the same structure. Each field it writes carries a label and exact quotes from the page, and code checks every quote.
 4. **Check.** The Hedera mirror node says what each ID really is and when it was active. GitHub says when the code was written. No AI.
