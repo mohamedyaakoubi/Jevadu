@@ -1,0 +1,3 @@
+# Keep line endings as LF everywhere, also on Windows.
+# Scripts that run inside Docker (Linux) break when a file has Windows line endings.
+* text=auto eol=lf
