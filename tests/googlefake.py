@@ -29,6 +29,9 @@ class FakeGoogle:
     def __init__(self, answer_text: str = "{}", usage: dict | None = None) -> None:
         self.requests: list[tuple[str, dict]] = []
         self.answer_text = answer_text
+        # Optional: answers to give one by one, one for each call, before answer_text is used.
+        self.answer_queue: list[str] = []
+        self.finish_reasons: list[str] = []
         self.usage = usage or {
             "promptTokenCount": 1000,
             "candidatesTokenCount": 200,
@@ -43,10 +46,19 @@ class FakeGoogle:
         self.vector_for: Callable[[str], list[float]] | None = None
         # Optional: answer every request with an error, as (status, message).
         self.fail_with: tuple[int, str] | None = None
+        # Optional: HTTP statuses to answer with, one for each request, before the real answer.
+        self.fail_first: list[int] = []
+        self.failed_requests = 0
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else {}
         self.requests.append((request.url.path, body))
+        if self.fail_first:
+            status = self.fail_first.pop(0)
+            self.failed_requests += 1
+            return httpx.Response(
+                status, json={"error": {"code": status, "message": "Internal error encountered."}}
+            )
         if self.fail_with:
             status, message = self.fail_with
             return httpx.Response(status, json={"error": {"code": status, "message": message}})
@@ -69,21 +81,25 @@ class FakeGoogle:
                 for i in range(count)
             ]
             return httpx.Response(200, json={"predictions": predictions})
-        parts = [{"text": self.answer_text}] if self.answer_text else []
+        text = self.answer_queue.pop(0) if self.answer_queue else self.answer_text
+        reason = self.finish_reasons.pop(0) if self.finish_reasons else self.finish_reason
+        parts = [{"text": text}] if text else []
         candidate = {
             "content": {"role": "model", "parts": parts},
-            "finishReason": self.finish_reason,
+            "finishReason": reason,
         }
         return httpx.Response(200, json={"candidates": [candidate], "usageMetadata": self.usage})
 
-    def client(self) -> genai.Client:
+    def client(self, retry_options: types.HttpRetryOptions | None = None) -> genai.Client:
         transport = httpx.MockTransport(self.handler)
         return genai.Client(
             enterprise=True,
             project="test-project",
             location="global",
             credentials=FakeCredentials(),
-            http_options=types.HttpOptions(httpx_client=httpx.Client(transport=transport)),
+            http_options=types.HttpOptions(
+                httpx_client=httpx.Client(transport=transport), retry_options=retry_options
+            ),
         )
 
 

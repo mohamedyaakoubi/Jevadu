@@ -7,10 +7,18 @@ from pathlib import Path
 
 import pytest
 from google.auth.exceptions import DefaultCredentialsError
+from google.genai import errors as genai_errors
+from google.genai import types
 
-from googlefake import FakeCredentials
+from googlefake import FakeCredentials, FakeGoogle
 from hackathon_memory.llm import client as client_module
-from hackathon_memory.llm.client import GoogleSetupError, load_key_file, make_client
+from hackathon_memory.llm import embeddings
+from hackathon_memory.llm.client import (
+    GoogleSetupError,
+    default_http_options,
+    load_key_file,
+    make_client,
+)
 from hackathon_memory.settings import Settings
 
 
@@ -112,3 +120,60 @@ def test_any_other_kind_of_file_is_refused(tmp_path: Path) -> None:
 def test_a_missing_file_is_refused(tmp_path: Path) -> None:
     with pytest.raises(GoogleSetupError, match="cannot be read"):
         load_key_file(str(tmp_path / "missing.json"))
+
+
+# ------------------------------------------------------------------ retry on transient errors
+
+
+def quick_retry(attempts: int = 4) -> types.HttpRetryOptions:
+    """The options of default_http_options, with waits of a few milliseconds for the tests."""
+    options = default_http_options(attempts=attempts, initial_delay=0.001, max_delay=0.005)
+    return options.retry_options
+
+
+def test_the_default_options_retry_the_transient_codes_and_set_a_long_timeout() -> None:
+    options = default_http_options()
+    assert options.retry_options.attempts == 4
+    assert options.retry_options.http_status_codes == [408, 429, 500, 502, 503, 504]
+    assert options.timeout == 300_000  # milliseconds
+
+
+def test_the_library_does_not_retry_unless_told_to() -> None:
+    """The reason for default_http_options. If this test fails, the library changed its default."""
+    google = FakeGoogle()
+    google.fail_first = [500, 500]
+    with pytest.raises(genai_errors.ServerError):
+        embeddings.embed_documents(google.client(), ["text"])
+    assert google.failed_requests == 1  # one try, then the error
+
+
+def test_a_500_from_google_is_tried_again_and_then_answered() -> None:
+    google = FakeGoogle()
+    google.fail_first = [500, 503]
+    [vector] = embeddings.embed_documents(google.client(quick_retry()), ["text"])
+    assert len(vector.values) == 3072
+    assert google.failed_requests == 2  # two failures, then the answer
+
+
+def test_an_error_that_will_not_pass_is_not_tried_again() -> None:
+    google = FakeGoogle()
+    google.fail_first = [400, 400, 400]
+    with pytest.raises(genai_errors.ClientError):
+        embeddings.embed_documents(google.client(quick_retry()), ["text"])
+    assert google.failed_requests == 1
+
+
+def test_it_gives_up_after_the_attempts() -> None:
+    google = FakeGoogle()
+    google.fail_first = [500] * 10
+    with pytest.raises(genai_errors.ServerError):
+        embeddings.embed_documents(google.client(quick_retry(attempts=3)), ["text"])
+    assert google.failed_requests == 3
+
+
+def test_make_client_uses_the_retry_options_by_default() -> None:
+    made = make_client(
+        settings(google_cloud_project="p", google_cloud_location="global"),
+        credentials=FakeCredentials(),
+    )
+    assert made._api_client._http_options.retry_options.attempts == 4

@@ -10,10 +10,11 @@ in a test file or in the chat. So this module has two rules:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Marks a setting whose value is safe to show on a screen. Everything else is shown as
@@ -21,6 +22,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _PUBLIC = {"public": True}
 
 DEFAULT_POSTGRES_PORT = 55432
+
+# The levels of thinking that Gemini 3.1 Pro and Gemini 3.8 Flash both accept (Google's page
+# "Thinking", 9 October 2026). MINIMAL is refused by both. The old "thinking budget" is not a
+# setting: Google deprecated it for Gemini 3, and sending it with a level is an error.
+ThinkingLevelName = Literal["LOW", "MEDIUM", "HIGH"]
 
 
 class SettingsError(Exception):
@@ -47,10 +53,19 @@ class Settings(BaseSettings):
     # GitHub (step 2)
     github_token: SecretStr = SecretStr("")
 
-    # Google Cloud: Gemini 3.8 Flash and the embedding model on Vertex AI (step 3)
+    # Google Cloud: the Gemini models and the embedding model on Vertex AI (step 3)
     google_cloud_project: SecretStr = SecretStr("")
     google_cloud_location: str = Field("", json_schema_extra=_PUBLIC)
     google_application_credentials: SecretStr = SecretStr("")
+
+    # The two Gemini layers. The maintainer decided on 9 October 2026 (design rule 7):
+    # the first layer reads and rewrites project pages into cards with Gemini 3.1 Pro, for the
+    # quality of the rewrite. The search uses Gemini 3.8 Flash. Both are public settings: they
+    # are model names and a level, not secrets. The defaults are the maintainer's choice.
+    gemini_rewrite_model: str = Field("gemini-3.1-pro-preview", json_schema_extra=_PUBLIC)
+    gemini_rewrite_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
+    gemini_search_model: str = Field("gemini-3.8-flash", json_schema_extra=_PUBLIC)
+    gemini_search_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
 
     # The local PostgreSQL that Docker Compose starts
     postgres_user: str = Field("hackathon", json_schema_extra=_PUBLIC)
@@ -68,6 +83,20 @@ class Settings(BaseSettings):
     collector_contact_email: SecretStr = SecretStr("")
     # One switch per site. "off" is the default: a collector runs only when it is turned on.
     collect_ethglobal: bool = Field(False, json_schema_extra=_PUBLIC)
+
+    @field_validator("gemini_rewrite_thinking_level", "gemini_search_thinking_level", mode="before")
+    @classmethod
+    def _level_in_capitals(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("gemini_rewrite_model", "gemini_search_model")
+    @classmethod
+    def _a_gemini_model(cls, value: str) -> str:
+        """Design rule 7: the LLM is a Gemini model on Vertex AI, and no other service."""
+        cleaned = value.strip()
+        if not re.fullmatch(r"gemini-[a-z0-9][a-z0-9.\-]*", cleaned):
+            raise ValueError("must be the id of a Gemini model, for example gemini-3.8-flash")
+        return cleaned
 
     def database_conninfo(self) -> str:
         """The text that psycopg needs to open the database. It holds a password: never print it."""

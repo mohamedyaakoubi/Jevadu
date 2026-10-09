@@ -23,6 +23,7 @@ REAL = RealText(name="Zed Widget", text=PAGE)
 
 
 def settings(**values: object) -> Settings:
+    # The two Gemini layers keep the maintainer's defaults: 3.1 Pro to rewrite, 3.8 Flash to search.
     defaults = {"google_cloud_project": PROJECT, "google_cloud_location": "global"}
     return Settings(_env_file=None, **(defaults | values))  # type: ignore[arg-type]
 
@@ -71,14 +72,52 @@ def test_everything_works(results_dir: Path) -> None:
     body = saved(results_dir)
     assert body["passed"] is True
     measured = body["measurements"]
-    assert measured["model"] == "gemini-3.8-flash"
     assert measured["location"] == "global"
     assert measured["embedding_dimensions"] == 3072
     assert measured["similarity_related"] > measured["similarity_unrelated"]
-    assert measured["gemini_cost_usd"] == pytest.approx(0.002625)
-    assert measured["labels"]["not_found"] == 2  # problem and solution
-    assert measured["quotes_total"] > 0
     assert measured["text_words"] == len(PAGE.split())
+
+    rewrite, search = measured["layers"]["rewrite"], measured["layers"]["search"]
+    assert rewrite["model"] == "gemini-3.1-pro-preview"
+    assert search["model"] == "gemini-3.8-flash"
+    assert rewrite["thinking_level"] == search["thinking_level"] == "HIGH"
+    assert rewrite["cost_usd"] == pytest.approx(0.008)  # 1000 in at 2.00, 500 out at 12.00
+    assert search["cost_usd"] == pytest.approx(0.002625)  # 1000 in at 0.75, 500 out at 3.75
+    assert measured["gemini_cost_usd_total"] == pytest.approx(0.010625)
+    assert rewrite["labels"]["not_found"] == 2  # problem and solution
+    assert rewrite["quotes_total"] > 0
+    # one request for each layer, then the three embeddings
+    paths = [path for path, _ in google.requests]
+    assert sum(p.endswith("gemini-3.1-pro-preview:generateContent") for p in paths) == 1
+    assert sum(p.endswith("gemini-3.8-flash:generateContent") for p in paths) == 1
+
+
+def test_the_models_and_levels_come_from_the_settings(results_dir: Path) -> None:
+    google = good_google()
+    chosen = settings(
+        gemini_rewrite_model="gemini-3.8-flash",
+        gemini_rewrite_thinking_level="low",
+        gemini_search_model="gemini-3.1-pro-preview",
+        gemini_search_thinking_level="MEDIUM",
+    )
+    assert run_with(google, settings=chosen) == 0
+    layers = saved(results_dir)["measurements"]["layers"]
+    assert (layers["rewrite"]["model"], layers["rewrite"]["thinking_level"]) == (
+        "gemini-3.8-flash",
+        "LOW",
+    )
+    assert (layers["search"]["model"], layers["search"]["thinking_level"]) == (
+        "gemini-3.1-pro-preview",
+        "MEDIUM",
+    )
+
+
+def test_a_model_with_an_unknown_price_is_reported_without_a_guess(results_dir: Path) -> None:
+    google = good_google()
+    assert run_with(google, settings=settings(gemini_search_model="gemini-9-future")) == 0
+    measured = saved(results_dir)["measurements"]
+    assert measured["layers"]["search"]["cost_usd"] is None
+    assert measured["gemini_cost_usd_total"] is None  # a total with a missing price is not shown
 
 
 def test_the_result_file_holds_no_text_and_no_project_name(results_dir: Path) -> None:
@@ -94,7 +133,8 @@ def test_a_google_error_that_names_the_project_is_scrubbed(results_dir: Path) ->
     google.fail_with = (403, f"Permission denied on project {PROJECT} for this model")
     assert run_with(google) == 1
     body = saved(results_dir)
-    assert "Gemini 3.8 Flash returned a valid form" in failed(body)
+    assert "rewrite: gemini-3.1-pro-preview (thinking HIGH) returned a valid form" in failed(body)
+    assert "search: gemini-3.8-flash (thinking HIGH) returned a valid form" in failed(body)
     text = json.dumps(body)
     assert PROJECT not in text
     assert "Permission denied" in text  # the reason itself stays
@@ -107,7 +147,10 @@ def test_an_invalid_form_fails_that_check_but_the_embeddings_still_run(
     google.vector_for = vectors
     assert run_with(google) == 1
     body = saved(results_dir)
-    assert failed(body) == ["Gemini 3.8 Flash returned a valid form"]
+    assert failed(body) == [
+        "rewrite: gemini-3.1-pro-preview (thinking HIGH) returned a valid form",
+        "search: gemini-3.8-flash (thinking HIGH) returned a valid form",
+    ]
     assert body["measurements"]["embedding_dimensions"] == 3072
 
 
@@ -137,10 +180,13 @@ def test_missing_setup_blocks_the_proof_and_writes_no_file(
     assert not results_dir.exists() or not list(results_dir.glob("*"))
 
 
-def test_a_location_that_the_model_is_not_offered_in_is_reported(results_dir: Path) -> None:
+def test_a_location_that_a_model_is_not_offered_in_is_reported(results_dir: Path) -> None:
     google = good_google()
-    assert run_with(google, settings=settings(google_cloud_location="us-central1")) == 1
-    assert "the location is one that Gemini 3.8 Flash is offered in" in failed(saved(results_dir))
+    # Gemini 3.8 Flash is offered in "us", Gemini 3.1 Pro is not: the rewrite layer fails first.
+    assert run_with(google, settings=settings(google_cloud_location="us")) == 1
+    assert "the location is one that gemini-3.1-pro-preview is offered in" in failed(
+        saved(results_dir)
+    )
     assert google.requests == []  # nothing was sent
 
 

@@ -10,6 +10,8 @@ are blocked by which missing step, and what to do.
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -54,6 +56,56 @@ def probe_database(settings: Settings) -> tuple[bool, str]:
                 "then docker compose up -d --wait db"
             )
         return False, "no answer: start Docker Desktop, then run: docker compose up -d --wait db"
+
+
+_GIT_PLACES = (r"C:\Program Files\Git\cmd\git.exe", r"C:\Program Files\Gitin\git.exe")
+
+
+def ignored_by_git(root: Path, path: Path) -> bool | None:
+    """True if git ignores `path`, False if it would not, None if git cannot be asked."""
+    program = shutil.which("git") or next((g for g in _GIT_PLACES if Path(g).exists()), None)
+    if program is None:
+        return None
+    try:
+        done = subprocess.run(  # noqa: S603
+            [program, "check-ignore", "--quiet", str(path)],
+            cwd=root,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return done.returncode == 0 if done.returncode in (0, 1) else None
+
+
+def google_sign_in_note(settings: Settings, root: Path) -> tuple[bool, str]:
+    """The Google sign-in file, if one is named. Its path and content are never shown."""
+    named = settings.google_application_credentials.get_secret_value().strip()
+    if not named:
+        return (
+            True,
+            "empty: the library uses the sign-in of gcloud (gcloud auth application-default login)",
+        )
+    path = Path(named) if Path(named).is_absolute() else root / named
+    if not path.is_file():
+        return False, "set, but no file is there"
+    try:
+        kind = json.loads(path.read_text(encoding="utf-8")).get("type")
+    except (OSError, ValueError):
+        return False, "set, but the file is not a valid sign-in file"
+    if kind not in ("service_account", "authorized_user"):
+        return False, "set, but the file is not a service account key or a user login file"
+    inside = root.resolve() in path.resolve().parents
+    if not inside:
+        return True, f"set, a sign-in file of the kind {kind}, outside the project folder"
+    ignored = ignored_by_git(root, path)
+    where = f"set, a sign-in file of the kind {kind}, INSIDE the project folder"
+    if ignored is False:
+        return False, f"{where}, and git does NOT ignore it: move it out of the project"
+    if ignored is None:
+        return True, f"{where} (git could not be asked if it ignores it)"
+    return True, f"{where}. Git ignores it. It is better kept outside."
 
 
 def _hedera_key_note(settings: Settings) -> tuple[bool, str]:
@@ -116,15 +168,30 @@ def report(
     has_project = bool(settings.google_cloud_project.get_secret_value().strip())
     add("3", "GOOGLE_CLOUD_PROJECT", has_project, "set" if has_project else "empty")
     location = settings.google_cloud_location.strip()
-    location_ok = location in LOCATIONS
     add(
         "3",
         "GOOGLE_CLOUD_LOCATION",
-        location_ok,
-        location + ("" if location_ok else f" (use one of: {', '.join(LOCATIONS)})")
+        location == "global",
+        location
+        + ("" if location == "global" else " (use: global. Gemini 3.1 Pro is offered only there)")
         if location
-        else "empty (use global)",
+        else "empty (use: global)",
     )
+    ok, note = google_sign_in_note(settings, root)
+    add("3", "GOOGLE_APPLICATION_CREDENTIALS", ok, note)
+    for layer, model, level in (
+        ("rewrite", settings.gemini_rewrite_model, settings.gemini_rewrite_thinking_level),
+        ("search", settings.gemini_search_model, settings.gemini_search_thinking_level),
+    ):
+        offered = LOCATIONS.get(model)
+        fits = offered is None or not location or location in offered  # empty is reported above
+        add(
+            "3",
+            f"Gemini {layer} layer",
+            fits,
+            f"{model}, thinking {level}"
+            + ("" if fits else f" (offered only in: {', '.join(offered or ())})"),
+        )
 
     # steps 8 and 9: the collector
     add(
@@ -168,7 +235,13 @@ def blockers(lines: list[Line]) -> dict[str, list[str]]:
     return {
         "database": missing("Docker and the local database"),
         "Hedera write": missing("HEDERA_OPERATOR_ID", "HEDERA_OPERATOR_KEY"),
-        "Google models": missing("GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"),
+        "Google models": missing(
+            "GOOGLE_CLOUD_PROJECT",
+            "GOOGLE_CLOUD_LOCATION",
+            "GOOGLE_APPLICATION_CREDENTIALS",
+            "Gemini rewrite layer",
+            "Gemini search layer",
+        ),
         "ETHGlobal live run": missing(
             "COLLECTOR_CONTACT_EMAIL", "your list of ETHGlobal prize pages"
         ),
@@ -190,6 +263,7 @@ def render(lines: list[Line]) -> str:
         )
     out += [
         "",
+        "How to do each step, one by one: README.md (its steps are numbered like these).",
         "Steps are numbered as in design section 15. Put values in .env, never in a chat.",
         "The ETHGlobal live run also needs two pages saved by hand and the maintainer's yes "
         ".",

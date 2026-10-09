@@ -174,3 +174,109 @@ def test_no_password_is_reported_before_any_connection(tmp_path: Path) -> None:
     ok, note = probe_database(settings(tmp_path))
     assert ok is False
     assert "POSTGRES_PASSWORD is empty" in note
+
+
+# ------------------------------------------------------------------ the Google sign-in file
+
+
+def sign_in(tmp_path: Path, name: str, content: object | None, **where: Path):
+    """Call google_sign_in_note for a file named `name` in the folder given by `where`."""
+    from hackathon_memory.setup_check import google_sign_in_note
+
+    root = tmp_path / "project"
+    root.mkdir(exist_ok=True)
+    if content is not None:
+        target = (where.get("folder") or root) / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            content if isinstance(content, str) else json.dumps(content), encoding="utf-8"
+        )
+    return google_sign_in_note(settings(tmp_path, google_application_credentials=name), root)
+
+
+def test_no_sign_in_file_means_the_gcloud_sign_in_is_used(tmp_path: Path) -> None:
+    from hackathon_memory.setup_check import google_sign_in_note
+
+    ok, note = google_sign_in_note(settings(tmp_path), tmp_path)
+    assert ok is True
+    assert "gcloud auth application-default login" in note
+
+
+def test_a_sign_in_file_that_is_not_there_or_not_valid_is_reported(tmp_path: Path) -> None:
+    ok, note = sign_in(tmp_path, "secret-folder/missing.json", None)
+    assert ok is False
+    assert "no file is there" in note
+    assert "secret-folder" not in note  # the path is never shown
+
+    ok, note = sign_in(tmp_path, "broken.json", "{ not json")
+    assert ok is False
+    assert "not a valid sign-in file" in note
+
+    ok, note = sign_in(tmp_path, "other.json", {"type": "external_account"})
+    assert ok is False
+    assert "service account key or a user login file" in note
+
+
+def test_a_sign_in_file_outside_the_project_is_fine(tmp_path: Path) -> None:
+    outside = tmp_path / "elsewhere"
+    absolute = outside / "adc.json"
+    outside.mkdir()
+    absolute.write_text(json.dumps({"type": "authorized_user"}), encoding="utf-8")
+    from hackathon_memory.setup_check import google_sign_in_note
+
+    root = tmp_path / "project"
+    root.mkdir()
+    ok, note = google_sign_in_note(
+        settings(tmp_path, google_application_credentials=str(absolute)), root
+    )
+    assert ok is True
+    assert "outside the project folder" in note
+    assert "authorized_user" in note
+    assert "elsewhere" not in note
+
+
+def test_a_sign_in_file_inside_the_project_must_be_ignored_by_git(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hackathon_memory import setup_check
+
+    kind = {"type": "authorized_user"}
+    monkeypatch.setattr(setup_check, "ignored_by_git", lambda root, path: True)
+    ok, note = sign_in(tmp_path, "adc.json", kind)
+    assert ok is True
+    assert "INSIDE the project folder" in note
+    assert "Git ignores it" in note
+
+    monkeypatch.setattr(setup_check, "ignored_by_git", lambda root, path: False)
+    ok, note = sign_in(tmp_path, "adc.json", kind)
+    assert ok is False
+    assert "does NOT ignore it" in note
+
+    monkeypatch.setattr(setup_check, "ignored_by_git", lambda root, path: None)
+    ok, note = sign_in(tmp_path, "adc.json", kind)
+    assert ok is True
+    assert "could not be asked" in note
+
+
+def test_git_is_asked_about_the_real_gitignore_of_this_project() -> None:
+    from hackathon_memory.setup_check import ignored_by_git
+
+    root = Path(__file__).resolve().parents[1]
+    assert ignored_by_git(root, root / "application_default_credentials.json") is True
+    assert ignored_by_git(root, root / "README.md") is False
+
+
+# ------------------------------------------------------------------ the two Gemini layers
+
+
+def test_each_gemini_layer_is_checked_against_its_own_locations(tmp_path: Path) -> None:
+    good = by_what(lines_for(tmp_path, google_cloud_location="global"))
+    assert good["Gemini rewrite layer"].ok and good["Gemini search layer"].ok
+    assert good["Gemini rewrite layer"].note == "gemini-3.1-pro-preview, thinking HIGH"
+
+    # Gemini 3.8 Flash is offered in "us", Gemini 3.1 Pro is not.
+    us = by_what(lines_for(tmp_path, google_cloud_location="us"))
+    assert us["Gemini rewrite layer"].ok is False
+    assert "offered only in: global" in us["Gemini rewrite layer"].note
+    assert us["Gemini search layer"].ok is True
+    assert us["GOOGLE_CLOUD_LOCATION"].ok is False  # the setup asks for global

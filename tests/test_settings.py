@@ -92,3 +92,50 @@ def test_conninfo_is_built_from_the_parts(clean_env: None) -> None:
 def test_a_database_url_replaces_the_parts(clean_env: None) -> None:
     url = "postgresql://someone:pw@db.example.test:5432/other"
     assert make(database_url=url).database_conninfo() == url
+
+
+# ------------------------------------------------------------------ the two Gemini layers
+
+
+def test_the_gemini_layers_have_the_owners_choices_by_default(clean_env: None) -> None:
+    s = make()
+    assert s.gemini_rewrite_model == "gemini-3.1-pro-preview"  # reading and rewriting the pages
+    assert s.gemini_search_model == "gemini-3.8-flash"  # the search
+    assert s.gemini_rewrite_thinking_level == "HIGH"
+    assert s.gemini_search_thinking_level == "HIGH"
+
+
+def test_the_gemini_settings_are_read_from_the_environment(
+    clean_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GEMINI_REWRITE_MODEL", "gemini-3.8-flash")
+    monkeypatch.setenv("GEMINI_REWRITE_THINKING_LEVEL", " low ")
+    monkeypatch.setenv("GEMINI_SEARCH_THINKING_LEVEL", "medium")
+    s = Settings(_env_file=None)
+    assert s.gemini_rewrite_model == "gemini-3.8-flash"
+    assert s.gemini_rewrite_thinking_level == "LOW"  # capitals and spaces are fixed
+    assert s.gemini_search_thinking_level == "MEDIUM"
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"gemini_rewrite_model": "gpt-4o"},  # design rule 7: Gemini only
+        {"gemini_search_model": "other-vendor-model"},
+        {"gemini_search_model": ""},
+        {"gemini_rewrite_model": "gemini-3.8 flash"},
+        {"gemini_rewrite_thinking_level": "MINIMAL"},  # refused by both models
+        {"gemini_search_thinking_level": "2048"},  # a budget is not a level
+    ],
+)
+def test_a_wrong_gemini_setting_is_refused_at_once(clean_env: None, bad: dict) -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        make(**bad)
+
+
+def test_the_gemini_settings_are_public(clean_env: None) -> None:
+    lines = {line.name: line.state for line in describe(make())}
+    assert lines["GEMINI_REWRITE_MODEL"] == "gemini-3.1-pro-preview"
+    assert lines["GEMINI_SEARCH_THINKING_LEVEL"] == "HIGH"

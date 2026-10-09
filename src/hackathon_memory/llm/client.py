@@ -24,6 +24,10 @@ from hackathon_memory.settings import Settings
 
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
+# The codes that mean "try again in a moment": the request timed out, too many requests, and the
+# errors of the server (500 was seen from Gemini 3.1 Pro preview on the second live run).
+RETRYABLE_CODES = [408, 429, 500, 502, 503, 504]
+
 
 class GoogleSetupError(Exception):
     """The Google settings or the sign-in are not ready. The message holds no secret."""
@@ -52,6 +56,33 @@ def load_key_file(path: str) -> Credentials:
     )
 
 
+def default_http_options(
+    *,
+    attempts: int = 4,
+    initial_delay: float = 2.0,
+    max_delay: float = 30.0,
+    timeout_seconds: int = 300,
+) -> types.HttpOptions:
+    """Retry on the transient errors, and never wait for ever.
+
+    The library does NOT retry unless it is told to: without these options a single 500 from
+    Google ends the call (found on the second live run). The waits grow
+    (2, 4, 8 seconds, with some randomness) up to `attempts` calls in all. The timeout is long
+    because a call with HIGH thinking takes 20 to 40 seconds.
+    """
+    return types.HttpOptions(
+        timeout=timeout_seconds * 1000,  # the library counts in milliseconds
+        retry_options=types.HttpRetryOptions(
+            attempts=attempts,
+            initial_delay=initial_delay,
+            max_delay=max_delay,
+            exp_base=2.0,
+            jitter=1.0,
+            http_status_codes=RETRYABLE_CODES,
+        ),
+    )
+
+
 def make_client(
     settings: Settings,
     *,
@@ -74,7 +105,7 @@ def make_client(
             project=project,
             location=location,
             credentials=credentials,
-            http_options=http_options,
+            http_options=http_options or default_http_options(),
         )
     except GoogleAuthError:
         raise GoogleSetupError(

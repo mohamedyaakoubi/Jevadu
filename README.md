@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 9 October 2026:** Phase A is built and tested, and Gate A is not passed yet. See "What works today" below. Everything on this page apart from that is the plan.
+> **State on 9 October 2026:** Phase A is built and tested. Three of the four proofs of Gate A have passed on the real services. The fourth, the first run of the collector on ETHGlobal, waits for the maintainer's inputs. So Gate A is not passed yet. See "What works today" below. Everything on this page apart from that is the plan.
 >
 > **Where the data comes from.** Every site was asked before any program reads it. ETHGlobal allowed its showcase in writing, for the projects with a Hedera prize. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
@@ -53,8 +53,8 @@ There is no website yet and no search. What exists is the ground that they will 
 | Proof of Gate A | State on 9 October 2026 |
 |---|---|
 | Database: PostgreSQL with pgvector answers a vector query | **Passed.** 3,000 vectors of 3,072 numbers, the right neighbours first, an exact search in 27 ms. The result file is in `proofs/results/`. |
-| Hedera write: a topic with no admin key, a message, read back from the ledger | The code and its proof script are written and tested against an in-memory ledger. **Not run on the real network yet:** it needs a free Hedera test account. |
-| Google models: one call to Gemini 3.8 Flash and one embedding call | The code and its proof script are written and tested through the real Google library with the network replaced. **Not run for real yet:** it needs a Google Cloud project. |
+| Hedera write: a topic with no admin key, a message, read back from the ledger | **Passed** on the real test network. The topic has no admin key and one submit key, a 102-byte record was read back from the mirror node, and a topic with a stranger's submit key refused our message. The result file is in `proofs/results/`. |
+| Google models: the two Gemini layers (Gemini 3.1 Pro reads the pages, Gemini 3.8 Flash does the search) and one embedding call | **Passed** on the real service. Both models returned a valid form for one real text, and the embeddings have the right size. The result file is in `proofs/results/`. |
 | Lists: the ETHGlobal collector | The collector is written and tested on invented pages. **Never run on a live site.** It refuses a live run until the maintainer has given the list of prize pages, the contact address, and two real pages saved by hand to check its page shape. |
 
 The tests (259 of them on 9 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
