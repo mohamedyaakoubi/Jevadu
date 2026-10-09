@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
+MAX_DETAIL = 500  # characters of one detail line
 
 
 @dataclass
@@ -43,7 +44,8 @@ class ProofResult:
         return text
 
     def check(self, name: str, passed: bool, detail: str = "") -> bool:
-        name, detail = self._scrub(name), self._scrub(detail)
+        # Scrub first and cut after. A secret that straddles the cut would otherwise stay in part.
+        name, detail = self._scrub(name), self._scrub(detail)[:MAX_DETAIL]
         self.checks.append(Check(name, bool(passed), detail))
         mark = "ok  " if passed else "FAIL"
         print(f"[{mark}] {name}" + (f": {detail}" if detail else ""))
