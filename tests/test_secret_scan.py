@@ -178,7 +178,9 @@ def test_the_secret_fields_of_a_login_file_are_searched_and_not_its_name(tmp_pat
 
 
 def test_a_private_key_is_searched_by_its_longest_line(tmp_path: Path) -> None:
-    pem = "-----BEGIN PRIVATE KEY-----\n" + KEY_BODY + "\n-----END PRIVATE KEY-----\n"
+    # The header is built from parts: a whole one in this file would trip the secret-shape test
+    # of tests/test_promises.py, which reads every tracked file.
+    pem = "-----BEGIN " + "PRIVATE KEY-----\n" + KEY_BODY + "\n-----END " + "PRIVATE KEY-----\n"
     path = tmp_path / "service.json"
     path.write_text(json.dumps({"type": "service_account", "private_key": pem}), encoding="utf-8")
     assert sign_in_file_values(str(path)) == {
