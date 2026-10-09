@@ -55,9 +55,9 @@ There is no website yet and no search. What exists is the ground that they will 
 | Database: PostgreSQL with pgvector answers a vector query | **Passed.** 3,000 vectors of 3,072 numbers, the right neighbours first, an exact search in 27 ms. The result file is in `proofs/results/`. |
 | Hedera write: a topic with no admin key, a message, read back from the ledger | **Passed** on the real test network. The topic has no admin key and one submit key, a 102-byte record was read back from the mirror node, and a topic with a stranger's submit key refused our message. The result file is in `proofs/results/`. |
 | Google models: the two Gemini layers (Gemini 3.1 Pro reads the pages, Gemini 3.8 Flash does the search) and one embedding call | **Passed** on the real service. Both models returned a valid form for one real text, and the embeddings have the right size. The result file is in `proofs/results/`. |
-| Lists: the ETHGlobal collector | The collector is written and tested on invented pages. **Never run on a live site.** It refuses a live run until the maintainer has given the list of prize pages, the contact address, and two real pages saved by hand to check its page shape. |
+| Lists: the ETHGlobal collector | The collector, and a three-request "look", are written and tested on invented pages. **Never run on a live site.** A live run is refused until the maintainer has given the list of prize pages and a yes, and until its page shape has been checked on a real page (the look, or two pages saved by hand). |
 
-The tests (259 of them on 9 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+The tests (317 of them on 10 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
 
 What does not exist yet: the parser, the cards, the checks of the ledger and of the code, the search, the website, the register, and the tests that measure the quality of the AI fields.
 
