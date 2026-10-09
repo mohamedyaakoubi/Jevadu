@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hackathon-memory"
+dynamic = ["version"]
+description = "A memory of Hedera hackathon projects, checked against the public ledger."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Mohamed Yaakoubi" }]
+# Versions were read from PyPI on 9 October 2026.
+# hiero-sdk-python is labelled "pre-alpha" by its authors, so it is pinned exactly.
+dependencies = [
+    "pydantic>=2.14,<3",
+    "pydantic-settings>=2.15,<3",
+    "requests>=2.34,<3",
+    "beautifulsoup4>=4.15,<5",
+    "lxml>=6.1,<7",
+    "psycopg[binary]>=3.3,<4",
+    "pgvector>=0.5,<0.6",
+    "hiero-sdk-python==0.2.10",
+    "google-genai>=2.29,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1,<10",
+    "ruff>=0.16,<0.17",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "hackathon_memory.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"hackathon_memory.db" = ["migrations/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: needs the local PostgreSQL that docker compose starts",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "proofs"]
+
+[tool.ruff.lint]
+# E, F: errors. I: import order. B: likely bugs. UP: old syntax.
+# S: security rules, because design rule 9 forbids secrets in code.
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may use assert, and may hold fake passwords that protect nothing.
+"tests/**" = ["S101", "S105", "S106"]

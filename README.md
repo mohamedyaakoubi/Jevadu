@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 9 October 2026:** design and documents only. No code yet. Everything below is the plan. This page will say plainly what works as soon as something does.
+> **State on 9 October 2026:** Phase A has started. The project setup, the settings, the local database and its migration runner exist and are tested. Nothing else works yet. Everything below, apart from those parts, is the plan. This page will say plainly what works as soon as something does.
 >
 > **Where the data comes from.** Every site was asked before any program reads it. ETHGlobal allowed its showcase in writing, for the projects with a Hedera prize. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
