@@ -67,6 +67,16 @@ class Settings(BaseSettings):
     gemini_search_model: str = Field("gemini-3.8-flash", json_schema_extra=_PUBLIC)
     gemini_search_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
 
+    # What the models may cost (finops). "test" is all the work before the tool is shown: the
+    # proofs, the tests, the first runs. "prod" is the tool while people use it. Each has its own
+    # budget in dollars, and a call that could go over it is not made. The defaults are small on
+    # purpose: about 70 project pages cost about 3 dollars with the two layers.
+    llm_environment: Literal["test", "prod"] = Field("test", json_schema_extra=_PUBLIC)
+    llm_budget_test_usd: float = Field(15.0, ge=0, json_schema_extra=_PUBLIC)
+    llm_budget_prod_usd: float = Field(30.0, ge=0, json_schema_extra=_PUBLIC)
+    llm_budget_prod_per_day_usd: float = Field(5.0, ge=0, json_schema_extra=_PUBLIC)
+    llm_budget_warn_percent: int = Field(80, ge=1, le=100, json_schema_extra=_PUBLIC)
+
     # The local PostgreSQL that Docker Compose starts
     postgres_user: str = Field("hackathon", json_schema_extra=_PUBLIC)
     postgres_password: SecretStr = SecretStr("")
@@ -83,6 +93,11 @@ class Settings(BaseSettings):
     collector_contact_email: SecretStr = SecretStr("")
     # One switch per site. "off" is the default: a collector runs only when it is turned on.
     collect_ethglobal: bool = Field(False, json_schema_extra=_PUBLIC)
+
+    @field_validator("llm_environment", mode="before")
+    @classmethod
+    def _environment_in_small_letters(cls, value: object) -> object:
+        return value.strip().lower() if isinstance(value, str) else value
 
     @field_validator("gemini_rewrite_thinking_level", "gemini_search_thinking_level", mode="before")
     @classmethod
