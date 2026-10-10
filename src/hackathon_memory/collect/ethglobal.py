@@ -18,8 +18,8 @@ code, with a test:
   people are visible only to a visitor who is signed in. The shape below has tripwires, so if a
   page ever shows a profile link, an avatar or a data key that holds people, the run stops
   (teamcut.py).
-* One run. A second run skips every page that is already saved, and makes no request at all
-  when nothing is missing.
+* One run. A second run skips every page that is already saved, and every page that an earlier
+  run read and did not keep. It makes no request at all when nothing is missing.
 * A stop switch: COLLECT_ETHGLOBAL in .env, read again before every request.
 
 What a project page looks like (3 real pages read on 10 October 2026, 2 of them winners of a
@@ -33,6 +33,7 @@ the name of the site, not a person.
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections.abc import Callable, Collection
 from dataclasses import asdict, dataclass, field
@@ -226,6 +227,8 @@ class RunSummary:
     # Pages that were NOT saved because text of the team part also stands elsewhere in them.
     pages_skipped_team_text: list[str] = field(default_factory=list)
     errors: list[dict[str, str]] = field(default_factory=list)
+    # Pages that an earlier run read and did not keep. They are not asked for a second time.
+    pages_not_kept_before: int = 0
     # Pages of the list that this run did not ask for, because it was told to read only some.
     pages_left_for_later: int = 0
     requests_made: int = 0
@@ -266,12 +269,15 @@ class EthGlobalCollector:
                 f"The page shape of {SITE} has not been checked against real pages yet. "
                 "No live run before that."
             )
+        not_kept_before = read_and_not_kept(self.runs_dir)
         summary = RunSummary(started_at=_now(), project_pages_planned=len(self.project_pages))
         asked = 0
         try:
             for url in self.project_pages:
                 if self.store.has(url):
                     summary.pages_already_saved += 1
+                elif url in not_kept_before:
+                    summary.pages_not_kept_before += 1
                 elif self.max_new_pages is not None and asked >= self.max_new_pages:
                     summary.pages_left_for_later += 1
                 else:
@@ -352,12 +358,46 @@ class EthGlobalCollector:
             raise StopCollecting(f"robots.txt of {SITE} does not allow this tool to read {url}")
 
     def _write_manifest(self, summary: RunSummary) -> None:
+        """One record for each run. A later run reads them, so none is written over or half."""
         self.runs_dir.mkdir(parents=True, exist_ok=True)
         stamp = summary.started_at.replace("-", "").replace(":", "")
-        path = self.runs_dir / f"{stamp}-ethglobal.json"
-        path.write_text(
+        path = self.runs_dir / f"{stamp}{RUN_RECORD_END}"
+        number = 2
+        while path.exists():  # two runs in the same second
+            path = self.runs_dir / f"{stamp}-{number}{RUN_RECORD_END}"
+            number += 1
+        temporary = path.with_name(path.name + ".part")
+        temporary.write_text(
             json.dumps(asdict(summary), indent=2) + "\n", encoding="utf-8", newline="\n"
         )
+        os.replace(temporary, path)
+
+
+RUN_RECORD_END = "-ethglobal.json"
+
+
+def read_and_not_kept(runs_dir: Path) -> set[str]:
+    """The pages that an earlier run asked for and did not keep, from the records of the runs.
+
+    A page with no Hedera prize, or a page that was not safe to save, is not asked for a second
+    time: the answer would be the same, and the site was promised that a page is read once. A
+    page that was missing or that failed is not in this set, so a later run tries it again.
+    A record that cannot be read refuses the run: it is not taken for an empty one.
+    """
+    pages: set[str] = set()
+    for record in sorted(runs_dir.glob(f"*{RUN_RECORD_END}")):
+        try:
+            data = json.loads(record.read_text(encoding="utf-8"))
+            for key in ("pages_without_hedera_prize", "pages_skipped_team_text"):
+                if not all(isinstance(page, str) for page in data[key]):
+                    raise ValueError("not a list of addresses")
+                pages.update(data[key])
+        except (OSError, ValueError, KeyError, TypeError):
+            raise CollectorRefused(
+                f"The record of an earlier run cannot be read: {record}. Repair it or move it "
+                "away. It may name pages that must not be asked for again."
+            ) from None
+    return pages
 
 
 def load_robots(client: PoliteClient, store: RawStore) -> RobotsRules:
@@ -464,9 +504,13 @@ def planned_pages(paths: DataPaths) -> PagePlan:
     return PagePlan(pages, len(by_hand), len(pages) - len(by_hand), tuple(notes))
 
 
-def requests_needed(project_pages: list[str], store: RawStore) -> int:
-    """How many requests a run would send: the pages that are not saved yet, and robots.txt."""
-    missing = sum(1 for page in project_pages if not store.has(page))
+def requests_needed(
+    project_pages: list[str], store: RawStore, not_kept_before: Collection[str] = ()
+) -> int:
+    """How many requests a run would send: robots.txt, and the pages that no run has read yet."""
+    missing = sum(
+        1 for page in project_pages if page not in not_kept_before and not store.has(page)
+    )
     if missing == 0:
         return 0
     return missing + (0 if store.has(ROBOTS_URL, ".txt") else 1)
@@ -530,8 +574,9 @@ def build_collector(
         identity, lambda url: is_allowed_url(url, named), paths, env_file=env_file, **client_options
     )
     store = RawStore(paths.raw_dir)
+    needed = requests_needed(project_pages, store, read_and_not_kept(paths.runs_dir))
     try:
-        needed, left = requests_needed(project_pages, store), client.count.left()
+        left = client.count.left()
     except StopCollecting as stop:
         raise CollectorRefused(str(stop)) from None
     if needed > left:
@@ -571,6 +616,7 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
     ]
     try:
         planned = planned_pages(paths)
+        not_kept_before = read_and_not_kept(paths.runs_dir)
     except CollectorRefused as refusal:
         lines.append(f"  {refusal}")
         return lines
@@ -580,12 +626,21 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
     )
     lines.extend(f"  {note}" for note in planned.notes)
     store = RawStore(paths.raw_dir)
+
+    def state(page: str) -> str:
+        if store.has(page):
+            return "saved"
+        return (
+            "read before and not kept: not asked for again"
+            if page in not_kept_before
+            else "to fetch"
+        )
+
     lines.append("It would read, in this order (robots.txt first, only if a page is missing):")
     lines.append(f"  {ROBOTS_URL}  ({'saved' if store.has(ROBOTS_URL, '.txt') else 'to fetch'})")
-    for page in pages:
-        lines.append(f"  {page}  ({'saved' if store.has(page) else 'to fetch'})")
+    lines.extend(f"  {page}  ({state(page)})" for page in pages)
     lines.append("  and nothing else. A page that shows no Hedera prize is read but not kept.")
-    lines.append(f"That is {requests_needed(pages, store)} request(s).")
+    lines.append(f"That is {requests_needed(pages, store, not_kept_before)} request(s).")
     return lines
 
 

@@ -20,6 +20,7 @@ from hackathon_memory.collect.ethglobal import (
     load_project_pages,
     plan,
     prize_sponsors,
+    read_and_not_kept,
     took_a_hedera_prize,
 )
 from hackathon_memory.collect.ethglobal_found import FoundList, PrizeProject, save_found
@@ -296,6 +297,75 @@ def test_a_page_that_is_not_kept_also_counts_as_a_page_of_the_part(tmp_path: Pat
     summary = collector.run()
     assert site.urls == [ROBOTS_URL, OTHER, WINNER]  # two pages were asked for, one was kept
     assert (summary.pages_saved, summary.pages_left_for_later) == (1, 1)
+
+
+def test_a_page_that_was_read_and_not_kept_is_never_asked_for_again(tmp_path: Path) -> None:
+    listed = (WINNER, OTHER, SECOND)
+    first, site, _ = make(tmp_path, pages(), listed=listed, max_new_pages=2)
+    summary = first.run()
+    assert site.urls == [ROBOTS_URL, WINNER, OTHER]
+    assert summary.pages_without_hedera_prize == [OTHER]
+
+    later, site, _ = make(tmp_path, pages(), listed=listed)
+    summary = later.run()
+    assert site.urls == [SECOND]  # the page with no Hedera prize is not read a second time
+    assert summary.pages_not_kept_before == 1
+    assert summary.pages_without_hedera_prize == []
+    assert (summary.pages_already_saved, summary.pages_saved) == (1, 1)
+
+    third, site, _ = make(tmp_path, pages(), listed=listed)
+    assert third.run().requests_made == 0  # and a third run still remembers it
+    assert site.seen == []
+
+
+def test_a_page_that_was_not_safe_to_save_is_not_asked_for_again(tmp_path: Path) -> None:
+    site_pages = pages(winner=unsafe_winner())
+    make(tmp_path, site_pages)[0].run()
+    later, site, _ = make(tmp_path, site_pages)
+    summary = later.run()
+    assert site.seen == []
+    assert (summary.pages_not_kept_before, summary.pages_already_saved) == (1, 1)
+
+
+def test_every_run_leaves_its_own_record(tmp_path: Path) -> None:
+    for _ in range(3):  # three runs in the same second
+        make(tmp_path, pages())[0].run()
+    records = sorted(p.name for p in (tmp_path / "runs").glob("*-ethglobal.json"))
+    assert len(records) == 3
+    assert not list((tmp_path / "runs").glob("*.part"))
+
+
+def test_a_record_of_an_earlier_run_that_cannot_be_read_refuses_the_run(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    (runs / "20261010T090000Z-ethglobal.json").write_text("{ half a record", encoding="utf-8")
+    collector, site, _ = make(tmp_path, pages())
+    with pytest.raises(CollectorRefused, match="record of an earlier run cannot be read"):
+        collector.run()
+    assert site.seen == []
+
+
+def test_the_record_of_a_walk_is_not_the_record_of_a_run(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    (runs / "20261010T090000Z-ethglobal-list.json").write_text('{"pages_read": 3}', "utf-8")
+    assert read_and_not_kept(runs) == set()
+    assert read_and_not_kept(tmp_path / "no-such-folder") == set()
+
+
+def test_the_plan_does_not_count_a_page_that_was_read_and_not_kept(tmp_path: Path) -> None:
+    folder = tmp_path / "by-hand" / "ethglobal.com"
+    folder.mkdir(parents=True)
+    (folder / "project-pages.txt").write_text(f"{WINNER}\n{OTHER}\n", encoding="utf-8")
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    record = {"pages_without_hedera_prize": [OTHER], "pages_skipped_team_text": []}
+    (runs / "20261010T090000Z-ethglobal.json").write_text(json.dumps(record), encoding="utf-8")
+
+    text = "\n".join(plan(_settings(tmp_path)))
+    assert f"{OTHER}  (read before and not kept: not asked for again)" in text
+    assert f"{WINNER}  (to fetch)" in text
+    assert "That is 2 request(s)." in text  # robots.txt and the one page that is left
 
 
 def test_a_part_of_a_run_is_one_page_or_more(tmp_path: Path) -> None:
