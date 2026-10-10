@@ -146,6 +146,15 @@ def test_one_search_has_a_cost_that_adds_its_calls() -> None:
     assert run.mean_usd == pytest.approx(2 * 0.002625 / 3)
 
 
+def test_a_job_with_items_is_not_counted_as_a_run() -> None:
+    # A job has a run id AND items: its unit is the item. Only a run with no item is a unit.
+    lines = [*ledger(), call(run_id="job-1", item_ref="p9"), call(run_id="job-1", item_ref="p10")]
+    built = report.build(lines, "test")
+    assert built.per_run is not None
+    assert built.per_run.units == 3  # still the three searches
+    assert built.per_item[0].units == 5  # the two pages of the job are items
+
+
 def test_a_ledger_with_no_item_and_no_run_has_no_unit_cost() -> None:
     built = report.build([call()], "test")
     assert built.per_item == []

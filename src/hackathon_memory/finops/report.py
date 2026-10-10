@@ -85,7 +85,7 @@ class Report:
     by_use: list[Group]  # purpose, model, thinking level
     by_day: list[tuple[date, int, float]]
     per_item: list[UnitCost]  # by purpose: the cost of one item (one project page)
-    per_run: UnitCost | None  # the cost of one run that has a run id (one search)
+    per_run: UnitCost | None  # the cost of one run that has no item (one search)
     dearest: list[Call] = field(default_factory=list)
 
 
@@ -152,7 +152,9 @@ def build(
         by_day[call.called_at.astimezone(UTC).date()].append(call)
         if call.item_ref is not None:
             items[call.purpose][call.item_ref].append(call)
-        if call.run_id is not None:
+        if call.run_id is not None and call.item_ref is None:
+            # A run with items is a job, and its unit is the item. A run with no item is
+            # its own unit: one search of a user.
             runs[call.run_id].append(call)
     per_item = [u for u in (_unit_cost(p, units) for p, units in sorted(items.items())) if u]
     dearest = sorted(
