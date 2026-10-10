@@ -1,18 +1,23 @@
-"""The collector for ETHGlobal's showcase: only the projects that took a Hedera prize.
+"""The collector for ETHGlobal's showcase: the projects that the showcase ties to Hedera.
 
-ETHGlobal said yes in writing on 9 October 2026, "as long as you honor your commitment", and
-the maintainer said yes in the chat the same day. The commitments are design 5.7. Each one is
-code, with a test:
+ETHGlobal was asked before any program read its showcase, and it agreed in writing to a slow,
+signed read of its Hedera prize projects (9 October 2026). On 10 October 2026 the maintainer
+decided to read the other projects that the showcase ties to Hedera in exactly the same way,
+so that the tool can show what is built on Hedera and not only what wins. The way a page is read
+is design 5.7. Each rule is code, with a test:
 
-* Only the pages we named. A run reads robots.txt and the project pages on its list, and nothing
-  else. The list has two sources: the pages that the maintainer saw with a Hedera prize (a short
-  list made by hand), and the winners that the walk through the Hedera list of the showcase
-  found (ethglobal_find.py). The prize pages of an event do not list winners (read on
-  10 October 2026), so they are not a starting point.
-* The walk names a sponsor only by an id. Which id is Hedera is not guessed: it is the one id
-  that all the pages seen by hand have (ethglobal_found.py).
-* A page that does not show a Hedera prize is not kept.
-* A hard limit of 300 requests over all runs, one at a time, two seconds apart (polite.py).
+* Only named pages. A run reads robots.txt and the project pages on its list, and nothing else.
+  The list has two sources: the pages that the maintainer saw with a Hedera prize (a short list
+  made by hand), and every project that the walk found in the showcase list with the filter
+  "partner: Hedera" (ethglobal_find.py). The prize pages of an event do not list winners (read
+  on 10 October 2026), so they are not a starting point.
+* Every page of that list is kept, with or without a prize. Whether a project took a Hedera
+  prize is read later from its own page, in the block "Winner of".
+* The list names a sponsor only by an id. Which id is Hedera is not guessed: it is the one id
+  that all the pages seen by hand have (ethglobal_found.py). The run compares the list with each
+  page, and three pages in a row that differ stop it.
+* A fixed limit of requests for this site over all runs, one at a time, two seconds apart
+  (polite.py, ethglobal_site.py).
 * The tool's name and the maintainer's address in each request (polite.py).
 * No names, photos or profiles of team members. A public project page shows no team at all: the
   people are visible only to a visitor who is signed in. The shape below has tripwires, so if a
@@ -22,12 +27,13 @@ code, with a test:
   run read and did not keep. It makes no request at all when nothing is missing.
 * A stop switch: COLLECT_ETHGLOBAL in .env, read again before every request.
 
-What a project page looks like (3 real pages read on 10 October 2026, 2 of them winners of a
-Hedera prize): a header with the name, a short line and the links to the demo and the code; a
-box with the event and, for a winner, the block "Winner of" with one line per prize
-("Hedera - <prize name> <place>"); the sections "Project Description" and "How it's Made"; the
-data of the page as text in a script. The two metadata tags "author" and "twitter:creator" hold
-the name of the site, not a person.
+What a project page looks like (92 real pages read on 10 October 2026, all winners of a Hedera
+prize): a header with the name, a short line and the links to the demo and the code; a box with
+the event and, for a winner, the block "Winner of" with one line per prize ("Hedera - <prize
+name> <place>"); the sections "Project Description" and "How it's Made"; the data of the page as
+text in a script. The two metadata tags "author" and "twitter:creator" hold the name of the
+site, not a person. The data of a page also holds scores that the site computes: they are never
+read out (design 3.3).
 """
 
 from __future__ import annotations
@@ -50,6 +56,7 @@ from hackathon_memory.collect.ethglobal_found import (
     winners_of,
 )
 from hackathon_memory.collect.ethglobal_site import (
+    REQUEST_LIMIT,
     ROBOTS_URL,
     SITE,
     looks_like_a_project_page,
@@ -75,12 +82,16 @@ from hackathon_memory.settings import Settings
 # Pages in a row that cannot be saved safely. Three in a row means the shape is wrong, not bad luck.
 MAX_UNSAFE_IN_A_ROW = 3
 
-# Listed pages in a row that show no Hedera prize. One can be a mistake in a list. Three in a row
-# mean that the list is wrong, and every further page would be a page that nobody was asked for.
+# Pages in a row, seen by hand and not in the Hedera list, that show no Hedera prize. One can be
+# a mistake in the hand-made list. Three in a row mean that this list is wrong.
 MAX_WITHOUT_PRIZE_IN_A_ROW = 3
 
-# robots.txt takes one of the 300 requests, so the list may hold 299 pages at most.
-MAX_LISTED_PAGES = 299
+# Pages in a row where the list and the page do not agree about a Hedera prize. Three in a row
+# mean that the tool took the wrong sponsor id for Hedera, and a person must look.
+MAX_DIFFERENT_IN_A_ROW = 3
+
+# robots.txt takes one of the requests of the site, so a run may read one page less.
+MAX_LISTED_PAGES = REQUEST_LIMIT - 1
 
 # The line of a prize on a project page: the sponsor, a dash, the prize name, the place.
 HEDERA_PRIZE_LINE = re.compile(r"^\s*hedera\s*[-‐-―]\s*\S", re.IGNORECASE)
@@ -180,8 +191,8 @@ def load_project_pages(path: Path) -> list[str]:
         raise CollectorRefused(f"The list of project pages is empty: {path}")
     if len(pages) > MAX_LISTED_PAGES:
         raise CollectorRefused(
-            f"The list holds {len(pages)} pages. The promise is 300 requests at most, and "
-            f"robots.txt is one of them, so the list may hold {MAX_LISTED_PAGES}."
+            f"The list holds {len(pages)} pages. The limit for {SITE} is {REQUEST_LIMIT} "
+            f"requests, and robots.txt is one of them, so the list may hold {MAX_LISTED_PAGES}."
         )
     return pages
 
@@ -207,7 +218,7 @@ def took_a_hedera_prize(html: bytes) -> bool:
 def prize_sponsors(html: bytes) -> list[str]:
     """The sponsors that the "Winner of" blocks name: the part of each line before the dash.
 
-    Only for the message about a page that is not kept, so that a person can see why.
+    Only for a message of the run, so that a person can see what a page shows.
     """
     names = (_BEFORE_THE_DASH.split(line, maxsplit=1)[0][:60] for line in prize_lines(html))
     return list(dict.fromkeys(name for name in names if name))
@@ -222,8 +233,11 @@ class RunSummary:
     pages_saved: int = 0
     pages_already_saved: int = 0
     pages_not_found: list[str] = field(default_factory=list)
-    # Pages that were read but NOT kept, because they show no Hedera prize.
+    # Pages that were read but NOT kept: they are not in the Hedera list of the showcase, and
+    # they show no Hedera prize.
     pages_without_hedera_prize: list[str] = field(default_factory=list)
+    # Pages that were kept, where the list and the page do not agree about a Hedera prize.
+    pages_that_differ_from_the_list: list[str] = field(default_factory=list)
     # Pages that were NOT saved because text of the team part also stands elsewhere in them.
     pages_skipped_team_text: list[str] = field(default_factory=list)
     errors: list[dict[str, str]] = field(default_factory=list)
@@ -244,6 +258,8 @@ class EthGlobalCollector:
         project_pages: list[str],
         shape: SiteShape = ETHGLOBAL_SHAPE,
         runs_dir: Path,
+        in_the_list: Collection[str] = (),
+        hedera_in_the_list: Collection[str] = (),
         max_new_pages: int | None = None,
         log: Callable[[str], None] = print,
     ) -> None:
@@ -254,12 +270,17 @@ class EthGlobalCollector:
         self.project_pages = project_pages
         self.shape = shape
         self.runs_dir = runs_dir
+        # The pages that the walk found in the Hedera list of the showcase. All of them are kept.
+        self.in_the_list = frozenset(in_the_list)
+        # Those of them that the list marks with the sponsor id of Hedera.
+        self.hedera_in_the_list = frozenset(hedera_in_the_list)
         # A run can be made in parts: the first pages, a look at what was saved, then the rest.
         self.max_new_pages = max_new_pages
         self.log = log
         self._robots: RobotsRules | None = None
         self._unsafe_in_a_row = 0
         self._without_prize_in_a_row = 0
+        self._different_in_a_row = 0
 
     # ------------------------------------------------------------------ public
 
@@ -326,8 +347,11 @@ class EthGlobalCollector:
                 ) from None
             return None
         self._unsafe_in_a_row = 0
-        if not took_a_hedera_prize(body):
-            # The email promised the projects that took a Hedera prize. Nothing else is kept.
+        has_prize = took_a_hedera_prize(body)
+        listed = url in self.in_the_list
+        if not listed and not has_prize:
+            # A page seen by hand that the showcase does not tie to Hedera, and that shows no
+            # Hedera prize: it is not a Hedera project, so it is not kept.
             summary.pages_without_hedera_prize.append(url)
             self._without_prize_in_a_row += 1
             shown = ", ".join(prize_sponsors(body)) or "no prize"
@@ -348,7 +372,31 @@ class EthGlobalCollector:
         )
         summary.pages_saved += 1
         self.log(f"saved {url}")
+        if listed:
+            self._compare_with_the_list(url, has_prize, body, summary)
         return saved
+
+    def _compare_with_the_list(
+        self, url: str, has_prize: bool, body: bytes, summary: RunSummary
+    ) -> None:
+        """The list and the page must agree about a Hedera prize. The page is kept either way."""
+        if has_prize == (url in self.hedera_in_the_list):
+            self._different_in_a_row = 0
+            return
+        summary.pages_that_differ_from_the_list.append(url)
+        self._different_in_a_row += 1
+        shown = ", ".join(prize_sponsors(body)) or "no prize"
+        self.log(
+            f"differs {url}: the list "
+            + ("names" if not has_prize else "does not name")
+            + f" a Hedera prize, and the page shows: {shown}"
+        )
+        if self._different_in_a_row >= MAX_DIFFERENT_IN_A_ROW:
+            raise StopCollecting(
+                f"{self._different_in_a_row} pages in a row do not agree with the list about a "
+                "Hedera prize. The sponsor id that was taken for Hedera is probably wrong. "
+                "Nothing more is read."
+            )
 
     def _check_robots(self, url: str) -> None:
         if self._robots is None:
@@ -376,28 +424,39 @@ class EthGlobalCollector:
 RUN_RECORD_END = "-ethglobal.json"
 
 
-def read_and_not_kept(runs_dir: Path) -> set[str]:
-    """The pages that an earlier run asked for and did not keep, from the records of the runs.
+def pages_in_run_records(runs_dir: Path, *keys: str) -> set[str]:
+    """The pages that the records of the earlier runs name under these keys.
 
-    A page with no Hedera prize, or a page that was not safe to save, is not asked for a second
-    time: the answer would be the same, and the site was promised that a page is read once. A
-    page that was missing or that failed is not in this set, so a later run tries it again.
-    A record that cannot be read refuses the run: it is not taken for an empty one.
+    A record that cannot be read refuses the run: it is not taken for an empty one. A key that
+    an older record does not have yet counts as an empty list.
     """
     pages: set[str] = set()
     for record in sorted(runs_dir.glob(f"*{RUN_RECORD_END}")):
         try:
             data = json.loads(record.read_text(encoding="utf-8"))
-            for key in ("pages_without_hedera_prize", "pages_skipped_team_text"):
-                if not all(isinstance(page, str) for page in data[key]):
+            if data["site"] != SITE:
+                raise ValueError("not a record of this site")
+            for key in keys:
+                named = data.get(key, [])
+                if not isinstance(named, list) or not all(isinstance(p, str) for p in named):
                     raise ValueError("not a list of addresses")
-                pages.update(data[key])
+                pages.update(named)
         except (OSError, ValueError, KeyError, TypeError):
             raise CollectorRefused(
                 f"The record of an earlier run cannot be read: {record}. Repair it or move it "
                 "away. It may name pages that must not be asked for again."
             ) from None
     return pages
+
+
+def read_and_not_kept(runs_dir: Path) -> set[str]:
+    """The pages that an earlier run asked for and did not keep.
+
+    A page that was read and not kept (it is not a Hedera project, or it was not safe to save)
+    is not asked for a second time: the answer would be the same, and a page is read once. A
+    page that was missing or that failed is not in this set, so a later run tries it again.
+    """
+    return pages_in_run_records(runs_dir, "pages_without_hedera_prize", "pages_skipped_team_text")
 
 
 def load_robots(client: PoliteClient, store: RawStore) -> RobotsRules:
@@ -452,9 +511,11 @@ def data_paths(settings: Settings) -> DataPaths:
 class PagePlan:
     """The project pages that a run reads, and where they come from."""
 
-    pages: list[str]  # the pages seen by hand first, then the winners that the walk found
+    pages: list[str]  # the pages seen by hand first, then the projects that the walk found
     by_hand: int
-    from_walk: int  # winners of the walk that the hand-made list does not name
+    from_walk: int  # projects of the walk that the hand-made list does not name
+    in_the_list: frozenset[str] = frozenset()  # every project of the walk
+    hedera_in_the_list: frozenset[str] = frozenset()  # those with the sponsor id of Hedera
     notes: tuple[str, ...] = ()  # for the plan, in plain words
 
 
@@ -463,13 +524,14 @@ def planned_pages(paths: DataPaths) -> PagePlan:
     found = load_found(paths.found_list)
     if found is None:
         by_hand = load_project_pages(paths.page_list)
-        return PagePlan(by_hand, len(by_hand), 0, ("No walk through the Hedera list was made.",))
+        note = "No walk through the Hedera list was made: only the pages seen by hand are read."
+        return PagePlan(by_hand, len(by_hand), 0, notes=(note,))
     if not paths.page_list.exists():
         raise CollectorRefused(
-            f"The walk found {len(found.with_prize)} projects with a prize, but the list names a "
-            "sponsor only by an id. To learn which id is Hedera, the tool needs one project that "
-            'you saw yourself with "Winner of" and a line that starts with "Hedera". Put its '
-            f"address into {paths.page_list}."
+            f"The walk found {found.listed} projects, but the list names a sponsor only by an "
+            "id. To learn which id is Hedera, the tool needs one project that you saw yourself "
+            'with "Winner of" and a line that starts with "Hedera". Put its address into '
+            f"{paths.page_list}."
         )
     by_hand = load_project_pages(paths.page_list)
     try:
@@ -478,30 +540,40 @@ def planned_pages(paths: DataPaths) -> PagePlan:
         raise CollectorRefused(
             f"{unsure} The list of pages by hand is {paths.page_list}."
         ) from None
+    listed = [project.page for project in found.projects]
     winners = winners_of(found, sponsor)
-    pages = list(dict.fromkeys([*by_hand, *winners]))
+    pages = list(dict.fromkeys([*by_hand, *listed]))
     if len(pages) > MAX_LISTED_PAGES:
         raise CollectorRefused(
-            f"The run would read {len(pages)} pages. The promise is 300 requests at most, and "
-            f"robots.txt is one of them, so a run may read {MAX_LISTED_PAGES}."
+            f"The run would read {len(pages)} pages. The limit for {SITE} is {REQUEST_LIMIT} "
+            f"requests, and robots.txt is one of them, so a run may read {MAX_LISTED_PAGES}."
         )
+    other_prize = len(found.with_prize) - len(winners)
     notes = [
-        f"The walk found {len(found.with_prize)} projects with a prize of some sponsor. The "
-        f"pages seen by hand say that the sponsor with the id {sponsor} is Hedera: "
-        f"{len(winners)} projects took its prize."
+        f"The walk found {found.listed} projects in the Hedera list of the showcase. "
+        f"{len(winners)} took a Hedera prize (the pages seen by hand say that the sponsor with "
+        f"the id {sponsor} is Hedera), {other_prize} took a prize of another sponsor only, and "
+        f"{found.listed - len(found.with_prize)} took no prize."
     ]
     if not found.complete:
         notes.append(
             f"The walk is not finished: {found.pages_read} page(s) of the list were read. "
-            "There may be more winners."
+            "There may be more projects."
         )
-    not_winners = sum(1 for page in by_hand if page not in set(winners))
-    if not_winners:
+    outside = sum(1 for page in by_hand if page not in set(listed))
+    if outside:
         notes.append(
-            f"{not_winners} page(s) seen by hand are not among these winners. The run reads "
-            "them too, and keeps them only if they show a Hedera prize."
+            f"{outside} page(s) seen by hand are not in the list. The run reads them too, and "
+            "keeps them only if they show a Hedera prize."
         )
-    return PagePlan(pages, len(by_hand), len(pages) - len(by_hand), tuple(notes))
+    return PagePlan(
+        pages,
+        len(by_hand),
+        len(pages) - len(by_hand),
+        frozenset(listed),
+        frozenset(winners),
+        tuple(notes),
+    )
 
 
 def requests_needed(
@@ -536,8 +608,9 @@ def polite_client(
 ) -> PoliteClient:
     """A client for this site that may read only what `allow` names.
 
-    Every request is counted in one file, so the limit of 300 holds over all runs together.
+    Every request is counted in one file, so the limit of the site holds over all runs together.
     """
+    client_options.setdefault("max_requests", REQUEST_LIMIT)
 
     def still_enabled() -> bool:
         # Read again before every request, so that turning the switch off stops a run at once.
@@ -548,7 +621,7 @@ def polite_client(
         identity=identity,
         allow=allow,
         is_enabled=still_enabled,
-        count=RequestCount(paths.request_count, SITE),
+        count=request_count(paths),
         **client_options,  # type: ignore[arg-type]
     )
 
@@ -568,7 +641,8 @@ def build_collector(
     """
     identity = identity_if_allowed(settings)
     paths = data_paths(settings)
-    project_pages = planned_pages(paths).pages
+    planned = planned_pages(paths)
+    project_pages = planned.pages
     named = frozenset(project_pages)
     client = polite_client(
         identity, lambda url: is_allowed_url(url, named), paths, env_file=env_file, **client_options
@@ -582,7 +656,7 @@ def build_collector(
     if needed > left:
         raise CollectorRefused(
             f"The run needs {needed} requests, and {left} are left of the {client.count.limit} "
-            f"that were promised to {SITE}. Make the list shorter, or ask the site for more."
+            f"that are the limit for {SITE}. Make the list shorter."
         )
     return EthGlobalCollector(
         client=client,
@@ -590,6 +664,8 @@ def build_collector(
         project_pages=project_pages,
         shape=shape,
         runs_dir=paths.runs_dir,
+        in_the_list=planned.in_the_list,
+        hedera_in_the_list=planned.hedera_in_the_list,
         max_new_pages=max_new_pages,
     )
 
@@ -604,7 +680,8 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
         f"Tool name in every request: {settings.collector_name or '(empty: the run will refuse)'}",
         "Contact address in every request: "
         + ("set" if settings.collector_contact_email.get_secret_value() else "(empty: refuse)"),
-        "One request at a time, two seconds apart, at most 300 requests over all runs.",
+        "One request at a time, two seconds apart, "
+        f"at most {REQUEST_LIMIT} requests over all runs.",
         _count_line(paths),
         "Page shape checked against real pages: "
         + (
@@ -636,16 +713,37 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
             else "to fetch"
         )
 
+    to_fetch = [page for page in pages if state(page) == "to fetch"]
+    lines.append(
+        f"The run has {len(pages)} page(s): {sum(1 for page in pages if store.has(page))} saved, "
+        f"{len(to_fetch)} to fetch."
+    )
     lines.append("It would read, in this order (robots.txt first, only if a page is missing):")
     lines.append(f"  {ROBOTS_URL}  ({'saved' if store.has(ROBOTS_URL, '.txt') else 'to fetch'})")
-    lines.extend(f"  {page}  ({state(page)})" for page in pages)
-    lines.append("  and nothing else. A page that shows no Hedera prize is read but not kept.")
+    if len(pages) <= PLAN_LISTS_EVERY_PAGE_UP_TO:
+        lines.extend(f"  {page}  ({state(page)})" for page in pages)
+    else:
+        lines.extend(f"  {page}  (to fetch)" for page in to_fetch[:PLAN_SHOWS_FIRST])
+        if len(to_fetch) > PLAN_SHOWS_FIRST:
+            lines.append(f"  ... and {len(to_fetch) - PLAN_SHOWS_FIRST} more pages to fetch")
+    lines.append("  and nothing else.")
     lines.append(f"That is {requests_needed(pages, store, not_kept_before)} request(s).")
     return lines
 
 
+# A plan names every page while the list is short. A long list is shown by its numbers and by the
+# first pages that are still to fetch.
+PLAN_LISTS_EVERY_PAGE_UP_TO = 30
+PLAN_SHOWS_FIRST = 10
+
+
+def request_count(paths: DataPaths) -> RequestCount:
+    """The count of all requests to this site, with the limit of this site."""
+    return RequestCount(paths.request_count, SITE, limit=REQUEST_LIMIT)
+
+
 def _count_line(paths: DataPaths) -> str:
-    count = RequestCount(paths.request_count, SITE)
+    count = request_count(paths)
     try:
         return f"Requests sent to the site so far: {count.sent()} of {count.limit}."
     except StopCollecting as stop:

@@ -23,13 +23,14 @@ from fakes import (
 from hackathon_memory.collect import __main__ as cli
 from hackathon_memory.collect.ethglobal import ROBOTS_URL, is_allowed_url
 from hackathon_memory.collect.ethglobal_find import ListWalker, build_walker, walk_plan
-from hackathon_memory.collect.ethglobal_found import FoundList, PrizeProject, load_found
+from hackathon_memory.collect.ethglobal_found import FoundList, FoundProject, load_found
 from hackathon_memory.collect.ethglobal_list import is_list_url
 from hackathon_memory.collect.polite import CollectorIdentity, CollectorRefused, PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.settings import Settings
 
 PAGE_2 = LIST + "&page=2"
+SHOWCASE = "https://ethglobal.com/showcase/"
 PAGE_3 = LIST + "&page=3"
 CONTACT = "maintainer@example.test"
 
@@ -109,38 +110,17 @@ def test_a_walk_reads_the_list_to_its_last_page_and_keeps_the_projects_with_a_pr
     assert found.complete is True
     assert found.pages_read == 3
     assert found.listed_by_event == {"ETHGlobal Sample Event": 5, "ETHGlobal Other Event": 1}
-    assert found.with_prize == [
-        PrizeProject(
-            "https://ethglobal.com/showcase/pebble-pay-x1y2z",
-            "ETHGlobal Sample Event",
-            (HEDERA_ID,),
-            1,
-        ),
-        PrizeProject(
-            "https://ethglobal.com/showcase/cedar-lens-k9l8m",
-            "ETHGlobal Sample Event",
-            (OTHER_ID,),
-            1,
-        ),
-        PrizeProject(
-            "https://ethglobal.com/showcase/quartz-notes-q3w4e",
-            "ETHGlobal Other Event",
-            (OTHER_ID, HEDERA_ID),
-            2,
-        ),
-        PrizeProject(
-            "https://ethglobal.com/showcase/eel-ledger-j5k6l",
-            "ETHGlobal Sample Event",
-            (HEDERA_ID,),
-            2,  # named once, by the first page that showed it
-        ),
-        PrizeProject(
-            "https://ethglobal.com/showcase/fig-registry-u7y6t",
-            "ETHGlobal Sample Event",
-            (HEDERA_ID,),
-            3,
-        ),
+    sample_event, other_event = "ETHGlobal Sample Event", "ETHGlobal Other Event"
+    assert found.projects == [
+        FoundProject(SHOWCASE + "pebble-pay-x1y2z", sample_event, (HEDERA_ID,), 1),
+        FoundProject(SHOWCASE + "cedar-lens-k9l8m", sample_event, (OTHER_ID,), 1),
+        FoundProject(SHOWCASE + "dune-notes-p0o9i", sample_event, (), 1),  # no prize: kept too
+        FoundProject(SHOWCASE + "quartz-notes-q3w4e", other_event, (OTHER_ID, HEDERA_ID), 2),
+        # named once, by the first page that showed it
+        FoundProject(SHOWCASE + "eel-ledger-j5k6l", sample_event, (HEDERA_ID,), 2),
+        FoundProject(SHOWCASE + "fig-registry-u7y6t", sample_event, (HEDERA_ID,), 3),
     ]
+    assert len(found.with_prize) == 5
 
 
 def test_every_request_of_a_walk_carries_the_name_and_the_address(tmp_path: Path) -> None:
@@ -161,10 +141,11 @@ def test_a_walk_saves_no_page_of_the_list_and_no_text_of_a_project(tmp_path: Pat
     for path in tmp_path.rglob("*"):
         if path.is_file() and "raw" not in path.parts:  # raw holds robots.txt only
             text = path.read_text(encoding="utf-8")
-            for kept_out in ("invented short line", "Pebble Pay", "Dune Notes", "dune-notes"):
+            for kept_out in ("invented short line", "Pebble Pay", "Dune Notes", "cdn.example"):
                 assert kept_out not in text, path.name
-    # A project without a prize leaves only a count: its address is not kept.
-    assert "dune-notes" not in (tmp_path / "found" / "hedera-list.json").read_text(encoding="utf-8")
+    # A project without a prize is kept too: its address, its event and no sponsor.
+    found_text = (tmp_path / "found" / "hedera-list.json").read_text(encoding="utf-8")
+    assert "dune-notes-p0o9i" in found_text
 
 
 def test_the_walk_leaves_a_record_with_counts_only(tmp_path: Path) -> None:
@@ -350,7 +331,7 @@ def test_a_file_of_the_walk_that_cannot_be_read_is_not_taken_for_an_empty_one(
     path = tmp_path / "found" / "hedera-list.json"
     path.parent.mkdir(parents=True)
     path.write_text(
-        '{"format": 1, "site": "ethglobal.com", "pages_read": "many"}', encoding="utf-8"
+        '{"format": 2, "site": "ethglobal.com", "pages_read": "many"}', encoding="utf-8"
     )
     walker, site, _ = make(tmp_path, the_list())
     with pytest.raises(CollectorRefused, match="cannot be read"):

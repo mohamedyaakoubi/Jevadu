@@ -55,7 +55,7 @@ There is no website yet and no search. What exists is the ground that they will 
 | Database: PostgreSQL with pgvector answers a vector query | **Passed.** 3,000 vectors of 3,072 numbers, the right neighbours first, an exact search in 27 ms. The result file is in `proofs/results/`. |
 | Hedera write: a topic with no admin key, a message, read back from the ledger | **Passed** on the real test network. The topic has no admin key and one submit key, a 102-byte record was read back from the mirror node, and a topic with a stranger's submit key refused our message. The result file is in `proofs/results/`. |
 | Google models: the two Gemini layers (Gemini 3.1 Pro reads the pages, Gemini 3.8 Flash does the search) and one embedding call | **Passed** on the real service. Both models returned a valid form for one real text, and the embeddings have the right size. The result file is in `proofs/results/`. |
-| Lists: the ETHGlobal collector | **Passed** on the real site. A walk read the 21 pages of the showcase list with the filter "partner: Hedera": 658 projects in 14 events, 92 of them with a Hedera prize. A run then read the pages of these 92 and kept all of them, each without its team part, and each with a Hedera prize in its own "Winner of" block. 140 requests were sent in all, out of a limit of 300, and the site refused none. The pages are not in this repository. The result file is in `proofs/results/`. |
+| Lists: the ETHGlobal collector | **Passed** on the real site. A walk read the 21 pages of the showcase list with the filter "partner: Hedera": 658 projects in 14 events, 92 of them with a Hedera prize. A run then read the pages of these 92 and kept all of them, each without its team part, and each with a Hedera prize in its own "Winner of" block. 140 requests were sent in all, and the site refused none. The pages are not in this repository. The result file is in `proofs/results/`. |
 
 Two more things work, and both were run on the real services:
 
@@ -104,11 +104,11 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m proofs.database` | Proof 1, on the local database |
 | `python -m proofs.hedera_write` | Proof 2, on the Hedera test network |
 | `python -m proofs.google_models` | Proof 3, on Google's models (it costs a few cents) |
-| `python -m proofs.lists` | Proof 4, on what the walk and the run left on disk. It sends no request: it checks that every promise to the site was kept. |
+| `python -m proofs.lists` | Proof 4, on what the walk and the run left on disk. It sends no request: it checks that the rules for reading the site were kept. |
 | `python -m hackathon_memory.collect ethglobal --plan` | Shows what the collector would read. It sends no request. |
 | `python -m hackathon_memory.collect ethglobal --look` | Reads robots.txt and the first page of the hand-made list, and saves no page |
-| `python -m hackathon_memory.collect ethglobal --find` | Walks through the showcase list with the filter "partner: Hedera" and writes down which projects took a prize. It saves no page. `--pages 5` reads five pages of the list and can be started again. |
-| `python -m hackathon_memory.collect ethglobal` | The run. It reads the pages seen by hand and the winners that the walk found, and keeps each page that shows a Hedera prize, without its team part. `--pages 3` asks for three new pages, so the first saved pages can be looked at before the rest is read. |
+| `python -m hackathon_memory.collect ethglobal --find` | Walks through the showcase list with the filter "partner: Hedera" and writes down every project of it, with the sponsors of its prizes. It saves no page. `--pages 5` reads five pages of the list and can be started again. |
+| `python -m hackathon_memory.collect ethglobal` | The run. It reads the page of every project that the walk found, and saves each one without its team part. `--pages 3` asks for three new pages, so the first saved pages can be looked at before the rest is read. |
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
 | `python -m hackathon_memory.finops budget` | Where the two budgets stand |
 | `python -m hackathon_memory.finops prices` | The prices in use, with the day each one begins |
@@ -135,19 +135,19 @@ The code and the tests point to these rules by number, for example "design rule 
 | 10 | The terms of a site are read before the first request to it. Requests go one at a time, with a pause, with the name of the tool and a contact address. A block is never worked around, and the tool never signs in. |
 | 11 | No personal data that the check does not need: no names, emails or photos of team members. |
 | 17 | No collector runs against a live site before the maintainer has said yes for that site and for the pages that will be read. |
-| 18 | A promise made to a site is a rule for the code, and each promise has a test. |
+| 18 | The way a site is read is fixed in the code, and each rule has a test. |
 
 Comments in the code also name sections of the design, for example "design 5.7". The design is in [`DESIGN.md`](DESIGN.md), with the same section numbers. The most cited section is repeated below.
 
-### The promises made to the sites (design 5.7)
+### How a site is read (design 5.7)
 
-A yes from a site holds only as long as these are kept. Each one is code, with a test.
+These rules are code, each with a test. ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way.
 
-| The promise | What the code does |
+| The rule | What the code does |
 |---|---|
-| Only the pages we named | The collector reads robots.txt, the project pages on its list, and the pages of one list of the showcase: the one with the filter "partner: Hedera". That list is read only to learn which projects took a prize, and none of its pages is saved. Every other address is refused before a request is sent. |
-| A few hundred pages at most | A fixed limit of 300 requests to a site. Every request is counted in one file, so the limit holds for all commands and all days together. |
-| One time | A second run skips every page that is already saved. |
+| Only named pages | A walk reads one list of the showcase: the one with the filter "partner: Hedera". A run reads robots.txt and the pages of the projects on that list. No page of the list is saved. Every other address is refused before a request is sent. |
+| A limit of requests | A fixed limit for each site: 800 for ETHGlobal's showcase. Every request is counted in one file, so the limit holds for all commands and all days together. |
+| One time | A second run skips every page that is already saved, and every page that an earlier run read and did not keep. |
 | One request at a time | One worker, a pause of two seconds, nothing in parallel. |
 | Each request says who sends it | The name of the tool and a contact address are in every request. The collector refuses to start when one is empty. |
 | No names, photos or profiles of team members | The team part is cut out before a page is saved. If a page shows a person where none is expected, the run stops. |

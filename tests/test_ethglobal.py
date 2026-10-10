@@ -18,12 +18,13 @@ from hackathon_memory.collect.ethglobal import (
     build_collector,
     is_allowed_url,
     load_project_pages,
+    pages_in_run_records,
     plan,
     prize_sponsors,
     read_and_not_kept,
     took_a_hedera_prize,
 )
-from hackathon_memory.collect.ethglobal_found import FoundList, PrizeProject, save_found
+from hackathon_memory.collect.ethglobal_found import FoundList, FoundProject, save_found
 from hackathon_memory.collect.polite import CollectorIdentity, CollectorRefused, PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.settings import Settings
@@ -345,6 +346,27 @@ def test_a_record_of_an_earlier_run_that_cannot_be_read_refuses_the_run(tmp_path
     assert site.seen == []
 
 
+def test_a_record_of_another_site_or_with_something_else_than_addresses_is_refused(
+    tmp_path: Path,
+) -> None:
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    record = runs / "20261010T090000Z-ethglobal.json"
+    for content in (
+        {"site": "example.com", "pages_without_hedera_prize": [], "pages_skipped_team_text": []},
+        {"pages_without_hedera_prize": [], "pages_skipped_team_text": []},
+        {"site": "ethglobal.com", "pages_without_hedera_prize": [7]},
+        {"site": "ethglobal.com", "pages_skipped_team_text": "all"},
+    ):
+        record.write_text(json.dumps(content), encoding="utf-8")
+        with pytest.raises(CollectorRefused, match="cannot be read"):
+            read_and_not_kept(runs)
+    # A key that an older record does not have yet counts as an empty list.
+    record.write_text(json.dumps({"site": "ethglobal.com"}), encoding="utf-8")
+    assert read_and_not_kept(runs) == set()
+    assert pages_in_run_records(runs, "pages_not_found") == set()
+
+
 def test_the_record_of_a_walk_is_not_the_record_of_a_run(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     runs.mkdir()
@@ -359,7 +381,11 @@ def test_the_plan_does_not_count_a_page_that_was_read_and_not_kept(tmp_path: Pat
     (folder / "project-pages.txt").write_text(f"{WINNER}\n{OTHER}\n", encoding="utf-8")
     runs = tmp_path / "runs"
     runs.mkdir()
-    record = {"pages_without_hedera_prize": [OTHER], "pages_skipped_team_text": []}
+    record = {
+        "site": "ethglobal.com",
+        "pages_without_hedera_prize": [OTHER],
+        "pages_skipped_team_text": [],
+    }
     (runs / "20261010T090000Z-ethglobal.json").write_text(json.dumps(record), encoding="utf-8")
 
     text = "\n".join(plan(_settings(tmp_path)))
@@ -635,7 +661,7 @@ def test_the_built_collector_may_read_the_listed_pages_only(tmp_path: Path) -> N
     assert not collector.client.allow(A_PRIZE_PAGE)
 
 
-# --------------------------------------------------------------------- the winners of the walk
+# --------------------------------------------------------------------- the projects of the walk
 
 
 def _write_walk(tmp_path: Path, *projects: tuple[str, tuple[str, ...]], complete: bool = True):
@@ -644,33 +670,137 @@ def _write_walk(tmp_path: Path, *projects: tuple[str, tuple[str, ...]], complete
         updated_at="2026-10-10T09:01:00Z",
         pages_read=2,
         complete=complete,
-        listed_by_event={"ETHGlobal Sample Event": 40},
-        with_prize=[
-            PrizeProject(page, "ETHGlobal Sample Event", sponsors, 1) for page, sponsors in projects
+        projects=[
+            FoundProject(page, "ETHGlobal Sample Event", sponsors, 1) for page, sponsors in projects
         ],
     )
     save_found(tmp_path / "found" / "ethglobal.com" / "hedera-list.json", found)
 
 
+# What the Hedera list of the invented site holds: two winners of a Hedera prize, one project
+# with a prize of another sponsor, and one with no prize.
 WALK = (
-    (SECOND, (HEDERA_ID,)),
-    (OTHER, (OTHER_ID,)),  # a prize of another sponsor
-    (WINNER, (OTHER_ID, HEDERA_ID)),
-    (PERSON, (HEDERA_ID,)),
+    (WINNER, (HEDERA_ID,)),
+    (SECOND, (OTHER_ID, HEDERA_ID)),
+    (OTHER, (OTHER_ID,)),
+    (NO_PRIZE, ()),
 )
 
 
-def test_a_run_reads_the_pages_seen_by_hand_and_then_the_winners_of_the_walk(
+def test_a_run_reads_the_pages_seen_by_hand_and_then_every_project_of_the_walk(
     tmp_path: Path,
 ) -> None:
     _write_page_list(tmp_path)  # one page seen by hand: WINNER
-    _write_walk(tmp_path, *WALK[:1], (WINNER, (HEDERA_ID,)), *WALK[1:2], WALK[3])
+    _write_walk(tmp_path, WALK[1], WALK[0], *WALK[2:])
     collector = build_collector(_settings(tmp_path))
-    assert collector.project_pages == [WINNER, SECOND, PERSON]
-    assert collector.client.allow(SECOND)
-    assert not collector.client.allow(OTHER)  # it took a prize, but not one of Hedera
-    assert not collector.client.allow(NO_PRIZE)
+    assert collector.project_pages == [WINNER, SECOND, OTHER, NO_PRIZE]
+    assert collector.in_the_list == {WINNER, SECOND, OTHER, NO_PRIZE}
+    assert collector.hedera_in_the_list == {WINNER, SECOND}
+    for page in (WINNER, SECOND, OTHER, NO_PRIZE):
+        assert collector.client.allow(page)
+    assert not collector.client.allow(PERSON)  # a project that the list does not name
     assert not collector.client.allow("https://ethglobal.com/showcase?partners=hedera")
+
+
+def listed_run(tmp_path: Path, site_pages: dict[str, Reply], listed: tuple[str, ...], **options):
+    """A run on a list that the walk found: WINNER and SECOND took a Hedera prize in the list."""
+    collector, site, fake_time = make(tmp_path, site_pages, listed=listed, **options)
+    collector.in_the_list = frozenset(listed)
+    collector.hedera_in_the_list = frozenset({WINNER, SECOND}) & frozenset(listed)
+    return collector, site, fake_time
+
+
+def test_every_page_of_the_list_is_kept_with_or_without_a_prize(tmp_path: Path) -> None:
+    listed = (WINNER, OTHER, NO_PRIZE, SECOND)
+    collector, site, _ = listed_run(tmp_path, pages(), listed)
+    summary = collector.run()
+    assert site.urls == [ROBOTS_URL, *listed]
+    assert summary.pages_saved == 4
+    assert summary.pages_without_hedera_prize == []  # nothing was read and dropped
+    assert summary.pages_that_differ_from_the_list == []
+    assert summary.stopped is None
+    for page in listed:
+        assert collector.store.has(page)
+    kept = collector.store.load(NO_PRIZE)
+    assert kept is not None
+    assert not took_a_hedera_prize(kept.read())  # the page itself says that it took no prize
+
+
+def test_many_pages_with_no_prize_in_a_row_do_not_stop_a_run_on_the_list(tmp_path: Path) -> None:
+    plain = [f"https://ethglobal.com/showcase/plain-{i}" for i in range(6)]
+    site_pages = pages() | {url: page(sample("project_no_prize.html")) for url in plain}
+    collector, _, _ = listed_run(tmp_path, site_pages, (*plain, WINNER))
+    summary = collector.run()
+    assert summary.stopped is None
+    assert summary.pages_saved == 7
+
+
+def test_a_page_that_differs_from_the_list_is_kept_and_noted(tmp_path: Path) -> None:
+    # The list names a Hedera prize for SECOND, and its page shows another sponsor's prize.
+    site_pages = pages(second=page(sample("project_other_sponsor.html")))
+    said: list[str] = []
+    collector, _, _ = listed_run(tmp_path, site_pages, (WINNER, SECOND, OTHER))
+    collector.log = said.append
+    summary = collector.run()
+    assert summary.pages_that_differ_from_the_list == [SECOND]
+    assert summary.pages_saved == 3  # it is a project of the list, so it is kept
+    assert summary.stopped is None
+    assert (
+        f"differs {SECOND}: the list names a Hedera prize, and the page shows: Other Sponsor"
+        in said
+    )
+
+
+def test_a_page_with_a_hedera_prize_that_the_list_does_not_name_is_noted_too(
+    tmp_path: Path,
+) -> None:
+    said: list[str] = []
+    collector, _, _ = listed_run(tmp_path, pages(other=winner("Cedar Lens")), (WINNER, OTHER))
+    collector.log = said.append
+    summary = collector.run()
+    assert summary.pages_that_differ_from_the_list == [OTHER]
+    assert any(line.startswith(f"differs {OTHER}: the list does not name") for line in said)
+
+
+def test_three_pages_in_a_row_that_differ_from_the_list_stop_the_run(tmp_path: Path) -> None:
+    # The tool took the wrong sponsor id for Hedera: the winners of the list show no Hedera prize.
+    wrong = [f"https://ethglobal.com/showcase/wrong-{i}" for i in range(4)]
+    site_pages = pages() | {url: page(sample("project_other_sponsor.html")) for url in wrong}
+    collector, site, _ = make(tmp_path, site_pages, listed=(*wrong, WINNER))
+    collector.in_the_list = frozenset((*wrong, WINNER))
+    collector.hedera_in_the_list = frozenset(wrong)
+    summary = collector.run()
+    assert site.urls == [ROBOTS_URL, *wrong[:3]]  # the fourth page and the winner are not read
+    assert summary.stopped is not None
+    assert "3 pages in a row do not agree with the list" in summary.stopped
+    assert summary.pages_that_differ_from_the_list == wrong[:3]
+    assert summary.pages_saved == 3
+
+
+def test_a_page_that_agrees_resets_the_count_of_pages_that_differ(tmp_path: Path) -> None:
+    wrong = [f"https://ethglobal.com/showcase/wrong-{i}" for i in range(4)]
+    site_pages = pages() | {url: page(sample("project_no_prize.html")) for url in wrong}
+    listed = (wrong[0], wrong[1], WINNER, wrong[2], wrong[3])  # never three in a row
+    collector, _, _ = make(tmp_path, site_pages, listed=listed)
+    collector.in_the_list = frozenset(listed)
+    collector.hedera_in_the_list = frozenset((*wrong, WINNER))
+    summary = collector.run()
+    assert summary.stopped is None
+    assert len(summary.pages_that_differ_from_the_list) == 4
+
+
+def test_a_page_seen_by_hand_outside_the_list_is_kept_only_with_a_hedera_prize(
+    tmp_path: Path,
+) -> None:
+    # OTHER and SECOND were put on the hand-made list. The walk does not name them.
+    collector, _, _ = make(tmp_path, pages(), listed=(OTHER, SECOND, WINNER))
+    collector.in_the_list = frozenset({WINNER})
+    collector.hedera_in_the_list = frozenset({WINNER})
+    summary = collector.run()
+    assert summary.pages_without_hedera_prize == [OTHER]
+    assert not collector.store.has(OTHER)
+    assert collector.store.has(SECOND)  # it shows a Hedera prize
+    assert collector.store.has(WINNER)
 
 
 def test_a_run_refuses_a_walk_when_no_page_seen_by_hand_says_which_sponsor_is_hedera(
@@ -679,9 +809,12 @@ def test_a_run_refuses_a_walk_when_no_page_seen_by_hand_says_which_sponsor_is_he
     _write_walk(tmp_path, *WALK)
     with pytest.raises(CollectorRefused, match="Winner of") as refusal:
         build_collector(_settings(tmp_path))  # there is no hand-made list at all
-    assert "4 projects with a prize" in str(refusal.value)
+    assert "The walk found 4 projects" in str(refusal.value)
 
-    _write_page_list(tmp_path)  # WINNER took prizes of two sponsors: not enough to decide
+    folder = tmp_path / "by-hand" / "ethglobal.com"
+    folder.mkdir(parents=True)
+    # SECOND took prizes of two sponsors: not enough to decide.
+    (folder / "project-pages.txt").write_text(SECOND + "\n", encoding="utf-8")
     with pytest.raises(CollectorRefused, match="share 2 sponsor ids"):
         build_collector(_settings(tmp_path))
 
@@ -702,11 +835,9 @@ def test_a_run_refuses_a_file_of_the_walk_that_cannot_be_read(tmp_path: Path) ->
         build_collector(_settings(tmp_path))
 
 
-def test_a_run_may_not_read_more_pages_than_the_promise_allows(tmp_path: Path) -> None:
+def test_a_run_may_not_read_more_pages_than_the_limit_of_the_site_allows(tmp_path: Path) -> None:
     _write_page_list(tmp_path)
-    many = [
-        (f"https://ethglobal.com/showcase/w-{i}", (HEDERA_ID,)) for i in range(MAX_LISTED_PAGES)
-    ]
+    many = [(f"https://ethglobal.com/showcase/w-{i}", ()) for i in range(MAX_LISTED_PAGES)]
     _write_walk(tmp_path, (WINNER, (HEDERA_ID,)), *many)
     with pytest.raises(CollectorRefused, match=f"a run may read {MAX_LISTED_PAGES}"):
         build_collector(_settings(tmp_path))
@@ -716,17 +847,35 @@ def test_the_plan_says_where_the_pages_come_from(tmp_path: Path) -> None:
     _write_page_list(tmp_path)
     text = "\n".join(plan(_settings(tmp_path)))
     assert "1 page(s) by hand, and 0 more from the walk." in text
-    assert "No walk through the Hedera list was made." in text
+    assert "No walk through the Hedera list was made" in text
 
-    _write_walk(tmp_path, (WINNER, (HEDERA_ID,)), *WALK[:2], complete=False)
+    _write_walk(tmp_path, *WALK, complete=False)
     text = "\n".join(plan(_settings(tmp_path)))
-    assert "1 page(s) by hand, and 1 more from the walk." in text
-    assert "3 projects with a prize of some sponsor" in text
-    assert f"the sponsor with the id {HEDERA_ID} is Hedera: 2 projects took its prize" in text
+    assert "1 page(s) by hand, and 3 more from the walk." in text
+    assert "The walk found 4 projects in the Hedera list of the showcase." in text
+    assert "2 took a Hedera prize" in text
+    assert f"the sponsor with the id {HEDERA_ID} is Hedera" in text
+    assert "1 took a prize of another sponsor only, and 1 took no prize." in text
     assert "The walk is not finished: 2 page(s) of the list were read." in text
-    assert SECOND in text
-    assert OTHER not in text  # a page that a run does not read is not in its plan
-    assert "That is 3 request(s)." in text  # robots.txt and two pages
+    assert "The run has 4 page(s): 0 saved, 4 to fetch." in text
+    for listed in (WINNER, SECOND, OTHER, NO_PRIZE):
+        assert listed in text
+    assert PERSON not in text  # a page that a run does not read is not in its plan
+    assert "That is 5 request(s)." in text  # robots.txt and four pages
+
+
+def test_the_plan_of_a_long_list_shows_its_numbers_and_its_first_pages(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    many = [(f"https://ethglobal.com/showcase/w-{i}", ()) for i in range(40)]
+    _write_walk(tmp_path, (WINNER, (HEDERA_ID,)), *many)
+    lines = plan(_settings(tmp_path))
+    text = "\n".join(lines)
+    assert "The run has 41 page(s): 0 saved, 41 to fetch." in text
+    assert "... and 31 more pages to fetch" in text
+    assert "https://ethglobal.com/showcase/w-8  (to fetch)" in text
+    assert "https://ethglobal.com/showcase/w-30" not in text
+    assert "That is 42 request(s)." in text
+    assert len(lines) < 40
 
 
 def test_the_plan_says_why_a_walk_cannot_be_used(tmp_path: Path) -> None:
@@ -736,15 +885,15 @@ def test_the_plan_says_why_a_walk_cannot_be_used(tmp_path: Path) -> None:
     assert "It would read" not in text
 
 
-def test_a_page_seen_by_hand_that_is_not_a_winner_of_the_walk_is_said_in_the_plan(
+def test_a_page_seen_by_hand_that_is_not_in_the_walk_is_said_in_the_plan(
     tmp_path: Path,
 ) -> None:
     folder = tmp_path / "by-hand" / "ethglobal.com"
     folder.mkdir(parents=True)
-    (folder / "project-pages.txt").write_text(f"{WINNER}\n{NO_PRIZE}\n", encoding="utf-8")
+    (folder / "project-pages.txt").write_text(f"{WINNER}\n{PERSON}\n", encoding="utf-8")
     _write_walk(tmp_path, (WINNER, (HEDERA_ID,)), (SECOND, (HEDERA_ID,)))
     text = "\n".join(plan(_settings(tmp_path)))
-    assert "1 page(s) seen by hand are not among these winners." in text
+    assert "1 page(s) seen by hand are not in the list." in text
     assert "2 page(s) by hand, and 1 more from the walk." in text
 
 
@@ -780,9 +929,9 @@ def test_a_built_collector_counts_its_requests_over_all_runs(
 
 def test_a_run_that_needs_more_requests_than_are_left_does_not_start(tmp_path: Path) -> None:
     _write_page_list(tmp_path)
-    # 299 of the 300 are used. One page and robots.txt need two.
-    _write_count(tmp_path, '{"site": "ethglobal.com", "sent": 299, "by_day": {}}')
-    with pytest.raises(CollectorRefused, match="needs 2 requests, and 1 are left of the 300"):
+    # 799 of the 800 are used. One page and robots.txt need two.
+    _write_count(tmp_path, '{"site": "ethglobal.com", "sent": 799, "by_day": {}}')
+    with pytest.raises(CollectorRefused, match="needs 2 requests, and 1 are left of the 800"):
         build_collector(_settings(tmp_path))
 
 
@@ -814,7 +963,7 @@ def test_the_plan_says_what_would_be_read_and_makes_no_request(tmp_path: Path) -
     assert "robots.txt" in text
     assert str(ETHGLOBAL_SHAPE.verified_on) in text  # the shape was checked against real pages
     assert "maintainer@example.test" not in text  # the address is never printed
-    assert "Requests sent to the site so far: 0 of 300." in text
+    assert "Requests sent to the site so far: 0 of 800." in text
     assert "That is 2 request(s)." in text  # robots.txt and the one page of the list
     assert not (tmp_path / "requests").exists()  # a plan writes nothing
 

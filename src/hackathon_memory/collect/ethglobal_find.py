@@ -1,22 +1,23 @@
-"""Find the projects with a prize in the Hedera list of ETHGlobal's showcase.
+"""Find the projects that ETHGlobal's showcase ties to Hedera.
 
     python -m hackathon_memory.collect ethglobal --find
 
-Why. ETHGlobal said yes for the projects that took a Hedera prize. No page of the site lists
-them. But the showcase has a list with the filter "partner: Hedera", and the data of that list
-says, for each project, which sponsors gave it a prize. So this walk reads the pages of that
-list, one after the other, and writes down the projects that took a prize. Then a run opens only
-the pages of the winners. It never has to open the page of a project that took no prize.
+Why. The showcase has a list with the filter "partner: Hedera". It names every project that is
+tied to Hedera, and the data of that list says, for each project, which sponsors gave it a
+prize. No other page of the site lists the Hedera projects or the winners of the Hedera prizes.
+So this walk reads the pages of that list, one after the other, and writes down each project.
+Then a run reads the pages of these projects.
 
-What it does, inside the promises of design 5.7:
+What it does, by the rules of design 5.7:
 
 * It reads robots.txt, then the pages of the list in order: page 1, then the page that page 1
   links to, and so on to the last one. It follows no other link.
 * The same polite client as the run: one request at a time, two seconds apart, the name of the
-  tool and the maintainer's address in each one, and every request counted in the 300.
-* No page of the list is saved. From each page it keeps the address, the event and the sponsor
-  ids of the projects with a prize, and it counts the others (ethglobal_found.py). The row
-  that two pages share is taken once.
+  tool and the maintainer's address in each one, and every request counted in the limit of the
+  site.
+* No page of the list is saved. From each page it keeps, for each project, the address, the
+  event and the sponsor ids of its prizes (ethglobal_found.py). The row that two pages share is
+  taken once.
 * It stops at the first refusal, at a page that is not shaped as expected, and at the limit of
   requests. Nothing is tried again and nothing is worked around.
 * It writes what it found after every page. When it is started again, it goes on at the next
@@ -140,10 +141,9 @@ class ListWalker:
                     f"The site answered with page {page.number} of the list when page {number} "
                     "was asked for."
                 )
-            before = len(found.with_prize)
             new_rows = found.add(page, _now())
             save_found(self.found_path, found)
-            with_prize = len(found.with_prize) - before
+            with_prize = sum(1 for row in new_rows if row.sponsors)
             summary.pages_read += 1
             summary.projects_listed += len(new_rows)
             summary.projects_with_prize += with_prize

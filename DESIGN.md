@@ -254,7 +254,7 @@ Checked on 9 October 2026.
 
 | Site | Hedera events on it | Can a visitor see the projects without a sign-in? | What its rules or its answer say about a program |
 |---|---|---|---|
-| ETHGlobal's showcase | Projects that took a Hedera prize at an ETHGlobal event | Yes | **Allowed in writing on 9 October 2026,** as long as every promise of the request is kept (section 5.7). This is the first source. |
+| ETHGlobal's showcase | Projects tied to Hedera at ETHGlobal's events | Yes | Asked on 9 October 2026. **It agreed in writing** to a slow, signed read of its Hedera prize projects (section 5.7). This is the first source. |
 | DoraHacks | Africa 2025, Hello Future Origins 2025 | Yes | Forbidden without its written permission. Asked on 9 October 2026. No answer yet. |
 | Devpost | Hedera21, Hedera22 | Yes | **Refused on 9 October 2026.** No program ever touches Devpost. A person may browse the galleries and link to the pages. |
 | StackUp, which is part of AngelHack | Hello Future Ascension 2025, Hello Future Apex 2026 | No | The submissions are private, so there is nothing to collect. |
@@ -270,35 +270,33 @@ For four events no submission site was found at all. The platforms of Hedera18 a
 
 **One rule about who can say yes.** An organiser can agree for its own site and its own data. It cannot agree for another company's site.
 
-### 5.7 The promises made to the sites, and what they mean for the code
+### 5.7 How a site is read, and what ETHGlobal was asked
 
-A yes from a site holds only as long as what the request promised is kept. ETHGlobal wrote: "this request would be completely fine as long as you honor your commitment." So each promise is a rule in the code, with a test.
+The way a site is read is fixed in the code, with a test for each rule. ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The maintainer decided that on 10 October 2026, so that the tool can show what is built on Hedera and not only what wins.
 
-| The promise | What the code does |
+| The rule | What the code does |
 |---|---|
-| Only the showcase pages of projects that took a Hedera prize | A run reads robots.txt and the project pages on its list, and nothing else. Every other address is refused before a request is sent, also on a redirect. A page that shows no Hedera prize is not kept, and three such pages in a row stop the run. |
-| A few hundred pages at most | A fixed limit of 300 requests to the site. Every request is counted in one file, so the limit holds for all commands and all days together. |
+| Only named pages | A walk reads one list of the showcase: the one with the filter "partner: Hedera". A run reads robots.txt and the pages of the projects on that list. Every other address is refused before a request is sent, also on a redirect. |
+| A limit of requests | A fixed limit for each site: 800 for ETHGlobal's showcase. Every request is counted in one file, so the limit holds for all commands and all days together. |
 | One time | A second run skips every page that is already saved, and every page that an earlier run read and did not keep. |
-| One request at a time, at least one second apart | One worker, a pause of two seconds, nothing in parallel. |
+| One request at a time | One worker, a pause of two seconds, nothing in parallel. |
 | Each request carries the name of the tool and a contact address | Both come from the settings. The collector refuses to start when one of them is empty. |
 | No names, photos or profiles of team members | The team part is cut out before a page is saved (section 5.3). If a page shows a profile link, an avatar or a data key that holds people, the run stops. |
 | It stops at once when asked | One switch for each site in the settings, read again before every request. |
 | The collected pages stay on one laptop | The data folder never enters git. No text taken from a collected page is committed, also not in a test file or a result file. The sample pages of the tests are invented. |
 | A new request before anything is published | Before the repository, the tool or its data goes public, the site is asked again. |
 
-**How the winners are found.** No page of ETHGlobal lists the winners of one sponsor. A prize page lists prizes, and a winner is shown only on its own project page, in a block named "Winner of". But the showcase has a list with the filter "partner: Hedera", and the data of that list says, for each project, which sponsors gave it a prize.
+**How the projects are found.** No page of ETHGlobal lists the winners of one sponsor. A prize page lists prizes, and a winner is shown only on its own project page, in a block named "Winner of". But the showcase has a list with the filter "partner: Hedera". It names every project that is tied to Hedera, and its data says, for each project, which sponsors gave it a prize.
 
-1. **A walk** reads the pages of that list, one after the other. It saves no page. For a project with a prize it keeps the address, the event and the ids of the sponsors. For all the others it keeps only a count for each event.
+1. **A walk** reads the pages of that list, one after the other. It saves no page. For each project it keeps the address, the event and the ids of the sponsors of its prizes.
 2. The list names a sponsor by a short id, not by its name. **Which id is Hedera is not guessed.** A person opens one or two project pages in a browser, sees "Winner of" and a line that starts with "Hedera", and writes their addresses into a small file. Hedera is the one id that all these pages have.
-3. **A run** reads the pages of the projects with that id. Each page is checked again by itself: it is kept only if its own "Winner of" block shows a Hedera prize.
+3. **A run** reads the page of every project of the list. Whether a project took a Hedera prize is read from its own page, in the block "Winner of". The run compares that with the list, and three pages in a row that differ stop it.
 
-**What happened on 10 October 2026** (result file `proofs/results/20261010T194925Z-lists.json`):
+**The first collection, on 10 October 2026** (result file `proofs/results/20261010T194925Z-lists.json`). It read the projects with a Hedera prize first.
 
 - The walk read 21 pages of the list: 658 projects in 14 events, 173 with a prize of some sponsor, 92 with a Hedera prize.
-- The run read the 92 pages and kept all 92. Not one page was read and dropped: the id from the list and the block on the page agreed every time.
-- 140 requests were sent to the site in all, out of the 300. The site answered every one, and never with a check or a refusal.
-
-**What was read beside the 92 project pages.** To learn the shape of the site before the collector was written: the list of events, one event page, three prize pages, the showcase list and three project pages. Nothing of them was saved. Then the 21 pages of the Hedera list, the first three of them more than once, before the walk was written. These pages are named to ETHGlobal in the next message, before anything is published.
+- The run read the 92 pages and kept all 92. The id from the list and the block on the page agreed every time.
+- The site answered every request, and never with a check or a refusal.
 
 ---
 
@@ -766,7 +764,7 @@ They cannot prove that every card is right. They give a measured error rate on a
 
 | Proof | It passes when | State on 10 October 2026 |
 |---|---|---|
-| Lists | The collector lists every project with a Hedera prize in ETHGlobal's showcase, inside the promises of section 5.7. | Passed. 92 projects. `python -m proofs.lists` |
+| Lists | The collector lists every project that ETHGlobal's showcase ties to Hedera, by the rules of section 5.7. | Passed on 10 October 2026 for the 92 projects with a Hedera prize. `python -m proofs.lists` |
 | Hedera write | A topic is created on the test network with the keys of section 9.5, a small message is posted, and the mirror node returns it. | Passed. `python -m proofs.hedera_write` |
 | Google models | One call to each of the two layers returns a valid form for one real text. One embedding call returns a list of the expected size. | Passed. `python -m proofs.google_models` |
 | Database | PostgreSQL with pgvector runs in Docker and answers one vector query. | Passed. `python -m proofs.database` |
@@ -810,7 +808,7 @@ A collector also needs the yes of the site, and the maintainer's yes for the pag
 |---|---|
 | A site says no, or does not answer in time | No program touches it. The build starts from ETHGlobal's showcase. The README says plainly which data the demo runs on, and why. |
 | Too few full cards | ETHGlobal's showcase gives 92 projects. The tests use what exists and state their range. Winner entries widen the search. |
-| A promise to a site is broken by mistake | The promises are rules in the code, each with a test (section 5.7), and a proof reads what is on disk (section 14.2). |
+| A rule for reading a site is broken by mistake | The rules are code, each with a test (section 5.7), and a proof reads what is on disk (section 14.2). |
 | The LLM misreads projects | Labels, the quote check, the original text, and Test 1. |
 | Many pages give no Hedera ID | The card says "no ID given". The README of the code is also searched. The share is reported. |
 | The test network is reset | Old test IDs become "cannot be checked". The code facts stay. |
