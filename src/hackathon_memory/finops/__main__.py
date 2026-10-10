@@ -21,12 +21,10 @@ import sys
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
-import psycopg
-
 from hackathon_memory.finops import budget as budgets
 from hackathon_memory.finops import prices, report
-from hackathon_memory.finops.calls import ENVIRONMENTS, CallStore, PostgresStore
-from hackathon_memory.settings import Settings, SettingsError
+from hackathon_memory.finops.calls import ENVIRONMENTS, CallStore, LedgerNotReady, open_ledger
+from hackathon_memory.settings import Settings
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -157,23 +155,16 @@ def main(
     settings = settings or Settings()
     moment = now or datetime.now(UTC)
     try:
-        ledger = store if store is not None else PostgresStore(settings.database_conninfo())
-        if args.command == "report":
-            print(_report(args, settings, ledger, moment))
-        elif args.command == "budget":
-            print(_budget(settings, ledger, moment))
-        else:
-            print(_reconcile(args, ledger))
-    except SettingsError as problem:
-        print(f"Cannot read the ledger: {problem}")
+        ledger = store if store is not None else open_ledger(settings)
+    except LedgerNotReady as problem:
+        print(f"Cannot read the ledger. {problem}")
         return 2
-    except psycopg.errors.UndefinedTable:
-        print("The table of calls does not exist yet. Run: python -m hackathon_memory.db migrate")
-        return 2
-    except psycopg.OperationalError:
-        # The text of this error is not shown on purpose: it can hold connection details.
-        print("The database does not answer. Start it with: docker compose up -d --wait db")
-        return 2
+    if args.command == "report":
+        print(_report(args, settings, ledger, moment))
+    elif args.command == "budget":
+        print(_budget(settings, ledger, moment))
+    else:
+        print(_reconcile(args, ledger))
     return 0
 
 
