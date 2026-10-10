@@ -157,3 +157,84 @@ def test_the_page_is_written_again_but_text_links_and_tags_stay_the_same(name: s
     ]
     assert [t.name for t in before.find_all(True)] == [t.name for t in after.find_all(True)]
     assert saved.decode("utf-8").lower().startswith("<!doctype html")  # the case may change
+
+
+# ---------------------------------------------------- tripwires, script keys, site names
+# These three exist because of what the real pages of a site showed: no team block at all for a
+# visitor who is not signed in, the data of a React page kept as text, and a "creator" meta tag
+# that holds the name of the site itself.
+
+PAGE_WITH_A_PROFILE_LINK = (
+    "<html><body><main><h1>A project</h1>"
+    '<a href="/hackers/someone-invented">someone</a></main></body></html>'
+)
+PAGE_WITH_TEXT_DATA = (
+    "<html><body><main><h1>A project</h1></main>"
+    '<script>self.__next_f.push([1,"{\\"project\\":{\\"slug\\":\\"x\\",\\"members\\":'
+    '[{\\"name\\":\\"Quillfeather\\"}]}}"])</script></body></html>'
+)
+
+
+def test_a_tripwire_stops_a_page_that_shows_a_profile_link() -> None:
+    policy = CutPolicy(rules=(), tripwires=("a[href^='/hackers/']",))
+    with pytest.raises(TeamShapeChanged, match="should not exist"):
+        cut(PAGE_WITH_A_PROFILE_LINK, policy)
+
+
+def test_a_tripwire_lets_a_page_without_it_pass() -> None:
+    policy = CutPolicy(rules=(), tripwires=("a[href^='/hackers/']",))
+    output, _ = cut("<html><body><main><h1>A project</h1></main></body></html>", policy)
+    assert b"A project" in output
+
+
+def test_a_person_key_in_a_script_that_is_not_json_refuses_the_page() -> None:
+    policy = CutPolicy(rules=(), script_person_keys=frozenset({"members"}))
+    with pytest.raises(TeamShapeChanged, match="'members'") as failure:
+        cut(PAGE_WITH_TEXT_DATA, policy)
+    assert "Quillfeather" not in str(failure.value)  # the key is named, never its value
+
+
+def test_the_same_script_passes_when_the_key_is_not_one_that_holds_people() -> None:
+    policy = CutPolicy(rules=(), script_person_keys=frozenset({"teammembers"}))
+    output, _ = cut(PAGE_WITH_TEXT_DATA, policy)
+    assert b"__next_f" in output
+
+
+def test_a_person_key_written_with_plain_quotes_is_found_too() -> None:
+    page = '<html><body><script>var data = {"users": [1, 2]};</script></body></html>'
+    with pytest.raises(TeamShapeChanged, match="'users'"):
+        cut(page, CutPolicy(rules=(), script_person_keys=frozenset({"users"})))
+
+
+SITE_NAMED_IN_METADATA = (
+    "<html><head>"
+    '<meta name="author" content="SampleSite">'
+    '<meta name="twitter:creator" content="@samplesite">'
+    "</head><body><main><h1>SampleSite project</h1></main>"
+    '<script>self.__next_f.push([1,"{\\"site\\":\\"@samplesite\\"}"])</script></body></html>'
+)
+
+
+def test_the_name_of_the_site_in_the_author_tags_is_not_a_leak_when_the_policy_says_so() -> None:
+    # Without the names, the handle that also stands in the page data looks like a person.
+    with pytest.raises(TeamTextRemains):
+        cut(SITE_NAMED_IN_METADATA, CutPolicy(rules=()))
+    policy = CutPolicy(rules=(), site_names=frozenset({"samplesite", "@samplesite"}))
+    output, report = cut(SITE_NAMED_IN_METADATA, policy)
+    assert b'name="author"' not in output  # the tags still go
+    assert b'name="twitter:creator"' not in output
+    assert report.elements_removed == 2
+
+
+def test_a_name_that_is_not_the_site_is_still_caught_when_site_names_are_set() -> None:
+    page = SITE_NAMED_IN_METADATA.replace('content="SampleSite"', 'content="Quill Samplewright"')
+    page = page.replace(
+        "<h1>SampleSite project</h1>", "<h1>A project</h1><p>Quill Samplewright</p>"
+    )
+    policy = CutPolicy(rules=(), site_names=frozenset({"samplesite", "@samplesite"}))
+    output, _ = cut(page, policy)  # the name is visible in the page, so it is generic: no leak
+    assert b"Quill Samplewright" in output
+    hidden = SITE_NAMED_IN_METADATA.replace('content="SampleSite"', 'content="Quill Samplewright"')
+    hidden = hidden.replace("</script>", ' var by = "Quill Samplewright";</script>')
+    with pytest.raises(TeamTextRemains):
+        cut(hidden, policy)

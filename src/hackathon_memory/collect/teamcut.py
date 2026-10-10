@@ -73,6 +73,17 @@ class CutPolicy:
     rules: tuple[CutRule, ...]
     # Keys (lower case) that hold people inside JSON data blocks. The key and its value go.
     json_blocklist: frozenset[str] = frozenset()
+    # Selectors that must match NOTHING. A page that shows a profile link or an avatar is a page
+    # that has changed shape: the cut cannot be trusted, so the run must stop.
+    tripwires: tuple[str, ...] = ()
+    # Keys (lower case) that hold people. If one of them stands in a script that is not valid
+    # JSON (the data of a React page is kept as text), the cut cannot remove it, so the page is
+    # refused as a changed shape.
+    script_person_keys: frozenset[str] = frozenset()
+    # Texts (lower case) that name the site itself, for example its name and its social handle.
+    # They sit in the "personal" metadata of every page, but they are not about a person, so the
+    # self-check does not look for them.
+    site_names: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -149,6 +160,20 @@ def _drop_keys(value: object, blocklist: frozenset[str]) -> tuple[object, int]:
     return value, 0
 
 
+# A key in JSON written as text. Inside a string of a script the quotes are written \", so the
+# pattern accepts a backslash before each quote.
+_SCRIPT_KEY = re.compile(r'\\*"([A-Za-z_][A-Za-z0-9_]*)\\*"\s*:')
+
+
+def _refuse_person_keys(script_text: str, policy: CutPolicy) -> None:
+    """A script we cannot parse must not hold a key that holds people. Only the key is named."""
+    if not policy.script_person_keys:
+        return
+    for key in _SCRIPT_KEY.findall(script_text):
+        if key.lower() in policy.script_person_keys:
+            raise TeamShapeChanged(f"a data block holds the key {key!r}, which holds people")
+
+
 def _top_level(matches: list[Tag]) -> list[Tag]:
     """Drop every match that sits inside another match, so nothing is removed twice."""
     ids = {id(m) for m in matches}
@@ -162,6 +187,10 @@ def cut_team(body: bytes, policy: CutPolicy) -> tuple[bytes, CutReport]:
     except UnicodeDecodeError:
         raise TeamShapeChanged("the page is not UTF-8, so the cut cannot be checked") from None
     soup = BeautifulSoup(text, "lxml")
+
+    for selector in policy.tripwires:
+        if soup.select_one(selector) is not None:
+            raise TeamShapeChanged(f"the page shows something that should not exist: {selector!r}")
 
     # Rules of the policy, then the personal metadata that every page loses.
     blocks: list[Tag] = []
@@ -178,6 +207,7 @@ def cut_team(body: bytes, policy: CutPolicy) -> tuple[bytes, CutReport]:
     for element in [*blocks, *metadata]:
         guarded |= _strings_of(element)
     guarded -= _visible_strings_outside(soup, [*blocks, *metadata])
+    guarded = {s for s in guarded if s.lower() not in policy.site_names}
 
     removed = 0
     for element in [*blocks, *metadata]:
@@ -187,13 +217,17 @@ def cut_team(body: bytes, policy: CutPolicy) -> tuple[bytes, CutReport]:
 
     json_keys_removed = 0
     for script in soup.find_all("script"):
+        script_text = script.get_text()
         is_data = script.get("type") in _JSON_SCRIPT_TYPES or script.get("id") == "__NEXT_DATA__"
-        if not is_data or not script.string:
+        data = None
+        if is_data and script_text:
+            try:
+                data = json.loads(script_text)
+            except ValueError:
+                data = None  # not JSON after all: the keys are looked for in the text below
+        if data is None:
+            _refuse_person_keys(script_text, policy)
             continue
-        try:
-            data = json.loads(script.string)
-        except ValueError:
-            continue  # not JSON after all: the self-check below still looks at it
         cleaned, count = _drop_keys(data, policy.json_blocklist)
         if count:
             script.string = json.dumps(cleaned, ensure_ascii=False, separators=(",", ":"))
