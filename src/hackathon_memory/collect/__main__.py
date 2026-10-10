@@ -7,7 +7,11 @@
 
 The first form never touches the network. The others refuse to start unless every promise of
 design 5.7 can be kept, and each needs the maintainer's yes for the pages it reads (design
-rule 17). `--find --pages 5` reads at most five pages of the list and can be started again.
+rule 17).
+
+A walk and a run can be made in parts. `--find --pages 5` reads at most five pages of the list.
+`--pages 3` with no other option is a run that asks for at most three new project pages. Started
+again, each goes on where it stopped, and nothing is asked for twice.
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ from hackathon_memory.collect.look import build_looker, look_plan
 from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.settings import Settings
 
-USAGE = "python -m hackathon_memory.collect ethglobal [--plan | --look | --find [--pages N]]"
+USAGE = "python -m hackathon_memory.collect ethglobal [--plan | --look | --find] [--pages N]"
 
 
 class _Quiet(argparse.ArgumentParser):
@@ -38,8 +42,8 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     what.add_argument("--find", action="store_true")
     parser.add_argument("--pages", type=int)
     args = parser.parse_args(argv)
-    if args.pages is not None and (not args.find or args.pages < 1):
-        raise ValueError("--pages goes with --find, and is 1 or more")
+    if args.pages is not None and (args.plan or args.look or args.pages < 1):
+        raise ValueError("--pages goes with --find or with a run, and is 1 or more")
     return args
 
 
@@ -68,12 +72,14 @@ def main(argv: list[str]) -> int:
                 + ("The last page was reached." if walk.complete else "The list is not finished.")
             )
             return 2 if walk.stopped else 0
-        summary = build_collector(settings).run()
+        summary = build_collector(settings, max_new_pages=args.pages).run()
     except CollectorRefused as refusal:
         print(f"Refused: {refusal}")
         return 1
     print(
         f"Done. Saved {summary.pages_saved}, already saved {summary.pages_already_saved}, "
+        f"not kept {len(summary.pages_without_hedera_prize)}, "
+        f"left for a later run {summary.pages_left_for_later}, "
         f"requests {summary.requests_made}, errors {len(summary.errors)}."
     )
     return 2 if summary.stopped else 0

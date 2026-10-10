@@ -86,6 +86,7 @@ def make(
     site_pages: dict[str, Reply],
     listed: tuple[str, ...] = (WINNER, SECOND),
     shape: SiteShape = SHAPE,
+    max_new_pages: int | None = None,
     **options,
 ):
     site = FakeSite(site_pages)
@@ -107,6 +108,7 @@ def make(
         project_pages=list(listed),
         shape=shape,
         runs_dir=tmp_path / "runs",
+        max_new_pages=max_new_pages,
         log=lambda message: None,
     )
     return collector, site, fake_time
@@ -258,6 +260,47 @@ def test_a_second_run_fetches_only_what_is_missing(tmp_path: Path) -> None:
     assert site.urls == [SECOND]  # robots.txt and the first project are already saved
     assert summary.pages_saved == 1
     assert summary.pages_already_saved == 1
+
+
+def test_a_run_can_be_made_in_parts_and_no_page_is_asked_for_twice(tmp_path: Path) -> None:
+    third = "https://ethglobal.com/showcase/opal-desk-t5r4e"
+    site_pages = pages() | {third: winner("Opal Desk")}
+    listed = (WINNER, SECOND, third)
+
+    first, site, _ = make(tmp_path, site_pages, listed=listed, max_new_pages=1)
+    summary = first.run()
+    assert site.urls == [ROBOTS_URL, WINNER]
+    assert (summary.pages_saved, summary.pages_left_for_later, summary.stopped) == (1, 2, None)
+
+    second, site, _ = make(tmp_path, site_pages, listed=listed, max_new_pages=1)
+    summary = second.run()
+    assert site.urls == [SECOND]  # robots.txt and the first page are saved
+    assert (summary.pages_already_saved, summary.pages_saved, summary.pages_left_for_later) == (
+        1,
+        1,
+        1,
+    )
+
+    rest, site, _ = make(tmp_path, site_pages, listed=listed)
+    summary = rest.run()
+    assert site.urls == [third]
+    assert (summary.pages_already_saved, summary.pages_saved, summary.pages_left_for_later) == (
+        2,
+        1,
+        0,
+    )
+
+
+def test_a_page_that_is_not_kept_also_counts_as_a_page_of_the_part(tmp_path: Path) -> None:
+    collector, site, _ = make(tmp_path, pages(), listed=(OTHER, WINNER, SECOND), max_new_pages=2)
+    summary = collector.run()
+    assert site.urls == [ROBOTS_URL, OTHER, WINNER]  # two pages were asked for, one was kept
+    assert (summary.pages_saved, summary.pages_left_for_later) == (1, 1)
+
+
+def test_a_part_of_a_run_is_one_page_or_more(tmp_path: Path) -> None:
+    with pytest.raises(CollectorRefused, match="1 or more"):
+        make(tmp_path, pages(), max_new_pages=0)
 
 
 def test_the_limit_stops_the_run_and_the_record_says_so(tmp_path: Path) -> None:

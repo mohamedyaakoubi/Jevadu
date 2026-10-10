@@ -226,6 +226,8 @@ class RunSummary:
     # Pages that were NOT saved because text of the team part also stands elsewhere in them.
     pages_skipped_team_text: list[str] = field(default_factory=list)
     errors: list[dict[str, str]] = field(default_factory=list)
+    # Pages of the list that this run did not ask for, because it was told to read only some.
+    pages_left_for_later: int = 0
     requests_made: int = 0
     stopped: str | None = None
 
@@ -239,13 +241,18 @@ class EthGlobalCollector:
         project_pages: list[str],
         shape: SiteShape = ETHGLOBAL_SHAPE,
         runs_dir: Path,
+        max_new_pages: int | None = None,
         log: Callable[[str], None] = print,
     ) -> None:
+        if max_new_pages is not None and max_new_pages < 1:
+            raise CollectorRefused("The number of pages to read must be 1 or more.")
         self.client = client
         self.store = store
         self.project_pages = project_pages
         self.shape = shape
         self.runs_dir = runs_dir
+        # A run can be made in parts: the first pages, a look at what was saved, then the rest.
+        self.max_new_pages = max_new_pages
         self.log = log
         self._robots: RobotsRules | None = None
         self._unsafe_in_a_row = 0
@@ -260,9 +267,16 @@ class EthGlobalCollector:
                 "No live run before that."
             )
         summary = RunSummary(started_at=_now(), project_pages_planned=len(self.project_pages))
+        asked = 0
         try:
             for url in self.project_pages:
-                self._collect_project(url, summary)
+                if self.store.has(url):
+                    summary.pages_already_saved += 1
+                elif self.max_new_pages is not None and asked >= self.max_new_pages:
+                    summary.pages_left_for_later += 1
+                else:
+                    asked += 1
+                    self._fetch_and_save(url, self.shape.project_cut, summary)
         except StopCollecting as stop:
             summary.stopped = str(stop)
             self.log(f"STOPPED: {stop}")
@@ -273,12 +287,6 @@ class EthGlobalCollector:
         return summary
 
     # ------------------------------------------------------------------ steps
-
-    def _collect_project(self, url: str, summary: RunSummary) -> None:
-        if self.store.has(url):
-            summary.pages_already_saved += 1
-            return
-        self._fetch_and_save(url, self.shape.project_cut, summary)
 
     def _fetch_and_save(self, url: str, policy: CutPolicy, summary: RunSummary) -> SavedPage | None:
         self._check_robots(url)
@@ -504,11 +512,16 @@ def polite_client(
 def build_collector(
     settings: Settings,
     *,
+    max_new_pages: int | None = None,
     env_file: Path | None = None,
     shape: SiteShape = ETHGLOBAL_SHAPE,
     **client_options: object,
 ) -> EthGlobalCollector:
-    """Everything a live run needs. Refuses (CollectorRefused) when a promise cannot be kept."""
+    """Everything a live run needs. Refuses (CollectorRefused) when a promise cannot be kept.
+
+    The whole list must fit into the requests that are left, also when this run reads only a
+    part of it (`max_new_pages`): a job that cannot be finished is not started.
+    """
     identity = identity_if_allowed(settings)
     paths = data_paths(settings)
     project_pages = planned_pages(paths).pages
@@ -532,6 +545,7 @@ def build_collector(
         project_pages=project_pages,
         shape=shape,
         runs_dir=paths.runs_dir,
+        max_new_pages=max_new_pages,
     )
 
 

@@ -107,7 +107,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m hackathon_memory.collect ethglobal --plan` | Shows what the collector would read. It sends no request. |
 | `python -m hackathon_memory.collect ethglobal --look` | Reads robots.txt and the first page of the hand-made list, and saves no page |
 | `python -m hackathon_memory.collect ethglobal --find` | Walks through the showcase list with the filter "partner: Hedera" and writes down which projects took a prize. It saves no page. `--pages 5` reads five pages of the list and can be started again. |
-| `python -m hackathon_memory.collect ethglobal` | The run. It reads the pages seen by hand and the winners that the walk found, and keeps each page that shows a Hedera prize, without its team part. |
+| `python -m hackathon_memory.collect ethglobal` | The run. It reads the pages seen by hand and the winners that the walk found, and keeps each page that shows a Hedera prize, without its team part. `--pages 3` asks for three new pages, so the first saved pages can be looked at before the rest is read. |
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
 | `python -m hackathon_memory.finops budget` | Where the two budgets stand |
 | `python -m hackathon_memory.finops prices` | The prices in use, with the day each one begins |

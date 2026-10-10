@@ -433,9 +433,13 @@ def test_the_command_line_takes_one_command_at_a_time(
     monkeypatch.setattr(cli, "Settings", lambda: Settings(_env_file=None))
     assert cli.main(["ethglobal", "--find"]) == 1  # the switch is off
     assert "Refused" in capsys.readouterr().out
+    assert cli.main(["ethglobal", "--pages", "3"]) == 1  # a run in parts: also refused
+    assert "Refused" in capsys.readouterr().out
     for wrong in (
         ["ethglobal", "--find", "--plan"],
-        ["ethglobal", "--pages", "3"],  # --pages goes with --find
+        ["ethglobal", "--plan", "--pages", "3"],  # a plan and a look read no part
+        ["ethglobal", "--look", "--pages", "2"],
+        ["ethglobal", "--pages", "0"],
         ["ethglobal", "--find", "--pages", "0"],
         ["ethglobal", "--find", "--pages", "many"],
         ["devpost", "--find"],
