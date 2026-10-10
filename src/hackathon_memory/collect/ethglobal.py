@@ -348,13 +348,53 @@ def _now() -> str:
 # ---------------------------------------------------------------------- building a real run
 
 
-def data_paths(settings: Settings) -> tuple[Path, Path, Path]:
-    """The list of project pages, the folder of saved pages, and the folder of run records."""
+@dataclass(frozen=True)
+class DataPaths:
+    """Where the collector keeps its files. All of them are in the data folder, outside git."""
+
+    page_list: Path  # the list of project pages that was made by hand
+    raw_dir: Path  # the saved pages
+    runs_dir: Path  # one record for each run
+
+
+def data_paths(settings: Settings) -> DataPaths:
     root = Path(settings.data_dir)
-    return (
-        root / "by-hand" / SITE / "project-pages.txt",
-        root / "raw" / SITE,
-        root / "runs",
+    return DataPaths(
+        page_list=root / "by-hand" / SITE / "project-pages.txt",
+        raw_dir=root / "raw" / SITE,
+        runs_dir=root / "runs",
+    )
+
+
+def identity_if_allowed(settings: Settings) -> CollectorIdentity:
+    """The name and the address for the requests. Refuses while the switch of the site is off."""
+    if not settings.collect_ethglobal:
+        raise CollectorRefused(
+            f"The switch for {SITE} is off. Set COLLECT_ETHGLOBAL=on in .env to allow it "
+            "(design rule 17: only after the maintainer's yes for the pages that will be read)."
+        )
+    return CollectorIdentity.from_settings(settings)
+
+
+def polite_client(
+    identity: CollectorIdentity,
+    allow: Callable[[str], bool],
+    *,
+    env_file: Path | None = None,
+    **client_options: object,
+) -> PoliteClient:
+    """A client for this site that may read only what `allow` names."""
+
+    def still_enabled() -> bool:
+        # Read again before every request, so that turning the switch off stops a run at once.
+        return Settings(_env_file=env_file or ".env").collect_ethglobal
+
+    return PoliteClient(
+        site=SITE,
+        identity=identity,
+        allow=allow,
+        is_enabled=still_enabled,
+        **client_options,  # type: ignore[arg-type]
     )
 
 
@@ -366,39 +406,26 @@ def build_collector(
     **client_options: object,
 ) -> EthGlobalCollector:
     """Everything a live run needs. Refuses (CollectorRefused) when a promise cannot be kept."""
-    if not settings.collect_ethglobal:
-        raise CollectorRefused(
-            "The switch for ethglobal.com is off. Set COLLECT_ETHGLOBAL=on in .env to allow a "
-            "run (design rule 17: only after the maintainer's yes for this site)."
-        )
-    identity = CollectorIdentity.from_settings(settings)
-    page_list, raw_dir, runs_dir = data_paths(settings)
-    project_pages = load_project_pages(page_list)
+    identity = identity_if_allowed(settings)
+    paths = data_paths(settings)
+    project_pages = load_project_pages(paths.page_list)
     named = frozenset(project_pages)
-
-    def still_enabled() -> bool:
-        # Read again before every request, so that turning the switch off stops a run at once.
-        return Settings(_env_file=env_file or ".env").collect_ethglobal
-
-    client = PoliteClient(
-        site=SITE,
-        identity=identity,
-        allow=lambda url: is_allowed_url(url, named),
-        is_enabled=still_enabled,
-        **client_options,  # type: ignore[arg-type]
+    client = polite_client(
+        identity, lambda url: is_allowed_url(url, named), env_file=env_file, **client_options
     )
     return EthGlobalCollector(
         client=client,
-        store=RawStore(raw_dir),
+        store=RawStore(paths.raw_dir),
         project_pages=project_pages,
         shape=shape,
-        runs_dir=runs_dir,
+        runs_dir=paths.runs_dir,
     )
 
 
 def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
     """What a live run would do, in plain words. Makes no request."""
-    page_list, raw_dir, _ = data_paths(settings)
+    paths = data_paths(settings)
+    page_list = paths.page_list
     lines = [
         f"Site: {SITE}",
         f"Switch COLLECT_ETHGLOBAL: {'on' if settings.collect_ethglobal else 'off'}",
@@ -419,7 +446,7 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
     except CollectorRefused as refusal:
         lines.append(f"  {refusal}")
         return lines
-    store = RawStore(raw_dir)
+    store = RawStore(paths.raw_dir)
     lines.append("It would read, in this order (robots.txt first, only if a page is missing):")
     lines.append(f"  {ROBOTS_URL}  ({'saved' if store.has(ROBOTS_URL, '.txt') else 'to fetch'})")
     for page in pages:

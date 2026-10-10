@@ -32,12 +32,13 @@ from hackathon_memory.collect.ethglobal import (
     SITE,
     SiteShape,
     data_paths,
+    identity_if_allowed,
     is_allowed_url,
     load_project_pages,
+    polite_client,
     took_a_hedera_prize,
 )
 from hackathon_memory.collect.polite import (
-    CollectorIdentity,
     CollectorRefused,
     FetchFailed,
     FetchResult,
@@ -159,32 +160,21 @@ def build_looker(
     **client_options: object,
 ) -> Looker:
     """Everything a look needs. Refuses (CollectorRefused) when a promise cannot be kept."""
-    if not settings.collect_ethglobal:
-        raise CollectorRefused(
-            "The switch for ethglobal.com is off. Set COLLECT_ETHGLOBAL=on in .env to allow it "
-            "(design rule 17: only after the maintainer's yes for these two pages)."
-        )
-    identity = CollectorIdentity.from_settings(settings)
-    page_list, _, _ = data_paths(settings)
-    first = load_project_pages(page_list)[0]
-
-    def still_enabled() -> bool:
-        return Settings(_env_file=env_file or ".env").collect_ethglobal
-
-    client = PoliteClient(
-        site=SITE,
-        identity=identity,
-        allow=lambda url: is_allowed_url(url, {first}),
-        is_enabled=still_enabled,
+    identity = identity_if_allowed(settings)
+    first = load_project_pages(data_paths(settings).page_list)[0]
+    client = polite_client(
+        identity,
+        lambda url: is_allowed_url(url, {first}),
+        env_file=env_file,
         max_requests=LOOK_REQUESTS,
-        **client_options,  # type: ignore[arg-type]
+        **client_options,
     )
     return Looker(client, first, shape)
 
 
 def look_plan(settings: Settings) -> list[str]:
     """What a look would read, in plain words. Makes no request."""
-    page_list, _, _ = data_paths(settings)
+    page_list = data_paths(settings).page_list
     lines = [
         "A look would send at most two requests, two seconds apart, and save nothing:",
         f"  1. {ROBOTS_URL}",

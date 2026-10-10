@@ -202,7 +202,7 @@ def report(
     )
     has_contact = bool(settings.collector_contact_email.get_secret_value().strip())
     add("8", "COLLECTOR_CONTACT_EMAIL", has_contact, "set" if has_contact else "empty")
-    page_list, _, _ = data_paths(settings)
+    page_list = data_paths(settings).page_list
     if page_list.exists():
         count = sum(
             1
