@@ -18,6 +18,7 @@ from typing import Protocol
 import psycopg
 
 from hackathon_memory.finops import prices
+from hackathon_memory.settings import Settings, SettingsError
 
 # "test" is all the work before the tool is shown: the proofs, the tests, the first runs.
 # "prod" is the tool while people use it.
@@ -228,3 +229,30 @@ class PostgresStore:
             )
             for row in rows
         ]
+
+
+class LedgerNotReady(Exception):
+    """The ledger cannot be written. The message says what to do, and holds no connection text."""
+
+
+def open_ledger(settings: Settings) -> PostgresStore:
+    """The ledger of the settings, after a check that it answers. Raises LedgerNotReady if not.
+
+    A job that pays for calls uses this before its first call: a call that cannot be counted
+    must not be made.
+    """
+    try:
+        store = PostgresStore(settings.database_conninfo())
+        store.spent(settings.llm_environment)
+    except SettingsError as problem:
+        raise LedgerNotReady(str(problem)) from None
+    except psycopg.errors.UndefinedTable:
+        raise LedgerNotReady(
+            "The table of calls does not exist yet. Run: python -m hackathon_memory.db migrate"
+        ) from None
+    except psycopg.OperationalError:
+        # The text of this error is not shown on purpose: it can hold connection details.
+        raise LedgerNotReady(
+            "The database does not answer. Start it with: docker compose up -d --wait db"
+        ) from None
+    return store

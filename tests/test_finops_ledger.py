@@ -8,7 +8,15 @@ import psycopg
 import pytest
 
 from hackathon_memory.db.migrate import migrate
-from hackathon_memory.finops.calls import Call, CallError, MemoryStore, PostgresStore
+from hackathon_memory.finops.calls import (
+    Call,
+    CallError,
+    LedgerNotReady,
+    MemoryStore,
+    PostgresStore,
+    open_ledger,
+)
+from hackathon_memory.settings import Settings
 
 FLASH = "gemini-3.8-flash"
 PRO = "gemini-3.1-pro-preview"
@@ -185,3 +193,30 @@ def test_the_table_has_no_column_for_the_text_of_a_call(empty_database: str) -> 
         "run_id",
         "item_ref",
     }
+
+
+# --------------------------------------------------------------------- a ledger that is checked
+
+
+def test_a_ready_ledger_is_opened(empty_database: str) -> None:
+    migrate(empty_database)
+    store = open_ledger(Settings(_env_file=None, database_url=empty_database))
+    store.add(call())
+    assert store.spent("test") == pytest.approx(0.008)
+
+
+def test_a_ledger_with_no_table_says_how_to_make_it(empty_database: str) -> None:
+    with pytest.raises(LedgerNotReady, match="db migrate"):
+        open_ledger(Settings(_env_file=None, database_url=empty_database))
+
+
+def test_a_ledger_that_does_not_answer_says_so_without_the_connection_text() -> None:
+    unreachable = "postgresql://nobody:hidden-word@127.0.0.1:1/none?connect_timeout=2"
+    with pytest.raises(LedgerNotReady, match="docker compose up") as problem:
+        open_ledger(Settings(_env_file=None, database_url=unreachable))
+    assert "hidden-word" not in str(problem.value)
+
+
+def test_a_ledger_with_no_password_says_what_is_missing() -> None:
+    with pytest.raises(LedgerNotReady, match="POSTGRES_PASSWORD"):
+        open_ledger(Settings(_env_file=None))

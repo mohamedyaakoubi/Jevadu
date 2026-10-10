@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from googlefake import FakeGoogle, answer
+from hackathon_memory.finops.calls import LedgerNotReady, MemoryStore
 from hackathon_memory.settings import Settings
 from proofs import google_models
 from proofs import result as result_module
@@ -43,10 +44,12 @@ def results_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def run_with(google: FakeGoogle, **options: object) -> int:
+    store = options.pop("store", None) or MemoryStore()
     return google_models.run(
         options.pop("settings", None) or settings(),  # type: ignore[arg-type]
         make=lambda _settings: google.client(),
         text_source=options.pop("text_source", lambda _s: REAL),  # type: ignore[arg-type]
+        ledger=options.pop("ledger", lambda _s: store),  # type: ignore[arg-type]
     )
 
 
@@ -90,6 +93,48 @@ def test_everything_works(results_dir: Path) -> None:
     paths = [path for path, _ in google.requests]
     assert sum(p.endswith("gemini-3.1-pro-preview:generateContent") for p in paths) == 1
     assert sum(p.endswith("gemini-3.8-flash:generateContent") for p in paths) == 1
+
+
+def test_every_call_of_the_proof_is_in_the_cost_ledger(results_dir: Path) -> None:
+    store = MemoryStore()
+    assert run_with(good_google(), store=store) == 0
+    lines = store.calls("test")
+    assert len(lines) == 5  # one for each layer, and three embedding calls
+    assert {line.purpose for line in lines} == {"proof"}
+    assert [line.item_ref for line in lines] == ["rewrite", "search"] + ["embeddings"] * 3
+    assert len({line.run_id for line in lines}) == 1
+    assert lines[0].run_id.startswith("proof-")
+    noted = saved(results_dir)["measurements"]["ledger"]
+    assert (noted["environment"], noted["calls"]) == ("test", 5)
+    assert noted["calls_with_a_known_price"] == 2  # the embedding model has no known price
+    assert noted["counted_cost_usd"] == pytest.approx(0.010625)
+
+
+def test_a_ledger_that_is_not_ready_blocks_the_proof_before_any_call(
+    results_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    google = good_google()
+
+    def not_ready(_settings: Settings) -> MemoryStore:
+        raise LedgerNotReady("The database does not answer.")
+
+    assert run_with(google, ledger=not_ready) == 3
+    out = capsys.readouterr().out
+    assert "Blocked" in out and "cost ledger" in out
+    assert google.requests == []  # a call that cannot be counted is not made
+    assert not results_dir.exists() or not list(results_dir.glob("*"))
+
+
+def test_a_budget_that_is_too_small_stops_the_model_calls(results_dir: Path) -> None:
+    google = good_google()
+    assert run_with(google, settings=settings(llm_budget_test_usd=0.01)) == 1
+    body = saved(results_dir)
+    names = failed(body)
+    assert "rewrite: gemini-3.1-pro-preview (thinking HIGH) returned a valid form" in names
+    assert "search: gemini-3.8-flash (thinking HIGH) returned a valid form" in names
+    assert "was not made" in json.dumps(body)
+    paths = [path for path, _ in google.requests]
+    assert not any(p.endswith(":generateContent") for p in paths)  # no model was asked
 
 
 def test_the_models_and_levels_come_from_the_settings(results_dir: Path) -> None:

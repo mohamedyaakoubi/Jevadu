@@ -26,6 +26,10 @@ What it checks:
    Each answer has 3,072 numbers, and the related question is closer to the text than the
    unrelated one. This shows that both modes (document and question) work.
 3. What the calls cost, from the token counts and Google's prices.
+
+Every call of the proof goes through the cost meter and leaves a line in the ledger (the
+table llm_calls), with the purpose "proof". If the ledger is not ready, the proof does not
+start: a call that cannot be counted is not made.
 """
 
 from __future__ import annotations
@@ -41,6 +45,9 @@ from pathlib import Path
 
 from google import genai
 
+from hackathon_memory.finops import budget as budgets
+from hackathon_memory.finops.calls import CallStore, LedgerNotReady, open_ledger
+from hackathon_memory.finops.meter import Meter, MeteredClient, Tags
 from hackathon_memory.llm import embeddings, gemini
 from hackathon_memory.llm.client import GoogleSetupError, make_client
 from hackathon_memory.settings import Settings
@@ -82,6 +89,7 @@ def run(
     settings: Settings | None = None,
     make: Callable[[Settings], genai.Client] = make_client,
     text_source: Callable[[Settings], RealText | None] = load_real_text,
+    ledger: Callable[[Settings], CallStore] = open_ledger,
 ) -> int:
     settings = settings or Settings()
     project = settings.google_cloud_project.get_secret_value().strip()
@@ -93,6 +101,14 @@ def run(
             "  gcloud auth application-default login\n"
             "and set GOOGLE_CLOUD_LOCATION=global. Never paste values into a chat.\n"
             "The steps are in README.md."
+        )
+        return 3
+    try:
+        store = ledger(settings)
+    except LedgerNotReady as problem:
+        print(
+            "Blocked: the calls of this proof are counted in the cost ledger, and the ledger "
+            f"is not ready.\n{problem}"
         )
         return 3
 
@@ -138,6 +154,14 @@ def run(
         result.check("the Google client can be made", False, str(error))
         return result.finish()
     result.check("the Google client can be made", True)
+    run_id = "proof-" + result.ran_at.replace(":", "").replace("-", "")
+    meter = Meter(
+        store,
+        settings.llm_environment,
+        budget=budgets.from_settings(settings),
+        location=location,
+    )
+    client = MeteredClient(client, meter, Tags(purpose="proof", run_id=run_id))
 
     # --- 1. the form, for each layer
     page = _normal(real.text)
@@ -148,7 +172,9 @@ def run(
         name = f"{layer}: {model} (thinking {level}) returned a valid form"
         try:
             started = time.monotonic()
-            card = gemini.fill_card(client, real.text, model=model, thinking_level=level)
+            card = gemini.fill_card(
+                client.tagged(item_ref=layer), real.text, model=model, thinking_level=level
+            )
             seconds = round(time.monotonic() - started, 1)
         except gemini.CardFormatError as error:
             result.check(name, False, str(error))
@@ -212,12 +238,14 @@ def run(
         result.measurements["gemini_cost_usd_total"] = round(total_cost, 6) if cost_known else None
 
     # --- 2. the embeddings
+    embedder = client.tagged(item_ref="embeddings")
     try:
-        [document] = embeddings.embed_documents(client, [real.text])
-        related = embeddings.embed_query(client, f"{real.name} on Hedera")
-        unrelated = embeddings.embed_query(client, UNRELATED_QUESTION)
+        [document] = embeddings.embed_documents(embedder, [real.text])
+        related = embeddings.embed_query(embedder, f"{real.name} on Hedera")
+        unrelated = embeddings.embed_query(embedder, UNRELATED_QUESTION)
     except embeddings.EmbeddingError as error:
         result.check("the embedding model returned vectors of the expected size", False, str(error))
+        _note_the_ledger(result, store, settings.llm_environment, run_id)
         return result.finish()
     except Exception as error:  # noqa: BLE001
         result.check(
@@ -225,6 +253,7 @@ def run(
             False,
             f"{type(error).__name__}: {error}",
         )
+        _note_the_ledger(result, store, settings.llm_environment, run_id)
         return result.finish()
     result.check(
         "the embedding model returned vectors of the expected size",
@@ -248,7 +277,25 @@ def run(
             "document_truncated": document.truncated,
         }
     )
+    _note_the_ledger(result, store, settings.llm_environment, run_id)
     return result.finish()
+
+
+def _note_the_ledger(result: ProofResult, store: CallStore, environment: str, run_id: str) -> None:
+    """Write into the result how many calls of this run the ledger holds, and their cost."""
+    lines = [call for call in store.calls(environment) if call.run_id == run_id]
+    result.check(
+        "the calls of this proof are in the cost ledger",
+        bool(lines),
+        f"{len(lines)} call(s), environment '{environment}'",
+    )
+    result.measurements["ledger"] = {
+        "environment": environment,
+        "run_id": run_id,
+        "calls": len(lines),
+        "calls_with_a_known_price": sum(1 for call in lines if call.cost_usd is not None),
+        "counted_cost_usd": round(sum(call.cost_usd or 0.0 for call in lines), 6),
+    }
 
 
 if __name__ == "__main__":
