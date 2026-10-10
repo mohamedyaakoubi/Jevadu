@@ -19,6 +19,7 @@ from hackathon_memory.collect.ethglobal import (
     is_allowed_url,
     load_project_pages,
     plan,
+    prize_sponsors,
     took_a_hedera_prize,
 )
 from hackathon_memory.collect.ethglobal_found import FoundList, PrizeProject, save_found
@@ -319,6 +320,48 @@ def test_a_page_without_a_hedera_prize_is_read_but_not_kept(tmp_path: Path) -> N
     assert not collector.store.has(NO_PRIZE)
     for path in (tmp_path / "raw").iterdir():
         assert b"Cedar Lens" not in path.read_bytes()  # not kept, not even in part
+
+
+def test_three_pages_in_a_row_without_a_hedera_prize_stop_the_run(tmp_path: Path) -> None:
+    # A list that names the wrong projects: the run must not read on through it.
+    wrong = [f"https://ethglobal.com/showcase/wrong-{i}" for i in range(4)]
+    site_pages = pages() | {url: page(sample("project_other_sponsor.html")) for url in wrong}
+    collector, site, _ = make(tmp_path, site_pages, listed=(*wrong, WINNER))
+    summary = collector.run()
+    assert site.urls == [ROBOTS_URL, *wrong[:3]]  # the fourth page and the winner are not read
+    assert summary.stopped is not None
+    assert "3 pages in a row show no Hedera prize" in summary.stopped
+    assert summary.pages_without_hedera_prize == wrong[:3]
+    assert summary.pages_saved == 0
+
+
+def test_a_kept_page_resets_the_count_of_pages_without_a_prize(tmp_path: Path) -> None:
+    wrong = [f"https://ethglobal.com/showcase/wrong-{i}" for i in range(4)]
+    site_pages = pages() | {url: page(sample("project_no_prize.html")) for url in wrong}
+    listed = (wrong[0], wrong[1], WINNER, wrong[2], wrong[3])  # never three in a row
+    collector, _, _ = make(tmp_path, site_pages, listed=listed)
+    summary = collector.run()
+    assert summary.stopped is None
+    assert summary.pages_saved == 1
+    assert len(summary.pages_without_hedera_prize) == 4
+
+
+def test_the_message_about_a_page_that_is_not_kept_names_the_sponsors_it_shows(
+    tmp_path: Path,
+) -> None:
+    said: list[str] = []
+    collector, _, _ = make(tmp_path, pages(), listed=(WINNER, OTHER, NO_PRIZE))
+    collector.log = said.append
+    collector.run()
+    assert f"not kept {OTHER}: the page shows no Hedera prize (it shows: Other Sponsor)" in said
+    assert f"not kept {NO_PRIZE}: the page shows no Hedera prize (it shows: no prize)" in said
+
+
+def test_the_sponsors_of_a_page_are_the_parts_before_the_dash() -> None:
+    assert prize_sponsors(sample("project_winner.html")) == ["Hedera", "Other Sponsor"]
+    assert prize_sponsors(sample("project_no_prize.html")) == []
+    twice = "<h3>Winner of</h3><div><h4>Acme-Labs - First</h4><h4>Acme-Labs – Second</h4></div>"
+    assert prize_sponsors(twice.encode()) == ["Acme-Labs"]
 
 
 # --------------------------------------------------------------------- the team part
