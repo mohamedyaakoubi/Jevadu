@@ -25,7 +25,7 @@ from urllib.parse import parse_qsl, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
-from hackathon_memory.collect.ethglobal import PROJECT_PAGE_PATH, SITE
+from hackathon_memory.collect.ethglobal_site import PROJECT_PAGE_PATH, SITE
 from hackathon_memory.collect.pagedata import objects_with_key, page_data_text
 
 LIST_PATH = "/showcase"

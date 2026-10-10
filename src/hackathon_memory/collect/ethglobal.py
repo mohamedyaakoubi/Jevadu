@@ -39,6 +39,11 @@ from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
+from hackathon_memory.collect.ethglobal_site import (
+    ROBOTS_URL,
+    SITE,
+    looks_like_a_project_page,
+)
 from hackathon_memory.collect.polite import (
     CollectorIdentity,
     CollectorRefused,
@@ -60,9 +65,6 @@ from hackathon_memory.settings import Settings
 # Pages in a row that cannot be saved safely. Three in a row means the shape is wrong, not bad luck.
 MAX_UNSAFE_IN_A_ROW = 3
 
-SITE = "ethglobal.com"
-ROBOTS_URL = f"https://{SITE}/robots.txt"
-PROJECT_PAGE_PATH = re.compile(r"^/showcase/[A-Za-z0-9-]+$")
 # robots.txt takes one of the 300 requests, so the list may hold 299 pages at most.
 MAX_LISTED_PAGES = 299
 
@@ -124,16 +126,6 @@ ETHGLOBAL_SHAPE = SiteShape(
     verified_on="2026-10-10",
     checked_pages="3 public project pages, 2 of them winners of a Hedera prize",
 )
-
-
-def looks_like_a_project_page(url: str) -> bool:
-    """The address has the form of one showcase project and nothing more."""
-    parts = urlsplit(url)
-    if parts.scheme != "https" or parts.hostname != SITE or parts.query or parts.fragment:
-        return False
-    if parts.port not in (None, 443) or parts.username or parts.password:
-        return False  # no other port, and no login written into the address
-    return bool(PROJECT_PAGE_PATH.match(parts.path.rstrip("/")))
 
 
 def is_allowed_url(url: str, named: Collection[str]) -> bool:
@@ -311,27 +303,10 @@ class EthGlobalCollector:
 
     def _check_robots(self, url: str) -> None:
         if self._robots is None:
-            self._robots = self._load_robots()
+            self._robots = load_robots(self.client, self.store)
         agent = self.client.identity.name
         if not self._robots.allows(agent, url):
             raise StopCollecting(f"robots.txt of {SITE} does not allow this tool to read {url}")
-
-    def _load_robots(self) -> RobotsRules:
-        saved = self.store.load(ROBOTS_URL, suffix=".txt")
-        if saved is not None:
-            rules = RobotsRules(saved.read().decode("utf-8", errors="replace"))
-            obey_crawl_delay(self.client, rules)
-            return rules
-        rules, fetched = read_rules(self.client, ROBOTS_URL, SITE)
-        if fetched.status == 200:
-            self.store.save(
-                fetched,
-                fetched.body,
-                received=fetched.body,
-                collector=f"{self.client.identity.name}/{self.client.identity.version}",
-                suffix=".txt",
-            )
-        return rules
 
     def _write_manifest(self, summary: RunSummary) -> None:
         self.runs_dir.mkdir(parents=True, exist_ok=True)
@@ -340,6 +315,25 @@ class EthGlobalCollector:
         path.write_text(
             json.dumps(asdict(summary), indent=2) + "\n", encoding="utf-8", newline="\n"
         )
+
+
+def load_robots(client: PoliteClient, store: RawStore) -> RobotsRules:
+    """The rules of the site: the saved copy if there is one, else one request (kept if 200)."""
+    saved = store.load(ROBOTS_URL, suffix=".txt")
+    if saved is not None:
+        rules = RobotsRules(saved.read().decode("utf-8", errors="replace"))
+        obey_crawl_delay(client, rules)
+        return rules
+    rules, fetched = read_rules(client, ROBOTS_URL, SITE)
+    if fetched.status == 200:
+        store.save(
+            fetched,
+            fetched.body,
+            received=fetched.body,
+            collector=f"{client.identity.name}/{client.identity.version}",
+            suffix=".txt",
+        )
+    return rules
 
 
 def _now() -> str:

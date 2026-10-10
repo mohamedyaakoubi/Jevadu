@@ -28,8 +28,6 @@ from pathlib import Path
 
 from hackathon_memory.collect.ethglobal import (
     ETHGLOBAL_SHAPE,
-    ROBOTS_URL,
-    SITE,
     SiteShape,
     data_paths,
     identity_if_allowed,
@@ -38,6 +36,7 @@ from hackathon_memory.collect.ethglobal import (
     polite_client,
     took_a_hedera_prize,
 )
+from hackathon_memory.collect.ethglobal_site import ROBOTS_URL, SITE
 from hackathon_memory.collect.polite import (
     CollectorRefused,
     FetchFailed,
