@@ -104,6 +104,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m proofs.database` | Proof 1, on the local database |
 | `python -m proofs.hedera_write` | Proof 2, on the Hedera test network |
 | `python -m proofs.google_models` | Proof 3, on Google's models (it costs a few cents) |
+| `python -m proofs.lists` | Proof 4, on what the walk and the run left on disk. It sends no request: it checks that every promise to the site was kept. |
 | `python -m hackathon_memory.collect ethglobal --plan` | Shows what the collector would read. It sends no request. |
 | `python -m hackathon_memory.collect ethglobal --look` | Reads robots.txt and the first page of the hand-made list, and saves no page |
 | `python -m hackathon_memory.collect ethglobal --find` | Walks through the showcase list with the filter "partner: Hedera" and writes down which projects took a prize. It saves no page. `--pages 5` reads five pages of the list and can be started again. |

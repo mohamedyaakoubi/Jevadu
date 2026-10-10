@@ -28,6 +28,7 @@ PROOFS = {
     "database": "database",
     "hedera-write": "Hedera write",
     "google-models": "Google models",
+    "lists": "ETHGlobal lists",
 }
 
 
