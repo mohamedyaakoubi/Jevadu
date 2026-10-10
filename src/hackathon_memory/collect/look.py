@@ -44,7 +44,7 @@ from hackathon_memory.collect.polite import (
     PoliteClient,
     StopCollecting,
 )
-from hackathon_memory.collect.robots import RobotsRules
+from hackathon_memory.collect.robots import RobotsRules, read_rules
 from hackathon_memory.collect.skeleton import skeleton
 from hackathon_memory.collect.teamcut import CutFailed, cut_team
 from hackathon_memory.settings import Settings
@@ -96,24 +96,18 @@ class Looker:
     # ------------------------------------------------------------------ steps
 
     def _robots(self, report: LookReport) -> RobotsRules:
-        fetched = self._get(ROBOTS_URL, report, allow_missing=True)
-        if fetched is None or fetched.status == 404:
+        rules, fetched = read_rules(self.client, ROBOTS_URL, SITE)
+        if fetched.status == 404:
             report.lines.append("robots.txt: none (404), so nothing is forbidden by it.")
-            return RobotsRules("")
-        report.lines.append(f"robots.txt: read, {len(fetched.body)} bytes. It is obeyed.")
-        rules = RobotsRules(fetched.body.decode("utf-8", errors="replace"))
-        delay = rules.crawl_delay(self.client.identity.name)
-        if delay:
-            self.client.raise_pause_to(delay)
+        else:
+            report.lines.append(f"robots.txt: read, {len(fetched.body)} bytes. It is obeyed.")
         return rules
 
-    def _get(self, url: str, report: LookReport, allow_missing: bool = False) -> FetchResult | None:
+    def _get(self, url: str, report: LookReport) -> FetchResult | None:
         try:
             fetched = self.client.get(url)
         except FetchFailed as error:
             raise StopCollecting(f"{url} could not be read: {error}") from None
-        if fetched.status == 404 and allow_missing:
-            return fetched
         if fetched.status != 200:
             raise StopCollecting(f"{url} answered {fetched.status}")
         return fetched

@@ -15,6 +15,8 @@ import re
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
+from hackathon_memory.collect.polite import FetchFailed, FetchResult, PoliteClient, StopCollecting
+
 
 @dataclass
 class _Group:
@@ -94,3 +96,28 @@ class RobotsRules:
     def crawl_delay(self, agent: str) -> float | None:
         group = self._group_for(agent)
         return group.crawl_delay if group else None
+
+
+def obey_crawl_delay(client: PoliteClient, rules: RobotsRules) -> None:
+    """A site may ask for a longer pause than ours. The pause is never made shorter."""
+    delay = rules.crawl_delay(client.identity.name)
+    if delay:
+        client.raise_pause_to(delay)
+
+
+def read_rules(client: PoliteClient, url: str, site: str) -> tuple[RobotsRules, FetchResult]:
+    """Fetch robots.txt once, and obey its Crawl-delay. Returns the rules and the answer.
+
+    404 means that the site has no rules. Any other answer that is not 200 is unclear, and the run
+    stops: we do not guess in our own favour.
+    """
+    try:
+        fetched = client.get(url)
+    except FetchFailed as error:
+        raise StopCollecting(f"robots.txt of {site} could not be read: {error}") from None
+    if fetched.status not in (200, 404):
+        raise StopCollecting(f"robots.txt of {site} answered {fetched.status}. Stopped.")
+    text = fetched.body.decode("utf-8", errors="replace") if fetched.status == 200 else ""
+    rules = RobotsRules(text)
+    obey_crawl_delay(client, rules)
+    return rules, fetched

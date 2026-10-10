@@ -43,12 +43,11 @@ from hackathon_memory.collect.polite import (
     CollectorIdentity,
     CollectorRefused,
     FetchFailed,
-    FetchResult,
     PoliteClient,
     StopCollecting,
 )
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
-from hackathon_memory.collect.robots import RobotsRules
+from hackathon_memory.collect.robots import RobotsRules, obey_crawl_delay, read_rules
 from hackathon_memory.collect.teamcut import (
     CutPolicy,
     TeamShapeChanged,
@@ -318,34 +317,20 @@ class EthGlobalCollector:
 
     def _load_robots(self) -> RobotsRules:
         saved = self.store.load(ROBOTS_URL, suffix=".txt")
-        if saved is None:
-            fetched = self._fetch_robots()
-            text = fetched.body.decode("utf-8", errors="replace") if fetched.status == 200 else ""
-            if fetched.status == 200:
-                self.store.save(
-                    fetched,
-                    fetched.body,
-                    received=fetched.body,
-                    collector=f"{self.client.identity.name}/{self.client.identity.version}",
-                    suffix=".txt",
-                )
-        else:
-            text = saved.read().decode("utf-8", errors="replace")
-        rules = RobotsRules(text)
-        delay = rules.crawl_delay(self.client.identity.name)
-        if delay:
-            self.client.raise_pause_to(delay)
+        if saved is not None:
+            rules = RobotsRules(saved.read().decode("utf-8", errors="replace"))
+            obey_crawl_delay(self.client, rules)
+            return rules
+        rules, fetched = read_rules(self.client, ROBOTS_URL, SITE)
+        if fetched.status == 200:
+            self.store.save(
+                fetched,
+                fetched.body,
+                received=fetched.body,
+                collector=f"{self.client.identity.name}/{self.client.identity.version}",
+                suffix=".txt",
+            )
         return rules
-
-    def _fetch_robots(self) -> FetchResult:
-        try:
-            fetched = self.client.get(ROBOTS_URL)
-        except FetchFailed as error:
-            raise StopCollecting(f"robots.txt of {SITE} could not be read: {error}") from None
-        if fetched.status not in (200, 404):
-            # Anything else is unclear. We do not guess in our own favour.
-            raise StopCollecting(f"robots.txt of {SITE} answered {fetched.status}. Stopped.")
-        return fetched
 
     def _write_manifest(self, summary: RunSummary) -> None:
         self.runs_dir.mkdir(parents=True, exist_ok=True)
