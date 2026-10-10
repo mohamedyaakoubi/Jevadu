@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -10,57 +11,88 @@ import pytest
 from fakes import FakeSite, FakeTime, Reply, sample, session_for
 from hackathon_memory.collect.ethglobal import (
     ETHGLOBAL_SHAPE,
+    MAX_LISTED_PAGES,
     ROBOTS_URL,
     EthGlobalCollector,
     SiteShape,
     build_collector,
-    extract_project_links,
     is_allowed_url,
-    load_prize_pages,
+    load_project_pages,
     plan,
+    took_a_hedera_prize,
 )
 from hackathon_memory.collect.polite import CollectorIdentity, CollectorRefused, PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
-from hackathon_memory.collect.teamcut import CutPolicy, CutRule
 from hackathon_memory.settings import Settings
 
-PRIZE = "https://ethglobal.com/events/sample-event-2099/prizes/hedera"
-ZED = "https://ethglobal.com/showcase/zed-widget-a1b2c"
-MANGO = "https://ethglobal.com/showcase/mango-ledger-d4e5f"
-NAMES = [b"Quillfeather", b"Ledgerwood", b"Orchardson", b"quillfeather", b"Samplewright"]
+WINNER = "https://ethglobal.com/showcase/pebble-pay-x1y2z"
+SECOND = "https://ethglobal.com/showcase/quartz-notes-q3w4e"
+OTHER = "https://ethglobal.com/showcase/cedar-lens-k9l8m"
+NO_PRIZE = "https://ethglobal.com/showcase/dune-notes-p0o9i"
+PROFILE = "https://ethglobal.com/showcase/eel-ledger-j5k6l"
+PERSON = "https://ethglobal.com/showcase/fig-registry-u7y6t"
+A_PRIZE_PAGE = "https://ethglobal.com/events/sample-event/prizes/hedera"
 
-# The shape of the INVENTED pages. The real shape is not known yet.
-TEST_SHAPE = SiteShape(
-    project_links_selector="main a[href]",
-    project_cut=CutPolicy(rules=(CutRule("#team"),), json_blocklist=frozenset({"members"})),
-    prize_cut=CutPolicy(rules=(CutRule("#team", required=False),)),
-    verified_on="invented test pages only",
-)
+# The real shape was checked against real pages on 10 October 2026. These tests use it as it is.
+SHAPE = ETHGLOBAL_SHAPE
 
 
 def page(body: bytes) -> Reply:
     return Reply(200, body, {"Content-Type": "text/html; charset=utf-8"})
 
 
+def winner(name: str = "Pebble Pay") -> Reply:
+    return page(sample("project_winner.html").replace(b"Pebble Pay", name.encode()))
+
+
+def unsafe_winner() -> Reply:
+    """A winner page whose author tag holds a name that is not the site's, and the name is also
+    hidden in the page data. Text of a removed tag that stands elsewhere is a leak."""
+    body = sample("project_winner.html")
+    body = body.replace(
+        b'<meta name="author" content="ETHGlobal">',
+        b'<meta name="author" content="Quill Invented">',
+    )
+    body = body.replace(b'\\"site\\":\\"@ethglobal\\"', b'\\"by\\":\\"Quill Invented\\"')
+    return page(body)
+
+
 def pages(**changes: Reply) -> dict[str, Reply]:
     result = {
         ROBOTS_URL: Reply(200, sample("robots.txt"), {"Content-Type": "text/plain"}),
-        PRIZE: page(sample("prize_page.html")),
-        ZED: page(sample("project_zed_widget.html")),
-        MANGO: page(sample("project_mango_ledger.html")),
+        WINNER: winner(),
+        SECOND: winner("Quartz Notes"),
+        OTHER: page(sample("project_other_sponsor.html")),
+        NO_PRIZE: page(sample("project_no_prize.html")),
+        PROFILE: page(sample("project_profile_link.html")),
+        PERSON: page(sample("project_person_in_data.html")),
+    }
+    names = {
+        "robots": ROBOTS_URL,
+        "winner": WINNER,
+        "second": SECOND,
+        "other": OTHER,
+        "no_prize": NO_PRIZE,
     }
     for key, reply in changes.items():
-        result[{"robots": ROBOTS_URL, "prize": PRIZE, "zed": ZED, "mango": MANGO}[key]] = reply
+        result[names[key]] = reply
     return result
 
 
-def make(tmp_path: Path, site_pages: dict[str, Reply], shape: SiteShape = TEST_SHAPE, **options):
+def make(
+    tmp_path: Path,
+    site_pages: dict[str, Reply],
+    listed: tuple[str, ...] = (WINNER, SECOND),
+    shape: SiteShape = SHAPE,
+    **options,
+):
     site = FakeSite(site_pages)
     fake_time = FakeTime()
+    named = frozenset(listed)
     client = PoliteClient(
         site="ethglobal.com",
-        identity=CollectorIdentity(name="TestTool-research", contact="owner@example.test"),
-        allow=is_allowed_url,
+        identity=CollectorIdentity(name="TestTool-research", contact="maintainer@example.test"),
+        allow=lambda url: is_allowed_url(url, named),
         is_enabled=lambda: True,
         session=session_for(site),
         clock=fake_time.clock,
@@ -70,7 +102,7 @@ def make(tmp_path: Path, site_pages: dict[str, Reply], shape: SiteShape = TEST_S
     collector = EthGlobalCollector(
         client=client,
         store=RawStore(tmp_path / "raw"),
-        prize_pages=[PRIZE],
+        project_pages=list(listed),
         shape=shape,
         runs_dir=tmp_path / "runs",
         log=lambda message: None,
@@ -81,94 +113,113 @@ def make(tmp_path: Path, site_pages: dict[str, Reply], shape: SiteShape = TEST_S
 # --------------------------------------------------------------------- only the pages we named
 
 
-@pytest.mark.parametrize(
-    "url",
-    [
-        ROBOTS_URL,
-        PRIZE,
-        PRIZE + "/",
-        ZED,
-        ZED + "/",
-    ],
-)
+@pytest.mark.parametrize("url", [ROBOTS_URL, WINNER, WINNER + "/"])
 def test_addresses_we_named_are_allowed(url: str) -> None:
-    assert is_allowed_url(url)
+    assert is_allowed_url(url, {WINNER})
 
 
 @pytest.mark.parametrize(
     "url",
     [
-        "http://ethglobal.com/showcase/zed-widget-a1b2c",  # not https
-        "https://example.com/showcase/zed-widget-a1b2c",  # another site
-        "https://ethglobal.com.evil.test/showcase/x",  # a look-alike
-        "https://user@ethglobal.com/showcase/x",  # a login in the address
-        "https://ethglobal.com:8443/showcase/x",  # another port
+        SECOND,  # a project page that is not on the list
+        "http://ethglobal.com/showcase/pebble-pay-x1y2z",  # not https
+        "https://example.com/showcase/pebble-pay-x1y2z",  # another site
+        "https://ethglobal.com.evil.test/showcase/pebble-pay-x1y2z",  # a look-alike
+        "https://user@ethglobal.com/showcase/pebble-pay-x1y2z",  # a login in the address
+        "https://ethglobal.com:8443/showcase/pebble-pay-x1y2z",  # another port
         "https://ethglobal.com/showcase",  # the list of the whole showcase
         "https://ethglobal.com/showcase/",
-        "https://ethglobal.com/showcase/x?page=2",  # a query
-        "https://ethglobal.com/showcase/x#team",  # a fragment
-        "https://ethglobal.com/events/sample-event-2099/prizes/other",  # not the Hedera prize
-        "https://ethglobal.com/events/sample-event-2099",
+        "https://ethglobal.com/showcase/pebble-pay-x1y2z?page=2",  # a query
+        "https://ethglobal.com/showcase/pebble-pay-x1y2z#team",  # a fragment
+        A_PRIZE_PAGE,  # a prize page lists no winners, so it is never read
+        "https://ethglobal.com/events/sample-event",
         "https://ethglobal.com/hackers/someone",  # a person
         "https://ethglobal.com/",
     ],
 )
 def test_other_addresses_are_never_allowed(url: str) -> None:
-    assert not is_allowed_url(url)
+    assert not is_allowed_url(url, {WINNER})
 
 
-def test_the_prize_list_must_exist_and_hold_prize_pages_only(tmp_path: Path) -> None:
-    path = tmp_path / "prize-pages.txt"
+def test_the_list_must_exist_and_hold_project_pages_only(tmp_path: Path) -> None:
+    path = tmp_path / "project-pages.txt"
     with pytest.raises(CollectorRefused, match="missing"):
-        load_prize_pages(path)
+        load_project_pages(path)
 
     path.write_text("# only comments\n\n", encoding="utf-8")
     with pytest.raises(CollectorRefused, match="empty"):
-        load_prize_pages(path)
+        load_project_pages(path)
 
-    path.write_text(f"{PRIZE}\nhttps://ethglobal.com/showcase/zed-widget-a1b2c\n", encoding="utf-8")
+    path.write_text(f"{WINNER}\n{A_PRIZE_PAGE}\n", encoding="utf-8")
     with pytest.raises(CollectorRefused, match="line 2"):
-        load_prize_pages(path)
+        load_project_pages(path)
 
 
-def test_the_prize_list_ignores_comments_and_repeats(tmp_path: Path) -> None:
-    path = tmp_path / "prize-pages.txt"
-    path.write_text(f"# checked by hand\n{PRIZE}  # one\n{PRIZE}/\n", encoding="utf-8")
-    assert load_prize_pages(path) == [PRIZE]
+def test_the_list_ignores_comments_and_repeats(tmp_path: Path) -> None:
+    path = tmp_path / "project-pages.txt"
+    path.write_text(f"# made by hand\n{WINNER}  # one\n{WINNER}/\n{SECOND}\n", encoding="utf-8")
+    assert load_project_pages(path) == [WINNER, SECOND]
 
 
-def test_only_showcase_projects_are_taken_from_a_prize_page() -> None:
-    links = extract_project_links(sample("prize_page.html"), PRIZE, "main a[href]")
-    # The page also links to a sponsor, to another prize page, and to Zed Widget twice.
-    assert links == [ZED, MANGO]
+def test_the_list_may_not_be_longer_than_the_promise_allows(tmp_path: Path) -> None:
+    path = tmp_path / "project-pages.txt"
+    lines = [f"https://ethglobal.com/showcase/p-{i}" for i in range(MAX_LISTED_PAGES + 1)]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with pytest.raises(CollectorRefused, match=str(MAX_LISTED_PAGES)):
+        load_project_pages(path)
+    path.write_text("\n".join(lines[:MAX_LISTED_PAGES]) + "\n", encoding="utf-8")
+    assert len(load_project_pages(path)) == MAX_LISTED_PAGES
+
+
+# --------------------------------------------------------------------- the Hedera prize
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("project_winner.html", True),
+        ("project_other_sponsor.html", False),  # won another sponsor's prize, talks about Hedera
+        ("project_no_prize.html", False),
+    ],
+)
+def test_a_page_is_a_hedera_winner_only_if_its_prize_block_says_so(
+    name: str, expected: bool
+) -> None:
+    assert took_a_hedera_prize(sample(name)) is expected
+
+
+def test_the_prize_line_is_read_whatever_the_case_or_the_dash() -> None:
+    def block(line: str) -> bytes:
+        return f"<h3>Winner of</h3><div><div><h4>{line}</h4></div></div>".encode()
+
+    assert took_a_hedera_prize(block("HEDERA - Best use"))
+    assert took_a_hedera_prize(block("Hedera – Best use"))
+    assert not took_a_hedera_prize(block("Hederaphile - Best use"))
+    assert not took_a_hedera_prize(b"<h3>Finalist</h3><div><h4>Hedera - Best use</h4></div>")
 
 
 # --------------------------------------------------------------------- a full run
 
 
-def test_a_full_run_saves_the_pages_without_the_team(tmp_path: Path) -> None:
+def test_a_full_run_saves_the_winners_without_personal_tags(tmp_path: Path) -> None:
     collector, site, fake_time = make(tmp_path, pages())
     summary = collector.run()
 
-    assert site.urls == [ROBOTS_URL, PRIZE, ZED, MANGO]
-    assert fake_time.sleeps == [2.0, 2.0, 2.0]
+    assert site.urls == [ROBOTS_URL, WINNER, SECOND]
+    assert fake_time.sleeps == [2.0, 2.0]
     assert summary.stopped is None
-    assert summary.pages_saved == 3  # the prize page and two projects (robots.txt is kept too)
-    assert summary.project_links_found == 2
+    assert summary.pages_saved == 2
+    assert summary.pages_without_hedera_prize == []
 
-    saved_files = [p for p in (tmp_path / "raw").iterdir() if p.is_file()]
-    assert saved_files
-    for path in saved_files:
-        content = path.read_bytes()
-        for name in NAMES:
-            assert name not in content, f"{name!r} was saved in {path.name}"
-
-    zed = collector.store.load(ZED)
-    assert zed is not None
-    assert b"Zed Widget" in zed.read()
-    assert b"0.0.1234567" in zed.read()
-    assert zed.meta["team_cut"]["elements_removed"] == 2
-    assert zed.meta["status"] == 200
+    saved = collector.store.load(WINNER)
+    assert saved is not None
+    content = saved.read()
+    assert b"Pebble Pay" in content
+    assert b"0.0.2345678" in content
+    assert b'name="author"' not in content  # the personal tags go on every page
+    assert b'name="twitter:creator"' not in content
+    assert saved.meta["status"] == 200
+    assert saved.meta["team_cut"]["elements_removed"] == 2
 
 
 def test_the_run_leaves_a_record_without_page_text(tmp_path: Path) -> None:
@@ -178,10 +229,10 @@ def test_the_run_leaves_a_record_without_page_text(tmp_path: Path) -> None:
     assert len(records) == 1
     text = records[0].read_text(encoding="utf-8")
     record = json.loads(text)
-    assert record["requests_made"] == 4
+    assert record["requests_made"] == 3
     assert record["stopped"] is None
-    assert record["project_links_found"] == 2
-    assert "Widget" not in text  # no text of a page, only counts and addresses
+    assert record["project_pages_planned"] == 2
+    assert "Pebble" not in text  # no text of a page, only counts and addresses
 
 
 def test_a_second_run_makes_no_request_at_all(tmp_path: Path) -> None:
@@ -197,24 +248,24 @@ def test_a_second_run_makes_no_request_at_all(tmp_path: Path) -> None:
 
 
 def test_a_second_run_fetches_only_what_is_missing(tmp_path: Path) -> None:
-    first, _, _ = make(tmp_path, pages(mango=Reply(404, b"gone")))
+    first, _, _ = make(tmp_path, pages(second=Reply(404, b"gone")))
     first.run()
 
     second, site, _ = make(tmp_path, pages())  # the page is back
     summary = second.run()
-    assert site.urls == [MANGO]  # robots.txt, the prize page and Zed Widget are already saved
+    assert site.urls == [SECOND]  # robots.txt and the first project are already saved
     assert summary.pages_saved == 1
     assert summary.pages_already_saved == 1
 
 
 def test_the_limit_stops_the_run_and_the_record_says_so(tmp_path: Path) -> None:
-    collector, site, _ = make(tmp_path, pages(), max_requests=3)
+    collector, site, _ = make(tmp_path, pages(), max_requests=2)
     summary = collector.run()
-    assert site.urls == [ROBOTS_URL, PRIZE, ZED]
+    assert site.urls == [ROBOTS_URL, WINNER]
     assert summary.stopped is not None
-    assert "limit of 3 requests" in summary.stopped
-    assert collector.store.has(ZED)
-    assert not collector.store.has(MANGO)
+    assert "limit of 2 requests" in summary.stopped
+    assert collector.store.has(WINNER)
+    assert not collector.store.has(SECOND)
     assert list((tmp_path / "runs").glob("*.json"))  # the record is written even when stopped
 
 
@@ -225,7 +276,7 @@ def test_robots_txt_is_read_first_and_obeyed(tmp_path: Path) -> None:
     robots = Reply(200, b"User-agent: *\nDisallow: /showcase/\n")
     collector, site, _ = make(tmp_path, pages(robots=robots))
     summary = collector.run()
-    assert site.urls == [ROBOTS_URL, PRIZE]
+    assert site.urls == [ROBOTS_URL]  # no project page is read
     assert summary.stopped is not None
     assert "robots.txt" in summary.stopped
 
@@ -234,7 +285,7 @@ def test_a_crawl_delay_in_robots_txt_makes_the_pause_longer(tmp_path: Path) -> N
     robots = Reply(200, b"User-agent: *\nCrawl-delay: 6\n")
     collector, _, fake_time = make(tmp_path, pages(robots=robots))
     collector.run()
-    assert fake_time.sleeps == [6.0, 6.0, 6.0]
+    assert fake_time.sleeps == [6.0, 6.0]
 
 
 def test_a_robots_answer_we_do_not_understand_stops_the_run(tmp_path: Path) -> None:
@@ -246,59 +297,91 @@ def test_a_robots_answer_we_do_not_understand_stops_the_run(tmp_path: Path) -> N
 
 
 def test_a_refusal_stops_the_run_at_once(tmp_path: Path) -> None:
-    collector, site, _ = make(tmp_path, pages(zed=Reply(403, b"no")))
+    collector, site, _ = make(tmp_path, pages(winner=Reply(403, b"no")))
     summary = collector.run()
-    assert site.urls == [ROBOTS_URL, PRIZE, ZED]  # nothing after the refusal
+    assert site.urls == [ROBOTS_URL, WINNER]  # nothing after the refusal
     assert summary.stopped is not None
     assert "says no" in summary.stopped
+
+
+# --------------------------------------------------------------------- only Hedera winners are kept
+
+
+def test_a_page_without_a_hedera_prize_is_read_but_not_kept(tmp_path: Path) -> None:
+    collector, site, _ = make(tmp_path, pages(), listed=(WINNER, OTHER, NO_PRIZE))
+    summary = collector.run()
+    assert site.urls == [ROBOTS_URL, WINNER, OTHER, NO_PRIZE]
+    assert summary.pages_without_hedera_prize == [OTHER, NO_PRIZE]
+    assert summary.pages_saved == 1
+    assert summary.stopped is None
+    assert not collector.store.has(OTHER)
+    assert not collector.store.has(NO_PRIZE)
+    for path in (tmp_path / "raw").iterdir():
+        assert b"Cedar Lens" not in path.read_bytes()  # not kept, not even in part
 
 
 # --------------------------------------------------------------------- the team part
 
 
-def test_a_page_whose_team_part_cannot_be_cut_is_not_saved_and_stops_the_run(
-    tmp_path: Path,
-) -> None:
-    changed_shape = (
-        b"<html><body><main><h1>Zed Widget</h1><p>No team block.</p></main></body></html>"
-    )
-    collector, site, _ = make(tmp_path, pages(zed=page(changed_shape)))
+def test_a_page_that_shows_a_profile_link_stops_the_run(tmp_path: Path) -> None:
+    collector, site, _ = make(tmp_path, pages(), listed=(PROFILE, SECOND))
     summary = collector.run()
-    assert site.urls == [ROBOTS_URL, PRIZE, ZED]  # stopped at the first page that cannot be cut
-    assert not collector.store.has(ZED)
+    assert site.urls == [ROBOTS_URL, PROFILE]  # the second page is never requested
+    assert not collector.store.has(PROFILE)
     assert summary.stopped is not None
     assert "team part" in summary.stopped
+    for path in (tmp_path / "raw").iterdir():
+        assert b"Samplewright" not in path.read_bytes()
 
 
-def _unsafe(project: bytes) -> bytes:
-    """The same page, but a team member's name is also written in the project's own text."""
-    marker = b"<h2>Project Description</h2>"
-    return project.replace(marker, marker + b"<p>Thanks to Zed Quillfeather for the idea.</p>")
+def test_a_page_whose_data_holds_members_stops_the_run(tmp_path: Path) -> None:
+    collector, site, _ = make(tmp_path, pages(), listed=(PERSON, SECOND))
+    summary = collector.run()
+    assert site.urls == [ROBOTS_URL, PERSON]
+    assert not collector.store.has(PERSON)
+    assert summary.stopped is not None
+    assert "'members'" in summary.stopped
+    assert "Samplewright" not in summary.stopped  # the key is named, never what it holds
+    records = (tmp_path / "runs").glob("*.json")
+    assert all("Samplewright" not in p.read_text(encoding="utf-8") for p in records)
 
 
-def test_a_page_with_a_team_name_in_its_text_is_skipped_and_the_run_goes_on(
+def test_the_name_of_the_site_in_the_tags_is_not_taken_for_a_person(tmp_path: Path) -> None:
+    # The same real shape, but without the names of the site: the handle that also stands in the
+    # page data looks like a leaked name, and the page is refused. This is what the real pages
+    # would have done to the first version of the shape.
+    without_site_names = SiteShape(
+        project_cut=replace(SHAPE.project_cut, site_names=frozenset()), verified_on="test"
+    )
+    collector, _, _ = make(tmp_path, pages(), shape=without_site_names)
+    summary = collector.run()
+    assert summary.pages_skipped_team_text == [WINNER, SECOND]
+    assert summary.pages_saved == 0
+
+    kept, _, _ = make(tmp_path / "real", pages())
+    assert kept.run().pages_saved == 2
+
+
+def test_a_page_with_a_name_hidden_in_its_data_is_skipped_and_the_run_goes_on(
     tmp_path: Path,
 ) -> None:
-    unsafe_zed = page(_unsafe(sample("project_zed_widget.html")))
-    collector, _, _ = make(tmp_path, pages(zed=unsafe_zed))
+    site_pages = pages(winner=unsafe_winner())
+    collector, _, _ = make(tmp_path, site_pages)
     summary = collector.run()
-    assert summary.pages_skipped_team_text == [ZED]
-    assert not collector.store.has(ZED)  # not saved, not even in part
-    assert collector.store.has(MANGO)  # the next page was saved
+    assert summary.pages_skipped_team_text == [WINNER]
+    assert not collector.store.has(WINNER)  # not saved, not even in part
+    assert collector.store.has(SECOND)  # the next page was saved
     assert summary.stopped is None
     for path in (tmp_path / "raw").iterdir():
-        assert b"Quillfeather" not in path.read_bytes()
+        assert b"Quill Invented" not in path.read_bytes()
 
 
 def test_three_unsafe_pages_in_a_row_stop_the_run(tmp_path: Path) -> None:
     slugs = [f"https://ethglobal.com/showcase/unsafe-{i}" for i in range(4)]
-    prize_links = "".join(f'<li><a href="{s}">p</a></li>' for s in slugs)
-    prize = page(f"<html><body><main><ul>{prize_links}</ul></main></body></html>".encode())
-    unsafe = page(_unsafe(sample("project_zed_widget.html")))
-    site_pages = pages(prize=prize) | {s: unsafe for s in slugs}
-    collector, site, _ = make(tmp_path, site_pages)
+    site_pages = pages() | {s: unsafe_winner() for s in slugs}
+    collector, site, _ = make(tmp_path, site_pages, listed=tuple(slugs))
     summary = collector.run()
-    assert site.urls == [ROBOTS_URL, PRIZE, *slugs[:3]]  # the fourth page is never requested
+    assert site.urls == [ROBOTS_URL, *slugs[:3]]  # the fourth page is never requested
     assert summary.stopped is not None
     assert "3 pages in a row" in summary.stopped
     assert summary.pages_skipped_team_text == slugs[:3]
@@ -306,17 +389,13 @@ def test_three_unsafe_pages_in_a_row_stop_the_run(tmp_path: Path) -> None:
 
 def test_a_safe_page_resets_the_count_of_unsafe_pages(tmp_path: Path) -> None:
     slugs = [f"https://ethglobal.com/showcase/mixed-{i}" for i in range(5)]
-    prize_links = "".join(f'<li><a href="{s}">p</a></li>' for s in slugs)
-    prize = page(f"<html><body><main><ul>{prize_links}</ul></main></body></html>".encode())
-    unsafe = page(_unsafe(sample("project_zed_widget.html")))
-    safe = page(sample("project_mango_ledger.html"))
     # unsafe, unsafe, safe, unsafe, unsafe: never three in a row
-    replies = [unsafe, unsafe, safe, unsafe, unsafe]
-    site_pages = pages(prize=prize) | dict(zip(slugs, replies, strict=True))
-    collector, _, _ = make(tmp_path, site_pages)
+    replies = [unsafe_winner(), unsafe_winner(), winner(), unsafe_winner(), unsafe_winner()]
+    site_pages = pages() | dict(zip(slugs, replies, strict=True))
+    collector, _, _ = make(tmp_path, site_pages, listed=tuple(slugs))
     summary = collector.run()
     assert summary.stopped is None
-    assert summary.pages_saved == 2  # the prize page and the one safe project
+    assert summary.pages_saved == 1
 
 
 # ------------------------------------------------------------ pages that are missing or broken
@@ -324,26 +403,32 @@ def test_a_safe_page_resets_the_count_of_unsafe_pages(tmp_path: Path) -> None:
 
 def test_a_missing_page_is_recorded_and_the_run_goes_on(tmp_path: Path) -> None:
     site_pages = pages()
-    del site_pages[MANGO]
+    del site_pages[SECOND]
     collector, _, _ = make(tmp_path, site_pages)
     summary = collector.run()
-    assert summary.pages_not_found == [MANGO]
+    assert summary.pages_not_found == [SECOND]
     assert summary.stopped is None
-    assert collector.store.has(ZED)
+    assert collector.store.has(WINNER)
 
 
 def test_a_server_error_is_recorded_and_the_run_goes_on(tmp_path: Path) -> None:
-    collector, _, _ = make(tmp_path, pages(zed=Reply(500, b"oops")))
+    collector, _, _ = make(tmp_path, pages(winner=Reply(500, b"oops")))
     summary = collector.run()
-    assert summary.errors == [{"url": ZED, "kind": "status 500"}]
-    assert collector.store.has(MANGO)
+    assert summary.errors == [{"url": WINNER, "kind": "status 500"}]
+    assert collector.store.has(SECOND)
 
 
 # --------------------------------------------------------------------- starting
 
 
-def test_the_unchecked_page_shape_refuses_a_live_run(tmp_path: Path) -> None:
-    collector, site, _ = make(tmp_path, pages(), shape=ETHGLOBAL_SHAPE)
+def test_the_shape_of_the_real_pages_was_checked() -> None:
+    assert ETHGLOBAL_SHAPE.verified_on is not None
+    assert ETHGLOBAL_SHAPE.checked_pages
+
+
+def test_an_unchecked_page_shape_refuses_a_live_run(tmp_path: Path) -> None:
+    unchecked = SiteShape(project_cut=SHAPE.project_cut, verified_on=None)
+    collector, site, _ = make(tmp_path, pages(), shape=unchecked)
     with pytest.raises(CollectorRefused, match="not been checked"):
         collector.run()
     assert site.seen == []
@@ -353,42 +438,51 @@ def _settings(tmp_path: Path, **values: object) -> Settings:
     defaults = {
         "data_dir": str(tmp_path),
         "collector_name": "TestTool-research",
-        "collector_contact_email": "owner@example.test",
+        "collector_contact_email": "maintainer@example.test",
         "collect_ethglobal": True,
     }
     return Settings(_env_file=None, **(defaults | values))  # type: ignore[arg-type]
 
 
-def _write_prize_list(tmp_path: Path) -> None:
+def _write_page_list(tmp_path: Path) -> None:
     folder = tmp_path / "by-hand" / "ethglobal.com"
     folder.mkdir(parents=True)
-    (folder / "prize-pages.txt").write_text(PRIZE + "\n", encoding="utf-8")
+    (folder / "project-pages.txt").write_text(WINNER + "\n", encoding="utf-8")
 
 
 def test_a_run_does_not_start_while_the_switch_is_off(tmp_path: Path) -> None:
-    _write_prize_list(tmp_path)
+    _write_page_list(tmp_path)
     with pytest.raises(CollectorRefused, match="switch"):
         build_collector(_settings(tmp_path, collect_ethglobal=False))
 
 
 def test_a_run_does_not_start_without_the_name_and_the_address(tmp_path: Path) -> None:
-    _write_prize_list(tmp_path)
+    _write_page_list(tmp_path)
     with pytest.raises(CollectorRefused, match="COLLECTOR_NAME"):
         build_collector(_settings(tmp_path, collector_contact_email=""))
     with pytest.raises(CollectorRefused, match="COLLECTOR_NAME"):
         build_collector(_settings(tmp_path, collector_name=""))
 
 
-def test_a_run_does_not_start_without_the_hand_checked_list(tmp_path: Path) -> None:
+def test_a_run_does_not_start_without_the_hand_made_list(tmp_path: Path) -> None:
     with pytest.raises(CollectorRefused, match="missing"):
         build_collector(_settings(tmp_path))
+
+
+def test_the_built_collector_may_read_the_listed_pages_only(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    collector = build_collector(_settings(tmp_path))
+    assert collector.client.allow(WINNER)
+    assert collector.client.allow(ROBOTS_URL)
+    assert not collector.client.allow(SECOND)  # a project page that is not on the list
+    assert not collector.client.allow(A_PRIZE_PAGE)
 
 
 def test_turning_the_switch_off_in_the_settings_file_stops_a_running_collector(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("COLLECT_ETHGLOBAL", raising=False)
-    _write_prize_list(tmp_path)
+    _write_page_list(tmp_path)
     env_file = tmp_path / ".env"
     env_file.write_text("COLLECT_ETHGLOBAL=on\n", encoding="utf-8")
     collector = build_collector(_settings(tmp_path), env_file=env_file)
@@ -399,12 +493,12 @@ def test_turning_the_switch_off_in_the_settings_file_stops_a_running_collector(
 
 
 def test_the_plan_says_what_would_be_read_and_makes_no_request(tmp_path: Path) -> None:
-    _write_prize_list(tmp_path)
+    _write_page_list(tmp_path)
     text = "\n".join(plan(_settings(tmp_path)))
-    assert PRIZE in text
+    assert WINNER in text
     assert "robots.txt" in text
-    assert "NO: a live run refuses" in text  # the real page shape is not checked yet
-    assert "owner@example.test" not in text  # the address is never printed
+    assert str(ETHGLOBAL_SHAPE.verified_on) in text  # the shape was checked against real pages
+    assert "maintainer@example.test" not in text  # the address is never printed
 
 
 def test_the_plan_says_when_the_list_is_missing(tmp_path: Path) -> None:

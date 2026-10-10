@@ -202,16 +202,16 @@ def report(
     )
     has_contact = bool(settings.collector_contact_email.get_secret_value().strip())
     add("8", "COLLECTOR_CONTACT_EMAIL", has_contact, "set" if has_contact else "empty")
-    prize_list, _, _ = data_paths(settings)
-    if prize_list.exists():
+    page_list, _, _ = data_paths(settings)
+    if page_list.exists():
         count = sum(
             1
-            for raw in prize_list.read_text(encoding="utf-8").splitlines()
+            for raw in page_list.read_text(encoding="utf-8").splitlines()
             if raw.split("#", 1)[0].strip()
         )
-        add("9", "your list of ETHGlobal prize pages", count > 0, f"{count} address(es)")
+        add("9", "your list of ETHGlobal project pages", count > 0, f"{count} address(es)")
     else:
-        add("9", "your list of ETHGlobal prize pages", False, f"missing: {prize_list}")
+        add("9", "your list of ETHGlobal project pages", False, f"missing: {page_list}")
     add(
         "-",
         "COLLECT_ETHGLOBAL (the stop switch)",
@@ -243,7 +243,7 @@ def blockers(lines: list[Line]) -> dict[str, list[str]]:
             "Gemini search layer",
         ),
         "ETHGlobal live run": missing(
-            "COLLECTOR_CONTACT_EMAIL", "your list of ETHGlobal prize pages"
+            "COLLECTOR_CONTACT_EMAIL", "your list of ETHGlobal project pages"
         ),
     }
 
@@ -263,10 +263,9 @@ def render(lines: list[Line]) -> str:
         )
     out += [
         "",
-        "How to do each step, one by one: README.md (its steps are numbered like these).",
-        "Steps are numbered as in design section 15. Put values in .env, never in a chat.",
-        "The ETHGlobal live run also needs two pages saved by hand and the maintainer's yes "
-        ".",
+        "How to get each value, one by one: README.md (its steps are numbered like these).",
+        "Put values in .env, never in a chat.",
+        "The ETHGlobal live run also needs the maintainer's yes for the pages on the list.",
     ]
     return "\n".join(out)
 

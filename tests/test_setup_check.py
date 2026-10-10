@@ -39,15 +39,15 @@ def test_an_empty_setup_says_what_is_missing(tmp_path: Path) -> None:
     assert lines["HEDERA_OPERATOR_KEY"].ok is False
     assert lines["GOOGLE_CLOUD_PROJECT"].ok is False
     assert lines["COLLECTOR_CONTACT_EMAIL"].ok is False
-    assert lines["your list of ETHGlobal prize pages"].ok is False
+    assert lines["your list of ETHGlobal project pages"].ok is False
 
 
 def test_a_full_setup_is_all_ok(tmp_path: Path) -> None:
     (tmp_path / ".env").write_text("x", encoding="utf-8")
-    prize = tmp_path / "data" / "by-hand" / "ethglobal.com"
-    prize.mkdir(parents=True)
-    (prize / "prize-pages.txt").write_text(
-        "# checked\nhttps://ethglobal.com/events/e/prizes/hedera\n", encoding="utf-8"
+    folder = tmp_path / "data" / "by-hand" / "ethglobal.com"
+    folder.mkdir(parents=True)
+    (folder / "project-pages.txt").write_text(
+        "# checked\nhttps://ethglobal.com/showcase/pebble-pay-x1y2z\n", encoding="utf-8"
     )
     lines = by_what(
         lines_for(
@@ -70,11 +70,11 @@ def test_a_full_setup_is_all_ok(tmp_path: Path) -> None:
         "GOOGLE_CLOUD_LOCATION",
         "COLLECTOR_NAME",
         "COLLECTOR_CONTACT_EMAIL",
-        "your list of ETHGlobal prize pages",
+        "your list of ETHGlobal project pages",
     ):
         assert lines[what].ok, what
     assert lines["HEDERA_OPERATOR_KEY"].note == "set, a valid ECDSA key"
-    assert lines["your list of ETHGlobal prize pages"].note == "1 address(es)"
+    assert lines["your list of ETHGlobal project pages"].note == "1 address(es)"
 
 
 def test_no_value_is_ever_printed(tmp_path: Path) -> None:

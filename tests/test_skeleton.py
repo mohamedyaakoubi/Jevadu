@@ -66,9 +66,10 @@ def test_a_heading_that_is_not_a_plain_section_word_is_shown_by_length() -> None
 
 
 def test_link_shapes_are_counted() -> None:
-    text = skeleton(sample("prize_page.html"))
-    assert "/showcase/{x}" in text
-    assert "example.com/{x}" in text
+    text = skeleton(sample("project_winner.html"))
+    assert "/events/{x}" in text
+    assert "github.com/{x}/{x}" in text
+    assert "demo.example.test/{x}" in text
 
 
 @pytest.mark.parametrize(

@@ -1,39 +1,40 @@
-"""A quick look at ETHGlobal: at most three requests, nothing saved, no person printed.
+"""A quick look at ETHGlobal: at most two requests, nothing saved, no person printed.
 
     python -m hackathon_memory.collect ethglobal --look
 
-Why. To write the page shape (design 5.7), someone must see the structure of a real prize page
-and of a real project page. The other way is that the maintainer saves two pages by hand from a browser (README.md, step 9b). This is the way that needs no manual work. It also
-answers the question that matters most, early: does ETHGlobal accept an honest request at all?
-If its server refuses, nothing is worked around (design rule 10).
+Why. Before a run on the whole list, one page of the list is read to see that everything works:
+the site answers an honest request, the team cut passes on a real page, and the page shows a
+Hedera prize. If the site refuses, nothing is worked around (design rule 10).
 
 What it does, inside the promises of design 5.7:
 
-* robots.txt, then the FIRST prize page of the maintainer's list, then the FIRST project page that this
-  prize page links to. Three requests at most, two seconds apart, with the name of the tool and the
-  maintainer's address in each one. Never any other page.
-* It prints the SHAPE of the two pages with the skeleton printer: every text only as its length,
-  no heading except plain section words, no name, no link target except its shape. Nothing is saved
-  to disk. The pages stay in memory and are gone when the command ends.
+* robots.txt, then the FIRST project page of the list. Two requests at most, two seconds apart,
+  with the name of the tool and the maintainer's address in each one. Never any other page.
+* It prints the SHAPE of the page with the skeleton printer: every text only as its length, no
+  heading except plain section words, no name, no link target except its shape. Then it says
+  whether the team cut passes (it names a rule that fails, never a text) and whether the page
+  shows a Hedera prize. Nothing is saved to disk. The page stays in memory and is gone when the
+  command ends.
 
-It still needs the maintainer's yes for these three pages (design rule 17), the switch
-COLLECT_ETHGLOBAL=on, the contact address and the list of prize pages.
+It still needs the maintainer's yes for these two pages (design rule 17), the switch
+COLLECT_ETHGLOBAL=on, the contact address and the list of project pages.
 """
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from hackathon_memory.collect.ethglobal import (
+    ETHGLOBAL_SHAPE,
     ROBOTS_URL,
     SITE,
+    SiteShape,
     data_paths,
-    extract_project_links,
     is_allowed_url,
-    load_prize_pages,
+    load_project_pages,
+    took_a_hedera_prize,
 )
 from hackathon_memory.collect.polite import (
     CollectorIdentity,
@@ -44,10 +45,11 @@ from hackathon_memory.collect.polite import (
     StopCollecting,
 )
 from hackathon_memory.collect.robots import RobotsRules
-from hackathon_memory.collect.skeleton import path_shape, skeleton
+from hackathon_memory.collect.skeleton import skeleton
+from hackathon_memory.collect.teamcut import CutFailed, cut_team
 from hackathon_memory.settings import Settings
 
-LOOK_REQUESTS = 3  # robots.txt, one prize page, one project page
+LOOK_REQUESTS = 2  # robots.txt and one project page
 
 
 @dataclass
@@ -61,11 +63,13 @@ class Looker:
     def __init__(
         self,
         client: PoliteClient,
-        prize_page: str,
+        project_page: str,
+        shape: SiteShape = ETHGLOBAL_SHAPE,
         log: Callable[[str], None] = print,
     ) -> None:
         self.client = client
-        self.prize_page = prize_page
+        self.project_page = project_page
+        self.shape = shape
         self.log = log
 
     def run(self) -> LookReport:
@@ -74,38 +78,16 @@ class Looker:
         try:
             rules = self._robots(report)
             agent = self.client.identity.name
-
-            if not rules.allows(agent, self.prize_page):
-                raise StopCollecting(
-                    f"robots.txt of {SITE} does not allow this tool to read the prize page"
-                )
-            prize = self._get(self.prize_page, report)
-            if prize is None:
-                return self._finish(report)
-            self._describe("prize page", prize, report)
-
-            links = extract_project_links(prize.body, self.prize_page, "a[href]")
-            say(f"Links on the prize page that go to a showcase project: {len(links)}")
-            shapes = Counter(path_shape(link) for link in links)
-            for shape, count in shapes.most_common(3):
-                say(f"  {count:3}  {shape}")
-            if not links:
-                say(
-                    "No project link was found, so no project page is read. "
-                    "The shape of the prize page must be studied first."
-                )
-                return self._finish(report)
-
-            project_url = links[0]
-            if not rules.allows(agent, project_url):
+            if not rules.allows(agent, self.project_page):
                 raise StopCollecting(
                     f"robots.txt of {SITE} does not allow this tool to read the project page"
                 )
-            project = self._get(project_url, report)
-            if project is None:
+            fetched = self._get(self.project_page, report)
+            if fetched is None:
                 return self._finish(report)
-            say(f"First project page read: {project_url}")
-            self._describe("project page", project, report)
+            say(f"First project page of the list: {self.project_page}")
+            self._describe("project page", fetched, report)
+            self._judge(fetched, report)
         except StopCollecting as stop:
             report.stopped = str(stop)
             say(f"STOPPED: {stop}")
@@ -143,6 +125,29 @@ class Looker:
         )
         report.lines.append(skeleton(fetched.body))
 
+    def _judge(self, fetched: FetchResult, report: LookReport) -> None:
+        try:
+            body, cut = cut_team(fetched.body, self.shape.project_cut)
+        except CutFailed as failure:
+            report.lines.append(
+                f"Team cut: REFUSED ({type(failure).__name__}: {failure}). "
+                "A run would stop on this page."
+            )
+            return
+        report.lines.append(
+            f"Team cut: passed ({cut.elements_removed} element(s) removed, "
+            f"{cut.json_keys_removed} data key(s) removed, "
+            f"{cut.strings_guarded} string(s) guarded)."
+        )
+        report.lines.append(
+            "Hedera prize on the page: "
+            + (
+                "yes, the page would be kept."
+                if took_a_hedera_prize(body)
+                else "NO, the page would be read but not kept."
+            )
+        )
+
     def _finish(self, report: LookReport) -> LookReport:
         report.requests_made = self.client.requests_made
         report.lines.append(
@@ -153,17 +158,21 @@ class Looker:
 
 
 def build_looker(
-    settings: Settings, *, env_file: Path | None = None, **client_options: object
+    settings: Settings,
+    *,
+    env_file: Path | None = None,
+    shape: SiteShape = ETHGLOBAL_SHAPE,
+    **client_options: object,
 ) -> Looker:
     """Everything a look needs. Refuses (CollectorRefused) when a promise cannot be kept."""
     if not settings.collect_ethglobal:
         raise CollectorRefused(
             "The switch for ethglobal.com is off. Set COLLECT_ETHGLOBAL=on in .env to allow it "
-            "(design rule 17: only after the maintainer's yes for these three pages)."
+            "(design rule 17: only after the maintainer's yes for these two pages)."
         )
     identity = CollectorIdentity.from_settings(settings)
-    prize_list, _, _ = data_paths(settings)
-    first = load_prize_pages(prize_list)[0]
+    page_list, _, _ = data_paths(settings)
+    first = load_project_pages(page_list)[0]
 
     def still_enabled() -> bool:
         return Settings(_env_file=env_file or ".env").collect_ethglobal
@@ -171,27 +180,27 @@ def build_looker(
     client = PoliteClient(
         site=SITE,
         identity=identity,
-        allow=is_allowed_url,
+        allow=lambda url: is_allowed_url(url, {first}),
         is_enabled=still_enabled,
         max_requests=LOOK_REQUESTS,
         **client_options,  # type: ignore[arg-type]
     )
-    return Looker(client, first)
+    return Looker(client, first, shape)
 
 
 def look_plan(settings: Settings) -> list[str]:
     """What a look would read, in plain words. Makes no request."""
-    prize_list, _, _ = data_paths(settings)
+    page_list, _, _ = data_paths(settings)
     lines = [
-        "A look would send at most three requests, two seconds apart, and save nothing:",
+        "A look would send at most two requests, two seconds apart, and save nothing:",
         f"  1. {ROBOTS_URL}",
     ]
     try:
-        first = load_prize_pages(prize_list)[0]
+        first = load_project_pages(page_list)[0]
     except CollectorRefused as refusal:
-        lines.append(f"  2. (the first prize page of your list) {refusal}")
+        lines.append(f"  2. (the first project page of your list) {refusal}")
         return lines
     lines.append(f"  2. {first}")
-    lines.append("  3. the first showcase project that this prize page links to")
-    lines.append("It prints the shape of the two pages (no text, no person). It needs your yes.")
+    lines.append("It prints the shape of the page (no text, no person), says whether the team cut")
+    lines.append("passes and whether the page shows a Hedera prize. It needs your yes.")
     return lines

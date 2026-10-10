@@ -45,6 +45,8 @@ SECTION_WORDS = {
     "overview",
     "about",
     "project",
+    "winner of",
+    "created at",
 }
 # Words that are part of the structure of a path and not a person or a project.
 PATH_WORDS = {

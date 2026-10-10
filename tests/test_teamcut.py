@@ -83,7 +83,11 @@ def test_a_required_rule_with_no_match_fails_closed() -> None:
 
 def test_an_optional_rule_with_no_match_is_fine() -> None:
     policy = CutPolicy(rules=(CutRule("#team", required=False),))
-    output, report = cut(sample("prize_page.html"), policy)
+    page = (
+        '<html><head><meta name="author" content="Quill Samplewright"></head>'
+        "<body><main><h1>Zed Widget</h1><p>No team block on this page.</p></main></body></html>"
+    )
+    output, report = cut(page, policy)
     assert b"Zed Widget" in output
     assert b"Samplewright" not in output  # the author meta tag is still removed
     assert report.elements_removed == 1

@@ -1,12 +1,12 @@
 """Command line for the collectors.
 
     python -m hackathon_memory.collect ethglobal --plan    what a run or a look would read
-    python -m hackathon_memory.collect ethglobal --look    a look: 3 requests, nothing saved
+    python -m hackathon_memory.collect ethglobal --look    a look: 2 requests, nothing saved
     python -m hackathon_memory.collect ethglobal           a live run (needs the maintainer's yes)
 
 The first form never touches the network. The other two refuse to start unless every promise of
-design 5.7 can be kept, and each needs the maintainer's yes for the pages it reads (hard
-constraint 17).
+design 5.7 can be kept, and each needs the maintainer's yes for the pages it reads (design
+rule 17).
 """
 
 from __future__ import annotations

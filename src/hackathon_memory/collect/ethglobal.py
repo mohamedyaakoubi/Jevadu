@@ -1,34 +1,41 @@
 """The collector for ETHGlobal's showcase: only the projects that took a Hedera prize.
 
 ETHGlobal said yes in writing on 9 October 2026, "as long as you honor your commitment", and
-the maintainer said yes in the chat the same day. The commitments are design section 5.7. Each
-one is code, with a test:
+the maintainer said yes in the chat the same day. The commitments are design 5.7. Each one is
+code, with a test:
 
-* Only the pages we named. The run starts from a short list of Hedera prize pages that the
-  maintainer checked by hand, and follows only the project links on those pages.
+* Only the pages we named. A run reads the project pages on a short list that was made by hand
+  (or sent by ETHGlobal), robots.txt, and nothing else. It never walks through the showcase.
+  The prize pages of an event do not list winners (read on 10 October 2026), so they are not a
+  starting point.
+* A page that does not show a Hedera prize is not kept.
 * A hard limit of 300 requests, one at a time, two seconds apart (polite.py).
 * The tool's name and the maintainer's address in each request (polite.py).
-* The team part of every page is cut out before the page is saved (teamcut.py).
+* No names, photos or profiles of team members. A public project page shows no team at all: the
+  people are visible only to a visitor who is signed in. The shape below has tripwires, so if a
+  page ever shows a profile link, an avatar or a data key that holds people, the run stops
+  (teamcut.py).
 * One run. A second run skips every page that is already saved, and makes no request at all
   when nothing is missing.
 * A stop switch: COLLECT_ETHGLOBAL in .env, read again before every request.
 
-THE PAGE SHAPE BELOW HAS NOT BEEN CHECKED AGAINST A REAL PAGE (`verified_on` is None). Until
-it is, the collector refuses to run live. Design rule: "send one real request and look
-at the answer before you write a collector", and design rule 18 forbids looking with any
-tool that does not carry the maintainer's address. So the maintainer saves one prize page and one
-project page by hand from a browser, and the shape is written from those.
+What a project page looks like (3 real pages read on 10 October 2026, 2 of them winners of a
+Hedera prize): a header with the name, a short line and the links to the demo and the code; a
+box with the event and, for a winner, the block "Winner of" with one line per prize
+("Hedera - <prize name> <place>"); the sections "Project Description" and "How it's Made"; the
+data of the page as text in a script. The two metadata tags "author" and "twitter:creator" hold
+the name of the site, not a person.
 """
 
 from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
@@ -44,7 +51,6 @@ from hackathon_memory.collect.rawstore import RawStore, SavedPage
 from hackathon_memory.collect.robots import RobotsRules
 from hackathon_memory.collect.teamcut import (
     CutPolicy,
-    CutRule,
     TeamShapeChanged,
     TeamTextRemains,
     cut_team,
@@ -56,81 +62,136 @@ MAX_UNSAFE_IN_A_ROW = 3
 
 SITE = "ethglobal.com"
 ROBOTS_URL = f"https://{SITE}/robots.txt"
-PRIZE_PAGE_PATH = re.compile(r"^/events/[a-z0-9-]+/prizes/hedera$")
 PROJECT_PAGE_PATH = re.compile(r"^/showcase/[A-Za-z0-9-]+$")
+# robots.txt takes one of the 300 requests, so the list may hold 299 pages at most.
+MAX_LISTED_PAGES = 299
+
+# The line of a prize on a project page: the sponsor, a dash, the prize name, the place.
+HEDERA_PRIZE_LINE = re.compile(r"^\s*hedera\s*[-‐-―]\s*\S", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
 class SiteShape:
-    """What the pages of the site look like. Written from a real page, then checked by hand."""
+    """What the pages of the site look like. Written from real pages, then checked by hand."""
 
-    project_links_selector: str
     project_cut: CutPolicy
-    prize_cut: CutPolicy
-    verified_on: str | None  # the date it was checked against a real page, or None
+    verified_on: str | None  # the date it was checked against real pages, or None
+    checked_pages: str = ""  # what that check looked at, in words (never page text)
 
 
-# A guess, NOT checked. The collector will not run live with it.
 ETHGLOBAL_SHAPE = SiteShape(
-    project_links_selector="main a[href]",
     project_cut=CutPolicy(
-        rules=(CutRule("#team", required=True),),
+        rules=(),  # a visitor who is not signed in sees no team block
         json_blocklist=frozenset(
             {"members", "team", "teammembers", "users", "hackers", "authors", "contributors"}
         ),
+        tripwires=(
+            "#team",
+            "[id*='team' i]",
+            "[class*='avatar' i]",
+            "[class*='team-member' i]",
+            "a[href^='/hackers' i]",
+            "a[href^='/users' i]",
+            "a[href^='/u/' i]",
+            "a[href^='/profile' i]",
+        ),
+        script_person_keys=frozenset(
+            {
+                "members",
+                "teammembers",
+                "team",
+                "users",
+                "user",
+                "hackers",
+                "hacker",
+                "builders",
+                "authors",
+                "author",
+                "creators",
+                "creator",
+                "contributors",
+                "owner",
+                "profile",
+                "avatar",
+                "email",
+                "twitterhandle",
+                "githubusername",
+                "discordhandle",
+            }
+        ),
+        site_names=frozenset({"ethglobal", "@ethglobal"}),
     ),
-    prize_cut=CutPolicy(rules=(CutRule("#team", required=False),)),
-    verified_on=None,
+    verified_on="2026-10-10",
+    checked_pages="3 public project pages, 2 of them winners of a Hedera prize",
 )
 
 
-def is_allowed_url(url: str) -> bool:
-    """True only for an address we named: robots.txt, a Hedera prize page, a showcase project."""
+def looks_like_a_project_page(url: str) -> bool:
+    """The address has the form of one showcase project and nothing more."""
     parts = urlsplit(url)
     if parts.scheme != "https" or parts.hostname != SITE or parts.query or parts.fragment:
         return False
     if parts.port not in (None, 443) or parts.username or parts.password:
         return False  # no other port, and no login written into the address
+    return bool(PROJECT_PAGE_PATH.match(parts.path.rstrip("/")))
+
+
+def is_allowed_url(url: str, named: Collection[str]) -> bool:
+    """True only for an address we named: robots.txt, or a project page that is on the list."""
+    parts = urlsplit(url)
+    if parts.scheme != "https" or parts.hostname != SITE or parts.query or parts.fragment:
+        return False
+    if parts.port not in (None, 443) or parts.username or parts.password:
+        return False
     path = parts.path.rstrip("/") or "/"
-    return path == "/robots.txt" or bool(
-        PRIZE_PAGE_PATH.match(path) or PROJECT_PAGE_PATH.match(path)
-    )
+    if path == "/robots.txt":
+        return True
+    return looks_like_a_project_page(url) and f"https://{SITE}{path}" in named
 
 
-def load_prize_pages(path: Path) -> list[str]:
-    """The list the maintainer checked by hand: one address per line, # for a comment."""
+def load_project_pages(path: Path) -> list[str]:
+    """The list made by hand: one address per line, # for a comment."""
     if not path.exists():
         raise CollectorRefused(
-            f"The list of Hedera prize pages is missing: {path}. The maintainer writes it by hand "
-            "(design 15, step 9). The collector never walks through the whole showcase."
+            f"The list of project pages is missing: {path}. It is made by hand (or sent by "
+            f"{SITE}): one address of a showcase project per line. The collector never walks "
+            "through the whole showcase."
         )
     pages: list[str] = []
     for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         line = raw.split("#", 1)[0].strip()
         if not line:
             continue
-        parts = urlsplit(line)
-        if not is_allowed_url(line) or not PRIZE_PAGE_PATH.match(parts.path.rstrip("/")):
+        if not looks_like_a_project_page(line):
             raise CollectorRefused(
-                f"{path.name}, line {number}: not a Hedera prize page of {SITE} "
-                f"(expected https://{SITE}/events/<event>/prizes/hedera)"
+                f"{path.name}, line {number}: not a project page of {SITE} "
+                f"(expected https://{SITE}/showcase/<project>)"
             )
-        pages.append(f"https://{SITE}{parts.path.rstrip('/')}")
+        pages.append(f"https://{SITE}{urlsplit(line).path.rstrip('/')}")
+    pages = list(dict.fromkeys(pages))
     if not pages:
-        raise CollectorRefused(f"The list of Hedera prize pages is empty: {path}")
-    return list(dict.fromkeys(pages))
+        raise CollectorRefused(f"The list of project pages is empty: {path}")
+    if len(pages) > MAX_LISTED_PAGES:
+        raise CollectorRefused(
+            f"The list holds {len(pages)} pages. The promise is 300 requests at most, and "
+            f"robots.txt is one of them, so the list may hold {MAX_LISTED_PAGES}."
+        )
+    return pages
 
 
-def extract_project_links(html: bytes, base_url: str, selector: str) -> list[str]:
-    """The project pages that a prize page links to, in order, once each."""
+def took_a_hedera_prize(html: bytes) -> bool:
+    """True if a "Winner of" block of the page has a line that starts with "Hedera -"."""
     soup = BeautifulSoup(html.decode("utf-8", errors="replace"), "lxml")
-    found: list[str] = []
-    for anchor in soup.select(selector):
-        absolute = urljoin(base_url, str(anchor.get("href", "")))
-        parts = urlsplit(absolute)
-        if parts.hostname == SITE and PROJECT_PAGE_PATH.match(parts.path.rstrip("/")):
-            found.append(f"https://{SITE}{parts.path.rstrip('/')}")
-    return list(dict.fromkeys(found))
+    for heading in soup.find_all("h3"):
+        if " ".join(heading.get_text().split()).lower() != "winner of":
+            continue
+        block = heading.find_next_sibling()
+        if block is None:
+            continue
+        for line in block.find_all("h4"):
+            if HEDERA_PRIZE_LINE.match(" ".join(line.get_text(" ").split())):
+                return True
+    return False
 
 
 @dataclass
@@ -138,11 +199,12 @@ class RunSummary:
     site: str = SITE
     started_at: str = ""
     finished_at: str = ""
-    prize_pages_planned: int = 0
-    project_links_found: int = 0
+    project_pages_planned: int = 0
     pages_saved: int = 0
     pages_already_saved: int = 0
     pages_not_found: list[str] = field(default_factory=list)
+    # Pages that were read but NOT kept, because they show no Hedera prize.
+    pages_without_hedera_prize: list[str] = field(default_factory=list)
     # Pages that were NOT saved because text of the team part also stands elsewhere in them.
     pages_skipped_team_text: list[str] = field(default_factory=list)
     errors: list[dict[str, str]] = field(default_factory=list)
@@ -156,14 +218,14 @@ class EthGlobalCollector:
         *,
         client: PoliteClient,
         store: RawStore,
-        prize_pages: list[str],
+        project_pages: list[str],
         shape: SiteShape = ETHGLOBAL_SHAPE,
         runs_dir: Path,
         log: Callable[[str], None] = print,
     ) -> None:
         self.client = client
         self.store = store
-        self.prize_pages = prize_pages
+        self.project_pages = project_pages
         self.shape = shape
         self.runs_dir = runs_dir
         self.log = log
@@ -175,18 +237,12 @@ class EthGlobalCollector:
     def run(self) -> RunSummary:
         if self.shape.verified_on is None:
             raise CollectorRefused(
-                f"The page shape of {SITE} has not been checked against a real page yet. "
-                "The maintainer saves one prize page and one project page by hand, and the shape "
-                "is written from them. No live run before that."
+                f"The page shape of {SITE} has not been checked against real pages yet. "
+                "No live run before that."
             )
-        summary = RunSummary(
-            started_at=_now(),
-            prize_pages_planned=len(self.prize_pages),
-        )
+        summary = RunSummary(started_at=_now(), project_pages_planned=len(self.project_pages))
         try:
-            project_urls = self._collect_prize_pages(summary)
-            summary.project_links_found = len(project_urls)
-            for url in project_urls:
+            for url in self.project_pages:
                 self._collect_project(url, summary)
         except StopCollecting as stop:
             summary.stopped = str(stop)
@@ -198,19 +254,6 @@ class EthGlobalCollector:
         return summary
 
     # ------------------------------------------------------------------ steps
-
-    def _collect_prize_pages(self, summary: RunSummary) -> list[str]:
-        urls: list[str] = []
-        for prize_url in self.prize_pages:
-            saved = self.store.load(prize_url) or self._fetch_and_save(
-                prize_url, self.shape.prize_cut, summary
-            )
-            if saved is None:
-                continue
-            urls.extend(
-                extract_project_links(saved.read(), prize_url, self.shape.project_links_selector)
-            )
-        return list(dict.fromkeys(urls))
 
     def _collect_project(self, url: str, summary: RunSummary) -> None:
         if self.store.has(url):
@@ -250,6 +293,11 @@ class EthGlobalCollector:
                 ) from None
             return None
         self._unsafe_in_a_row = 0
+        if not took_a_hedera_prize(body):
+            # The email promised the projects that took a Hedera prize. Nothing else is kept.
+            summary.pages_without_hedera_prize.append(url)
+            self.log(f"not kept {url}: the page shows no Hedera prize")
+            return None
         saved = self.store.save(
             fetched,
             body,
@@ -316,10 +364,10 @@ def _now() -> str:
 
 
 def data_paths(settings: Settings) -> tuple[Path, Path, Path]:
-    """The prize-page list, the folder of saved pages, and the folder of run records."""
+    """The list of project pages, the folder of saved pages, and the folder of run records."""
     root = Path(settings.data_dir)
     return (
-        root / "by-hand" / SITE / "prize-pages.txt",
+        root / "by-hand" / SITE / "project-pages.txt",
         root / "raw" / SITE,
         root / "runs",
     )
@@ -339,8 +387,9 @@ def build_collector(
             "run (design rule 17: only after the maintainer's yes for this site)."
         )
     identity = CollectorIdentity.from_settings(settings)
-    prize_list, raw_dir, runs_dir = data_paths(settings)
-    prize_pages = load_prize_pages(prize_list)
+    page_list, raw_dir, runs_dir = data_paths(settings)
+    project_pages = load_project_pages(page_list)
+    named = frozenset(project_pages)
 
     def still_enabled() -> bool:
         # Read again before every request, so that turning the switch off stops a run at once.
@@ -349,14 +398,14 @@ def build_collector(
     client = PoliteClient(
         site=SITE,
         identity=identity,
-        allow=is_allowed_url,
+        allow=lambda url: is_allowed_url(url, named),
         is_enabled=still_enabled,
         **client_options,  # type: ignore[arg-type]
     )
     return EthGlobalCollector(
         client=client,
         store=RawStore(raw_dir),
-        prize_pages=prize_pages,
+        project_pages=project_pages,
         shape=shape,
         runs_dir=runs_dir,
     )
@@ -364,7 +413,7 @@ def build_collector(
 
 def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
     """What a live run would do, in plain words. Makes no request."""
-    prize_list, raw_dir, _ = data_paths(settings)
+    page_list, raw_dir, _ = data_paths(settings)
     lines = [
         f"Site: {SITE}",
         f"Switch COLLECT_ETHGLOBAL: {'on' if settings.collect_ethglobal else 'off'}",
@@ -372,11 +421,16 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
         "Contact address in every request: "
         + ("set" if settings.collector_contact_email.get_secret_value() else "(empty: refuse)"),
         "One request at a time, two seconds apart, at most 300 requests.",
-        f"Page shape checked against a real page: {shape.verified_on or 'NO: a live run refuses'}",
-        f"List of prize pages: {prize_list}",
+        "Page shape checked against real pages: "
+        + (
+            f"{shape.verified_on} ({shape.checked_pages})"
+            if shape.verified_on
+            else "NO: a live run refuses"
+        ),
+        f"List of project pages: {page_list}",
     ]
     try:
-        pages = load_prize_pages(prize_list)
+        pages = load_project_pages(page_list)
     except CollectorRefused as refusal:
         lines.append(f"  {refusal}")
         return lines
@@ -385,5 +439,5 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
     lines.append(f"  {ROBOTS_URL}  ({'saved' if store.has(ROBOTS_URL, '.txt') else 'to fetch'})")
     for page in pages:
         lines.append(f"  {page}  ({'saved' if store.has(page) else 'to fetch'})")
-    lines.append("  then the showcase pages that those prize pages link to, and nothing else.")
+    lines.append("  and nothing else. A page that shows no Hedera prize is read but not kept.")
     return lines

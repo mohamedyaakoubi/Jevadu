@@ -1,4 +1,4 @@
-"""The look at ETHGlobal: three requests, nothing saved, no person printed. No network."""
+"""The look at ETHGlobal: two requests, nothing saved, no person printed. No network."""
 
 from __future__ import annotations
 
@@ -13,10 +13,11 @@ from hackathon_memory.collect.look import Looker, build_looker, look_plan
 from hackathon_memory.collect.polite import CollectorIdentity, CollectorRefused, PoliteClient
 from hackathon_memory.settings import Settings
 
-PRIZE = "https://ethglobal.com/events/sample-event-2099/prizes/hedera"
-ZED = "https://ethglobal.com/showcase/zed-widget-a1b2c"
-PEOPLE = ["Quillfeather", "Ledgerwood", "Orchardson", "quillfeather", "Samplewright"]
-CONTACT = "owner@example.test"
+WINNER = "https://ethglobal.com/showcase/pebble-pay-x1y2z"
+OTHER = "https://ethglobal.com/showcase/cedar-lens-k9l8m"
+PROFILE = "https://ethglobal.com/showcase/eel-ledger-j5k6l"
+PEOPLE = ["Samplewright", "orla-samplewright"]
+CONTACT = "maintainer@example.test"
 
 
 def page(body: bytes) -> Reply:
@@ -26,85 +27,83 @@ def page(body: bytes) -> Reply:
 def pages(**changes: Reply) -> dict[str, Reply]:
     result = {
         ROBOTS_URL: Reply(200, sample("robots.txt"), {"Content-Type": "text/plain"}),
-        PRIZE: page(sample("prize_page.html")),
-        ZED: page(sample("project_zed_widget.html")),
+        WINNER: page(sample("project_winner.html")),
+        OTHER: page(sample("project_other_sponsor.html")),
+        PROFILE: page(sample("project_profile_link.html")),
     }
     for key, reply in changes.items():
-        result[{"robots": ROBOTS_URL, "prize": PRIZE, "zed": ZED}[key]] = reply
+        result[{"robots": ROBOTS_URL, "winner": WINNER}[key]] = reply
     return result
 
 
-def make(site_pages: dict[str, Reply], **options):
+def make(site_pages: dict[str, Reply], project: str = WINNER, **options):
     site = FakeSite(site_pages)
     fake_time = FakeTime()
     client = PoliteClient(
         site="ethglobal.com",
         identity=CollectorIdentity(name="TestTool-research", contact=CONTACT),
-        allow=is_allowed_url,
+        allow=lambda url: is_allowed_url(url, {project}),
         is_enabled=lambda: True,
         session=session_for(site),
         clock=fake_time.clock,
         sleep=fake_time.sleep,
-        max_requests=3,
+        max_requests=2,
         **options,
     )
-    return Looker(client, PRIZE, log=lambda m: None), site, fake_time
+    return Looker(client, project, log=lambda m: None), site, fake_time
 
 
-def test_a_look_reads_three_pages_and_prints_the_shape_of_two() -> None:
+def test_a_look_reads_two_pages_and_prints_the_shape_of_one() -> None:
     looker, site, fake_time = make(pages())
     report = looker.run()
 
-    assert site.urls == [ROBOTS_URL, PRIZE, ZED]  # robots.txt, the prize page, the first project
-    assert report.requests_made == 3
+    assert site.urls == [ROBOTS_URL, WINNER]  # robots.txt and the first project page
+    assert report.requests_made == 2
     assert report.stopped is None
-    assert fake_time.sleeps == [2.0, 2.0]
+    assert fake_time.sleeps == [2.0]
     text = "\n".join(report.lines)
-    assert "The prize page: status 200" in text
     assert "The project page: status 200" in text
-    assert "Links on the prize page that go to a showcase project: 2" in text
-    assert "section#team" in text  # the structure of the project page is visible
-    assert 'h2 "Team"' in text
+    assert 'h3 "Winner of"' in text  # the structure of the page is visible
+    assert "Team cut: passed" in text
+    assert "Hedera prize on the page: yes" in text
     assert "Nothing was saved to disk." in text
 
 
-def test_a_look_shows_no_person_and_no_page_text() -> None:
+def test_a_look_shows_no_page_text() -> None:
     report = make(pages())[0].run()
     text = "\n".join(report.lines)
-    for person in PEOPLE:
-        assert person not in text
-    for page_text in ("Zed Widget lets", "0.0.1234567", "Best use of Hedera"):
+    for page_text in ("Pebble Pay lets", "0.0.2345678", "Try it"):
         assert page_text not in text
-    assert CONTACT not in text  # the maintainer's address is only sent to the site
+    assert CONTACT not in text  # the address is only sent to the site
 
 
 def test_every_request_of_a_look_carries_the_name_and_the_address() -> None:
-    _, site, _ = (looker := make(pages()))[0], looker[1], looker[2]
-    looker[0].run()
+    looker, site, _ = make(pages())
+    looker.run()
     for request in site.seen:
         assert "TestTool-research" in request.headers["User-Agent"]
         assert request.headers["From"] == CONTACT
 
 
-def test_a_look_never_makes_a_fourth_request() -> None:
+def test_a_look_never_makes_a_third_request() -> None:
     looker, site, _ = make(pages())
     looker.run()
-    assert len(site.seen) == 3
-    with pytest.raises(Exception, match="limit of 3 requests"):
-        looker.client.get(ZED)  # the client itself refuses
-    assert len(site.seen) == 3
+    assert len(site.seen) == 2
+    with pytest.raises(Exception, match="limit of 2 requests"):
+        looker.client.get(WINNER)  # the client itself refuses
+    assert len(site.seen) == 2
 
 
 def test_a_refusal_by_the_site_stops_the_look_and_nothing_is_worked_around() -> None:
-    looker, site, _ = make(pages(prize=Reply(403, b"no")))
+    looker, site, _ = make(pages(winner=Reply(403, b"no")))
     report = looker.run()
     assert report.stopped is not None
     assert "says no" in report.stopped
-    assert site.urls == [ROBOTS_URL, PRIZE]  # no second try, no project page
+    assert site.urls == [ROBOTS_URL, WINNER]  # no second try
 
 
 def test_robots_txt_is_obeyed_by_a_look() -> None:
-    robots = Reply(200, b"User-agent: *\nDisallow: /events/\n")
+    robots = Reply(200, b"User-agent: *\nDisallow: /showcase/\n")
     looker, site, _ = make(pages(robots=robots))
     report = looker.run()
     assert site.urls == [ROBOTS_URL]
@@ -112,13 +111,23 @@ def test_robots_txt_is_obeyed_by_a_look() -> None:
     assert "robots.txt" in report.stopped
 
 
-def test_a_prize_page_with_no_project_link_is_reported_not_guessed() -> None:
-    empty = page(b"<html><body><main><h1>Hedera</h1><p>No winners yet.</p></main></body></html>")
-    looker, site, _ = make(pages(prize=empty))
+def test_a_page_that_the_team_cut_refuses_is_reported_and_the_look_goes_on() -> None:
+    looker, site, _ = make(pages(), project=PROFILE)
     report = looker.run()
-    assert site.urls == [ROBOTS_URL, PRIZE]
-    assert "No project link was found" in "\n".join(report.lines)
+    text = "\n".join(report.lines)
+    assert site.urls == [ROBOTS_URL, PROFILE]
+    assert "Team cut: REFUSED (TeamShapeChanged" in text
+    assert "A run would stop on this page." in text
     assert report.stopped is None
+    for person in PEOPLE:
+        assert person not in text  # the rule is named, never the person
+
+
+def test_a_page_without_a_hedera_prize_is_reported() -> None:
+    report = make(pages(), project=OTHER)[0].run()
+    text = "\n".join(report.lines)
+    assert "Hedera prize on the page: NO" in text
+    assert "not kept" in text
 
 
 def test_a_missing_robots_txt_forbids_nothing() -> None:
@@ -126,7 +135,7 @@ def test_a_missing_robots_txt_forbids_nothing() -> None:
     del site_pages[ROBOTS_URL]
     report = make(site_pages)[0].run()
     assert "robots.txt: none (404)" in "\n".join(report.lines)
-    assert report.requests_made == 3
+    assert report.requests_made == 2
 
 
 def _settings(tmp_path: Path, **values: object) -> Settings:
@@ -142,7 +151,7 @@ def _settings(tmp_path: Path, **values: object) -> Settings:
 def _write_list(tmp_path: Path) -> None:
     folder = tmp_path / "by-hand" / "ethglobal.com"
     folder.mkdir(parents=True)
-    (folder / "prize-pages.txt").write_text(PRIZE + "\n", encoding="utf-8")
+    (folder / "project-pages.txt").write_text(WINNER + "\n", encoding="utf-8")
 
 
 def test_a_look_does_not_start_while_the_switch_is_off(tmp_path: Path) -> None:
@@ -159,12 +168,13 @@ def test_a_look_needs_the_name_the_address_and_the_list(tmp_path: Path) -> None:
         build_looker(_settings(tmp_path, collector_contact_email=""))
 
 
-def test_a_look_needs_no_checked_page_shape(tmp_path: Path) -> None:
-    """The look is how the shape is found, so it cannot wait for the shape (unlike a run)."""
+def test_a_look_reads_the_first_page_of_the_list_only(tmp_path: Path) -> None:
     _write_list(tmp_path)
     looker = build_looker(_settings(tmp_path))
-    assert looker.prize_page == PRIZE
-    assert looker.client.max_requests == 3
+    assert looker.project_page == WINNER
+    assert looker.client.max_requests == 2
+    assert looker.client.allow(WINNER)
+    assert not looker.client.allow(OTHER)
 
 
 def test_a_look_writes_nothing_to_the_data_folder(tmp_path: Path) -> None:
@@ -180,8 +190,8 @@ def test_the_look_plan_says_what_would_be_read(tmp_path: Path) -> None:
     _write_list(tmp_path)
     text = "\n".join(look_plan(_settings(tmp_path)))
     assert ROBOTS_URL in text
-    assert PRIZE in text
-    assert "at most three requests" in text
+    assert WINNER in text
+    assert "at most two requests" in text
     assert CONTACT not in text
 
 
