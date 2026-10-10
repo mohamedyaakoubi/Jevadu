@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from fakes import FakeSite, FakeTime, Reply, sample, session_for
+from fakes import HEDERA_ID, OTHER_ID, FakeSite, FakeTime, Reply, sample, session_for
 from hackathon_memory.collect.ethglobal import (
     ETHGLOBAL_SHAPE,
     MAX_LISTED_PAGES,
@@ -21,6 +21,7 @@ from hackathon_memory.collect.ethglobal import (
     plan,
     took_a_hedera_prize,
 )
+from hackathon_memory.collect.ethglobal_found import FoundList, PrizeProject, save_found
 from hackathon_memory.collect.polite import CollectorIdentity, CollectorRefused, PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.settings import Settings
@@ -476,6 +477,119 @@ def test_the_built_collector_may_read_the_listed_pages_only(tmp_path: Path) -> N
     assert collector.client.allow(ROBOTS_URL)
     assert not collector.client.allow(SECOND)  # a project page that is not on the list
     assert not collector.client.allow(A_PRIZE_PAGE)
+
+
+# --------------------------------------------------------------------- the winners of the walk
+
+
+def _write_walk(tmp_path: Path, *projects: tuple[str, tuple[str, ...]], complete: bool = True):
+    found = FoundList(
+        started_at="2026-10-10T09:00:00Z",
+        updated_at="2026-10-10T09:01:00Z",
+        pages_read=2,
+        complete=complete,
+        listed_by_event={"ETHGlobal Sample Event": 40},
+        with_prize=[
+            PrizeProject(page, "ETHGlobal Sample Event", sponsors, 1) for page, sponsors in projects
+        ],
+    )
+    save_found(tmp_path / "found" / "ethglobal.com" / "hedera-list.json", found)
+
+
+WALK = (
+    (SECOND, (HEDERA_ID,)),
+    (OTHER, (OTHER_ID,)),  # a prize of another sponsor
+    (WINNER, (OTHER_ID, HEDERA_ID)),
+    (PERSON, (HEDERA_ID,)),
+)
+
+
+def test_a_run_reads_the_pages_seen_by_hand_and_then_the_winners_of_the_walk(
+    tmp_path: Path,
+) -> None:
+    _write_page_list(tmp_path)  # one page seen by hand: WINNER
+    _write_walk(tmp_path, *WALK[:1], (WINNER, (HEDERA_ID,)), *WALK[1:2], WALK[3])
+    collector = build_collector(_settings(tmp_path))
+    assert collector.project_pages == [WINNER, SECOND, PERSON]
+    assert collector.client.allow(SECOND)
+    assert not collector.client.allow(OTHER)  # it took a prize, but not one of Hedera
+    assert not collector.client.allow(NO_PRIZE)
+    assert not collector.client.allow("https://ethglobal.com/showcase?partners=hedera")
+
+
+def test_a_run_refuses_a_walk_when_no_page_seen_by_hand_says_which_sponsor_is_hedera(
+    tmp_path: Path,
+) -> None:
+    _write_walk(tmp_path, *WALK)
+    with pytest.raises(CollectorRefused, match="Winner of") as refusal:
+        build_collector(_settings(tmp_path))  # there is no hand-made list at all
+    assert "4 projects with a prize" in str(refusal.value)
+
+    _write_page_list(tmp_path)  # WINNER took prizes of two sponsors: not enough to decide
+    with pytest.raises(CollectorRefused, match="share 2 sponsor ids"):
+        build_collector(_settings(tmp_path))
+
+
+def test_a_run_refuses_when_the_pages_seen_by_hand_are_not_in_the_walk(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    _write_walk(tmp_path, (SECOND, (HEDERA_ID,)), (OTHER, (OTHER_ID,)))
+    with pytest.raises(CollectorRefused, match="None of the pages seen by hand"):
+        build_collector(_settings(tmp_path))
+
+
+def test_a_run_refuses_a_file_of_the_walk_that_cannot_be_read(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    folder = tmp_path / "found" / "ethglobal.com"
+    folder.mkdir(parents=True)
+    (folder / "hedera-list.json").write_text("{ half a file", encoding="utf-8")
+    with pytest.raises(CollectorRefused, match="cannot be read"):
+        build_collector(_settings(tmp_path))
+
+
+def test_a_run_may_not_read_more_pages_than_the_promise_allows(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    many = [
+        (f"https://ethglobal.com/showcase/w-{i}", (HEDERA_ID,)) for i in range(MAX_LISTED_PAGES)
+    ]
+    _write_walk(tmp_path, (WINNER, (HEDERA_ID,)), *many)
+    with pytest.raises(CollectorRefused, match=f"a run may read {MAX_LISTED_PAGES}"):
+        build_collector(_settings(tmp_path))
+
+
+def test_the_plan_says_where_the_pages_come_from(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    text = "\n".join(plan(_settings(tmp_path)))
+    assert "1 page(s) by hand, and 0 more from the walk." in text
+    assert "No walk through the Hedera list was made." in text
+
+    _write_walk(tmp_path, (WINNER, (HEDERA_ID,)), *WALK[:2], complete=False)
+    text = "\n".join(plan(_settings(tmp_path)))
+    assert "1 page(s) by hand, and 1 more from the walk." in text
+    assert "3 projects with a prize of some sponsor" in text
+    assert f"the sponsor with the id {HEDERA_ID} is Hedera: 2 projects took its prize" in text
+    assert "The walk is not finished: 2 page(s) of the list were read." in text
+    assert SECOND in text
+    assert OTHER not in text  # a page that a run does not read is not in its plan
+    assert "That is 3 request(s)." in text  # robots.txt and two pages
+
+
+def test_the_plan_says_why_a_walk_cannot_be_used(tmp_path: Path) -> None:
+    _write_walk(tmp_path, *WALK)
+    text = "\n".join(plan(_settings(tmp_path)))
+    assert "which id is Hedera" in text
+    assert "It would read" not in text
+
+
+def test_a_page_seen_by_hand_that_is_not_a_winner_of_the_walk_is_said_in_the_plan(
+    tmp_path: Path,
+) -> None:
+    folder = tmp_path / "by-hand" / "ethglobal.com"
+    folder.mkdir(parents=True)
+    (folder / "project-pages.txt").write_text(f"{WINNER}\n{NO_PRIZE}\n", encoding="utf-8")
+    _write_walk(tmp_path, (WINNER, (HEDERA_ID,)), (SECOND, (HEDERA_ID,)))
+    text = "\n".join(plan(_settings(tmp_path)))
+    assert "1 page(s) seen by hand are not among these winners." in text
+    assert "2 page(s) by hand, and 1 more from the walk." in text
 
 
 def _write_count(tmp_path: Path, content: str) -> None:

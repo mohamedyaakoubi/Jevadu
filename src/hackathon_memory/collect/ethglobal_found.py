@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -84,6 +85,40 @@ class FoundList:
 
 def _fingerprint(address: str) -> str:
     return hashlib.sha256(address.encode("utf-8")).hexdigest()[:16]
+
+
+class SponsorNotKnown(Exception):
+    """The pages seen by hand do not tell which sponsor id is Hedera."""
+
+
+def hedera_sponsor(found: FoundList, seen_by_hand: Collection[str]) -> str:
+    """The id that the list uses for the sponsor Hedera.
+
+    The list names a sponsor by an id, not by its name, so the id of Hedera cannot be read from
+    it. It is not guessed either (the most common id is only a guess). The pages that a person
+    saw with a Hedera prize decide: Hedera is the one id that every one of them has. When they
+    point to no id, or to more than one, nobody knows, and SponsorNotKnown says so.
+    """
+    sponsors_of = {project.page: set(project.sponsors) for project in found.with_prize}
+    seen = [sponsors_of[page] for page in seen_by_hand if page in sponsors_of]
+    if not seen:
+        raise SponsorNotKnown(
+            "None of the pages seen by hand is in the walk with a prize, so nothing tells which "
+            "sponsor id is Hedera."
+        )
+    shared = set.intersection(*seen)
+    if len(shared) != 1:
+        raise SponsorNotKnown(
+            f"The {len(seen)} page(s) seen by hand that the walk knows share {len(shared)} "
+            "sponsor ids, not exactly one, so the id of Hedera is not sure. Add a page that "
+            "took a prize of Hedera only."
+        )
+    return next(iter(shared))
+
+
+def winners_of(found: FoundList, sponsor: str) -> list[str]:
+    """The pages of the projects that took a prize of this sponsor, in the order of the list."""
+    return [project.page for project in found.with_prize if sponsor in project.sponsors]
 
 
 def save_found(path: Path, found: FoundList) -> None:

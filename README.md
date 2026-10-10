@@ -95,7 +95,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | 3 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_APPLICATION_CREDENTIALS` | A Google Cloud project with the Vertex AI API turned on. The location is `global`. Sign in with `gcloud auth application-default login`. If you name a sign-in file, keep it outside the project folder. |
 | 4 | `POSTGRES_PASSWORD` | Any password you choose. Then `docker compose up -d --wait db`. |
 | 8 | `COLLECTOR_NAME`, `COLLECTOR_CONTACT_EMAIL` | A name for the tool and your own address. Both are sent in every request to a site, so that the site can see who reads it. Only needed to run a collector. |
-| 9 | The list of project pages | `data/by-hand/ethglobal.com/project-pages.txt`, one showcase address per line. Only needed to run the ETHGlobal collector, and only with a written yes from the site. |
+| 9 | Project pages seen by hand | `data/by-hand/ethglobal.com/project-pages.txt`, one showcase address per line: projects that you saw yourself with "Winner of" and a line that starts with "Hedera". One is enough. The showcase list names a sponsor only by an id, and these pages tell the tool which id is Hedera. Only needed to run the ETHGlobal collector, and only with a written yes from the site. |
 
 ### The commands
 
@@ -107,6 +107,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m hackathon_memory.collect ethglobal --plan` | Shows what the collector would read. It sends no request. |
 | `python -m hackathon_memory.collect ethglobal --look` | Reads robots.txt and the first page of the hand-made list, and saves no page |
 | `python -m hackathon_memory.collect ethglobal --find` | Walks through the showcase list with the filter "partner: Hedera" and writes down which projects took a prize. It saves no page. `--pages 5` reads five pages of the list and can be started again. |
+| `python -m hackathon_memory.collect ethglobal` | The run. It reads the pages seen by hand and the winners that the walk found, and keeps each page that shows a Hedera prize, without its team part. |
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
 | `python -m hackathon_memory.finops budget` | Where the two budgets stand |
 | `python -m hackathon_memory.finops prices` | The prices in use, with the day each one begins |

@@ -4,10 +4,13 @@ ETHGlobal said yes in writing on 9 October 2026, "as long as you honor your comm
 the maintainer said yes in the chat the same day. The commitments are design 5.7. Each one is
 code, with a test:
 
-* Only the pages we named. A run reads the project pages on a short list that was made by hand
-  (or sent by ETHGlobal), robots.txt, and nothing else. It never walks through the showcase.
-  The prize pages of an event do not list winners (read on 10 October 2026), so they are not a
-  starting point.
+* Only the pages we named. A run reads robots.txt and the project pages on its list, and nothing
+  else. The list has two sources: the pages that the maintainer saw with a Hedera prize (a short
+  list made by hand), and the winners that the walk through the Hedera list of the showcase
+  found (ethglobal_find.py). The prize pages of an event do not list winners (read on
+  10 October 2026), so they are not a starting point.
+* The walk names a sponsor only by an id. Which id is Hedera is not guessed: it is the one id
+  that all the pages seen by hand have (ethglobal_found.py).
 * A page that does not show a Hedera prize is not kept.
 * A hard limit of 300 requests over all runs, one at a time, two seconds apart (polite.py).
 * The tool's name and the maintainer's address in each request (polite.py).
@@ -39,6 +42,12 @@ from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
+from hackathon_memory.collect.ethglobal_found import (
+    SponsorNotKnown,
+    hedera_sponsor,
+    load_found,
+    winners_of,
+)
 from hackathon_memory.collect.ethglobal_site import (
     ROBOTS_URL,
     SITE,
@@ -365,6 +374,62 @@ def data_paths(settings: Settings) -> DataPaths:
     )
 
 
+@dataclass(frozen=True)
+class PagePlan:
+    """The project pages that a run reads, and where they come from."""
+
+    pages: list[str]  # the pages seen by hand first, then the winners that the walk found
+    by_hand: int
+    from_walk: int  # winners of the walk that the hand-made list does not name
+    notes: tuple[str, ...] = ()  # for the plan, in plain words
+
+
+def planned_pages(paths: DataPaths) -> PagePlan:
+    """What a run would read. Refuses when the sources do not give a list that can be trusted."""
+    found = load_found(paths.found_list)
+    if found is None:
+        by_hand = load_project_pages(paths.page_list)
+        return PagePlan(by_hand, len(by_hand), 0, ("No walk through the Hedera list was made.",))
+    if not paths.page_list.exists():
+        raise CollectorRefused(
+            f"The walk found {len(found.with_prize)} projects with a prize, but the list names a "
+            "sponsor only by an id. To learn which id is Hedera, the tool needs one project that "
+            'you saw yourself with "Winner of" and a line that starts with "Hedera". Put its '
+            f"address into {paths.page_list}."
+        )
+    by_hand = load_project_pages(paths.page_list)
+    try:
+        sponsor = hedera_sponsor(found, by_hand)
+    except SponsorNotKnown as unsure:
+        raise CollectorRefused(
+            f"{unsure} The list of pages by hand is {paths.page_list}."
+        ) from None
+    winners = winners_of(found, sponsor)
+    pages = list(dict.fromkeys([*by_hand, *winners]))
+    if len(pages) > MAX_LISTED_PAGES:
+        raise CollectorRefused(
+            f"The run would read {len(pages)} pages. The promise is 300 requests at most, and "
+            f"robots.txt is one of them, so a run may read {MAX_LISTED_PAGES}."
+        )
+    notes = [
+        f"The walk found {len(found.with_prize)} projects with a prize of some sponsor. The "
+        f"pages seen by hand say that the sponsor with the id {sponsor} is Hedera: "
+        f"{len(winners)} projects took its prize."
+    ]
+    if not found.complete:
+        notes.append(
+            f"The walk is not finished: {found.pages_read} page(s) of the list were read. "
+            "There may be more winners."
+        )
+    not_winners = sum(1 for page in by_hand if page not in set(winners))
+    if not_winners:
+        notes.append(
+            f"{not_winners} page(s) seen by hand are not among these winners. The run reads "
+            "them too, and keeps them only if they show a Hedera prize."
+        )
+    return PagePlan(pages, len(by_hand), len(pages) - len(by_hand), tuple(notes))
+
+
 def requests_needed(project_pages: list[str], store: RawStore) -> int:
     """How many requests a run would send: the pages that are not saved yet, and robots.txt."""
     missing = sum(1 for page in project_pages if not store.has(page))
@@ -420,7 +485,7 @@ def build_collector(
     """Everything a live run needs. Refuses (CollectorRefused) when a promise cannot be kept."""
     identity = identity_if_allowed(settings)
     paths = data_paths(settings)
-    project_pages = load_project_pages(paths.page_list)
+    project_pages = planned_pages(paths).pages
     named = frozenset(project_pages)
     client = polite_client(
         identity, lambda url: is_allowed_url(url, named), paths, env_file=env_file, **client_options
@@ -462,13 +527,18 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
             if shape.verified_on
             else "NO: a live run refuses"
         ),
-        f"List of project pages: {page_list}",
+        f"Project pages seen by hand: {page_list}",
     ]
     try:
-        pages = load_project_pages(page_list)
+        planned = planned_pages(paths)
     except CollectorRefused as refusal:
         lines.append(f"  {refusal}")
         return lines
+    pages = planned.pages
+    lines.append(
+        f"  {planned.by_hand} page(s) by hand, and {planned.from_walk} more from the walk."
+    )
+    lines.extend(f"  {note}" for note in planned.notes)
     store = RawStore(paths.raw_dir)
     lines.append("It would read, in this order (robots.txt first, only if a page is missing):")
     lines.append(f"  {ROBOTS_URL}  ({'saved' if store.has(ROBOTS_URL, '.txt') else 'to fetch'})")
