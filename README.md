@@ -142,7 +142,8 @@ A yes from a site holds only as long as these are kept. Each one is code, with a
 
 | The promise | What the code does |
 |---|---|
-| Only the pages we named | The collector reads the pages on a hand-made list and robots.txt. It never walks through a whole site. A fixed limit stops it after 300 requests. |
+| Only the pages we named | The collector reads the pages on a hand-made list and robots.txt. It never walks through a whole site. |
+| A few hundred pages at most | A fixed limit of 300 requests to a site. Every request is counted in one file, so the limit holds for all commands and all days together. |
 | One time | A second run skips every page that is already saved. |
 | One request at a time | One worker, a pause of two seconds, nothing in parallel. |
 | Each request says who sends it | The name of the tool and a contact address are in every request. The collector refuses to start when one is empty. |

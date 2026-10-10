@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import time
+from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +16,7 @@ from hackathon_memory.collect.polite import (
     CollectorRefused,
     FetchFailed,
     PoliteClient,
+    RequestCount,
     StopCollecting,
     _NoCookies,
 )
@@ -140,6 +144,98 @@ def test_the_limit_of_requests_stops_the_run_exactly() -> None:
 def test_the_default_limit_is_300() -> None:
     client, _, _ = make({})
     assert client.max_requests == 300
+
+
+# --------------------------------------------------- "a few hundred pages at most, one time"
+
+
+def counted(tmp_path: Path, limit: int = 300) -> RequestCount:
+    day = datetime(2026, 10, 10, 9, 0, tzinfo=UTC)
+    return RequestCount(
+        tmp_path / "requests" / "ethglobal.com.json", "ethglobal.com", limit, lambda: day
+    )
+
+
+def test_the_requests_of_all_runs_are_counted_in_one_file(tmp_path: Path) -> None:
+    first, _, _ = make({A: OK, B: OK}, count=counted(tmp_path))
+    first.get(A)
+    first.get(B)
+
+    later, _, _ = make({C: OK}, count=counted(tmp_path))  # another run, another day
+    assert later.count.sent() == 2
+    later.get(C)
+    assert later.count.sent() == 3
+    assert later.requests_made == 1
+    record = json.loads((tmp_path / "requests" / "ethglobal.com.json").read_text(encoding="utf-8"))
+    assert record == {"site": "ethglobal.com", "sent": 3, "by_day": {"2026-10-10": 3}}
+
+
+def test_the_limit_over_all_runs_stops_a_later_run(tmp_path: Path) -> None:
+    first, _, _ = make({A: OK, B: OK}, count=counted(tmp_path, limit=3))
+    first.get(A)
+    first.get(B)
+
+    later, site, _ = make({A: OK, C: OK}, count=counted(tmp_path, limit=3))
+    later.get(C)  # the third request of all runs: the last one that is allowed
+    with pytest.raises(StopCollecting, match="over all runs"):
+        later.get(A)
+    assert site.urls == [C]
+    assert later.count.left() == 0
+
+
+def test_a_redirect_and_a_refused_request_are_counted_too(tmp_path: Path) -> None:
+    pages = {A: Reply(301, b"", {"Location": "/showcase/b-two"}), B: OK, C: Reply(403, b"no")}
+    client, _, _ = make(pages, count=counted(tmp_path))
+    client.get(A)  # two requests: the redirect and the page
+    with pytest.raises(StopCollecting, match="says no"):
+        client.get(C)
+    assert client.count.sent() == 3
+
+
+def test_a_request_that_is_not_allowed_is_not_counted(tmp_path: Path) -> None:
+    client, _, _ = make({}, allow=lambda url: False, count=counted(tmp_path))
+    with pytest.raises(StopCollecting, match="not on the list"):
+        client.get(A)
+    assert client.count.sent() == 0  # nothing was sent, so nothing is counted
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "not json",
+        "[1, 2]",
+        '{"site": "example.com", "sent": 1, "by_day": {}}',  # the count of another site
+        '{"site": "ethglobal.com", "sent": -1, "by_day": {}}',
+        '{"site": "ethglobal.com", "sent": "many", "by_day": {}}',
+        '{"site": "ethglobal.com", "sent": 1}',
+    ],
+)
+def test_a_count_that_cannot_be_read_is_never_taken_for_zero(tmp_path: Path, content: str) -> None:
+    count = counted(tmp_path)
+    count.path.parent.mkdir(parents=True)
+    count.path.write_text(content, encoding="utf-8")
+    client, site, _ = make({A: OK}, count=count)
+    with pytest.raises(StopCollecting, match="cannot be read"):
+        client.get(A)
+    assert site.seen == []
+    assert count.path.read_text(encoding="utf-8") == content  # and it is not written over
+
+
+def test_notes_in_the_count_file_are_kept(tmp_path: Path) -> None:
+    count = counted(tmp_path)
+    count.path.parent.mkdir(parents=True)
+    start = {
+        "site": "ethglobal.com",
+        "sent": 24,
+        "by_day": {"2026-10-10": 24},
+        "notes": ["by hand"],
+    }
+    count.path.write_text(json.dumps(start), encoding="utf-8")
+    client, _, _ = make({A: OK}, count=count)
+    client.get(A)
+    record = json.loads(count.path.read_text(encoding="utf-8"))
+    assert record["sent"] == 25
+    assert record["notes"] == ["by hand"]
 
 
 # --------------------------------------------------- "only the pages we named"

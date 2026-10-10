@@ -66,7 +66,7 @@ def test_a_look_reads_two_pages_and_prints_the_shape_of_one() -> None:
     assert 'h3 "Winner of"' in text  # the structure of the page is visible
     assert "Team cut: passed" in text
     assert "Hedera prize on the page: yes" in text
-    assert "Nothing was saved to disk." in text
+    assert "No page was saved to disk." in text
 
 
 def test_a_look_shows_no_page_text() -> None:
@@ -177,11 +177,30 @@ def test_a_look_reads_the_first_page_of_the_list_only(tmp_path: Path) -> None:
     assert not looker.client.allow(OTHER)
 
 
-def test_a_look_writes_nothing_to_the_data_folder(tmp_path: Path) -> None:
-    looker, _, _ = make(pages())
-    before = sorted(p for p in tmp_path.rglob("*"))
-    looker.run()
-    assert sorted(p for p in tmp_path.rglob("*")) == before == []
+def test_a_look_saves_no_page_and_counts_its_two_requests(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("COLLECT_ETHGLOBAL", raising=False)
+    _write_list(tmp_path)
+    env_file = tmp_path / ".env"
+    env_file.write_text("COLLECT_ETHGLOBAL=on\n", encoding="utf-8")
+    site, fake_time = FakeSite(pages()), FakeTime()
+    looker = build_looker(
+        _settings(tmp_path),
+        env_file=env_file,
+        session=session_for(site),
+        clock=fake_time.clock,
+        sleep=fake_time.sleep,
+    )
+    before = {p for p in tmp_path.rglob("*") if p.is_file()}
+    report = looker.run()
+
+    assert report.requests_made == 2
+    written = {p for p in tmp_path.rglob("*") if p.is_file()} - before
+    assert [p.relative_to(tmp_path).as_posix() for p in written] == ["requests/ethglobal.com.json"]
+    count = written.pop().read_text(encoding="utf-8")
+    assert '"sent": 2' in count
+    assert "Pebble" not in count  # numbers only, no text of the page
 
 
 def test_the_look_plan_says_what_would_be_read(tmp_path: Path) -> None:

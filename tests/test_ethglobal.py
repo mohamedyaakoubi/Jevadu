@@ -478,6 +478,51 @@ def test_the_built_collector_may_read_the_listed_pages_only(tmp_path: Path) -> N
     assert not collector.client.allow(A_PRIZE_PAGE)
 
 
+def _write_count(tmp_path: Path, content: str) -> None:
+    folder = tmp_path / "requests"
+    folder.mkdir(parents=True)
+    (folder / "ethglobal.com.json").write_text(content, encoding="utf-8")
+
+
+def test_a_built_collector_counts_its_requests_over_all_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("COLLECT_ETHGLOBAL", raising=False)
+    _write_page_list(tmp_path)
+    env_file = tmp_path / ".env"
+    env_file.write_text("COLLECT_ETHGLOBAL=on\n", encoding="utf-8")
+    site, fake_time = FakeSite(pages()), FakeTime()
+    collector = build_collector(
+        _settings(tmp_path),
+        env_file=env_file,
+        session=session_for(site),
+        clock=fake_time.clock,
+        sleep=fake_time.sleep,
+    )
+    collector.log = lambda message: None
+    summary = collector.run()
+
+    assert site.urls == [ROBOTS_URL, WINNER]
+    assert summary.pages_saved == 1
+    count = json.loads((tmp_path / "requests" / "ethglobal.com.json").read_text(encoding="utf-8"))
+    assert count["sent"] == 2
+
+
+def test_a_run_that_needs_more_requests_than_are_left_does_not_start(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    # 299 of the 300 are used. One page and robots.txt need two.
+    _write_count(tmp_path, '{"site": "ethglobal.com", "sent": 299, "by_day": {}}')
+    with pytest.raises(CollectorRefused, match="needs 2 requests, and 1 are left of the 300"):
+        build_collector(_settings(tmp_path))
+
+
+def test_a_run_does_not_start_when_the_count_cannot_be_read(tmp_path: Path) -> None:
+    _write_page_list(tmp_path)
+    _write_count(tmp_path, "broken")
+    with pytest.raises(CollectorRefused, match="cannot be read"):
+        build_collector(_settings(tmp_path))
+
+
 def test_turning_the_switch_off_in_the_settings_file_stops_a_running_collector(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -499,6 +544,9 @@ def test_the_plan_says_what_would_be_read_and_makes_no_request(tmp_path: Path) -
     assert "robots.txt" in text
     assert str(ETHGLOBAL_SHAPE.verified_on) in text  # the shape was checked against real pages
     assert "maintainer@example.test" not in text  # the address is never printed
+    assert "Requests sent to the site so far: 0 of 300." in text
+    assert "That is 2 request(s)." in text  # robots.txt and the one page of the list
+    assert not (tmp_path / "requests").exists()  # a plan writes nothing
 
 
 def test_the_plan_says_when_the_list_is_missing(tmp_path: Path) -> None:

@@ -9,7 +9,7 @@ code, with a test:
   The prize pages of an event do not list winners (read on 10 October 2026), so they are not a
   starting point.
 * A page that does not show a Hedera prize is not kept.
-* A hard limit of 300 requests, one at a time, two seconds apart (polite.py).
+* A hard limit of 300 requests over all runs, one at a time, two seconds apart (polite.py).
 * The tool's name and the maintainer's address in each request (polite.py).
 * No names, photos or profiles of team members. A public project page shows no team at all: the
   people are visible only to a visitor who is signed in. The shape below has tripwires, so if a
@@ -44,6 +44,7 @@ from hackathon_memory.collect.polite import (
     CollectorRefused,
     FetchFailed,
     PoliteClient,
+    RequestCount,
     StopCollecting,
 )
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
@@ -355,6 +356,7 @@ class DataPaths:
     page_list: Path  # the list of project pages that was made by hand
     raw_dir: Path  # the saved pages
     runs_dir: Path  # one record for each run
+    request_count: Path  # how many requests were sent to the site, over all runs
 
 
 def data_paths(settings: Settings) -> DataPaths:
@@ -363,7 +365,16 @@ def data_paths(settings: Settings) -> DataPaths:
         page_list=root / "by-hand" / SITE / "project-pages.txt",
         raw_dir=root / "raw" / SITE,
         runs_dir=root / "runs",
+        request_count=root / "requests" / f"{SITE}.json",
     )
+
+
+def requests_needed(project_pages: list[str], store: RawStore) -> int:
+    """How many requests a run would send: the pages that are not saved yet, and robots.txt."""
+    missing = sum(1 for page in project_pages if not store.has(page))
+    if missing == 0:
+        return 0
+    return missing + (0 if store.has(ROBOTS_URL, ".txt") else 1)
 
 
 def identity_if_allowed(settings: Settings) -> CollectorIdentity:
@@ -379,11 +390,15 @@ def identity_if_allowed(settings: Settings) -> CollectorIdentity:
 def polite_client(
     identity: CollectorIdentity,
     allow: Callable[[str], bool],
+    paths: DataPaths,
     *,
     env_file: Path | None = None,
     **client_options: object,
 ) -> PoliteClient:
-    """A client for this site that may read only what `allow` names."""
+    """A client for this site that may read only what `allow` names.
+
+    Every request is counted in one file, so the limit of 300 holds over all runs together.
+    """
 
     def still_enabled() -> bool:
         # Read again before every request, so that turning the switch off stops a run at once.
@@ -394,6 +409,7 @@ def polite_client(
         identity=identity,
         allow=allow,
         is_enabled=still_enabled,
+        count=RequestCount(paths.request_count, SITE),
         **client_options,  # type: ignore[arg-type]
     )
 
@@ -411,11 +427,21 @@ def build_collector(
     project_pages = load_project_pages(paths.page_list)
     named = frozenset(project_pages)
     client = polite_client(
-        identity, lambda url: is_allowed_url(url, named), env_file=env_file, **client_options
+        identity, lambda url: is_allowed_url(url, named), paths, env_file=env_file, **client_options
     )
+    store = RawStore(paths.raw_dir)
+    try:
+        needed, left = requests_needed(project_pages, store), client.count.left()
+    except StopCollecting as stop:
+        raise CollectorRefused(str(stop)) from None
+    if needed > left:
+        raise CollectorRefused(
+            f"The run needs {needed} requests, and {left} are left of the {client.count.limit} "
+            f"that were promised to {SITE}. Make the list shorter, or ask the site for more."
+        )
     return EthGlobalCollector(
         client=client,
-        store=RawStore(paths.raw_dir),
+        store=store,
         project_pages=project_pages,
         shape=shape,
         runs_dir=paths.runs_dir,
@@ -432,7 +458,8 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
         f"Tool name in every request: {settings.collector_name or '(empty: the run will refuse)'}",
         "Contact address in every request: "
         + ("set" if settings.collector_contact_email.get_secret_value() else "(empty: refuse)"),
-        "One request at a time, two seconds apart, at most 300 requests.",
+        "One request at a time, two seconds apart, at most 300 requests over all runs.",
+        _count_line(paths),
         "Page shape checked against real pages: "
         + (
             f"{shape.verified_on} ({shape.checked_pages})"
@@ -452,4 +479,13 @@ def plan(settings: Settings, shape: SiteShape = ETHGLOBAL_SHAPE) -> list[str]:
     for page in pages:
         lines.append(f"  {page}  ({'saved' if store.has(page) else 'to fetch'})")
     lines.append("  and nothing else. A page that shows no Hedera prize is read but not kept.")
+    lines.append(f"That is {requests_needed(pages, store)} request(s).")
     return lines
+
+
+def _count_line(paths: DataPaths) -> str:
+    count = RequestCount(paths.request_count, SITE)
+    try:
+        return f"Requests sent to the site so far: {count.sent()} of {count.limit}."
+    except StopCollecting as stop:
+        return str(stop)

@@ -1,4 +1,4 @@
-"""A quick look at ETHGlobal: at most two requests, nothing saved, no person printed.
+"""A quick look at ETHGlobal: at most two requests, no page saved, no person printed.
 
     python -m hackathon_memory.collect ethglobal --look
 
@@ -13,8 +13,8 @@ What it does, inside the promises of design 5.7:
 * It prints the SHAPE of the page with the skeleton printer: every text only as its length, no
   heading except plain section words, no name, no link target except its shape. Then it says
   whether the team cut passes (it names a rule that fails, never a text) and whether the page
-  shows a Hedera prize. Nothing is saved to disk. The page stays in memory and is gone when the
-  command ends.
+  shows a Hedera prize. No page is saved to disk: the page stays in memory and is gone when the
+  command ends. Only the two requests are added to the count of requests of the site.
 
 It still needs the maintainer's yes for these two pages (design rule 17), the switch
 COLLECT_ETHGLOBAL=on, the contact address and the list of project pages.
@@ -147,7 +147,7 @@ class Looker:
         report.requests_made = self.client.requests_made
         report.lines.append(
             f"Requests sent: {report.requests_made} (at most {LOOK_REQUESTS}). "
-            "Nothing was saved to disk."
+            "No page was saved to disk."
         )
         return report
 
@@ -161,10 +161,12 @@ def build_looker(
 ) -> Looker:
     """Everything a look needs. Refuses (CollectorRefused) when a promise cannot be kept."""
     identity = identity_if_allowed(settings)
-    first = load_project_pages(data_paths(settings).page_list)[0]
+    paths = data_paths(settings)
+    first = load_project_pages(paths.page_list)[0]
     client = polite_client(
         identity,
         lambda url: is_allowed_url(url, {first}),
+        paths,
         env_file=env_file,
         max_requests=LOOK_REQUESTS,
         **client_options,
@@ -176,7 +178,7 @@ def look_plan(settings: Settings) -> list[str]:
     """What a look would read, in plain words. Makes no request."""
     page_list = data_paths(settings).page_list
     lines = [
-        "A look would send at most two requests, two seconds apart, and save nothing:",
+        "A look would send at most two requests, two seconds apart, and save no page:",
         f"  1. {ROBOTS_URL}",
     ]
     try:

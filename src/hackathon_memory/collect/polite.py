@@ -4,7 +4,8 @@
 |-----------------------------------------------------|-----------------------------------------|
 | Only the pages we named                             | `allow`, checked before every request   |
 |                                                     | and on every redirect                   |
-| A fixed limit of 300 requests                       | `max_requests`                          |
+| A fixed limit of 300 requests                       | `max_requests` for one run, and         |
+|                                                     | `RequestCount` over all runs            |
 | One request at a time, a pause of two seconds       | `_lock`, `_wait_turn`                   |
 | The tool's name and a contact address in each one   | `CollectorIdentity`, `_headers`         |
 | A stop switch for each site                         | `is_enabled`, read before every request |
@@ -18,12 +19,15 @@ Nowhere else is it printed or saved.
 from __future__ import annotations
 
 import http.cookiejar
+import json
+import os
 import re
 import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
@@ -99,6 +103,62 @@ class FetchResult:
     fetched_at: str  # UTC, ISO form
 
 
+class RequestCount:
+    """Every request that was ever sent to one site, counted in one small file.
+
+    A site was promised "a few hundred pages at most, one time" (design 5.7). A limit that only
+    one run knows does not keep that promise: a look, a walk through a list and a run would each
+    start at zero. So the count is kept on disk, and every command draws on the same limit.
+
+    A file that cannot be read is never taken for zero. It stops everything until it is repaired.
+    """
+
+    def __init__(
+        self,
+        path: Path,
+        site: str,
+        limit: int = MAX_REQUESTS,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
+        self.path = path
+        self.site = site
+        self.limit = limit
+        self.now = now or (lambda: datetime.now(UTC))
+
+    def sent(self) -> int:
+        return self._read()["sent"]
+
+    def left(self) -> int:
+        return max(0, self.limit - self.sent())
+
+    def add_one(self) -> None:
+        record = self._read()
+        day = self.now().strftime("%Y-%m-%d")
+        record["sent"] += 1
+        record["by_day"][day] = record["by_day"].get(day, 0) + 1
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_name(self.path.name + ".part")
+        temporary.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8", newline="\n")
+        os.replace(temporary, self.path)
+
+    def _read(self) -> dict:
+        if not self.path.exists():
+            return {"site": self.site, "sent": 0, "by_day": {}}
+        try:
+            record = json.loads(self.path.read_text(encoding="utf-8"))
+            sent, by_day = record["sent"], record["by_day"]
+            if record["site"] != self.site or type(sent) is not int or sent < 0:
+                raise ValueError("not the count of this site")
+            if not isinstance(by_day, dict):
+                raise ValueError("no count by day")
+        except (OSError, ValueError, KeyError, TypeError):
+            raise StopCollecting(
+                f"The count of requests to {self.site} cannot be read ({self.path.name}). "
+                "Nothing is requested until it is repaired."
+            ) from None
+        return record
+
+
 class _NoCookies(http.cookiejar.CookiePolicy):
     """Keeps no cookie. The collector never signs in, so it has nothing to remember."""
 
@@ -135,6 +195,7 @@ class PoliteClient:
         allow: Callable[[str], bool],
         is_enabled: Callable[[], bool],
         session: requests.Session | None = None,
+        count: RequestCount | None = None,
         pause_seconds: float = PAUSE_SECONDS,
         max_requests: int = MAX_REQUESTS,
         max_errors_in_a_row: int = MAX_ERRORS_IN_A_ROW,
@@ -148,6 +209,7 @@ class PoliteClient:
         self.identity = identity
         self.allow = allow
         self.is_enabled = is_enabled
+        self.count = count  # the requests of all runs; None only in a test of something else
         self.pause_seconds = pause_seconds
         self.max_requests = max_requests
         self.max_errors_in_a_row = max_errors_in_a_row
@@ -201,6 +263,11 @@ class PoliteClient:
             raise StopCollecting(f"The switch for {self.site} is off. Nothing more is requested.")
         if self.requests_made >= self.max_requests:
             raise StopCollecting(f"The limit of {self.max_requests} requests is reached.")
+        if self.count is not None and self.count.left() <= 0:
+            raise StopCollecting(
+                f"The limit of {self.count.limit} requests to {self.site} over all runs is "
+                "reached. Nothing more is requested."
+            )
         if not self.allow(url):
             raise StopCollecting(f"{url} is not on the list of pages named for {self.site}.")
 
@@ -238,6 +305,8 @@ class PoliteClient:
     def _request_once(self, url: str) -> _Raw:
         self._wait_turn()
         self.requests_made += 1
+        if self.count is not None:
+            self.count.add_one()  # before it is sent: a request that fails was still a request
         try:
             response = self.session.get(
                 url,
