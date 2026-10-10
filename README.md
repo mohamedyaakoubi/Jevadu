@@ -137,7 +137,7 @@ The code and the tests point to these rules by number, for example "design rule 
 | 17 | No collector runs against a live site before the maintainer has said yes for that site and for the pages that will be read. |
 | 18 | A promise made to a site is a rule for the code, and each promise has a test. |
 
-Comments in the code also name sections of the design notes, for example "design 5.7". The most cited one is below. A design document for readers will be added before the submission.
+Comments in the code also name sections of the design, for example "design 5.7". The design is in [`DESIGN.md`](DESIGN.md), with the same section numbers. The most cited section is repeated below.
 
 ### The promises made to the sites (design 5.7)
 
