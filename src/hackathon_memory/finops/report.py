@@ -328,13 +328,22 @@ def render(
     if report.by_use:
         lines += ["", "By use (purpose, model, thinking level)"]
         for group in report.by_use:
+            unknown = group.unpriced_calls == group.calls
+            cost = (
+                "cost not known"
+                if unknown
+                else f"{_usd(group.cost_usd)}, one call {_usd(group.mean_cost_usd)}"
+            )
             lines.append(
-                f"  {' / '.join(group.label)}: {group.calls} call(s), {_usd(group.cost_usd)}"
-                f", one call {_usd(group.mean_cost_usd)}"
+                f"  {' / '.join(group.label)}: {group.calls} call(s), {cost}"
                 f", time {_ms(group.latency_p50_ms)} (half of the calls) and "
                 f"{_ms(group.latency_p95_ms)} (95 of 100)"
                 + (f", {group.failed} failed" if group.failed else "")
-                + (f", {group.unpriced_calls} with no known price" if group.unpriced_calls else "")
+                + (
+                    f", {group.unpriced_calls} with no known price"
+                    if group.unpriced_calls and not unknown
+                    else ""
+                )
             )
 
     if report.per_item:

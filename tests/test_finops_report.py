@@ -247,6 +247,13 @@ def test_the_text_of_the_report_says_the_main_things() -> None:
     assert "reconcile --billed" in text
 
 
+def test_a_use_with_no_known_price_says_so_and_shows_no_amount() -> None:
+    lines = [c for c in ledger() if c.purpose == "embed_query"]
+    text = report.render(report.build(lines, "test"), today=TODAY)
+    assert "embed_query / gemini-embedding-001 / -: 1 call(s), cost not known" in text
+    assert "embed_query / gemini-embedding-001 / -: 1 call(s), $" not in text
+
+
 def test_the_report_as_data_has_no_text_of_a_page_and_names_its_price_source() -> None:
     data = report.as_dict(report.build(ledger(), "test"))
     assert data["total"]["calls"] == 8
