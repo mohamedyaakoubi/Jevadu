@@ -1,7 +1,7 @@
 """The Gemini layers and the embedding model, through the real library with a fake network.
 
-These tests pin what Google's pages and the library's source said on 9 October 2026. If the library changes its requests, a test here goes red instead of a live call failing
-silently.
+These tests pin what Google's pages and the library's source said on 9 October 2026. If the
+library changes its requests, a test here goes red instead of a live call failing silently.
 """
 
 from __future__ import annotations

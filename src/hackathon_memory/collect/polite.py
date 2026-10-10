@@ -6,7 +6,7 @@
 |                                                     | and on every redirect                   |
 | A fixed limit of 300 requests                       | `max_requests`                          |
 | One request at a time, a pause of two seconds       | `_lock`, `_wait_turn`                   |
-| The tool's name and the maintainer's address in each one | `CollectorIdentity`, `_headers`         |
+| The tool's name and a contact address in each one   | `CollectorIdentity`, `_headers`         |
 | A stop switch for each site                         | `is_enabled`, read before every request |
 | Stop after repeated errors, never work around a     | `_note_error`, `_BLOCK_STATUSES`        |
 | block, never sign in                                | `_NoCookies`, `trust_env = False`       |
