@@ -16,7 +16,6 @@ from hackathon_memory.llm import embeddings
 from hackathon_memory.llm.card_form import CardFields, Category, Label
 from hackathon_memory.llm.gemini import (
     LOCATIONS,
-    PRICES,
     CardFormatError,
     Usage,
     check_location,
@@ -106,9 +105,14 @@ def test_the_cost_depends_on_the_model() -> None:
     assert usage.cost_usd("gemini-9-unknown") is None  # an unknown price is never guessed
 
 
-def test_the_prices_are_the_ones_read_on_9_october_2026() -> None:
-    assert PRICES[FLASH] == (0.75, 3.75)  # until 31 December 2026
-    assert PRICES[PRO] == (2.00, 12.00)  # prompts up to 200,000 tokens
+def test_the_cost_of_a_call_is_the_one_of_its_day() -> None:
+    from datetime import date
+
+    usage = Usage(1000, 200, 300, 1500)
+    in_2026 = usage.cost_usd(FLASH, on=date(2026, 12, 31))
+    in_2027 = usage.cost_usd(FLASH, on=date(2027, 1, 1))
+    assert in_2026 == pytest.approx(0.002625)
+    assert in_2027 == pytest.approx(2 * 0.002625)  # the price of Flash doubles in 2027
 
 
 @pytest.mark.parametrize(

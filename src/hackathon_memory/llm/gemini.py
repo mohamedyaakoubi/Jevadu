@@ -21,20 +21,20 @@ Facts from Google's own pages, read on 9 October 2026:
 * `temperature`, `top_k` and `top_p` are ignored by the backend, and Google says to remove them,
   so they are not sent.
 * Thinking tokens are billed as output tokens.
-* Prices, in dollars per million tokens, for prompts up to 200,000 tokens (a page here is a few
-  thousand): 3.8 Flash 0.75 in and 3.75 out until 31 December 2026, then double; 3.1 Pro 2.00 in
-  and 12.00 out. Above 200,000 tokens the price of 3.1 Pro is higher, and no page comes near that.
+* The prices are in the price book, finops/prices.py, with the day each one begins.
 """
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
 
 from google import genai
 from google.genai import types
 from pydantic import ValidationError
 
+from hackathon_memory.finops import prices
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION, SYSTEM_INSTRUCTIONS, CardFields
 
 THINKING_LEVELS = ("LOW", "MEDIUM", "HIGH")
@@ -45,12 +45,6 @@ MAX_OUTPUT_TOKENS = 16384  # thinking tokens count against this limit too, and H
 LOCATIONS: dict[str, tuple[str, ...]] = {
     "gemini-3.8-flash": ("global", "us", "eu"),
     "gemini-3.1-pro-preview": ("global",),
-}
-
-# Dollars per million tokens (input, output) for prompts up to 200,000 tokens.
-PRICES: dict[str, tuple[float, float]] = {
-    "gemini-3.8-flash": (0.75, 3.75),  # until 31 December 2026, then 1.50 and 7.50
-    "gemini-3.1-pro-preview": (2.00, 12.00),
 }
 
 
@@ -86,18 +80,18 @@ class Usage:
             self.total_tokens + other.total_tokens,
         )
 
-    def cost_usd(self, model: str) -> float | None:
-        """The cost of this call, or None when the price of the model is not known.
+    def cost_usd(self, model: str, on: date | None = None) -> float | None:
+        """The cost of this call on that day, or None when the price of the model is not known.
 
-        Thinking tokens are billed as output.
+        The day is today when none is given. Thinking tokens are billed as output.
         """
-        price = PRICES.get(model)
-        if price is None:
-            return None
-        price_in, price_out = price
-        return (
-            self.prompt_tokens * price_in + (self.output_tokens + self.thought_tokens) * price_out
-        ) / 1_000_000
+        return prices.cost_usd(
+            model,
+            on or prices.today(),
+            input_tokens=self.prompt_tokens,
+            output_tokens=self.output_tokens,
+            thinking_tokens=self.thought_tokens,
+        )
 
 
 @dataclass(frozen=True)

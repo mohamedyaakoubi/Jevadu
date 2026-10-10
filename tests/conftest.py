@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import secrets
 from collections.abc import Iterator
+from datetime import date
 from pathlib import Path
 
 import psycopg
@@ -16,9 +17,22 @@ import pytest
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
+from hackathon_memory.finops import prices
 from hackathon_memory.settings import Settings
 
 ROOT = Path(__file__).resolve().parents[1]
+TEST_DAY = date(2026, 10, 10)
+
+
+@pytest.fixture(autouse=True)
+def the_day_is_known(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test runs on 10 October 2026.
+
+    The price of a model depends on the day: Gemini 3.8 Flash costs double from 1 January 2027.
+    A test that reads the clock would turn red on that day for no fault of the code. A test
+    about another day passes the day itself.
+    """
+    monkeypatch.setattr(prices, "today", lambda: TEST_DAY)
 
 
 @pytest.fixture(autouse=True)

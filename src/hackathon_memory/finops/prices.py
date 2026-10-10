@@ -23,7 +23,7 @@ were billed at the old price.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 
 READ_ON = date(2026, 10, 10)
 SOURCE = "Google, Gemini Developer API pricing (ai.google.dev/gemini-api/docs/pricing)"
@@ -65,6 +65,11 @@ PRICE_BOOK: tuple[Price, ...] = (
     ),
     Price("gemini-embedding-2", date(2026, 1, 1), 0.20, 0.0),
 )
+
+
+def today() -> date:
+    """The day in UTC. Calls are dated in UTC, so their price is looked up in UTC too."""
+    return datetime.now(UTC).date()
 
 
 def price_on(model: str, day: date, book: tuple[Price, ...] = PRICE_BOOK) -> Price | None:
