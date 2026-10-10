@@ -348,6 +348,7 @@ class DataPaths:
     """Where the collector keeps its files. All of them are in the data folder, outside git."""
 
     page_list: Path  # the list of project pages that was made by hand
+    found_list: Path  # what the walk through the Hedera list found
     raw_dir: Path  # the saved pages
     runs_dir: Path  # one record for each run
     request_count: Path  # how many requests were sent to the site, over all runs
@@ -357,6 +358,7 @@ def data_paths(settings: Settings) -> DataPaths:
     root = Path(settings.data_dir)
     return DataPaths(
         page_list=root / "by-hand" / SITE / "project-pages.txt",
+        found_list=root / "found" / SITE / "hedera-list.json",
         raw_dir=root / "raw" / SITE,
         runs_dir=root / "runs",
         request_count=root / "requests" / f"{SITE}.json",

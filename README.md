@@ -105,7 +105,8 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m proofs.hedera_write` | Proof 2, on the Hedera test network |
 | `python -m proofs.google_models` | Proof 3, on Google's models (it costs a few cents) |
 | `python -m hackathon_memory.collect ethglobal --plan` | Shows what the collector would read. It sends no request. |
-| `python -m hackathon_memory.collect ethglobal --look` | Reads robots.txt and the first page of the list, and saves nothing |
+| `python -m hackathon_memory.collect ethglobal --look` | Reads robots.txt and the first page of the hand-made list, and saves no page |
+| `python -m hackathon_memory.collect ethglobal --find` | Walks through the showcase list with the filter "partner: Hedera" and writes down which projects took a prize. It saves no page. `--pages 5` reads five pages of the list and can be started again. |
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
 | `python -m hackathon_memory.finops budget` | Where the two budgets stand |
 | `python -m hackathon_memory.finops prices` | The prices in use, with the day each one begins |
@@ -142,7 +143,7 @@ A yes from a site holds only as long as these are kept. Each one is code, with a
 
 | The promise | What the code does |
 |---|---|
-| Only the pages we named | The collector reads the pages on a hand-made list and robots.txt. It never walks through a whole site. |
+| Only the pages we named | The collector reads robots.txt, the project pages on its list, and the pages of one list of the showcase: the one with the filter "partner: Hedera". That list is read only to learn which projects took a prize, and none of its pages is saved. Every other address is refused before a request is sent. |
 | A few hundred pages at most | A fixed limit of 300 requests to a site. Every request is counted in one file, so the limit holds for all commands and all days together. |
 | One time | A second run skips every page that is already saved. |
 | One request at a time | One worker, a pause of two seconds, nothing in parallel. |
