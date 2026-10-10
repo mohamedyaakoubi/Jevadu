@@ -6,7 +6,8 @@ says, for each project, where its own page is and which sponsors gave it a prize
 
 What a page of the list looks like (pages 1, 2 and 3 were read on 10 October 2026):
 
-* 33 cards. Each card is a link to a project page, /showcase/<name>-<id>.
+* 33 cards. Each card is a link to a project page, /showcase/<name>-<id>. The last card of a
+  page is also the first card of the next page: the list moves on by 32.
 * A link to the next page of the list, while there is one.
 * The data of the page as text in scripts (pagedata.py). One object holds the number of the
   page ("currentPage") and the records of the projects ("projects"). A record has a name, a

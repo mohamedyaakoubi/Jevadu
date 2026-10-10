@@ -7,16 +7,21 @@ event, and nothing more. It holds no text of a page and nothing about a person.
 
 The file is written after every page of the list, so a walk that stops can go on later from the
 next page, and no page is asked for twice.
+
+Two pages of the list share one row: a page shows 33 rows, and the last one is the first row of
+the next page (seen on the real list on 10 October 2026). That row is taken once. Its address is
+not kept for this, only a fingerprint of it.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from hackathon_memory.collect.ethglobal_list import ListPage, list_url
+from hackathon_memory.collect.ethglobal_list import ListedProject, ListPage, list_url
 from hackathon_memory.collect.ethglobal_site import SITE, looks_like_a_project_page
 from hackathon_memory.collect.polite import CollectorRefused
 
@@ -39,25 +44,46 @@ class FoundList:
     complete: bool = False  # the last page of the list was reached
     listed_by_event: dict[str, int] = field(default_factory=dict)  # every project of the list
     with_prize: list[PrizeProject] = field(default_factory=list)
+    last_row: str = ""  # a fingerprint of the last row of the last page that was read
+    # How often a page did not start with the last row of the page before. On the real list it
+    # always does. When it does not, the list moved while it was read, and a row may be missing.
+    page_ends_not_shared: int = 0
 
     @property
     def listed(self) -> int:
         return sum(self.listed_by_event.values())
 
-    def add(self, page: ListPage, when: str) -> None:
-        """Take in the next page of the list. Pages come in order, each one once."""
+    def add(self, page: ListPage, when: str) -> tuple[ListedProject, ...]:
+        """Take in the next page of the list, and return its rows that are new.
+
+        Pages come in order, each one once. The row that a page shares with the page before it
+        is not new.
+        """
         if self.complete or page.number != self.pages_read + 1:
             raise ValueError("the pages of the list are added in order, each one once")
+        rows = page.projects
+        if page.number > 1 and rows:
+            if _fingerprint(rows[0].page) == self.last_row:
+                rows = rows[1:]
+            else:
+                self.page_ends_not_shared += 1
         known = {project.page for project in self.with_prize}
-        for project in page.projects:
+        for project in rows:
             self.listed_by_event[project.event] = self.listed_by_event.get(project.event, 0) + 1
             if project.sponsors and project.page not in known:
                 self.with_prize.append(
                     PrizeProject(project.page, project.event, project.sponsors, page.number)
                 )
+        if page.projects:
+            self.last_row = _fingerprint(page.projects[-1].page)
         self.pages_read = page.number
         self.complete = not page.has_next
         self.updated_at = when
+        return rows
+
+
+def _fingerprint(address: str) -> str:
+    return hashlib.sha256(address.encode("utf-8")).hexdigest()[:16]
 
 
 def save_found(path: Path, found: FoundList) -> None:
@@ -70,6 +96,8 @@ def save_found(path: Path, found: FoundList) -> None:
         "pages_read": found.pages_read,
         "complete": found.complete,
         "listed_by_event": found.listed_by_event,
+        "last_row": found.last_row,
+        "page_ends_not_shared": found.page_ends_not_shared,
         "with_prize": [
             {
                 "page": project.page,
@@ -107,6 +135,8 @@ def load_found(path: Path) -> FoundList | None:
                 str(event): _count(number) for event, number in record["listed_by_event"].items()
             },
             with_prize=[_prize_project(item) for item in record["with_prize"]],
+            last_row=str(record.get("last_row", "")),
+            page_ends_not_shared=_count(record.get("page_ends_not_shared", 0)),
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         raise CollectorRefused(

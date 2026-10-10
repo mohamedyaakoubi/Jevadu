@@ -33,16 +33,17 @@ PAGE_2 = LIST + "&page=2"
 PAGE_3 = LIST + "&page=3"
 CONTACT = "maintainer@example.test"
 
-FIRST = [
-    listed("pebble-pay", "x1y2z", HEDERA_ID),
-    listed("cedar-lens", "k9l8m", OTHER_ID),
-    listed("dune-notes", "p0o9i"),
-]
-SECOND = [
-    listed("quartz-notes", "q3w4e", OTHER_ID, HEDERA_ID, event="ETHGlobal Other Event"),
-    listed("eel-ledger", "j5k6l"),
-]
-THIRD = [listed("fig-registry", "u7y6t", HEDERA_ID)]
+# The invented list has six projects. As on the real site, a page ends with the row that the
+# next page starts with: here a page shows three rows and the list moves on by two.
+PEBBLE = listed("pebble-pay", "x1y2z", HEDERA_ID)
+CEDAR = listed("cedar-lens", "k9l8m", OTHER_ID)
+DUNE = listed("dune-notes", "p0o9i")  # no prize, shared by the pages 1 and 2
+QUARTZ = listed("quartz-notes", "q3w4e", OTHER_ID, HEDERA_ID, event="ETHGlobal Other Event")
+EEL = listed("eel-ledger", "j5k6l", HEDERA_ID)  # a prize, shared by the pages 2 and 3
+FIG = listed("fig-registry", "u7y6t", HEDERA_ID)
+FIRST = [PEBBLE, CEDAR, DUNE]
+SECOND = [DUNE, QUARTZ, EEL]
+THIRD = [EEL, FIG]
 
 
 def the_list(**changes: Reply) -> dict[str, Reply]:
@@ -101,7 +102,7 @@ def test_a_walk_reads_the_list_to_its_last_page_and_keeps_the_projects_with_a_pr
     assert fake_time.sleeps == [2.0, 2.0, 2.0]
     assert summary.stopped is None
     assert summary.complete is True
-    assert (summary.pages_read, summary.projects_listed, summary.projects_with_prize) == (3, 6, 4)
+    assert (summary.pages_read, summary.projects_listed, summary.projects_with_prize) == (3, 6, 5)
     assert summary.requests_made == 4
 
     found = found_in(tmp_path)
@@ -126,6 +127,12 @@ def test_a_walk_reads_the_list_to_its_last_page_and_keeps_the_projects_with_a_pr
             "ETHGlobal Other Event",
             (OTHER_ID, HEDERA_ID),
             2,
+        ),
+        PrizeProject(
+            "https://ethglobal.com/showcase/eel-ledger-j5k6l",
+            "ETHGlobal Sample Event",
+            (HEDERA_ID,),
+            2,  # named once, by the first page that showed it
         ),
         PrizeProject(
             "https://ethglobal.com/showcase/fig-registry-u7y6t",
@@ -157,7 +164,7 @@ def test_a_walk_saves_no_page_of_the_list_and_no_text_of_a_project(tmp_path: Pat
             for kept_out in ("invented short line", "Pebble Pay", "Dune Notes", "dune-notes"):
                 assert kept_out not in text, path.name
     # A project without a prize leaves only a count: its address is not kept.
-    assert "eel-ledger" not in (tmp_path / "found" / "hedera-list.json").read_text(encoding="utf-8")
+    assert "dune-notes" not in (tmp_path / "found" / "hedera-list.json").read_text(encoding="utf-8")
 
 
 def test_the_walk_leaves_a_record_with_counts_only(tmp_path: Path) -> None:
@@ -168,10 +175,40 @@ def test_the_walk_leaves_a_record_with_counts_only(tmp_path: Path) -> None:
     record = json.loads(records[0].read_text(encoding="utf-8"))
     assert record["requests_made"] == 4
     assert record["pages_read"] == 3
-    assert record["projects_with_prize"] == 4
+    assert record["projects_with_prize"] == 5
     assert record["complete"] is True
     assert record["stopped"] is None
     assert "pebble" not in records[0].read_text(encoding="utf-8")
+
+
+# --------------------------------------------------------------------- the row that two pages share
+
+
+def test_the_row_that_two_pages_share_is_counted_once(tmp_path: Path) -> None:
+    walker, _, _ = make(tmp_path, the_list())
+    walker.run()
+    found = found_in(tmp_path)
+    assert found.listed == 6  # eight rows were shown, and two of them twice
+    assert found.listed_by_event == {"ETHGlobal Sample Event": 5, "ETHGlobal Other Event": 1}
+    assert [project.page.rsplit("/", 1)[1] for project in found.with_prize].count(
+        "eel-ledger-j5k6l"
+    ) == 1
+    assert found.page_ends_not_shared == 0
+
+
+def test_a_page_that_does_not_start_with_the_last_row_is_counted_whole_and_noted(
+    tmp_path: Path,
+) -> None:
+    # A list whose pages share no row: every row is new, and the file says how often this was.
+    pages = the_list(
+        second=list_reply(2, [QUARTZ, EEL], has_next=True),
+        third=list_reply(3, [FIG], has_next=False),
+    )
+    walker, _, _ = make(tmp_path, pages)
+    walker.run()
+    found = found_in(tmp_path)
+    assert found.listed == 6
+    assert found.page_ends_not_shared == 2
 
 
 # --------------------------------------------------------------------- one time
@@ -198,7 +235,9 @@ def test_a_walk_can_be_made_in_parts_and_no_page_is_asked_for_twice(tmp_path: Pa
     summary = second.run()
     assert site.urls == [PAGE_2, PAGE_3]  # robots.txt is saved, page 1 is not asked for again
     assert (summary.first_page, summary.pages_read, summary.complete) == (2, 2, True)
-    assert len(found_in(tmp_path).with_prize) == 4
+    found = found_in(tmp_path)
+    assert len(found.with_prize) == 5
+    assert found.listed == 6  # the row shared by two walks is also counted once
 
 
 def test_what_was_found_is_written_after_every_page(tmp_path: Path) -> None:
@@ -384,7 +423,7 @@ def test_the_plan_of_a_walk_says_what_was_read_and_makes_no_request(tmp_path: Pa
     walker.found_path = folder / "hedera-list.json"
     walker.run()
     text = "\n".join(walk_plan(settings))
-    assert "Read so far: 2 page(s), 5 projects, 3 of them with a prize" in text
+    assert "Read so far: 2 page(s), 5 projects, 4 of them with a prize" in text
     assert "The next walk starts at page 3." in text
 
 

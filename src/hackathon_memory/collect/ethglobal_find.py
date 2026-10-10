@@ -15,7 +15,8 @@ What it does, inside the promises of design 5.7:
 * The same polite client as the run: one request at a time, two seconds apart, the name of the
   tool and the maintainer's address in each one, and every request counted in the 300.
 * No page of the list is saved. From each page it keeps the address, the event and the sponsor
-  ids of the projects with a prize, and it counts the others (ethglobal_found.py).
+  ids of the projects with a prize, and it counts the others (ethglobal_found.py). The row
+  that two pages share is taken once.
 * It stops at the first refusal, at a page that is not shaped as expected, and at the limit of
   requests. Nothing is tried again and nothing is worked around.
 * It writes what it found after every page. When it is started again, it goes on at the next
@@ -139,14 +140,15 @@ class ListWalker:
                     f"The site answered with page {page.number} of the list when page {number} "
                     "was asked for."
                 )
-            with_prize = sum(1 for project in page.projects if project.sponsors)
-            found.add(page, _now())
+            before = len(found.with_prize)
+            new_rows = found.add(page, _now())
             save_found(self.found_path, found)
+            with_prize = len(found.with_prize) - before
             summary.pages_read += 1
-            summary.projects_listed += len(page.projects)
+            summary.projects_listed += len(new_rows)
             summary.projects_with_prize += with_prize
             self.log(
-                f"page {number}: {len(page.projects)} projects, {with_prize} with a prize"
+                f"page {number}: {len(new_rows)} new projects, {with_prize} with a prize"
                 + ("" if page.has_next else " (the last page)")
             )
 
@@ -210,6 +212,11 @@ def walk_plan(settings: Settings) -> list[str]:
         f"  Read so far: {found.pages_read} page(s), {found.listed} projects, "
         f"{len(found.with_prize)} of them with a prize of some sponsor."
     )
+    if found.page_ends_not_shared:
+        lines.append(
+            f"  At {found.page_ends_not_shared} page end(s) the next page did not start with "
+            "the same row: the list may have moved while it was read, and a row may be missing."
+        )
     lines.append(
         "  The last page of the list was reached. A new walk sends no request."
         if found.complete
