@@ -1,0 +1,205 @@
+{
+  "proof": "lists",
+  "gate": "A",
+  "ran_at": "2026-10-11T03:14:18Z",
+  "passed": true,
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "checks": [
+    {
+      "name": "a walk through the Hedera list of the showcase was made",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "the walk reached the last page of the list",
+      "passed": true,
+      "detail": "21 pages, 658 projects in 14 events"
+    },
+    {
+      "name": "every page of the list started with the row that the page before ended with",
+      "passed": true,
+      "detail": "0 page end(s) where it did not: the list stood still"
+    },
+    {
+      "name": "the pages seen by hand say which sponsor id is Hedera",
+      "passed": true,
+      "detail": "2 page(s) seen by hand, and they share exactly one sponsor id"
+    },
+    {
+      "name": "every page of the plan was read",
+      "passed": true,
+      "detail": "658 planned: 658 saved, 0 read and not kept or gone from the site, 0 not read yet"
+    },
+    {
+      "name": "every project of the Hedera list is saved",
+      "passed": true,
+      "detail": "658 of 658 saved, 0 read and not kept or gone from the site"
+    },
+    {
+      "name": "no page outside the plan is saved",
+      "passed": true,
+      "detail": "0 page(s) outside the plan"
+    },
+    {
+      "name": "no saved page was edited after it was saved (fingerprints)",
+      "passed": true,
+      "detail": "0 edited"
+    },
+    {
+      "name": "the list and the \"Winner of\" block of each saved page agree about a Hedera prize",
+      "passed": true,
+      "detail": "0 of 658 page(s) differ"
+    },
+    {
+      "name": "no saved page holds a personal tag, a profile link, an avatar or a data key for people",
+      "passed": true,
+      "detail": "0 page(s) where the team cut would still find something"
+    },
+    {
+      "name": "every saved page names this tool as the one that fetched it",
+      "passed": true,
+      "detail": "0 page(s) fetched by something else"
+    },
+    {
+      "name": "two saved pages were never fetched less than two seconds apart",
+      "passed": true,
+      "detail": "the smallest gap is 2 s"
+    },
+    {
+      "name": "the requests to the site, over all commands, stay inside the limit of the site",
+      "passed": true,
+      "detail": "732 of 800"
+    }
+  ],
+  "measurements": {
+    "site": "ethglobal.com",
+    "list_pages_read": 21,
+    "projects_in_the_list": 658,
+    "projects_with_a_hedera_prize": 92,
+    "projects_with_a_prize_of_another_sponsor_only": 81,
+    "projects_with_no_prize": 485,
+    "pages_seen_by_hand": 2,
+    "pages_planned": 658,
+    "pages_saved": 658,
+    "pages_read_and_not_kept_or_gone": 0,
+    "pages_where_the_list_and_the_page_differ": 0,
+    "requests_sent_over_all_commands": 732,
+    "request_limit": 800,
+    "smallest_gap_between_two_saved_pages_s": 2.0,
+    "saved_page_bytes": {
+      "smallest": 73342,
+      "median": 81706,
+      "largest": 162202,
+      "total": 54807822
+    },
+    "by_event": {
+      "ETHOnline 2026": {
+        "in_the_list": 271,
+        "with_a_hedera_prize": 10,
+        "with_a_prize_of_another_sponsor_only": 11,
+        "with_no_prize": 250,
+        "pages_saved": 271
+      },
+      "ETHGlobal Lisbon 2026": {
+        "in_the_list": 46,
+        "with_a_hedera_prize": 10,
+        "with_a_prize_of_another_sponsor_only": 8,
+        "with_no_prize": 28,
+        "pages_saved": 46
+      },
+      "ETHGlobal New York 2026": {
+        "in_the_list": 33,
+        "with_a_hedera_prize": 11,
+        "with_a_prize_of_another_sponsor_only": 6,
+        "with_no_prize": 16,
+        "pages_saved": 33
+      },
+      "ETHGlobal Cannes 2026": {
+        "in_the_list": 40,
+        "with_a_hedera_prize": 9,
+        "with_a_prize_of_another_sponsor_only": 4,
+        "with_no_prize": 27,
+        "pages_saved": 40
+      },
+      "ETHGlobal Buenos Aires": {
+        "in_the_list": 15,
+        "with_a_hedera_prize": 5,
+        "with_a_prize_of_another_sponsor_only": 5,
+        "with_no_prize": 5,
+        "pages_saved": 15
+      },
+      "ETHOnline 2025": {
+        "in_the_list": 79,
+        "with_a_hedera_prize": 5,
+        "with_a_prize_of_another_sponsor_only": 1,
+        "with_no_prize": 73,
+        "pages_saved": 79
+      },
+      "ETHGlobal New Delhi": {
+        "in_the_list": 60,
+        "with_a_hedera_prize": 5,
+        "with_a_prize_of_another_sponsor_only": 6,
+        "with_no_prize": 49,
+        "pages_saved": 60
+      },
+      "ETHGlobal New York 2025": {
+        "in_the_list": 11,
+        "with_a_hedera_prize": 4,
+        "with_a_prize_of_another_sponsor_only": 4,
+        "with_no_prize": 3,
+        "pages_saved": 11
+      },
+      "ETHGlobal Cannes": {
+        "in_the_list": 12,
+        "with_a_hedera_prize": 5,
+        "with_a_prize_of_another_sponsor_only": 1,
+        "with_no_prize": 6,
+        "pages_saved": 12
+      },
+      "ETHGlobal Prague": {
+        "in_the_list": 17,
+        "with_a_hedera_prize": 5,
+        "with_a_prize_of_another_sponsor_only": 6,
+        "with_no_prize": 6,
+        "pages_saved": 17
+      },
+      "ETHGlobal Bangkok": {
+        "in_the_list": 17,
+        "with_a_hedera_prize": 3,
+        "with_a_prize_of_another_sponsor_only": 11,
+        "with_no_prize": 3,
+        "pages_saved": 17
+      },
+      "ETHGlobal San Francisco": {
+        "in_the_list": 6,
+        "with_a_hedera_prize": 5,
+        "with_a_prize_of_another_sponsor_only": 1,
+        "with_no_prize": 0,
+        "pages_saved": 6
+      },
+      "ETHGlobal Singapore": {
+        "in_the_list": 20,
+        "with_a_hedera_prize": 5,
+        "with_a_prize_of_another_sponsor_only": 6,
+        "with_no_prize": 9,
+        "pages_saved": 20
+      },
+      "ETHOnline 2024": {
+        "in_the_list": 31,
+        "with_a_hedera_prize": 10,
+        "with_a_prize_of_another_sponsor_only": 11,
+        "with_no_prize": 10,
+        "pages_saved": 31
+      }
+    }
+  },
+  "does_not_prove": [
+    "That the showcase list is complete. It is the site's own list with its own filter \"partner: Hedera\". A project that the site left out of it is not found.",
+    "That the name of the tool and the contact address were in each request. The tests of the polite client prove that on an invented site. Nothing on disk can prove it afterwards.",
+    "That the parser can read these pages. That is the next phase.",
+    "Anything about the other sites. Only ethglobal.com was read."
+  ]
+}
