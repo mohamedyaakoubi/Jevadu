@@ -12,6 +12,7 @@ import json
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from html import escape
 from pathlib import Path
 
 import requests
@@ -202,3 +203,158 @@ def list_reply(number: int, records: list[dict], *, has_next: bool) -> Reply:
         list_page(number, records, has_next=has_next),
         {"Content-Type": "text/html; charset=utf-8"},
     )
+
+
+# ------------------------------------------------------------------ an invented project page
+
+PROJECT_PAGE = "https://ethglobal.com/showcase/pebble-pay-x1y2z"
+# The scores that the site computes are planted with loud values. No test may ever see them come
+# out of the parser (design rule 1).
+PLANTED_SCORES = {
+    "autoOriginality": 987654321,
+    "autoPracticality": 876543219,
+    "autoTechnicality": 765432198,
+    "autoSummary": "A PLANTED SUMMARY OF THE SITE THAT MUST NEVER COME OUT",
+}
+_BETWEEN = "<!-- --> <!-- -->"  # what React writes between two pieces of text
+
+
+def won(
+    sponsor: str = "Hedera",
+    sponsor_id: str = HEDERA_ID,
+    *,
+    track: str = "AI, Agents & Hedera Services",
+    award: str | None = None,
+    kind: str = "tier",
+    pool: bool = False,
+) -> dict:
+    """One INVENTED prize of a project, with the keys that a real page has in its data.
+
+    A prize of the kind "tier" has a place. For any other kind the award is the name of the
+    prize once more, unless the test gives another one.
+    """
+    return {
+        "uuid": f"{sponsor_id}-{kind}",
+        "name": award if award is not None else ("1st place" if kind == "tier" else track),
+        "poolPrize": pool,
+        "prize": {
+            "name": track,
+            "type": kind,
+            "sponsor": {
+                "name": sponsor,
+                "organization": {
+                    "uuid": sponsor_id,
+                    "name": sponsor,
+                    "squareLogo": {"fullUrl": f"https://cdn.example.test/logos/{sponsor_id}.png"},
+                },
+            },
+        },
+    }
+
+
+def shown_prize(prize: dict) -> str:
+    """The line that a real page shows for a prize: a tier shows the prize and the place, any
+    other kind shows what was won."""
+    inner = prize["prize"]
+    words = [inner["name"], prize["name"]] if inner["type"] == "tier" else [prize["name"]]
+    return _BETWEEN.join([inner["sponsor"]["name"], "-", *(escape(word) for word in words)])
+
+
+def project_page(
+    *,
+    name: str = "Pebble Pay",
+    slug: str = "pebble-pay",
+    short_id: str = "x1y2z",
+    short_line: str = "Pay a street vendor with a coin on Hedera.",
+    event_slug: str = "sample-event",
+    event_name: str = EVENT,
+    starts_at: str = "2026-03-06T16:00:00.000Z",
+    prizes: list[dict] | None = None,
+    description: str = "<p>Pebble Pay lets a street vendor take a payment with a coin.</p>",
+    made: str = "<p>A small web page asks the buyer to sign.</p>",
+    code: str | None = "https://github.com/sample-org/pebble-pay",
+    demo: str | None = "https://demo.example.test/pebble-pay",
+    video: bool = True,
+    data_changes: dict | None = None,
+) -> bytes:
+    """An INVENTED project page, in the shape of the real ones as they are saved.
+
+    `description` and `made` are the HTML of the two texts. `data_changes` is laid over the data
+    of the page, so that a test can build a page whose data and whose visible part do not fit.
+    """
+    prizes = prizes or []
+    data = {
+        "uuid": short_id,
+        "slug": slug,
+        "name": name,
+        "tagline": short_line,
+        "description": "$1a",
+        "howItsMade": "$1b",
+        "url": demo,
+        "sourceCodeUrl": None,
+        "primaryRepository": {"url": code} if code else None,
+        "event": {"slug": event_slug, "name": event_name, "startTime": starts_at},
+        "banner": {"file": {"fullUrl": f"https://cdn.example.test/banners/{slug}.png"}},
+        "logo": {"file": {"fullUrl": f"https://cdn.example.test/logos/{slug}.png"}},
+        "screenshots": [],
+        "video": (
+            {
+                "file": {"fullUrl": f"https://cdn.example.test/videos/{slug}.mp4"},
+                "muxUrl": f"https://stream.example.test/{slug}.m3u8",
+                "muxThumbnailUrl": f"https://stream.example.test/{slug}.png",
+                "youtubeId": None,
+            }
+            if video
+            else None
+        ),
+        "prizes": prizes,
+        "meta": {**PLANTED_SCORES, "demoVideoReady": video, "tmpVideoId": 12345, "timer": None},
+    }
+    data.update(data_changes or {})
+    row = f'3c:["$","$L3d",null,{json.dumps({"project": data}, separators=(",", ":"))}]\n'
+    cut = len(row) // 2
+    pushes = [
+        '1:"$Sreact.fragment"\n',
+        "1a:T2e,an invented text row with a } and a {\n",
+        row[:cut],
+        row[cut:],
+        "1b:T1c,one more invented text row\n",
+    ]
+    scripts = "\n".join(
+        f"<script>self.__next_f.push([1,{json.dumps(text)}])</script>" for text in pushes
+    )
+    links = "".join(
+        f'<a href="{escape(url)}" target="_blank">{label}</a>'
+        for label, url in (("Live Demo", demo), ("Source Code", code))
+        if url
+    )
+    winner_of = ""
+    if prizes:
+        entries = "".join(
+            f'<div class="entry"><img src="https://cdn.example.test/logos/sponsor.png" alt="">'
+            f"<div><h4>{shown_prize(prize)}</h4></div></div>"
+            for prize in prizes
+        )
+        winner_of = f'<hr><h3>Winner of</h3><div class="space-y-3">{entries}</div>'
+    return (
+        "<!doctype html>\n"
+        "<!-- INVENTED SAMPLE. Not taken from any real page. Every word in it is made up. -->\n"
+        f'<html lang="en"><head><meta charset="utf-8"><title>{escape(name)} | ETHGlobal</title>'
+        f'<meta name="description" content="{escape(short_line)}"></head>\n'
+        '<body><nav><a href="/">Home</a> <a href="/events">Events</a> '
+        '<a href="/showcase">Showcase</a></nav>\n'
+        f'<div class="page"><header><h1>{escape(name)}</h1>'
+        f'<p class="lg:text-lg text-black-500">{escape(short_line)}</p>'
+        f"<div>{links}</div></header>\n"
+        f'<div class="columns"><aside><div class="card"><h2>{escape(name)}</h2>'
+        f'<h3>Created At</h3><a href="/events/{event_slug}"><div>{escape(event_name)}</div></a>'
+        f"{winner_of}</div></aside>\n"
+        f'<section><h3>Project Description</h3><div class="text-black-500 text-md">{description}'
+        f'</div>\n<h3>How it\'s Made</h3><div class="text-black-500 text-md">{made}</div>'
+        "</section></div>\n"
+        "<h3>Get the latest news and updates</h3>"
+        '<form><input id="email" placeholder="Your email address"><button>Subscribe</button>'
+        "</form></div>\n"
+        "<script>self.__next_f=self.__next_f||[];self.__next_f.push([0])</script>\n"
+        f"{scripts}\n</body></html>\n"
+    ).encode()
