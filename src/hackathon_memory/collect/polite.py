@@ -353,7 +353,9 @@ class _NoCookies(http.cookiejar.CookiePolicy):
 
 
 @dataclass
-class _Raw:
+class RawAnswer:
+    """An answer of a site as it came: its status, its headers and its body."""
+
     status: int
     headers: requests.structures.CaseInsensitiveDict
     body: bytes
@@ -518,7 +520,7 @@ class PoliteClient:
             chunks.append(chunk)
         return b"".join(chunks)
 
-    def _request_once(self, url: str) -> _Raw:
+    def _request_once(self, url: str) -> RawAnswer:
         self._wait_turn()
         self.requests_made += 1
         if self.count is not None:
@@ -545,13 +547,13 @@ class PoliteClient:
             raise FetchFailed(f"network error {type(error).__name__}") from None
         self._last_end = self.clock()
 
-        raw = _Raw(status=response.status_code, headers=response.headers, body=body)
+        raw = RawAnswer(status=response.status_code, headers=response.headers, body=body)
         self._note_site_headers(raw.headers)
         self._judge(raw)
         self._errors_in_a_row = 0
         return raw
 
-    def _judge(self, raw: _Raw) -> None:
+    def _judge(self, raw: RawAnswer) -> None:
         """What an answer means for the run. Raises when the run must stop or the page failed.
 
         This is the one place that reads the status of an answer. A client for a site whose
