@@ -139,10 +139,14 @@ def run(settings: Settings | None = None) -> int:
         except CutFailed:
             unsafe += 1
         other_tool += meta.get("collector") != f"{settings.collector_name}/{__version__}"
+    # A page from which personal data was removed later says so in its small file, with the
+    # reason. Its fingerprint is the one of the page after the removal.
+    removed = sum(1 for meta in metas if meta.get("removed"))
     result.check(
-        "no saved page was edited after it was saved (fingerprints)",
+        "no saved page was changed without a written reason (fingerprints)",
         edited == 0,
-        f"{edited} edited",
+        f"{edited} changed. {removed} page(s) had personal data removed after saving, each "
+        "with its reason written next to it",
     )
     result.check(
         'the list and the "Winner of" block of each saved page agree about a Hedera prize',
@@ -214,6 +218,7 @@ def run(settings: Settings | None = None) -> int:
             "pages_saved": len(metas),
             "pages_read_and_not_kept_or_gone": len(accounted & plan),
             "pages_where_the_list_and_the_page_differ": differ,
+            "pages_with_personal_data_removed_after_saving": removed,
             "requests_sent_over_all_commands": sent,
             "request_limit": count.limit,
             "smallest_gap_between_two_saved_pages_s": smallest,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from pathlib import Path
 
 import pytest
@@ -131,3 +132,80 @@ def test_a_small_file_whose_page_is_missing_is_not_listed(tmp_path: Path) -> Non
 
 def test_a_folder_that_does_not_exist_yet_holds_no_page(tmp_path: Path) -> None:
     assert RawStore(tmp_path / "not" / "made" / "yet").saved() == []
+
+
+# --------------------------------------------------------------------- personal data found later
+
+ADDRESS = re.compile(r"[a-z.]+@example\.test")
+PAGE = b"<p>Write to quill.invented@example.test or to reed@example.test.</p><p>The rest.</p>"
+
+
+def test_personal_data_is_taken_out_of_a_saved_page_and_the_reason_is_written(
+    tmp_path: Path,
+) -> None:
+    store = RawStore(tmp_path)
+    before = store.save(fetch(), PAGE, received=PAGE + b"<p>team</p>", collector="Tool/0.1.0")
+
+    removed = store.remove_text(
+        URL, ADDRESS, "[address hidden]", "an address of a person", at="2026-10-11T15:00:00Z"
+    )
+
+    assert removed == 2
+    after = store.load(URL)
+    assert after is not None
+    body = b"<p>Write to [address hidden] or to [address hidden].</p><p>The rest.</p>"
+    assert after.read() == body
+    assert after.meta["sha256"] == hashlib.sha256(body).hexdigest()
+    assert after.meta["bytes"] == len(body)
+    assert after.meta["removed"] == [
+        {
+            "at": "2026-10-11T15:00:00Z",
+            "why": "an address of a person",
+            "matches": 2,
+            "sha256_before": before.meta["sha256"],
+        }
+    ]
+    # What the site sent keeps its fingerprint, and the rest of the small file stays.
+    assert after.meta["received_sha256"] == before.meta["received_sha256"]
+    assert {k: v for k, v in after.meta.items() if k not in ("sha256", "bytes", "removed")} == {
+        k: v for k, v in before.meta.items() if k not in ("sha256", "bytes")
+    }
+    # The text that was removed is written nowhere.
+    assert b"quill" not in after.meta_path.read_bytes() + after.read()
+
+
+def test_a_second_removal_adds_a_second_record(tmp_path: Path) -> None:
+    store = RawStore(tmp_path)
+    store.save(fetch(), PAGE, received=PAGE, collector="Tool/0.1.0")
+    store.remove_text(URL, re.compile(r"quill\.invented@example\.test"), "[x]", "first reason")
+    middle = store.load(URL).meta["sha256"]  # type: ignore[union-attr]
+    store.remove_text(URL, ADDRESS, "[x]", "second reason")
+    records = store.load(URL).meta["removed"]  # type: ignore[union-attr]
+    assert [(r["why"], r["matches"]) for r in records] == [
+        ("first reason", 1),
+        ("second reason", 1),
+    ]
+    assert records[1]["sha256_before"] == middle
+    assert records[0]["at"].endswith("Z")  # the time of the removal, when none is given
+
+
+def test_a_removal_that_finds_nothing_writes_nothing(tmp_path: Path) -> None:
+    store = RawStore(tmp_path)
+    saved = store.save(fetch(), PAGE, received=PAGE, collector="Tool/0.1.0")
+    meta_before = saved.meta_path.read_bytes()
+    assert store.remove_text(URL, re.compile("not in the page"), "[x]", "a reason") == 0
+    assert saved.meta_path.read_bytes() == meta_before
+    assert saved.read() == PAGE
+    assert "removed" not in store.load(URL).meta  # type: ignore[union-attr]
+
+
+def test_a_saved_page_is_never_changed_without_a_reason_or_when_it_is_not_there(
+    tmp_path: Path,
+) -> None:
+    store = RawStore(tmp_path)
+    store.save(fetch(), PAGE, received=PAGE, collector="Tool/0.1.0")
+    with pytest.raises(ValueError, match="written reason"):
+        store.remove_text(URL, ADDRESS, "[x]", "   ")
+    assert store.load(URL).read() == PAGE  # type: ignore[union-attr]
+    with pytest.raises(FileNotFoundError):
+        store.remove_text("https://ethglobal.com/showcase/another-a1b2c", ADDRESS, "[x]", "why")
