@@ -237,6 +237,7 @@ Collection by a program is a proof of the idea. Real use would need the sites to
 - Every page is saved with its address, the date and a **fingerprint** of its content. There are two exceptions to "saved as received", both made before the page is saved.
   1. **The team part is cut out,** because the sites were promised that it is not collected (section 5.7). That means the block that shows the team, the metadata that names an author, and the keys that hold people inside data blocks.
   2. **The page is written again by the HTML parser,** because the cut needs one. A test compares a saved sample page with the original after the team part was removed by hand: the visible text, the links and the order of the tags are the same. The spaces between tags, the case of the doctype and the slash of empty tags may differ. Two fingerprints are kept next to the page: of the page as saved, and of what the site sent.
+- The README of a project's code is saved as text, after the part about the team and the words about people were taken out (section 5.4). The fingerprint of what GitHub sent, the numbers of what was taken out, and the name, size and version of the file are kept next to it.
 - A saved page is never edited afterwards, with one exception: **personal data that is found in a saved page later is taken out.** The store has one function for that, and no other way to change a page. It writes next to the page the reason, the time, the number of places and the fingerprint that the page had before. The text that was taken out is written nowhere. The proof of the lists fails when a page differs from its fingerprint, and it counts the pages that carry such a record.
 - Running the collection again skips pages that are already saved, and pages that an earlier run read and did not keep.
 - Everything else in the system can be rebuilt from the raw pages with one command. This is also the backup.
@@ -253,14 +254,23 @@ A team can also name a person inside its own text. The parser hides these words 
 | An email address | `[address hidden]` |
 | A link to a profile on a social site, such as "x.com/name" or "t.me/name" | `[profile link hidden]` |
 | A link to GitHub with one name only: the profile of an account | `[profile link hidden]` |
+| A link to the photo of an account on GitHub | `[photo hidden]` |
+| A handle inside a link, such as "medium.com/@name/a-post" | the handle becomes `@[name hidden]`, and the rest of the link stays |
 
 The rest of the sentence stays word for word, and so does its full stop. The tool cannot tell a person from a company or from a bot of the project, so it hides all of them. Little is lost, because every card links to the page of the project.
 
-Three things are not hidden. The name of a software package, which has a slash after its first part ("@scope/package"). Anything inside code, where an "@" belongs to the language. A link to a repository or to a video.
+Three things are not hidden. The name of a software package, which has a slash after its first part ("@scope/package"), also inside the link of a site of packages. Anything inside code, where an "@" belongs to the language, except an email address. A link to a repository or to a video.
 
 **A link of a project is asked the same question.** A demo link can lead to a profile site, for example to a name on Telegram. Such a link is kept without its address: the table says that the link is there, of which kind, and on which site. So a card never says "no demo" where a team gave one. It sends the reader to the page of the project.
 
 The step that reads the saved pages counts how many words and links it hid, and writes the number into its row in the table of runs.
+
+**A README is cleaned before it is saved.** The README of a project's code (section 7.3) is written by the team for other developers, and it often has a part about the team: names, photos, links to profiles. Before a README is saved, two things are done:
+
+1. A part about the team is cut out whole: its title and everything under it, up to the next title of the same or a higher level, or up to a title that names a part of the project, such as "Installation". The titles are a fixed list ("Team", "Our Team", "Contributors", "Built by", "Contact" and a few more), compared after signs, emoji and a name after a colon are taken away.
+2. In the rest, the words of the table above are hidden. A Markdown or HTML link to a profile goes with its words, because those words are most often a name.
+
+Both are counted next to the saved README. So is every Hedera ID that stood in a part that was cut out, so that one can see whether the cut ever takes something that the check needs. The text that was cut is kept nowhere.
 
 ### 5.5 A start that needs no permission: public repositories
 
@@ -436,6 +446,16 @@ The numbers 30 and 14 are a first choice. Test 3 (section 13.4) tells whether th
 ### 7.3 Facts from the code
 
 The GitHub API is asked with a read-only token. Without a token the limit is 60 requests per hour. With a token it is 5,000 per hour. Requests go one after the other, the limit headers are read, and every answer is stored so it is never asked twice.
+
+**How GitHub is asked.** The rules of section 5.7 hold here too: the name of the tool and a contact address in every request, at least one second between two requests, a limit of requests counted on disk over all runs, and a stop switch in `.env` (`COLLECT_GITHUB`), read again before every request. GitHub's own rules, read on its documentation on 11 October 2026, are kept as well:
+
+- The version of the API is named in every request: 2026-03-10, the newest. None of its changes touches what the tool asks.
+- A 404 ("no README", "no repository") and one blocked repository are answers. They are saved, and the run goes on.
+- A rate limit (a 403 or 429 with "x-ratelimit-remaining: 0", a retry-after or a message) is handled like a 429 of any site: the run stops, the tool waits at least one hour and goes on five times slower. The run also stops by itself when fewer than 100 requests are left in GitHub's hour.
+- A 401 or any other no stops everything until a person decides.
+- A moved repository answers 301. The new address is followed, and only inside the API, so the token is never sent anywhere else.
+
+**The README.** One request for each repository asks for its README. Projects with the same code share one repository and one README. The Hedera IDs in a README are found by the same rules as on a page (section 6.1), kept for each project of the repository, marked as found in the README, and judged by the same proof rule (section 7.2). The step is `python -m hackathon_memory.pipeline readmes`. Run again, it asks only for what is missing, and it writes the IDs of a project again only when they changed.
 
 For each repository: does it exist, when was it created, when was the first and the last change, how many changes, how many contributors, which languages. The package files are read to see whether a Hedera library is named. The README is searched for Hedera IDs, because many project pages give none.
 
