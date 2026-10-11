@@ -9,7 +9,9 @@ What is hidden:
 * a word that starts with "@", such as a handle on a social network;
 * an email address;
 * a link to a profile on a social site, written in the text ("x.com/name", "t.me/name");
-* a link to the profile of an account on GitHub: an address with one name only.
+* a link to the profile of an account on GitHub: an address with one name only;
+* a link to the photo of an account on GitHub;
+* a handle inside a link, as in "medium.com/@name/a-post". The rest of the link stays.
 
 The tool cannot tell a person from a company or from a bot of the project, so it hides all of
 them. Little is lost: a card links to the page of the project.
@@ -40,6 +42,7 @@ from bs4 import NavigableString, Tag
 HIDDEN_HANDLE = "@[name hidden]"
 HIDDEN_ADDRESS = "[address hidden]"
 HIDDEN_LINK = "[profile link hidden]"
+HIDDEN_PHOTO = "[photo hidden]"
 
 # An email address: something, an @, and a name with at least one dot in it.
 ADDRESS = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
@@ -73,6 +76,32 @@ _PROFILE_LINK = re.compile(
 CODE_HOST = "github.com"
 _ACCOUNT_LINK = re.compile(
     rf"(?<![A-Za-z0-9.@/-])(?:https?://)?(?:www\.)?{re.escape(CODE_HOST)}/([^\s<>()\[\]\"']+)",
+    re.IGNORECASE,
+)
+# A handle inside the path of a link: "medium.com/@name/a-post", "youtube.com/@name". On the
+# sites of packages the same shape is the name of a package, and it stays.
+PACKAGE_SITES = (
+    "npmjs.com",
+    "npmjs.org",
+    "yarnpkg.com",
+    "unpkg.com",
+    "jsdelivr.net",
+    "esm.sh",
+    "skypack.dev",
+    "jsr.io",
+    "deno.land",
+    "socket.dev",
+    "bundlephobia.com",
+)
+_LINK_WITH_A_HANDLE = re.compile(
+    r"(?:https?://|www\.)[^\s<>()\[\]\"'/]+(?:/[^\s<>()\[\]\"'/]*)*/@[^\s<>()\[\]\"']*",
+    re.IGNORECASE,
+)
+_HANDLE_PIECE = re.compile(r"/@([^\s<>()\[\]\"'/?#]+)")
+# The photo of an account on GitHub: of a person, or of a group.
+PHOTO_HOST = "avatars.githubusercontent.com"
+_PHOTO_LINK = re.compile(
+    rf"(?<![A-Za-z0-9.@/-])(?:https?://)?{re.escape(PHOTO_HOST)}/[^\s<>()\[\]\"']+",
     re.IGNORECASE,
 )
 _SENTENCE_SIGNS = ".,;:!?"
@@ -110,10 +139,30 @@ def _address(match: re.Match[str]) -> str:
     return HIDDEN_ADDRESS
 
 
+def _photo(match: re.Match[str]) -> str:
+    return HIDDEN_PHOTO
+
+
+def _link_with_a_handle(match: re.Match[str]) -> str:
+    link = match.group(0)
+    host = re.sub(r"^(?:https?://)?", "", link, flags=re.IGNORECASE).split("/", 1)[0].lower()
+    if any(host == site or host.endswith("." + site) for site in PACKAGE_SITES):
+        return link  # the name of a package
+    return _HANDLE_PIECE.sub(_hidden_piece, link)
+
+
+def _hidden_piece(piece: re.Match[str]) -> str:
+    word = piece.group(1)
+    name = word.rstrip(_SENTENCE_SIGNS)
+    return "/" + HIDDEN_HANDLE + word[len(name) :] if name else piece.group(0)
+
+
 # In this order: a link first, so that an address or a handle inside it is not taken alone.
 _HIDERS = (
     (_PROFILE_LINK, _profile_link),
     (_ACCOUNT_LINK, _account_link),
+    (_PHOTO_LINK, _photo),
+    (_LINK_WITH_A_HANDLE, _link_with_a_handle),
     (ADDRESS, _address),
     (_AT_WORD, _handle),
 )
@@ -144,6 +193,11 @@ def hide_in_text(text: str) -> tuple[str, int]:
         text, changed = _hide(pattern, shown_for, text)
         hidden += changed
     return text, hidden
+
+
+def is_photo_of_an_account(url: str) -> bool:
+    """True for the address of the photo of an account on GitHub."""
+    return bool(_PHOTO_LINK.fullmatch(url.strip()))
 
 
 def profile_site(url: str) -> str | None:

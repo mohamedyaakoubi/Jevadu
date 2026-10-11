@@ -9,10 +9,12 @@ from hackathon_memory.parse.people import (
     HIDDEN_ADDRESS,
     HIDDEN_HANDLE,
     HIDDEN_LINK,
+    HIDDEN_PHOTO,
     PROFILE_SITES,
     hide_in_box,
     hide_in_code,
     hide_in_text,
+    is_photo_of_an_account,
     profile_site,
 )
 
@@ -269,3 +271,60 @@ def test_the_address_of_an_account_on_github_is_a_profile_and_a_repository_is_no
     url: str, site: str | None
 ) -> None:
     assert profile_site(url) == site
+
+
+# --------------------------------------------------------------------- a photo, a handle in a link
+
+
+@pytest.mark.parametrize(
+    ("text", "shown"),
+    [
+        (
+            "Me: https://avatars.githubusercontent.com/u/1234567?v=4 and more",
+            f"Me: {HIDDEN_PHOTO} and more",
+        ),
+        ("(avatars.githubusercontent.com/u/1234567)", f"({HIDDEN_PHOTO})"),
+    ],
+)
+def test_a_link_to_the_photo_of_an_account_is_hidden(text: str, shown: str) -> None:
+    assert hide_in_text(text) == (shown, 1)
+
+
+def test_the_address_of_a_photo_is_known_as_one() -> None:
+    assert is_photo_of_an_account("https://avatars.githubusercontent.com/u/1234567?v=4")
+    assert not is_photo_of_an_account("https://raw.githubusercontent.com/sample-org/pebble/a.png")
+    assert not is_photo_of_an_account("https://avatars.githubusercontent.com.example.test/u/1")
+
+
+@pytest.mark.parametrize(
+    ("text", "shown"),
+    [
+        (
+            "Read https://medium.com/@quill_invented/our-build-123 now.",
+            f"Read https://medium.com/{HIDDEN_HANDLE}/our-build-123 now.",
+        ),
+        ("See www.youtube.com/@quill_invented.", f"See www.youtube.com/{HIDDEN_HANDLE}."),
+        (
+            "https://sample.example.test/@quill/posts?tab=1",
+            f"https://sample.example.test/{HIDDEN_HANDLE}/posts?tab=1",
+        ),
+    ],
+)
+def test_a_handle_inside_a_link_is_hidden_and_the_rest_of_the_link_stays(
+    text: str, shown: str
+) -> None:
+    assert hide_in_text(text) == (shown, 1)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Get https://www.npmjs.com/package/@sample-scope/sdk today",
+        "cdn: https://cdn.jsdelivr.net/npm/@sample-scope/sdk@2.1.0/dist/x.js",
+        "https://unpkg.com/@sample-scope/sdk and https://esm.sh/@sample-scope/sdk",
+        "The path is src/@types/index.d.ts in the code.",  # not a link
+        "https://sample.example.test/@.",  # no name after the @
+    ],
+)
+def test_the_name_of_a_package_in_a_link_stays(text: str) -> None:
+    assert hide_in_text(text) == (text, 0)
