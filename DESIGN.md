@@ -2,7 +2,7 @@
 
 This document explains what the tool is, how it is built, and why. The code and the tests point to its sections by number, for example "design 5.7" or "design section 11.6". So the numbers are fixed: a new section is added at the end, never in the middle.
 
-**State on 11 October 2026.** Phase A is built: the setup and four small proofs (section 14.2). Sections 6 to 13 describe what comes next. They are a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
+**State on 11 October 2026.** Phase A is done: the setup and four small proofs, which all passed (section 14.2). Sections 6 to 13 describe what comes next. They are a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
 
 Words in **bold** on first use are explained in section 17.
 
@@ -301,7 +301,12 @@ The way a site is read is fixed in the code, with a test for each rule. ETHGloba
 - The run read the 92 pages and kept all 92. The id from the list and the block on the page agreed every time.
 - The site answered every request, and never with a check or a refusal.
 
-**The second collection, from 11 October 2026.** The walk was made again and kept every project: the same 658, and the list had not moved. The run then began to read the 566 pages that were not saved yet. After 62 of them the site answered "too many requests". The run stopped, and the tool goes on after one hour, at ten seconds between two requests (section 5.2). The numbers of this collection come with its result file.
+**The second collection, on 11 October 2026** (result file `proofs/results/20261011T031418Z-lists.json`). It read every other project of the list.
+
+- The walk was made again and kept every project: the same 658, and the list had not moved.
+- The run read the other 566 pages and kept all of them. Of the 658 projects, 92 took a Hedera prize, 81 a prize of another sponsor only, and 485 no prize. The list and the block on the page agreed every time.
+- Once the site asked for a slower pace ("too many requests"). The tool waited one hour and went on at ten seconds between two requests, as section 5.2 says.
+- 732 requests were sent to the site over both collections, out of the limit of 800.
 
 ---
 
@@ -756,9 +761,9 @@ They cannot prove that every card is right. They give a measured error rate on a
 
 ### 14.2 Gate A: four small proofs
 
-| Proof | It passes when | State on 10 October 2026 |
+| Proof | It passes when | State on 11 October 2026 |
 |---|---|---|
-| Lists | The collector lists every project that ETHGlobal's showcase ties to Hedera, by the rules of section 5.7. | Passed on 10 October 2026 for the 92 projects with a Hedera prize. Open again for the wider scope until all 658 pages are read. `python -m proofs.lists` |
+| Lists | The collector lists every project that ETHGlobal's showcase ties to Hedera, by the rules of section 5.7. | Passed on 11 October 2026 for all 658 projects. It had passed on 10 October for the 92 with a Hedera prize, which were read first. `python -m proofs.lists` |
 | Hedera write | A topic is created on the test network with the keys of section 9.5, a small message is posted, and the mirror node returns it. | Passed. `python -m proofs.hedera_write` |
 | Google models | One call to each of the two layers returns a valid form for one real text. One embedding call returns a list of the expected size. | Passed. `python -m proofs.google_models` |
 | Database | PostgreSQL with pgvector runs in Docker and answers one vector query. | Passed. `python -m proofs.database` |
