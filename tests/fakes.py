@@ -12,6 +12,7 @@ import json
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from html import escape
 from pathlib import Path
 
@@ -358,3 +359,53 @@ def project_page(
         "<script>self.__next_f=self.__next_f||[];self.__next_f.push([0])</script>\n"
         f"{scripts}\n</body></html>\n"
     ).encode()
+
+
+# ------------------------------------------------------------------ a stand-in mirror node
+
+
+class StandInMirror:
+    """Stands in for the mirror node client: answers from small tables, and remembers what
+    it was asked. The kinds are written as words here, as the ledger facts write them."""
+
+    def __init__(self, network: str = "testnet", **things: dict[str, dict]) -> None:
+        self.network = network
+        self.things = things  # kind -> id -> answer
+        self.lists: dict[tuple[str, str], list[dict]] = {}  # (what, id) -> oldest first
+        self.asked: list[tuple] = []
+
+    @property
+    def requests_made(self) -> int:
+        return len(self.asked)
+
+    def _one(self, kind: str, entity: str) -> dict | None:
+        self.asked.append((kind, entity))
+        return self.things.get(kind, {}).get(entity)
+
+    def token(self, entity: str) -> dict | None:
+        return self._one("token", entity)
+
+    def topic(self, entity: str) -> dict | None:
+        return self._one("topic", entity)
+
+    def contract(self, entity: str) -> dict | None:
+        return self._one("contract", entity)
+
+    def account(self, entity: str) -> dict | None:
+        return self._one("account", entity)
+
+    def _end(self, what: str, entity: str, newest_first: bool, **more: object) -> list[dict]:
+        self.asked.append((what, entity, "newest" if newest_first else "oldest", more))
+        found = self.lists.get((what, entity), [])
+        return found[-1:] if newest_first else found[:1]
+
+    def topic_messages(self, entity: str, *, newest_first: bool) -> list[dict]:
+        return self._end("messages", entity, newest_first)
+
+    def contract_results(self, entity: str, *, newest_first: bool) -> list[dict]:
+        return self._end("calls", entity, newest_first)
+
+    def account_transactions(
+        self, entity: str, *, newest_first: bool, since: datetime | None = None
+    ) -> list[dict]:
+        return self._end("transactions", entity, newest_first, since=since)

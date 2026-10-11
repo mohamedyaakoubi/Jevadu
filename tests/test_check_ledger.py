@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from fakes import StandInMirror
 from hackathon_memory.check.ledger import LedgerFacts, kinds_to_ask, read_facts
 from hackathon_memory.hedera.mirror import MirrorError, when
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
@@ -19,49 +20,6 @@ MADE = "1785016492.973922171"
 CHANGED = "1785100000.000000001"
 FIRST = "1785016500.000000001"
 LAST = "1785200000.000000001"
-
-
-class StandInMirror:
-    """Answers from four small tables, and remembers what it was asked."""
-
-    network = "testnet"
-
-    def __init__(self, **things: dict[str, dict]) -> None:
-        self.things = things  # kind -> id -> answer
-        self.lists: dict[tuple[str, str], list[dict]] = {}  # (what, id) -> oldest first
-        self.asked: list[tuple] = []
-
-    def _one(self, kind: str, entity: str) -> dict | None:
-        self.asked.append((kind, entity))
-        return self.things.get(kind, {}).get(entity)
-
-    def token(self, entity: str) -> dict | None:
-        return self._one(TOKEN, entity)
-
-    def topic(self, entity: str) -> dict | None:
-        return self._one(TOPIC, entity)
-
-    def contract(self, entity: str) -> dict | None:
-        return self._one(CONTRACT, entity)
-
-    def account(self, entity: str) -> dict | None:
-        return self._one(ACCOUNT, entity)
-
-    def _end(self, what: str, entity: str, newest_first: bool, **more: object) -> list[dict]:
-        self.asked.append((what, entity, "newest" if newest_first else "oldest", more))
-        found = self.lists.get((what, entity), [])
-        return found[-1:] if newest_first else found[:1]
-
-    def topic_messages(self, entity: str, *, newest_first: bool) -> list[dict]:
-        return self._end("messages", entity, newest_first)
-
-    def contract_results(self, entity: str, *, newest_first: bool) -> list[dict]:
-        return self._end("calls", entity, newest_first)
-
-    def account_transactions(
-        self, entity: str, *, newest_first: bool, since: datetime | None = None
-    ) -> list[dict]:
-        return self._end("transactions", entity, newest_first, since=since)
 
 
 def facts_of(mirror: StandInMirror, entity: str, said_kind: str | None = None) -> LedgerFacts:
