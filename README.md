@@ -2,9 +2,9 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 10 October 2026:** Phase A is built and tested. All four proofs of Gate A have passed on the real services. The phase sits on its own branch and is not merged yet. See "What works today" below. Everything on this page apart from that is the plan.
+> **State on 11 October 2026:** Phase A is built and tested. The four proofs of Gate A passed on the real services on 10 October 2026. Since then the collection was widened, from the projects with a Hedera prize to every project that ETHGlobal's showcase ties to Hedera. That collection is not finished, so the lists proof is open again. The phase sits on its own branch and is not merged yet. See "What works today" below. Everything on this page apart from that is the plan.
 >
-> **Where the data comes from.** No program reads a site that has not said yes. ETHGlobal allowed its showcase in writing, for the projects with a Hedera prize: their 92 pages were read on 10 October 2026, one time, and they stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
+> **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The pages stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
 ## Why
 
@@ -50,19 +50,19 @@ Many tools score hackathon submissions with AI. This tool does not score.
 
 There is no website yet and no search. What exists is the ground that they will stand on, and four small proofs that it holds.
 
-| Proof of Gate A | State on 10 October 2026 |
+| Proof of Gate A | State on 11 October 2026 |
 |---|---|
 | Database: PostgreSQL with pgvector answers a vector query | **Passed.** 3,000 vectors of 3,072 numbers, the right neighbours first, an exact search in 27 ms. The result file is in `proofs/results/`. |
 | Hedera write: a topic with no admin key, a message, read back from the ledger | **Passed** on the real test network. The topic has no admin key and one submit key, a 102-byte record was read back from the mirror node, and a topic with a stranger's submit key refused our message. The result file is in `proofs/results/`. |
 | Google models: the two Gemini layers (Gemini 3.1 Pro reads the pages, Gemini 3.8 Flash does the search) and one embedding call | **Passed** on the real service. Both models returned a valid form for one real text, and the embeddings have the right size. The result file is in `proofs/results/`. |
-| Lists: the ETHGlobal collector | **Passed** on the real site. A walk read the 21 pages of the showcase list with the filter "partner: Hedera": 658 projects in 14 events, 92 of them with a Hedera prize. A run then read the pages of these 92 and kept all of them, each without its team part, and each with a Hedera prize in its own "Winner of" block. 140 requests were sent in all, and the site refused none. The pages are not in this repository. The result file is in `proofs/results/`. |
+| Lists: the ETHGlobal collector | **Passed on 10 October 2026 for the first scope, and open again for the wider one.** A walk read the 21 pages of the showcase list with the filter "partner: Hedera": 658 projects in 14 events, 92 of them with a Hedera prize. A run read the pages of these 92 and kept all of them, each without its team part (the result file is in `proofs/results/`). The collection now covers all 658 projects. `python -m proofs.lists` says how far it is. The pages are not in this repository. |
 
 Two more things work, and both were run on the real services:
 
 - **The cost of the models is counted.** Every call to a model leaves one line in a ledger: the model, the tokens, the time, the cost. A budget stops a call before it is made when it could go over the cap. `python -m hackathon_memory.finops report` shows where the money went. The ledger holds numbers only, never the text of a call.
 - **The history is searched for secrets.** `python -m hackathon_memory.secret_scan` looks for each secret of `.env` in every commit.
 
-The tests (614 of them on 10 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+The tests (655 of them on 11 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
 
 What does not exist yet: the parser, the cards, the checks of the ledger and of the code, the search, the website, the register, and the tests that measure the quality of the AI fields.
 

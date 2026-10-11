@@ -2,7 +2,7 @@
 
 This document explains what the tool is, how it is built, and why. The code and the tests point to its sections by number, for example "design 5.7" or "design section 11.6". So the numbers are fixed: a new section is added at the end, never in the middle.
 
-**State on 10 October 2026.** Phase A is built: the setup and four small proofs (section 14.2). Sections 6 to 13 describe what comes next. They are a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
+**State on 11 October 2026.** Phase A is built: the setup and four small proofs (section 14.2). Sections 6 to 13 describe what comes next. They are a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
 
 Words in **bold** on first use are explained in section 17.
 
@@ -104,7 +104,7 @@ Nobody asked an organiser whether they want this. The assumption is that they ch
 
 ### 3.1 In the first version
 
-- Projects from ETHGlobal's showcase that took a Hedera prize. ETHGlobal allowed this in writing on 9 October 2026 (section 5.7). This is the first source: 92 projects from 14 events, collected on 10 October 2026.
+- The projects that ETHGlobal's showcase ties to Hedera: 658 projects from 14 events, 92 of them with a Hedera prize (section 5.7). This is the first source. A card says whether its project took a Hedera prize, a prize of another sponsor, or none.
 - Projects from DoraHacks for two events, the Hedera Africa Hackathon 2025 and Hello Future Origins 2025, if DoraHacks gives its written permission (section 5.2). It has not answered yet.
 - Winner entries for the events whose submissions are not public (section 4.6).
 - One card for each project (section 4).
@@ -300,6 +300,8 @@ The way a site is read is fixed in the code, with a test for each rule. ETHGloba
 - The walk read 21 pages of the list: 658 projects in 14 events, 173 with a prize of some sponsor, 92 with a Hedera prize.
 - The run read the 92 pages and kept all 92. The id from the list and the block on the page agreed every time.
 - The site answered every request, and never with a check or a refusal.
+
+**The second collection, from 11 October 2026.** The walk was made again and kept every project: the same 658, and the list had not moved. The run then began to read the 566 pages that were not saved yet. After 62 of them the site answered "too many requests". The run stopped, and the tool goes on after one hour, at ten seconds between two requests (section 5.2). The numbers of this collection come with its result file.
 
 ---
 
@@ -756,7 +758,7 @@ They cannot prove that every card is right. They give a measured error rate on a
 
 | Proof | It passes when | State on 10 October 2026 |
 |---|---|---|
-| Lists | The collector lists every project that ETHGlobal's showcase ties to Hedera, by the rules of section 5.7. | Passed on 10 October 2026 for the 92 projects with a Hedera prize. `python -m proofs.lists` |
+| Lists | The collector lists every project that ETHGlobal's showcase ties to Hedera, by the rules of section 5.7. | Passed on 10 October 2026 for the 92 projects with a Hedera prize. Open again for the wider scope until all 658 pages are read. `python -m proofs.lists` |
 | Hedera write | A topic is created on the test network with the keys of section 9.5, a small message is posted, and the mirror node returns it. | Passed. `python -m proofs.hedera_write` |
 | Google models | One call to each of the two layers returns a valid form for one real text. One embedding call returns a list of the expected size. | Passed. `python -m proofs.google_models` |
 | Database | PostgreSQL with pgvector runs in Docker and answers one vector query. | Passed. `python -m proofs.database` |
@@ -799,7 +801,7 @@ A collector also needs the yes of the site, and the maintainer's yes for the pag
 | Risk | What is done |
 |---|---|
 | A site says no, or does not answer in time | No program touches it. The build starts from ETHGlobal's showcase. The README says plainly which data the demo runs on, and why. |
-| Too few full cards | ETHGlobal's showcase gives 92 projects. The tests use what exists and state their range. Winner entries widen the search. |
+| Too few full cards | ETHGlobal's showcase ties 658 projects to Hedera, 92 of them with a Hedera prize. The tests use what exists and state their range. Winner entries widen the search. |
 | A rule for reading a site is broken by mistake | The rules are code, each with a test (section 5.7), and a proof reads what is on disk (section 14.2). |
 | The LLM misreads projects | Labels, the quote check, the original text, and Test 1. |
 | Many pages give no Hedera ID | The card says "no ID given". The README of the code is also searched. The share is reported. |
