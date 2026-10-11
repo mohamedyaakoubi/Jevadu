@@ -2,7 +2,7 @@
 
 This document explains what the tool is, how it is built, and why. The code and the tests point to its sections by number, for example "design 5.7" or "design section 11.6". So the numbers are fixed: a new section is added at the end, never in the middle.
 
-**State on 11 October 2026.** Phase A is done: the setup and four small proofs, which all passed (section 14.2). Sections 6 to 13 describe what comes next. They are a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
+**State on 11 October 2026.** Phase A is done: the setup and four small proofs, which all passed (section 14.2). Phase B is being built: the parser (section 6.1) and the check on the ledger (sections 7.1 and 7.2) already run on the saved pages. The rest of sections 6 to 13 describes what comes next. It is a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
 
 Words in **bold** on first use are explained in section 17.
 
@@ -326,6 +326,16 @@ A page of ETHGlobal's showcase has a fixed shape instead: a short line, "Project
 
 A trap for the parser: a version number like "0.0.3" has the same shape as a Hedera ID. The words around a number decide what it is.
 
+**The parser of ETHGlobal's pages.** A page tells each fact twice: in what it shows, and in the data of the page. The parser reads both and refuses a page where they differ, for the name, the short line, the event and the prizes. It guesses nothing. A text is kept block by block (a paragraph, an item of a list, a title, code), word for word, and a test compares the blocks with the page letter by letter. A title that a team wrote inside a text stays a block of that text.
+
+For a Hedera ID there are three rules:
+
+- A number below 1001 belongs to the network itself and is never taken as an ID. The first number that a user can own is 1001: the setting `firstUserEntity` of the node software.
+- The network is taken from the words only when the words near the ID name one network and no other. A wrong network is worse than none: the ledger would be asked about another thing.
+- An EVM address is kept only when a HashScan link names it, because the same address can live on another chain.
+
+The data of each page also holds scores that the site computes. The parser never reads them, and a test plants loud scores and checks that none comes out.
+
 ### 6.2 What the LLM is asked
 
 The LLM gets the page text and the sections the parser copied. It fills the LLM fields of section 4.1 in a fixed form. It is told:
@@ -356,6 +366,14 @@ IDs, links, dates, counts and statuses are produced only by the parser, the code
 
 Each LLM answer is stored with the model name, the version of the instructions and a fingerprint of the input. Running again with the same three gives the stored answer and costs nothing. A change in any of the three is visible in the data.
 
+**The caches.** Only exact caches: a stored answer is given back only for exactly the same input, so a cache cannot change an answer. They all live in PostgreSQL, next to the ledger of the costs: the saved page, the card fields, the embeddings, the facts of the ledger and of the code with the time of their reading, the embedding of a typed idea, and the comparison of the search.
+
+- A fact is never inside a cached text. It is read from the tables when the page is drawn, so a cached text cannot carry an old fact.
+- The list of results never waits for the model. The comparison appears when the model has finished.
+- No cache gives the answer of one question to a similar question. That kind of cache can show the answer to another idea.
+- The answers of the mirror node are asked again after seven days.
+- Of a typed idea, only a fingerprint is kept, and its comparison for 24 hours.
+
 ---
 
 ## 7. Step 4: Check
@@ -385,6 +403,14 @@ The window of an event runs from 30 days before it started to 14 days after it e
 | No ID given | The page and the README give no Hedera ID. |
 
 The numbers 30 and 14 are a first choice. Test 3 (section 13.4) tells whether they are right.
+
+**What the code adds to the table.**
+
+- Two more statuses that the table implies. *Found, but as another kind of thing:* the ledger says that the ID is another kind of thing than the page says. *The end of the event is not typed in yet:* the dates are not judged, in place of a guess.
+- A word of the page can mean more than one kind. A contract can make a token, and a contract has an account, so "token" and "account" fit a contract. "Topic" fits only a topic. The ledger decides what a thing is, never the page.
+- A thing that was made before the window and was used both before and after it gets one more question: did anything happen on it inside the window?
+- For a project, the best status of its IDs counts. An ID whose page names no network is asked on the test network and on the main network.
+- No page gives the end of its event, so it is typed into a file by hand. For an event of one weekend, the last day is the day of the judging, which the data of its project pages shows.
 
 **What this check does not show.** It does not show that the project is good. It does not prove that the ID belongs to the team: a team could paste somebody else's ID. Two things reduce that risk: the same ID must also appear in the team's own code or README, and the dates on Hedera must fit the dates of the code.
 
@@ -543,6 +569,10 @@ Each choice is justified by what the job needs and by a source. "Already install
 | A local LLM | The reading needs a strong model, and the data is public, so there is no privacy reason. |
 | A separate JavaScript website | It would put the rules in two languages. Two copies drift apart. |
 | Big data tools | Section 11.6. |
+| Redis | A table in PostgreSQL holds the caches (section 6.5), and PostgreSQL also holds the list of jobs (section 11.6). There is one program on one machine. |
+| Cache-augmented generation (CAG) as the search | It puts all the knowledge into the prompt of the model. The knowledge is too big for that and it changes, each search would cost more, and the model, not the code, would pick the projects. |
+| A cache that answers a similar question | It can give the answer of another idea. Redis's own documentation says that such a cache gives up the guarantee that a hit is correct. |
+| A GitHub Actions job for the pipeline | A job of GitHub starts on an empty machine, and the pages and the database stay on one laptop (section 5.7). GitHub runs the lint and the tests on every push. |
 
 ### 11.3 The LLM and the embedding model
 
@@ -719,6 +749,7 @@ Rules for every test:
 - **Cases:** pairs of projects that are the same idea, and pairs that only look alike. The exact repeats of section 8.4 give some pairs for free. The maintainer also writes ideas in plain words, as a builder would type them.
 - **The number:** how many of the known similar projects appear in the first 10 results.
 - **What is compared:** the page as it is against the LLM fields, and one embedding model against another.
+- **Code against model, on the same pages.** A card made by code alone is made for every page. The model reads the 15 pages for tuning and the 60 pages of Test 1. On those 60, the maintainer marks once which Hedera services each page names and which theme fits. Code then scores each way against these marks: the search, the services, the theme, and the cost of a page. The rule for "better" is written before the run, and the first layer runs on all pages only after it.
 
 ### 13.4 Test 3: Hedera IDs and the proof rule
 
