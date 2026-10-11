@@ -142,6 +142,19 @@ def test_a_project_is_saved_with_all_that_the_parser_read(database: str) -> None
     ]
 
 
+def test_a_link_with_a_hidden_address_is_saved_with_its_site_only(database: str) -> None:
+    ProjectStore(database).save(parsed(demo="https://t.me/invented_helper_bot"), SHA_A)
+    assert rows(
+        database, "SELECT position, kind, url, label, hidden_on FROM links ORDER BY position"
+    ) == [
+        (1, "demo", None, "Live Demo", "t.me"),
+        (2, "code", "https://github.com/sample-org/pebble-pay", "Source Code", None),
+    ]
+    with psycopg.connect(database) as conn:
+        everything = conn.execute("SELECT row_to_json(links)::text FROM links").fetchall()
+    assert "invented_helper_bot" not in str(everything)
+
+
 def test_saving_the_same_page_again_changes_nothing(database: str) -> None:
     store = ProjectStore(database)
     store.save(parsed(**FULL), SHA_A)
@@ -263,6 +276,9 @@ def test_the_counts_say_what_the_tables_hold(database: str) -> None:
         "UPDATE hedera_ids SET found_in = 'chat'",
         "UPDATE links SET kind = 'person'",
         "UPDATE links SET url = 'javascript:alert(1)'",
+        "UPDATE links SET url = NULL",  # neither an address nor the site of a hidden one
+        "UPDATE links SET hidden_on = 't.me'",  # both
+        "UPDATE links SET url = NULL, hidden_on = ''",
         "UPDATE sections SET blocks = '{}'",
         "UPDATE events SET ends_on = '2026-03-01'",  # before its start
     ],

@@ -388,3 +388,46 @@ def test_an_id_next_to_a_hidden_word_is_still_found_and_its_words_name_nobody() 
         ("0.0.3456789", "testnet", TOPIC)
     ]
     assert "quill" not in page.hedera_ids[0].words_around
+
+
+def test_a_demo_link_to_a_profile_site_is_kept_without_its_address() -> None:
+    # The tool cannot tell a bot of the project from a person, so the address is not kept.
+    page = read_project_page(project_page(demo="https://t.me/invented_helper_bot"), PROJECT_PAGE)
+    assert page.links == (
+        Link(DEMO_LINK, None, "Live Demo", hidden_on="t.me"),
+        Link(CODE_LINK, "https://github.com/sample-org/pebble-pay", "Source Code"),
+    )
+    assert page.link(DEMO_LINK) is None
+    assert page.link(CODE_LINK) == "https://github.com/sample-org/pebble-pay"
+    assert page.people_words_hidden == 1
+    assert "invented_helper_bot" not in json.dumps(asdict(page))  # in no field at all
+
+
+def test_the_address_of_a_kind_is_the_first_one_that_is_not_hidden() -> None:
+    html = project_page(demo="https://x.com/quill_invented/status/1").replace(
+        b"</header>", b'<a href="https://demo.example.test/second">Live Demo</a></header>'
+    )
+    page = read_project_page(html, PROJECT_PAGE)
+    assert [(link.kind, link.url, link.hidden_on) for link in page.links] == [
+        (DEMO_LINK, None, "x.com"),
+        (CODE_LINK, "https://github.com/sample-org/pebble-pay", None),
+        (DEMO_LINK, "https://demo.example.test/second", None),
+    ]
+    assert page.link(DEMO_LINK) == "https://demo.example.test/second"
+
+
+def test_a_handle_in_the_words_of_a_header_link_is_hidden() -> None:
+    html = project_page().replace(b">Live Demo<", b">Demo by @quill_invented<")
+    page = read_project_page(html, PROJECT_PAGE)
+    assert page.links[0] == Link(
+        "other", "https://demo.example.test/pebble-pay", f"Demo by {HIDDEN_HANDLE}"
+    )
+    assert page.people_words_hidden == 1
+    assert "quill" not in json.dumps(asdict(page))
+
+
+def test_no_id_is_taken_from_a_link_whose_address_is_hidden() -> None:
+    page = read_project_page(
+        project_page(demo="https://t.me/invented_helper_bot?start=0.0.3456789"), PROJECT_PAGE
+    )
+    assert page.hedera_ids == ()

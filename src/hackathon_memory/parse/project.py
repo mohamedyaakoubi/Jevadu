@@ -48,9 +48,14 @@ class Prize:
 
 @dataclass(frozen=True)
 class Link:
+    """A link of a project. It has its address, or the site of an address that is hidden."""
+
     kind: str  # code, demo or other
-    url: str
+    # None when the address is hidden: it leads to a profile on a social site and could name a
+    # person (people.py). A card then sends the reader to the page of the project.
+    url: str | None
     label: str  # the words of the link on the page
+    hidden_on: str | None = None  # the site of a hidden address, such as "t.me"
 
 
 @dataclass(frozen=True)
@@ -81,11 +86,13 @@ class ProjectPage:
     hedera_ids: tuple[FoundId, ...]
     has_video: bool
     parser: str  # the version of the parser that read the page
-    # How many handles, addresses and links to profiles were hidden in the texts (people.py).
+    # How many handles, addresses and links to profiles were hidden, in the texts and among
+    # the links (people.py).
     people_words_hidden: int = 0
 
     def section(self, kind: str) -> Section | None:
         return next((section for section in self.sections if section.kind == kind), None)
 
     def link(self, kind: str) -> str | None:
-        return next((link.url for link in self.links if link.kind == kind), None)
+        """The first address of this kind that is not hidden."""
+        return next((link.url for link in self.links if link.kind == kind and link.url), None)

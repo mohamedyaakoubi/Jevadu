@@ -280,13 +280,24 @@ def test_a_file_of_ends_that_cannot_be_read_is_not_used_at_all(
 def test_the_step_hides_people_and_the_command_says_how_many_words(
     database: str, raw: RawStore, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    save(raw, "eel-ledger", at="2026-10-10T19:00:01Z", made="<p>Built by @quill and @reed.</p>")
+    save(
+        raw,
+        "eel-ledger",
+        at="2026-10-10T19:00:01Z",
+        made="<p>Built by @quill and @reed.</p>",
+        demo="https://t.me/invented_helper_bot",
+    )
     assert main(["parse"], settings_for(database, raw)) == 0
     said = capsys.readouterr().out
     assert (
-        "Handles, addresses and profile links of people that were hidden in the texts: 2."
+        "Handles, addresses and profile links that were hidden in the texts and the links: 3."
     ) in said
     with psycopg.connect(database) as conn:
         texts = " ".join(body for (body,) in conn.execute("SELECT body FROM sections"))
     assert "quill" not in texts and "reed" not in texts
     assert "Built by @[name hidden] and @[name hidden]." in texts
+    with psycopg.connect(database) as conn:
+        hidden = conn.execute(
+            "SELECT kind, url, hidden_on FROM links WHERE hidden_on IS NOT NULL"
+        ).fetchall()
+    assert hidden == [("demo", None, "t.me")]

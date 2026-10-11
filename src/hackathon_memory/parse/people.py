@@ -13,6 +13,9 @@ What is hidden:
 The tool cannot tell a person from a company or from a bot of the project, so it hides all of
 them. Little is lost: a card links to the page of the project.
 
+A link that stands on its own, such as the demo link of a project, is asked the same question
+by `profile_site`. Its address is then not kept: only the name of the site is.
+
 What is not hidden:
 
 * the name of a package, which has a slash after its first part ("@scope/package");
@@ -26,6 +29,7 @@ stop.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlsplit
 
 from bs4 import NavigableString, Tag
 
@@ -90,6 +94,22 @@ def hide_in_text(text: str) -> tuple[str, int]:
         return shown
 
     return _AT_WORD.sub(count, text), links + addresses + handles
+
+
+def profile_site(url: str) -> str | None:
+    """The profile site that the address of a link leads to, or None when it leads elsewhere.
+
+    For a link that stands on its own, such as the demo link of a project. The address of the
+    site alone, with nothing after it, names nobody and gives None.
+    """
+    try:
+        parts = urlsplit(url.strip())
+        host = (parts.hostname or "").lower()
+    except ValueError:  # not an address that a browser could open
+        return None
+    if not (parts.path.strip("/") or parts.query or parts.fragment):
+        return None
+    return next((site for site in PROFILE_SITES if host == site or host.endswith("." + site)), None)
 
 
 def hide_in_box(box: Tag) -> int:

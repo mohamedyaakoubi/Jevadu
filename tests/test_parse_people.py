@@ -9,8 +9,10 @@ from hackathon_memory.parse.people import (
     HIDDEN_ADDRESS,
     HIDDEN_HANDLE,
     HIDDEN_LINK,
+    PROFILE_SITES,
     hide_in_box,
     hide_in_text,
+    profile_site,
 )
 
 
@@ -149,3 +151,45 @@ def test_a_box_with_no_word_about_people_is_not_changed() -> None:
     before = str(page)
     assert hide_in_box(page) == 0
     assert str(page) == before
+
+
+# --------------------------------------------------------------------- a link on its own
+
+
+@pytest.mark.parametrize(
+    ("url", "site"),
+    [
+        ("https://t.me/invented_helper_bot", "t.me"),
+        ("https://T.ME/quill_invented", "t.me"),
+        ("http://www.x.com/quill_invented/status/123", "x.com"),
+        ("https://uk.linkedin.com/in/quill-invented/", "linkedin.com"),
+        ("https://x.com/?user=quill", "x.com"),
+        ("  https://mobile.twitter.com/quill  ", "twitter.com"),
+    ],
+)
+def test_the_address_of_a_link_to_a_profile_site_names_that_site(url: str, site: str) -> None:
+    assert profile_site(url) == site
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://demo.example.test/pebble-pay",
+        "https://github.com/sample-org/pebble-pay",
+        "https://box.com/pebble",  # not x.com
+        "https://docs.example.test/x.com/page",  # the site is not x.com
+        "https://t.me/",  # the site alone names nobody
+        "https://x.com",
+        "https://[not-an-address",  # no browser could open it
+        "",
+    ],
+)
+def test_the_address_of_another_link_names_no_profile_site(url: str) -> None:
+    assert profile_site(url) is None
+
+
+def test_a_text_and_a_link_on_its_own_get_the_same_answer() -> None:
+    # One list of sites decides both.
+    for site in PROFILE_SITES:
+        assert profile_site(f"https://{site}/quill_invented") == site
+        assert hide_in_text(f"see {site}/quill_invented") == (f"see {HIDDEN_LINK}", 1)

@@ -23,7 +23,8 @@ The data also holds scores that the site computes for each project. They are nev
 
 A team can name a person inside its own text: a handle, an email address, a link to a profile.
 These words are hidden in the short line and in the two texts before anything else is done with
-them (people.py, design rule 11). So they reach no table, no model and no card.
+them (people.py, design rule 11). So they reach no table, no model and no card. A link of the
+header that leads to a profile site is kept without its address, for the same reason.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ from hackathon_memory.collect.ethglobal_site import SITE
 from hackathon_memory.parse.blocks import blocks_of, squash
 from hackathon_memory.parse.hedera_ids import find_ids
 from hackathon_memory.parse.pagedata import objects_with_key, page_data_text
-from hackathon_memory.parse.people import hide_in_box, hide_in_text
+from hackathon_memory.parse.people import hide_in_box, hide_in_text, profile_site
 from hackathon_memory.parse.project import (
     CODE_LINK,
     DEMO_LINK,
@@ -53,7 +54,7 @@ from hackathon_memory.parse.project import (
 )
 
 # Stored with every parsed page. A change of this word means: read every saved page again.
-PARSER_VERSION = "ethglobal-page-4"
+PARSER_VERSION = "ethglobal-page-5"
 
 DESCRIPTION = "description"
 HOW_ITS_MADE = "how_its_made"
@@ -162,8 +163,8 @@ def read_project_page(html: bytes, page: str) -> ProjectPage:
     short_line, hidden_in_the_line = hide_in_text(short_line)
     prizes = _prizes(soup, data)
     sections, boxes, hidden_in_the_texts = _sections(soup)
-    links = _links(header)
-    targets = [link.url for link in links]
+    links, hidden_in_the_links = _links(header)
+    targets = [link.url for link in links if link.url]
     targets.extend(str(a["href"]) for box in boxes for a in box.find_all("a", href=True))
     video = _dict(data.get("video"))
     return ProjectPage(
@@ -186,7 +187,7 @@ def read_project_page(html: bytes, page: str) -> ProjectPage:
         hedera_ids=tuple(find_ids(*(section.text for section in sections), *targets)),
         has_video=any(video.get(key) for key in ("file", "muxUrl", "youtubeId")),
         parser=PARSER_VERSION,
-        people_words_hidden=hidden_in_the_line + hidden_in_the_texts,
+        people_words_hidden=hidden_in_the_line + hidden_in_the_texts + hidden_in_the_links,
     )
 
 
@@ -225,16 +226,26 @@ def _header(soup: BeautifulSoup, data: dict) -> tuple[Tag, str, str]:
     return header, name, short_line
 
 
-def _links(header: Tag) -> tuple[Link, ...]:
-    """The links of the header that lead out of the site, with the words of each one."""
+def _links(header: Tag) -> tuple[tuple[Link, ...], int]:
+    """The links of the header that lead out of the site, with the words of each one, and how
+    many words about people were hidden in them.
+
+    A link that leads to a profile site is kept without its address: the tool cannot tell a
+    bot of the project from a person there.
+    """
     links: list[Link] = []
+    hidden = 0
     for anchor in header.find_all("a", href=True):
         url = str(anchor["href"]).strip()
         if not url.lower().startswith(("http://", "https://")):
             continue
-        label = squash(anchor.get_text())
-        links.append(Link(_LINK_LABELS.get(label.lower(), OTHER_LINK), url, label))
-    return tuple(links)
+        words = squash(anchor.get_text())
+        kind = _LINK_LABELS.get(words.lower(), OTHER_LINK)
+        label, hidden_in_the_words = hide_in_text(words)
+        site = profile_site(url)
+        links.append(Link(kind, None, label, hidden_on=site) if site else Link(kind, url, label))
+        hidden += hidden_in_the_words + (site is not None)
+    return tuple(links), hidden
 
 
 def _event(soup: BeautifulSoup, data: dict) -> EventRef:

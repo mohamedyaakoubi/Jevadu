@@ -150,10 +150,10 @@ class ProjectStore:
                 ],
             )  # fmt: skip
             cursor.executemany(
-                "INSERT INTO links (project_id, position, kind, url, label) "
-                "VALUES (%s, %s, %s, %s, %s)",
+                "INSERT INTO links (project_id, position, kind, url, label, hidden_on) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
                 [
-                    (project_id, at, link.kind, link.url, link.label)
+                    (project_id, at, link.kind, link.url, link.label, link.hidden_on)
                     for at, link in enumerate(page.links, start=1)
                 ],
             )
