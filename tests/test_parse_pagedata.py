@@ -6,7 +6,7 @@ import json
 
 from bs4 import BeautifulSoup
 
-from hackathon_memory.collect.pagedata import objects_with_key, page_data_text
+from hackathon_memory.parse.pagedata import objects_with_key, page_data_text
 
 
 def page(*pushed: str, extra: str = "") -> BeautifulSoup:

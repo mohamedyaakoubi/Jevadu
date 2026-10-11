@@ -9,7 +9,7 @@ What a page of the list looks like (pages 1, 2 and 3 were read on 10 October 202
 * 33 cards. Each card is a link to a project page, /showcase/<name>-<id>. The last card of a
   page is also the first card of the next page: the list moves on by 32.
 * A link to the next page of the list, while there is one.
-* The data of the page as text in scripts (pagedata.py). One object holds the number of the
+* The data of the page as text in scripts (parse/pagedata.py). One object holds the number of the
   page ("currentPage") and the records of the projects ("projects"). A record has a name, a
   short line, the event, and "prizes". A prize names its sponsor by a short id and a logo, and
   not by a name. A record holds nothing about a person.
@@ -27,7 +27,7 @@ from urllib.parse import parse_qsl, urljoin, urlsplit
 from bs4 import BeautifulSoup
 
 from hackathon_memory.collect.ethglobal_site import PROJECT_PAGE_PATH, SITE
-from hackathon_memory.collect.pagedata import objects_with_key, page_data_text
+from hackathon_memory.parse.pagedata import objects_with_key, page_data_text
 
 LIST_PATH = "/showcase"
 PARTNER = "hedera"
