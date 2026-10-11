@@ -82,6 +82,11 @@ def parse_lines(run: Run) -> list[str]:
     ]
     if counts["left_for_later"]:
         lines.append(f"Left for a later run, because of the limit: {counts['left_for_later']}.")
+    if counts["words_about_people_hidden"]:
+        lines.append(
+            "Handles, addresses and profile links of people that were hidden in the texts: "
+            f"{counts['words_about_people_hidden']}."
+        )
     if counts["event_ends_written"] or counts["event_ends_same"] or counts["events_without_an_end"]:
         lines.append(
             f"Ends of events typed by hand: {counts['event_ends_written']} written, "

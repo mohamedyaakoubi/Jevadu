@@ -272,3 +272,21 @@ def test_a_file_of_ends_that_cannot_be_read_is_not_used_at_all(
         "  the ends of events typed by hand: event-ends.txt, line 2: expected the short name"
     ) in said
     assert ends_in(database) == [("sample-event", None)]  # not even the good first line
+
+
+# --------------------------------------------------------------------- people are hidden
+
+
+def test_the_step_hides_people_and_the_command_says_how_many_words(
+    database: str, raw: RawStore, capsys: pytest.CaptureFixture[str]
+) -> None:
+    save(raw, "eel-ledger", at="2026-10-10T19:00:01Z", made="<p>Built by @quill and @reed.</p>")
+    assert main(["parse"], settings_for(database, raw)) == 0
+    said = capsys.readouterr().out
+    assert (
+        "Handles, addresses and profile links of people that were hidden in the texts: 2."
+    ) in said
+    with psycopg.connect(database) as conn:
+        texts = " ".join(body for (body,) in conn.execute("SELECT body FROM sections"))
+    assert "quill" not in texts and "reed" not in texts
+    assert "Built by @[name hidden] and @[name hidden]." in texts

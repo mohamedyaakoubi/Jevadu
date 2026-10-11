@@ -29,6 +29,7 @@ from hackathon_memory.parse.ethglobal_page import (
     took_a_hedera_prize,
 )
 from hackathon_memory.parse.hedera_ids import ACCOUNT, TOKEN, TOPIC
+from hackathon_memory.parse.people import HIDDEN_ADDRESS, HIDDEN_HANDLE, HIDDEN_LINK
 from hackathon_memory.parse.project import (
     CODE_LINK,
     DEMO_LINK,
@@ -346,3 +347,44 @@ def test_the_same_project_twice_in_the_data_is_fine_when_both_say_the_same() -> 
     script = html[html.index(b"<script>self.__next_f.push([1,") : html.index(b"</body>")]
     page = read_project_page(html.replace(b"</body>", script + b"</body>"), PROJECT_PAGE)
     assert page.name == "Pebble Pay"
+
+
+# --------------------------------------------------------------------- people are hidden
+
+
+def test_words_about_people_in_the_short_line_and_the_texts_are_hidden() -> None:
+    html = project_page(
+        short_line="A coin for vendors, by @quill_invented.",
+        description=(
+            "<p>Built by <strong>@quill_invented</strong>. Write to quill@example.test.</p>"
+        ),
+        made=(
+            "<p>We use <code>@sample-scope/sdk</code>. News on https://x.com/quill_invented.</p>"
+            "<pre><code>@Override\nvoid pay() {}</code></pre>"
+        ),
+    )
+    page = read_project_page(html, PROJECT_PAGE)
+    description = page.section(DESCRIPTION)
+    made = page.section(HOW_ITS_MADE)
+    assert description is not None and made is not None
+    assert page.short_line == f"A coin for vendors, by {HIDDEN_HANDLE}."
+    assert description.text == f"Built by {HIDDEN_HANDLE}. Write to {HIDDEN_ADDRESS}."
+    # Code keeps its @ signs: there they belong to the language.
+    assert made.text == (
+        f"We use @sample-scope/sdk. News on {HIDDEN_LINK}.\n@Override\nvoid pay() {{}}"
+    )
+    assert page.people_words_hidden == 4
+    assert "quill" not in json.dumps(asdict(page))  # in no field at all
+
+
+def test_a_page_with_no_word_about_people_hides_nothing() -> None:
+    assert read_project_page(project_page(), PROJECT_PAGE).people_words_hidden == 0
+
+
+def test_an_id_next_to_a_hidden_word_is_still_found_and_its_words_name_nobody() -> None:
+    html = project_page(made="<p>Ask @quill about the topic 0.0.3456789 on testnet.</p>")
+    page = read_project_page(html, PROJECT_PAGE)
+    assert [(i.entity_id, i.network, i.said_kind) for i in page.hedera_ids] == [
+        ("0.0.3456789", "testnet", TOPIC)
+    ]
+    assert "quill" not in page.hedera_ids[0].words_around

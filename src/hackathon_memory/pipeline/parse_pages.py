@@ -67,6 +67,8 @@ def parse_saved_pages(
             run.problem(page.url, str(changed))
             continue
         run.counts[projects.save(project, sha256)] += 1
+        if project.people_words_hidden:
+            run.counts["words_about_people_hidden"] += project.people_words_hidden
 
 
 def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) -> None:

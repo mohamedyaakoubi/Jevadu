@@ -81,6 +81,8 @@ class ProjectPage:
     hedera_ids: tuple[FoundId, ...]
     has_video: bool
     parser: str  # the version of the parser that read the page
+    # How many handles, addresses and links to profiles were hidden in the texts (people.py).
+    people_words_hidden: int = 0
 
     def section(self, kind: str) -> Section | None:
         return next((section for section in self.sections if section.kind == kind), None)

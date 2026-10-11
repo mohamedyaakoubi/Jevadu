@@ -20,6 +20,10 @@ it raises PageShapeChanged, and a person looks.
 
 The data also holds scores that the site computes for each project. They are never read out
 (design rule 1): the parser takes the keys that it names here and no other.
+
+A team can name a person inside its own text: a handle, an email address, a link to a profile.
+These words are hidden in the short line and in the two texts before anything else is done with
+them (people.py, design rule 11). So they reach no table, no model and no card.
 """
 
 from __future__ import annotations
@@ -33,6 +37,7 @@ from hackathon_memory.collect.ethglobal_site import SITE
 from hackathon_memory.parse.blocks import blocks_of, squash
 from hackathon_memory.parse.hedera_ids import find_ids
 from hackathon_memory.parse.pagedata import objects_with_key, page_data_text
+from hackathon_memory.parse.people import hide_in_box, hide_in_text
 from hackathon_memory.parse.project import (
     CODE_LINK,
     DEMO_LINK,
@@ -48,7 +53,7 @@ from hackathon_memory.parse.project import (
 )
 
 # Stored with every parsed page. A change of this word means: read every saved page again.
-PARSER_VERSION = "ethglobal-page-2"
+PARSER_VERSION = "ethglobal-page-3"
 
 DESCRIPTION = "description"
 HOW_ITS_MADE = "how_its_made"
@@ -154,8 +159,9 @@ def read_project_page(html: bytes, page: str) -> ProjectPage:
     site_key = urlsplit(page).path.rstrip("/").rsplit("/", 1)[-1]
     data = _project_data(soup, site_key)
     header, name, short_line = _header(soup, data)
+    short_line, hidden_in_the_line = hide_in_text(short_line)
     prizes = _prizes(soup, data)
-    sections, boxes = _sections(soup)
+    sections, boxes, hidden_in_the_texts = _sections(soup)
     links = _links(header)
     targets = [link.url for link in links]
     targets.extend(str(a["href"]) for box in boxes for a in box.find_all("a", href=True))
@@ -180,6 +186,7 @@ def read_project_page(html: bytes, page: str) -> ProjectPage:
         hedera_ids=tuple(find_ids(*(section.text for section in sections), *targets)),
         has_video=any(video.get(key) for key in ("file", "muxUrl", "youtubeId")),
         parser=PARSER_VERSION,
+        people_words_hidden=hidden_in_the_line + hidden_in_the_texts,
     )
 
 
@@ -248,14 +255,16 @@ def _event(soup: BeautifulSoup, data: dict) -> EventRef:
     )
 
 
-def _sections(soup: BeautifulSoup) -> tuple[tuple[Section, ...], list[Tag]]:
-    """The two texts of the page, and the boxes that hold them.
+def _sections(soup: BeautifulSoup) -> tuple[tuple[Section, ...], list[Tag], int]:
+    """The two texts of the page, the boxes that hold them, and how many words about people
+    were hidden in them.
 
     A title that a team wrote inside a text is not a title of the page, also when it uses the
     same words: a title inside a box that was already taken is passed over.
     """
     sections: list[Section] = []
     boxes: list[Tag] = []
+    hidden = 0
     for heading in soup.find_all("h3"):
         kind = _SECTION_TITLES.get(squash(heading.get_text()).lower())
         if kind is None or any(parent is box for parent in heading.parents for box in boxes):
@@ -264,10 +273,11 @@ def _sections(soup: BeautifulSoup) -> tuple[tuple[Section, ...], list[Tag]]:
         if not isinstance(box, Tag):
             raise PageShapeChanged(f"no text follows the title of the part {kind!r}")
         boxes.append(box)
+        hidden += hide_in_box(box)  # before the text is copied: no later step sees a person
         sections.append(Section(kind, squash(heading.get_text()), tuple(blocks_of(box))))
     if [section.kind for section in sections] != [DESCRIPTION, HOW_ITS_MADE]:
         raise PageShapeChanged(
             'the page does not have the titles "Project Description" and "How it\'s Made", '
             "once each and in this order"
         )
-    return tuple(sections), boxes
+    return tuple(sections), boxes, hidden
