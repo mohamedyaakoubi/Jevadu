@@ -110,7 +110,7 @@ def allowed(url: str) -> bool:
     )
 
 
-def _message(body: bytes) -> str:
+def api_message(body: bytes) -> str:
     """The "message" of an answer of the API, or nothing."""
     try:
         answer = json.loads(body.decode("utf-8"))
@@ -148,7 +148,7 @@ class GitHubClient(PoliteClient):
 
     def _judge(self, raw: RawAnswer) -> None:
         self._note_hour(raw.headers)
-        message = _message(raw.body)
+        message = api_message(raw.body)
         if raw.status in (403, 429) and (
             raw.headers.get("x-ratelimit-remaining") == "0"
             or "retry-after" in raw.headers
