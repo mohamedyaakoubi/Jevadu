@@ -8,7 +8,8 @@ What is hidden:
 
 * a word that starts with "@", such as a handle on a social network;
 * an email address;
-* a link to a profile on a social site, written in the text ("x.com/name", "t.me/name").
+* a link to a profile on a social site, written in the text ("x.com/name", "t.me/name");
+* a link to the profile of an account on GitHub: an address with one name only.
 
 The tool cannot tell a person from a company or from a bot of the project, so it hides all of
 them. Little is lost: a card links to the page of the project.
@@ -20,7 +21,8 @@ What is not hidden:
 
 * the name of a package, which has a slash after its first part ("@scope/package");
 * anything inside code. There an "@" belongs to the language, as in "@media" or "@Override";
-* a link to a video or to the code.
+* a link to a video, or to the code: an address on GitHub with an account and a repository.
+  The name of the account is part of that link, and the link is what a card needs.
 
 A sign of the sentence after a hidden word stays where it is: "ask @someone." keeps its full
 stop.
@@ -65,6 +67,13 @@ _PROFILE_LINK = re.compile(
     rf"(?:{'|'.join(re.escape(site) for site in PROFILE_SITES)})/[^\s<>()\[\]\"']+",
     re.IGNORECASE,
 )
+# On a code host an address with one name only is the profile of an account, of a person or
+# of a group. With two names it is a repository, and that link is kept.
+CODE_HOST = "github.com"
+_ACCOUNT_LINK = re.compile(
+    rf"(?<![A-Za-z0-9.@/-])(?:https?://)?(?:www\.)?{re.escape(CODE_HOST)}/([^\s<>()\[\]\"']+)",
+    re.IGNORECASE,
+)
 _SENTENCE_SIGNS = ".,;:!?"
 _CODE_TAGS = frozenset({"code", "pre", "script", "style"})
 
@@ -82,12 +91,31 @@ def _profile_link(match: re.Match[str]) -> str:
     return HIDDEN_LINK + link[len(link.rstrip(_SENTENCE_SIGNS)) :]
 
 
+def _names_in(path: str) -> list[str]:
+    """The names of a path, without what follows a "?" or a "#"."""
+    return [name for name in re.split("[?#]", path, maxsplit=1)[0].split("/") if name]
+
+
+def _account_link(match: re.Match[str]) -> str:
+    link = match.group(0)
+    bare = link.rstrip(_SENTENCE_SIGNS)
+    path = match.group(1)[: len(match.group(1)) - (len(link) - len(bare))]
+    if len(_names_in(path)) != 1:
+        return link  # a repository, a file of one, or nothing after the site
+    return HIDDEN_LINK + link[len(bare) :]
+
+
 def _address(match: re.Match[str]) -> str:
     return HIDDEN_ADDRESS
 
 
 # In this order: a link first, so that an address or a handle inside it is not taken alone.
-_HIDERS = ((_PROFILE_LINK, _profile_link), (ADDRESS, _address), (_AT_WORD, _handle))
+_HIDERS = (
+    (_PROFILE_LINK, _profile_link),
+    (_ACCOUNT_LINK, _account_link),
+    (ADDRESS, _address),
+    (_AT_WORD, _handle),
+)
 
 
 def _hide(
@@ -128,6 +156,8 @@ def profile_site(url: str) -> str | None:
         host = (parts.hostname or "").lower()
     except ValueError:  # not an address that a browser could open
         return None
+    if host in (CODE_HOST, "www." + CODE_HOST):
+        return CODE_HOST if len(_names_in(parts.path)) == 1 else None
     if not (parts.path.strip("/") or parts.query or parts.fragment):
         return None
     return next((site for site in PROFILE_SITES if host == site or host.endswith("." + site)), None)

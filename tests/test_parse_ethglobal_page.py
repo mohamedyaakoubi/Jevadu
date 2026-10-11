@@ -431,3 +431,13 @@ def test_no_id_is_taken_from_a_link_whose_address_is_hidden() -> None:
         project_page(demo="https://t.me/invented_helper_bot?start=0.0.3456789"), PROJECT_PAGE
     )
     assert page.hedera_ids == ()
+
+
+def test_a_demo_link_to_an_account_on_github_is_kept_without_its_address() -> None:
+    page = read_project_page(project_page(demo="https://github.com/quill-invented"), PROJECT_PAGE)
+    assert page.links == (
+        Link(DEMO_LINK, None, "Live Demo", hidden_on="github.com"),
+        Link(CODE_LINK, "https://github.com/sample-org/pebble-pay", "Source Code"),  # kept
+    )
+    assert page.people_words_hidden == 1
+    assert "quill" not in json.dumps(asdict(page))

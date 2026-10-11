@@ -193,3 +193,50 @@ def test_a_text_and_a_link_on_its_own_get_the_same_answer() -> None:
     for site in PROFILE_SITES:
         assert profile_site(f"https://{site}/quill_invented") == site
         assert hide_in_text(f"see {site}/quill_invented") == (f"see {HIDDEN_LINK}", 1)
+
+
+# --------------------------------------------------------------------- an account on GitHub
+
+
+@pytest.mark.parametrize(
+    ("text", "shown"),
+    [
+        ("Made by https://github.com/quill-invented.", f"Made by {HIDDEN_LINK}."),
+        ("See github.com/quill-invented/ for more", f"See {HIDDEN_LINK} for more"),
+        ("(www.GitHub.com/quill-invented?tab=repositories)", f"({HIDDEN_LINK})"),
+    ],
+)
+def test_a_link_to_an_account_on_github_is_hidden(text: str, shown: str) -> None:
+    assert hide_in_text(text) == (shown, 1)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The code is at https://github.com/sample-org/pebble-pay.",
+        "Read github.com/sample-org/pebble-pay/blob/main/README.md, please.",
+        "We host it on github.com and nowhere else.",  # the site alone
+        "A fork lives on gist.github.com/sample-org and on notgithub.com/sample-org.",
+        "The site sample-org.github.io/pebble-pay shows it.",
+    ],
+)
+def test_a_link_to_a_repository_stays(text: str) -> None:
+    assert hide_in_text(text) == (text, 0)
+
+
+@pytest.mark.parametrize(
+    ("url", "site"),
+    [
+        ("https://github.com/quill-invented", "github.com"),
+        ("https://www.github.com/quill-invented/", "github.com"),
+        ("https://github.com/quill-invented?tab=repositories", "github.com"),
+        ("https://github.com/sample-org/pebble-pay", None),
+        ("https://github.com/sample-org/pebble-pay/tree/main", None),
+        ("https://github.com/", None),
+        ("https://sample-org.github.io/pebble-pay", None),
+    ],
+)
+def test_the_address_of_an_account_on_github_is_a_profile_and_a_repository_is_not(
+    url: str, site: str | None
+) -> None:
+    assert profile_site(url) == site
