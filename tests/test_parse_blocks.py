@@ -90,6 +90,18 @@ def test_a_list_wrapped_in_a_box_inside_an_item_is_not_lost() -> None:
     assert blocks_of(page) == [Block(ITEM, "outer", 1), Block(ITEM, "inner", 2)]
 
 
+def test_words_after_a_list_inside_an_item_come_after_its_items() -> None:
+    # Seen on real pages: an item, a list inside it, then more words of the same item.
+    page = box("<ul><li>before<ul><li>inner</li><li>second</li></ul>after</li><li>next</li></ul>")
+    assert blocks_of(page) == [
+        Block(ITEM, "before", 1),
+        Block(ITEM, "inner", 2),
+        Block(ITEM, "second", 2),
+        Block(ITEM, "after", 1),
+        Block(ITEM, "next", 1),
+    ]
+
+
 def test_a_title_keeps_its_level() -> None:
     page = box("<h2>Overview</h2><p>text</p><h3>Problem</h3><h4>A <em>small</em> part</h4>")
     assert blocks_of(page) == [
@@ -156,6 +168,7 @@ loose words
 <ul>
   <li>one <a href="https://example.test/x">link</a>
     <ul><li>inside<!-- --> <!-- -->item</li></ul>
+    and after the list
   </li>
   <li><p>two</p><p>three</p></li>
 </ul>
@@ -182,6 +195,7 @@ def test_the_order_of_the_page_is_kept() -> None:
         "loose words",
         "one link",
         "inside item",
+        "and after the list",
         "two three",
         "a quote",
         "line one\nline two",

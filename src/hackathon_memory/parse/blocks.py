@@ -96,10 +96,18 @@ def blocks_of(box: Tag) -> list[Block]:
             elif name == "li":
                 close_loose()
                 item_depth = max(depth, 1)
-                add(ITEM, squash(_words(child, stop_at_lists=True)), item_depth)
-                for inner in child.find_all(_LISTS):
-                    if _nearest(inner, ("li",), child) is None:  # a list of this item itself
-                        walk(inner, item_depth + 1)
+                # The words of the item and the lists inside it, in the order of the page.
+                # Words that come after a list inside the item are a block of their own.
+                words: list[str] = []
+                for piece in _pieces(child, lists_apart=True):
+                    if isinstance(piece, str):
+                        words.append(piece)
+                        continue
+                    add(ITEM, squash("".join(words)), item_depth)
+                    words.clear()
+                    walk(piece, item_depth + 1)
+                    close_loose()
+                add(ITEM, squash("".join(words)), item_depth)
             elif name in _LISTS:
                 close_loose()
                 walk(child, depth + 1)
@@ -118,38 +126,29 @@ def blocks_of(box: Tag) -> list[Block]:
     return found
 
 
-def _words(tag: Tag, *, stop_at_lists: bool = False) -> str:
-    """The text inside `tag`, as it is written. A line break of the page becomes a new line.
+def _words(tag: Tag) -> str:
+    """The text inside `tag`, as it is written. A line break of the page becomes a new line."""
+    return "".join(piece for piece in _pieces(tag) if isinstance(piece, str))
 
-    With `stop_at_lists`, the text of a list inside `tag` is left out: an item gives its own
-    words, and the items of a list inside it are blocks of their own.
+
+def _pieces(tag: Tag, lists_apart: bool = False) -> Iterator[str | Tag]:
+    """The text inside `tag`, piece by piece, in the order of the page.
+
+    A line break, and a tag that starts on a new line, give a new line. With `lists_apart`, a
+    list inside `tag` is given as the list itself, in its place, and not as text.
     """
-    return "".join(_pieces(tag, stop_at_lists))
-
-
-def _pieces(tag: Tag, stop_at_lists: bool) -> Iterator[str]:
     for child in tag.children:
         if isinstance(child, NavigableString):
-            if type(child) is NavigableString:
+            if type(child) is NavigableString:  # a comment is not text
                 yield str(child)
-        elif isinstance(child, Tag):
-            if child.name in _NOT_TEXT or (stop_at_lists and child.name in _LISTS):
-                continue
-            if child.name == "br":
+        elif isinstance(child, Tag) and child.name not in _NOT_TEXT:
+            if lists_apart and child.name in _LISTS:
+                yield child
+            elif child.name == "br":
                 yield "\n"
             elif child.name in _OWN_LINE:
                 yield "\n"
-                yield from _pieces(child, stop_at_lists)
+                yield from _pieces(child, lists_apart)
                 yield "\n"
             else:
-                yield from _pieces(child, stop_at_lists)
-
-
-def _nearest(tag: Tag, names: tuple[str, ...], below: Tag) -> Tag | None:
-    """The nearest tag around `tag` with one of `names`, looking no higher than `below`."""
-    for parent in tag.parents:
-        if parent is below:
-            return None
-        if parent.name in names:
-            return parent
-    return None
+                yield from _pieces(child, lists_apart)
