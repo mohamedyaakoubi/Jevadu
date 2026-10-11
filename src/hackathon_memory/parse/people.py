@@ -29,6 +29,7 @@ stop.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from urllib.parse import urlsplit
 
 from bs4 import NavigableString, Tag
@@ -81,19 +82,39 @@ def _profile_link(match: re.Match[str]) -> str:
     return HIDDEN_LINK + link[len(link.rstrip(_SENTENCE_SIGNS)) :]
 
 
-def hide_in_text(text: str) -> tuple[str, int]:
-    """The text with links to profiles, addresses and handles hidden, and how many were hidden."""
-    text, links = _PROFILE_LINK.subn(_profile_link, text)
-    text, addresses = ADDRESS.subn(HIDDEN_ADDRESS, text)
-    handles = 0
+def _address(match: re.Match[str]) -> str:
+    return HIDDEN_ADDRESS
 
-    def count(match: re.Match[str]) -> str:
-        nonlocal handles
-        shown = _handle(match)
-        handles += shown != match.group(0)
+
+# In this order: a link first, so that an address or a handle inside it is not taken alone.
+_HIDERS = ((_PROFILE_LINK, _profile_link), (ADDRESS, _address), (_AT_WORD, _handle))
+
+
+def _hide(
+    pattern: re.Pattern[str], shown_for: Callable[[re.Match[str]], str], text: str
+) -> tuple[str, int]:
+    """Put what `shown_for` gives in the place of each match, and count the matches that changed.
+
+    A match that stays as it is, such as the name of a package, was not hidden.
+    """
+    changed = 0
+
+    def swap(match: re.Match[str]) -> str:
+        nonlocal changed
+        shown = shown_for(match)
+        changed += shown != match.group(0)
         return shown
 
-    return _AT_WORD.sub(count, text), links + addresses + handles
+    return pattern.sub(swap, text), changed
+
+
+def hide_in_text(text: str) -> tuple[str, int]:
+    """The text with links to profiles, addresses and handles hidden, and how many were hidden."""
+    hidden = 0
+    for pattern, shown_for in _HIDERS:
+        text, changed = _hide(pattern, shown_for, text)
+        hidden += changed
+    return text, hidden
 
 
 def profile_site(url: str) -> str | None:
