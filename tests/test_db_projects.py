@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import replace
+from datetime import date
 
 import psycopg
 import pytest
@@ -298,3 +299,67 @@ def test_no_table_of_the_projects_has_a_column_for_a_person(database: str) -> No
     )
     assert len(columns) > 30
     assert [name for (name,) in columns if person.search(name)] == []
+
+
+# --------------------------------------------------------------------- the ends of events
+
+
+def other_event() -> ProjectPage:
+    html = project_page(
+        name="Quartz Notes",
+        slug="quartz-notes",
+        short_id="q3w4e",
+        event_slug="other-event",
+        event_name="ETHGlobal Other Event",
+        starts_at="2025-11-21T15:00:00.000Z",
+    )
+    return read_project_page(html, SECOND_PAGE)
+
+
+def ends_in(database: str) -> list[tuple]:
+    return rows(database, "SELECT slug, ends_on::text FROM events ORDER BY slug")
+
+
+def test_the_ends_of_events_are_written_once_and_then_left_as_they_are(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)
+    store.save(other_event(), SHA_B)
+
+    done = store.set_event_ends("ethglobal.com", {"sample-event": date(2026, 3, 8)})
+    assert (done.written, done.same, done.unknown, done.before_start) == (1, 0, [], [])
+    assert done.without_end == 1  # the other event has no end yet
+    assert ends_in(database) == [("other-event", None), ("sample-event", "2026-03-08")]
+
+    again = store.set_event_ends(
+        "ethglobal.com", {"sample-event": date(2026, 3, 8), "other-event": date(2025, 11, 23)}
+    )
+    assert (again.written, again.same, again.without_end) == (1, 1, 0)
+    assert ends_in(database) == [("other-event", "2025-11-23"), ("sample-event", "2026-03-08")]
+
+
+def test_an_end_can_be_corrected(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)
+    store.set_event_ends("ethglobal.com", {"sample-event": date(2026, 3, 8)})
+    assert store.set_event_ends("ethglobal.com", {"sample-event": date(2026, 3, 7)}).written == 1
+    assert ends_in(database) == [("sample-event", "2026-03-07")]
+
+
+def test_an_event_that_no_project_names_is_not_made_up(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)
+    done = store.set_event_ends("ethglobal.com", {"another-event": date(2026, 3, 8)})
+    assert done.unknown == ["another-event"]
+    assert rows(database, "SELECT count(*) FROM events") == [(1,)]
+    other_site = store.set_event_ends("example.test", {"sample-event": date(2026, 3, 8)})
+    assert other_site.unknown == ["sample-event"]  # the same name on another site
+
+
+def test_an_end_before_the_start_is_refused(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)  # the event starts on 6 March 2026
+    done = store.set_event_ends("ethglobal.com", {"sample-event": date(2026, 3, 5)})
+    assert (done.written, done.before_start) == (0, ["sample-event"])
+    assert ends_in(database) == [("sample-event", None)]
+    same_day = store.set_event_ends("ethglobal.com", {"sample-event": date(2026, 3, 6)})
+    assert same_day.written == 1  # an event of one day ends on the day it starts

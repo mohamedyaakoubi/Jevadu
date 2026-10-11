@@ -5,8 +5,10 @@
     python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
 
-"parse" sends no request: it works on the pages that are saved. "check" asks the Hedera mirror
-node, a public API made for programs, and no site (design rule 17).
+"parse" sends no request: it works on the pages that are saved. It also writes the last day of
+each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
+rule needs it and no page gives it (design 7.2). "check" asks the Hedera mirror node, a public API
+made for programs, and no site (design rule 17).
 
 A step prints numbers. For a page or an id that it could not handle it prints the address or
 the id and the rule that failed. It never prints text of a page, and never the connection text
@@ -24,11 +26,13 @@ import psycopg
 
 from hackathon_memory.check import proof
 from hackathon_memory.collect.ethglobal import data_paths
+from hackathon_memory.collect.ethglobal_site import SITE
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
 from hackathon_memory.db.runs import Run, recorded_run
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
+from hackathon_memory.parse import event_ends
 from hackathon_memory.pipeline import check_ids, parse_pages
 from hackathon_memory.settings import Settings, SettingsError
 
@@ -78,7 +82,13 @@ def parse_lines(run: Run) -> list[str]:
     ]
     if counts["left_for_later"]:
         lines.append(f"Left for a later run, because of the limit: {counts['left_for_later']}.")
-    return lines + _problem_lines(run, "Not read, with the rule that failed:")
+    if counts["event_ends_written"] or counts["event_ends_same"] or counts["events_without_an_end"]:
+        lines.append(
+            f"Ends of events typed by hand: {counts['event_ends_written']} written, "
+            f"{counts['event_ends_same']} the same as before. "
+            f"Events with no end yet: {counts['events_without_an_end']}."
+        )
+    return lines + _problem_lines(run, "Not used, and why:")
 
 
 def check_lines(run: Run) -> list[str]:
@@ -128,10 +138,13 @@ def main(
         conninfo = settings.database_conninfo()
         with recorded_run(conninfo, arguments.step) as run:
             if arguments.step == parse_pages.STEP:
-                raw = RawStore(data_paths(settings).raw_dir)
+                paths = data_paths(settings)
+                projects = ProjectStore(conninfo)
                 parse_pages.parse_saved_pages(
-                    raw, ProjectStore(conninfo), run, limit=arguments.limit
+                    RawStore(paths.raw_dir), projects, run, limit=arguments.limit
                 )
+                ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
+                parse_pages.apply_event_ends(projects, ends, SITE, run)
             else:
                 if mirrors is None:
                     # Every network that a page can name. An id with no network is asked on

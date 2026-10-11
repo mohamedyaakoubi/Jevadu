@@ -12,7 +12,9 @@ back to "not checked", because the ids of the page may have changed.
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, date
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -29,11 +31,49 @@ FULL_CARD = "full_card"
 ON_THE_PAGE = "page"
 
 
+@dataclass
+class EventEnds:
+    """What writing the ends of events did."""
+
+    written: int = 0
+    same: int = 0
+    unknown: list[str] = field(default_factory=list)  # events that no saved project names
+    before_start: list[str] = field(default_factory=list)  # refused: the end is before the start
+    without_end: int = 0  # events of the site that still have no end
+
+
 class ProjectStore:
     """Keeps parsed projects in PostgreSQL. Opens a short connection for each operation."""
 
     def __init__(self, conninfo: str) -> None:
         self._conninfo = conninfo
+
+    def set_event_ends(self, site: str, ends: Mapping[str, date]) -> EventEnds:
+        """Write the last day of each event that `ends` names, in one transaction.
+
+        An event that no saved project names is not made up: it is named in the result. An end
+        before the start of its event is refused and named too.
+        """
+        done = EventEnds()
+        with psycopg.connect(self._conninfo) as conn:
+            for slug, end in sorted(ends.items()):
+                row = conn.execute(
+                    "SELECT id, starts_at, ends_on FROM events WHERE site = %s AND slug = %s",
+                    (site, slug),
+                ).fetchone()
+                if row is None:
+                    done.unknown.append(slug)
+                elif row[1] is not None and end < row[1].astimezone(UTC).date():
+                    done.before_start.append(slug)
+                elif row[2] == end:
+                    done.same += 1
+                else:
+                    conn.execute("UPDATE events SET ends_on = %s WHERE id = %s", (end, row[0]))
+                    done.written += 1
+            done.without_end = conn.execute(
+                "SELECT count(*) FROM events WHERE site = %s AND ends_on IS NULL", (site,)
+            ).fetchone()[0]
+        return done
 
     def already_parsed(self) -> dict[str, tuple[str, str]]:
         """For each page address: the fingerprint of the page and the parser that read it."""

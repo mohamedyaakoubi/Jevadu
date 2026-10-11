@@ -12,6 +12,7 @@ when it was saved. The second one must never happen (design rule 5), so it is sa
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 from hackathon_memory.collect.rawstore import RawStore, fingerprint
 from hackathon_memory.db.projects import SAME, ProjectStore
@@ -21,6 +22,7 @@ from hackathon_memory.parse.ethglobal_page import (
     PageShapeChanged,
     read_project_page,
 )
+from hackathon_memory.parse.event_ends import EventEndsError, read_event_ends
 from hackathon_memory.parse.project import ProjectPage
 
 STEP = "parse"
@@ -65,3 +67,29 @@ def parse_saved_pages(
             run.problem(page.url, str(changed))
             continue
         run.counts[projects.save(project, sha256)] += 1
+
+
+def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) -> None:
+    """Write the ends of events that a person typed into `path` (design 7.2).
+
+    A file that cannot be read is named in the run, and nothing of it is used: half a file
+    could leave one event with an end and another without one, with no sign of it.
+    """
+    try:
+        ends = read_event_ends(path)
+    except EventEndsError as wrong:
+        run.counts["event_ends_not_read"] += 1
+        run.problem("the ends of events typed by hand", str(wrong))
+        return
+    done = projects.set_event_ends(site, ends)
+    for key, value in (
+        ("event_ends_written", done.written),
+        ("event_ends_same", done.same),
+        ("events_without_an_end", done.without_end),
+    ):
+        if value:
+            run.counts[key] += value
+    for slug in done.unknown:
+        run.problem(f"{path.name}: {slug}", "no saved project names this event")
+    for slug in done.before_start:
+        run.problem(f"{path.name}: {slug}", "the last day is before the start of the event")

@@ -174,7 +174,13 @@ def test_the_command_parses_and_says_what_it_did(
     assert "Left for a later run, because of the limit: 1." in said
     (row,) = last_runs(database, STEP)
     assert row["ok"] is True
-    assert row["counts"] == {"pages": 3, "new": 2, "left_for_later": 1}
+    assert row["counts"] == {
+        "pages": 3,
+        "new": 2,
+        "left_for_later": 1,
+        "events_without_an_end": 1,
+    }
+    assert "Events with no end yet: 1." in said
     assert f"This is run {row['id']} in the table of runs." in said
 
 
@@ -212,3 +218,57 @@ def test_the_command_refuses_what_it_does_not_know(
 ) -> None:
     assert main(argv) == 2
     assert "usage: python -m hackathon_memory.pipeline parse" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------- the ends of events
+
+
+def write_ends(raw: RawStore, text: str) -> None:
+    """The file of the ends of events, where the command looks for it."""
+    folder = raw.folder.parents[1] / "by-hand" / "ethglobal.com"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "event-ends.txt").write_text(text, encoding="utf-8")
+
+
+def ends_in(database: str) -> list[tuple]:
+    with psycopg.connect(database) as conn:
+        return conn.execute("SELECT slug, ends_on::text FROM events ORDER BY slug").fetchall()
+
+
+def test_the_command_writes_the_ends_of_events_typed_by_hand(
+    database: str, raw: RawStore, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_ends(raw, "# typed by hand\nsample-event 2026-03-08  # the page of the event\n")
+    assert main(["parse"], settings_for(database, raw)) == 0
+    said = capsys.readouterr().out
+    assert (
+        "Ends of events typed by hand: 1 written, 0 the same as before. Events with no end yet: 0."
+    ) in said
+    assert ends_in(database) == [("sample-event", "2026-03-08")]
+
+    assert main(["parse"], settings_for(database, raw)) == 0
+    assert "0 written, 1 the same as before" in capsys.readouterr().out
+
+
+def test_the_command_names_an_end_that_it_could_not_use(
+    database: str, raw: RawStore, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_ends(raw, "sample-event 2026-03-01\nanother-event 2026-03-08\n")
+    assert main(["parse"], settings_for(database, raw)) == 1
+    said = capsys.readouterr().out
+    assert "Not used, and why:" in said
+    assert "  event-ends.txt: another-event: no saved project names this event" in said
+    assert "  event-ends.txt: sample-event: the last day is before the start of the event" in said
+    assert ends_in(database) == [("sample-event", None)]
+
+
+def test_a_file_of_ends_that_cannot_be_read_is_not_used_at_all(
+    database: str, raw: RawStore, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_ends(raw, "sample-event 2026-03-08\nnot a line\n")
+    assert main(["parse"], settings_for(database, raw)) == 1
+    said = capsys.readouterr().out
+    assert (
+        "  the ends of events typed by hand: event-ends.txt, line 2: expected the short name"
+    ) in said
+    assert ends_in(database) == [("sample-event", None)]  # not even the good first line
