@@ -1,0 +1,65 @@
+{
+  "proof": "database",
+  "gate": "A",
+  "ran_at": "2026-10-09T17:55:03Z",
+  "passed": true,
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "checks": [
+    {
+      "name": "migrations are applied",
+      "passed": true,
+      "detail": "1 migration(s)"
+    },
+    {
+      "name": "the vector add-on is on",
+      "passed": true,
+      "detail": "pgvector 0.8.7"
+    },
+    {
+      "name": "3,072-number vectors can be stored",
+      "passed": true,
+      "detail": "3000 rows"
+    },
+    {
+      "name": "the planted neighbours come first, nearest first",
+      "passed": true,
+      "detail": "top 3 ids: [1, 2, 3]"
+    },
+    {
+      "name": "the database distance equals an independent computation",
+      "passed": true,
+      "detail": "largest difference 1.29e-07 over the top 10"
+    },
+    {
+      "name": "an exact search over 3,000 rows needs no index",
+      "passed": true,
+      "detail": "median 27 ms, slowest 30 ms, 20 runs"
+    },
+    {
+      "name": "the normal index refuses 3,072 numbers",
+      "passed": true,
+      "detail": "column cannot have more than 2000 dimensions for hnsw index"
+    },
+    {
+      "name": "an index on the half-size type works and is used",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "measurements": {
+    "server_version": "17.11 (Debian 17.11-1.pgdg12+2)",
+    "pgvector_version": "0.8.7",
+    "insert_seconds": 0.31,
+    "distance_difference_max": 1.2894526668638662e-07,
+    "exact_search_ms_median": 27.4,
+    "exact_search_ms_max": 30.4
+  },
+  "does_not_prove": [
+    "It uses random vectors, not real embeddings. How well real embeddings find similar projects is measured by Test 2 (design 13.3), not here.",
+    "The timings are from one laptop with 3,000 rows. They are not a promise for a server.",
+    "It does not test the data model. The tables of design section 10 come in Phase B."
+  ]
+}

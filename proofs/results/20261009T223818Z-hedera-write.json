@@ -1,0 +1,79 @@
+{
+  "proof": "hedera-write",
+  "gate": "A",
+  "ran_at": "2026-10-09T22:38:18Z",
+  "passed": false,
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "checks": [
+    {
+      "name": "the network is the test network",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "the account exists on the test network",
+      "passed": true,
+      "detail": "0.0.10941897"
+    },
+    {
+      "name": "the account has a balance to pay the fees",
+      "passed": true,
+      "detail": "100000000000 tinybar"
+    },
+    {
+      "name": "the private key in .env is the key of this account",
+      "passed": true,
+      "detail": "key type on the ledger: ECDSA_SECP256K1"
+    },
+    {
+      "name": "a topic was created",
+      "passed": true,
+      "detail": "0.0.10961137; auto-renew account sent: True"
+    },
+    {
+      "name": "the ledger shows NO admin key (nobody can delete the topic or change its rules)",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "the ledger shows our public key as the submit key",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "the topic is not deleted",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "the record fits in one message",
+      "passed": true,
+      "detail": "102 bytes"
+    },
+    {
+      "name": "the write to the test network worked",
+      "passed": false,
+      "detail": "ValueError: Field proto.TransactionReceipt.topicRunningHash does not have presence."
+    }
+  ],
+  "measurements": {
+    "balance_before_tinybar": 100000000000,
+    "key_type": "ECDSA_SECP256K1",
+    "topic_id": "0.0.10961137",
+    "create_transaction_id": "0.0.10941897@1791585491.450701713",
+    "auto_renew_account_sent": true,
+    "topic_link": "https://hashscan.io/testnet/topic/0.0.10961137",
+    "seconds_until_the_mirror_node_had_the_topic": 6.4,
+    "balance_after_tinybar": 99977941259,
+    "spent_tinybar_approximate": 22058741
+  },
+  "does_not_prove": [
+    "It writes to the test network only. The main network is not tested and costs real money.",
+    "The record has the proof form (version 0). The real record of the register (design 9.3) comes with Phase F.",
+    "The negative control shows that a submit key is enforced. It does not show that a stranger cannot find another way to post: that is the guarantee of the network itself.",
+    "The test network can be reset. The ids in this file may stop existing."
+  ]
+}

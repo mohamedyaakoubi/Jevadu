@@ -3,9 +3,18 @@
 .env.*
 # Names only, never a value. Without this line ".env.*" above would hide it.
 !.env.example
-# Google key files, in case one is saved next to the code by mistake.
+# Google key files and sign-in files, in case one is saved next to the code by mistake.
+# application_default_credentials.json is what "gcloud auth application-default login" writes. It
+# holds a refresh token, which is a long-lived login to a Google account. Added on 9 October 2026,
+# after such a file was found in the project folder (it had never been committed).
 *-key.json
 service-account*.json
+application_default_credentials.json
+client_secret*.json
+*credentials*.json
+*.pem
+*.p12
+*.pfx
 
 # Collected pages and everything built from them (design 5.3).
 # They can be rebuilt with one command, so they do not belong in git.

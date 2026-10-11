@@ -1,0 +1,26 @@
+# The local database: PostgreSQL 17 with the pgvector add-on (design section 11.1).
+# Start it with:  docker compose up -d db
+# The password comes from .env (POSTGRES_PASSWORD). The port is bound to this laptop only.
+name: hackathon-memory
+
+services:
+  db:
+    # Tags checked on Docker Hub on 9 October 2026: pg17 and pg18 exist. PostgreSQL 17 is
+    # supported until 2029 and is offered by most hosts.
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hackathon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hackathon_memory}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:

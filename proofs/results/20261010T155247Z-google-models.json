@@ -1,0 +1,117 @@
+{
+  "proof": "google-models",
+  "gate": "A",
+  "ran_at": "2026-10-10T15:52:47Z",
+  "passed": true,
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "checks": [
+    {
+      "name": "the location is one that gemini-3.1-pro-preview is offered in",
+      "passed": true,
+      "detail": "global"
+    },
+    {
+      "name": "the location is one that gemini-3.8-flash is offered in",
+      "passed": true,
+      "detail": "global"
+    },
+    {
+      "name": "a real text is available (the hand-copied winners of Hedera x AI)",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "the Google client can be made",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "rewrite: gemini-3.1-pro-preview (thinking HIGH) returned a valid form",
+      "passed": true,
+      "detail": "21.4 seconds, 1 attempt(s)"
+    },
+    {
+      "name": "search: gemini-3.8-flash (thinking HIGH) returned a valid form",
+      "passed": true,
+      "detail": "16.5 seconds, 1 attempt(s)"
+    },
+    {
+      "name": "the embedding model returned vectors of the expected size",
+      "passed": true,
+      "detail": "3 vectors of 3072 numbers"
+    },
+    {
+      "name": "a question about the text is closer to it than an unrelated question",
+      "passed": true,
+      "detail": "similarity 0.767 against 0.525"
+    },
+    {
+      "name": "the calls of this proof are in the cost ledger",
+      "passed": true,
+      "detail": "5 call(s), environment 'test'"
+    }
+  ],
+  "measurements": {
+    "text_words": 81,
+    "location": "global",
+    "layers": {
+      "rewrite": {
+        "model": "gemini-3.1-pro-preview",
+        "thinking_level": "HIGH",
+        "instructions_version": "card-form-0",
+        "seconds": 21.4,
+        "attempts": 1,
+        "prompt_tokens": 1723,
+        "output_tokens": 658,
+        "thought_tokens": 1620,
+        "cost_usd": 0.030782,
+        "labels": {
+          "stated": 7
+        },
+        "quotes_total": 12,
+        "quotes_found_in_text": 12
+      },
+      "search": {
+        "model": "gemini-3.8-flash",
+        "thinking_level": "HIGH",
+        "instructions_version": "card-form-0",
+        "seconds": 16.5,
+        "attempts": 1,
+        "prompt_tokens": 1723,
+        "output_tokens": 706,
+        "thought_tokens": 2022,
+        "cost_usd": 0.011522,
+        "labels": {
+          "stated": 6,
+          "inferred": 1
+        },
+        "quotes_total": 14,
+        "quotes_found_in_text": 14
+      }
+    },
+    "gemini_cost_usd_total": 0.042304,
+    "embedding_model": "gemini-embedding-001",
+    "embedding_dimensions": 3072,
+    "similarity_related": 0.7667,
+    "similarity_unrelated": 0.525,
+    "document_tokens": 106,
+    "document_truncated": false,
+    "ledger": {
+      "environment": "test",
+      "run_id": "proof-20261010T155247Z",
+      "calls": 5,
+      "calls_with_a_known_price": 2,
+      "counted_cost_usd": 0.042304
+    }
+  },
+  "does_not_prove": [
+    "The text is short (58 to 81 words) and it is not a full project page. How well the form is filled for full pages is measured by Test 1 (design 13.2), not here.",
+    "It does not show that the quotes are right. The check of the quotes is Phase D (design 6.3). The count of quotes found in the text is only an observation.",
+    "The search layer is checked with the card form only. Its own form, the comparison of projects, is built in Phase D.",
+    "One call per model. The speed, the quota and the cost of a full run are not shown. Gemini 3.1 Pro is a public preview model: Google may change or retire it, and its quota may be lower than that of a generally available model.",
+    "The price of the embedding model was not read from Google, so only its token count is reported."
+  ]
+}
