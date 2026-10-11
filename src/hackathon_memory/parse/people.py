@@ -39,12 +39,24 @@ ADDRESS = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Z
 # the whole word is taken: a pattern that could give back letters would turn "@scope/package"
 # into a handle.
 _AT_WORD = re.compile(r"(?<![A-Za-z0-9._%+/-])@([A-Za-z0-9_./-]+)")
-# A link to one of the sites where a page is the profile of somebody. The name of the site must
-# start there: "box.com" is not "x.com".
+# The sites where a page is the profile of somebody.
+PROFILE_SITES = (
+    "twitter.com",
+    "x.com",
+    "t.me",
+    "telegram.me",
+    "linkedin.com",
+    "instagram.com",
+    "facebook.com",
+    "warpcast.com",
+    "threads.net",
+    "bsky.app",
+    "tiktok.com",
+)
+# A link to one of them. The name of the site must start there: "box.com" is not "x.com".
 _PROFILE_LINK = re.compile(
     r"(?<![A-Za-z0-9.@/-])(?:https?://)?(?:www\.|mobile\.)?"
-    r"(?:twitter\.com|x\.com|t\.me|telegram\.me|linkedin\.com|instagram\.com|facebook\.com|"
-    r"warpcast\.com|threads\.net|bsky\.app|tiktok\.com)/[^\s<>()\[\]\"']+",
+    rf"(?:{'|'.join(re.escape(site) for site in PROFILE_SITES)})/[^\s<>()\[\]\"']+",
     re.IGNORECASE,
 )
 _SENTENCE_SIGNS = ".,;:!?"
