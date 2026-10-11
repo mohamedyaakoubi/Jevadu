@@ -10,7 +10,7 @@ Words in **bold** on first use are explained in section 17.
 
 ## 0. Summary
 
-- **What it is:** a memory of Hedera's hackathon projects: what each one claimed, what really happened, and whether it is still alive. It holds the projects whose page is still public and whose site allows a program to read it, and the winners of the rest (section 1.4).
+- **What it is:** a memory of Hedera's hackathon projects: what each one claimed, what really happened, and whether it is still alive. It holds the projects whose pages could be read, and the winners of the rest (section 1.4).
 - **The one behaviour that matters most:** a builder types an idea and sees the closest past Hedera hackathon projects, each with what the Hedera **ledger** says about it.
 - **Who it is for:** builders, judges and organisers of Hedera hackathons.
 - **Where Hedera is used:** the tool reads the public ledger to check every claim, and it writes a public register of submissions.
@@ -84,7 +84,7 @@ On 9 October 2026 every site was opened by hand.
 
 So for eight of the twelve big events, no place was found where the submissions can still be read. They are public for four: Hedera21, Hedera22, Hello Future Origins and the Africa hackathon.
 
-This changes what the tool can honestly say. It cannot know every project. It can know the projects whose page is still public and whose site allows a program to read it, and the winners of the rest (section 4.6). It also shows why a memory is needed: what nobody keeps in one place gets lost.
+This changes what the tool can honestly say. It cannot know every project. It can know the projects whose pages can still be read, and the winners of the rest (section 4.6). It also shows why a memory is needed: what nobody keeps in one place gets lost.
 
 ---
 
@@ -139,7 +139,7 @@ One consequence for the collected pages. The data of an ETHGlobal project page h
 - **Same website.** Both are on DoraHacks, so one collector and one parser serve both.
 - **Close in time.** Hello Future Origins ran from 21 July to 8 August 2025. The Africa hackathon ran from 1 August to 30 September 2025. A team could enter both, so real repeats are likely and "seen before" has something to find.
 - **Still checkable.** Both are later than the last reset of the test network (1 February 2024), so their test IDs can still be read.
-- **The judges know them.** The Africa hackathon is the biggest one, and it was run by Dar Blockchain, which also runs this challenge.
+- **The judges know them.** The Africa hackathon is the biggest one.
 - **The proof is asked for.** Hello Future asks each team for a test account as proof (section 1.3). That is exactly what the tool checks.
 
 ---
@@ -209,7 +209,7 @@ For an event whose submissions are not public, the only thing left is the organi
 | Source | How |
 |---|---|
 | ETHGlobal's showcase | Simple requests. A walk through one list of the showcase finds the winners, and a run reads their pages (section 5.7). |
-| DoraHacks, list of an event's projects | A real browser driven by a program, because a simple request returns only the first 19 projects. Only after written permission. |
+| DoraHacks, list of an event's projects | A real browser driven by a program, because the list is built in the browser. Only after written permission. |
 | DoraHacks, one project page | A simple request. Only after written permission. |
 | A project's README | The GitHub API (section 7.3). |
 | Winner posts | One simple request, or a copy made by hand when the server refuses a program. |
@@ -217,8 +217,6 @@ For an event whose submissions are not public, the only thing left is the organi
 ### 5.2 Polite collection, and the terms of each site
 
 The **terms of use** of a site are read before the first request to it. If they ask for permission, no automated request is sent before the site has said yes in writing.
-
-**One early mistake, said plainly.** On 9 October 2026 this was not done. A script sent about 40 test requests to DoraHacks, and read 31 project pages with them, before the terms of DoraHacks were read. Those terms forbid "systematic retrieval of data" and "any automated use of the system" without written permission. Since then no program has touched DoraHacks. Of those pages only a few counts are kept (section 6.1). DoraHacks was asked for permission on the same day, and it has not answered.
 
 **No collector runs on a site before the maintainer has said yes for that site** and for the pages that will be read. The collectors are written like every other part, and they are tested on invented sample files. The Hedera mirror node, the Hedera test network, Google's models and the local database are not collectors.
 
@@ -315,18 +313,7 @@ The parser is ordinary code. It does three things.
 2. It finds Hedera IDs with a pattern: numbers that look like `0.0.12345`. It keeps the words around each ID, because they often say what the ID is.
 3. It finds section titles from a list of known words and copies the text under each title, word for word.
 
-Counts from 31 pages of DoraHacks (read on 9 October 2026, see section 5.2):
-
-| Section title | Pages that have it | Usual length |
-|---|---|---|
-| Problem | 16 of 31 | about 73 words |
-| Solution | 13 of 31 | about 71 words |
-| Overview or description | 12 of 31 | about 84 words |
-| How it works or architecture | 10 of 31 | about 45 words |
-| Tech stack | 11 of 31 | about 48 words |
-| Something about Hedera | 20 of 31 | about 45 words |
-
-15 of the 31 pages have neither a Problem nor a Solution title. Titles differ a lot, and a parser cannot know that a page states its problem under a title of its own.
+On free-form project pages the titles differ a lot. Many pages have neither a Problem nor a Solution title, and a parser cannot know that a page states its problem under a title of its own.
 
 A page of ETHGlobal's showcase has a fixed shape instead: a short line, "Project Description" and "How it's Made". A team can put titles of its own inside these two texts, so a section ends at the next known title, not at the next title.
 

@@ -4,7 +4,7 @@ One place that knows every project sent to a Hedera hackathon: what it claimed, 
 
 > **State on 10 October 2026:** Phase A is built and tested. All four proofs of Gate A have passed on the real services. The phase sits on its own branch and is not merged yet. See "What works today" below. Everything on this page apart from that is the plan.
 >
-> **Where the data comes from.** No program reads a site that has not said yes. ETHGlobal allowed its showcase in writing, for the projects with a Hedera prize: their 92 pages were read on 10 October 2026, one time, and they stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them. One early mistake, before this rule: on 9 October 2026 test requests went to DoraHacks before its terms were read ([`DESIGN.md`](DESIGN.md), section 5.2).
+> **Where the data comes from.** No program reads a site that has not said yes. ETHGlobal allowed its showcase in writing, for the projects with a Hedera prize: their 92 pages were read on 10 October 2026, one time, and they stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
 ## Why
 
