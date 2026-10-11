@@ -89,6 +89,9 @@ def test_an_email_address_is_hidden_whole(text: str, shown: str) -> None:
         ("See https://www.linkedin.com/in/quill-invented/", f"See {HIDDEN_LINK}"),
         ("twitter.com/quill and instagram.com/quill", f"{HIDDEN_LINK} and {HIDDEN_LINK}"),
         ("(https://warpcast.com/quill)", f"({HIDDEN_LINK})"),
+        # The site behind another first part is the same site.
+        ("See https://uk.linkedin.com/in/quill-invented.", f"See {HIDDEN_LINK}."),
+        ("m.facebook.com/quill and mobile.twitter.com/quill", f"{HIDDEN_LINK} and {HIDDEN_LINK}"),
     ],
 )
 def test_a_link_to_a_profile_is_hidden(text: str, shown: str) -> None:
@@ -105,6 +108,8 @@ def test_a_link_to_a_profile_is_hidden(text: str, shown: str) -> None:
         "Files are on box.com/pebble and on dropbox.com/pebble.",  # not x.com
         "The log: https://hashscan.io/testnet/topic/0.0.3456789",
         "Docs at https://docs.example.test/x.com/page",  # the site is not x.com
+        "Files at https://files.dropbox.com/pebble and max.com/pebble.",  # nor are these
+        "We post on x.com and on t.me every week.",  # the name of a site names nobody
     ],
 )
 def test_a_link_to_code_to_a_video_or_to_another_site_stays(text: str) -> None:

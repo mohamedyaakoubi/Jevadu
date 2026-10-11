@@ -53,9 +53,10 @@ PROFILE_SITES = (
     "bsky.app",
     "tiktok.com",
 )
-# A link to one of them. The name of the site must start there: "box.com" is not "x.com".
+# A link to one of them, also behind another first part ("www.", "uk.", "m."). The name of the
+# site must start after a dot or at the start: "box.com" is not "x.com".
 _PROFILE_LINK = re.compile(
-    r"(?<![A-Za-z0-9.@/-])(?:https?://)?(?:www\.|mobile\.)?"
+    r"(?<![A-Za-z0-9.@/-])(?:https?://)?(?:[A-Za-z0-9-]+\.)*"
     rf"(?:{'|'.join(re.escape(site) for site in PROFILE_SITES)})/[^\s<>()\[\]\"']+",
     re.IGNORECASE,
 )
