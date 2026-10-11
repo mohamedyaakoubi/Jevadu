@@ -12,7 +12,7 @@ import json
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 
@@ -394,18 +394,53 @@ class StandInMirror:
     def account(self, entity: str) -> dict | None:
         return self._one("account", entity)
 
-    def _end(self, what: str, entity: str, newest_first: bool, **more: object) -> list[dict]:
-        self.asked.append((what, entity, "newest" if newest_first else "oldest", more))
-        found = self.lists.get((what, entity), [])
+    def _end(
+        self,
+        what: str,
+        entity: str,
+        newest_first: bool,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ) -> list[dict]:
+        asked = {name: value for name, value in (("since", since), ("until", until)) if value}
+        self.asked.append((what, entity, "newest" if newest_first else "oldest", asked))
+        found = [item for item in self.lists.get((what, entity), []) if _inside(item, since, until)]
         return found[-1:] if newest_first else found[:1]
 
-    def topic_messages(self, entity: str, *, newest_first: bool) -> list[dict]:
-        return self._end("messages", entity, newest_first)
+    def topic_messages(
+        self,
+        entity: str,
+        *,
+        newest_first: bool,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ) -> list[dict]:
+        return self._end("messages", entity, newest_first, since, until)
 
-    def contract_results(self, entity: str, *, newest_first: bool) -> list[dict]:
-        return self._end("calls", entity, newest_first)
+    def contract_results(
+        self,
+        entity: str,
+        *,
+        newest_first: bool,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ) -> list[dict]:
+        return self._end("calls", entity, newest_first, since, until)
 
     def account_transactions(
-        self, entity: str, *, newest_first: bool, since: datetime | None = None
+        self,
+        entity: str,
+        *,
+        newest_first: bool,
+        since: datetime | None = None,
+        until: datetime | None = None,
     ) -> list[dict]:
-        return self._end("transactions", entity, newest_first, since=since)
+        return self._end("transactions", entity, newest_first, since, until)
+
+
+def _inside(item: dict, since: datetime | None, until: datetime | None) -> bool:
+    """True if the time of a message, a call or a transaction lies in the time asked for."""
+    moment = datetime.fromtimestamp(
+        float(item.get("consensus_timestamp") or item["timestamp"]), UTC
+    )
+    return (since is None or moment >= since) and (until is None or moment < until)

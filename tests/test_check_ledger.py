@@ -10,7 +10,12 @@ from datetime import UTC, datetime
 import pytest
 
 from fakes import StandInMirror
-from hackathon_memory.check.ledger import LedgerFacts, kinds_to_ask, read_facts
+from hackathon_memory.check.ledger import (
+    LedgerFacts,
+    kinds_to_ask,
+    read_facts,
+    was_used_inside,
+)
 from hackathon_memory.hedera.mirror import MirrorError, when
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
 
@@ -208,3 +213,46 @@ def test_an_error_of_the_node_goes_on_to_the_caller() -> None:
 
     with pytest.raises(MirrorError, match="503"):
         facts_of(Broken(), "0.0.2345678")
+
+
+# --------------------------------------------------------------------- one more question
+
+BEFORE_ALL = datetime(2026, 1, 1, tzinfo=UTC)
+AFTER_ALL = datetime(2027, 1, 1, tzinfo=UTC)
+EARLY = (datetime(2026, 1, 1, tzinfo=UTC), datetime(2026, 2, 1, tzinfo=UTC))  # nothing in here
+
+
+@pytest.mark.parametrize(
+    ("kind", "what", "key"),
+    [
+        (TOPIC, "messages", "consensus_timestamp"),
+        (CONTRACT, "calls", "timestamp"),
+        (ACCOUNT, "transactions", "consensus_timestamp"),
+    ],
+)
+def test_the_use_inside_a_time_is_asked_from_the_right_list(kind: str, what: str, key: str) -> None:
+    mirror = StandInMirror()
+    mirror.lists[(what, "0.0.3456789")] = [{key: FIRST}, {key: LAST}]
+    facts = LedgerFacts("0.0.3456789", "testnet", NOW, found=True, kind=kind)
+    assert was_used_inside(mirror, facts, BEFORE_ALL, AFTER_ALL) is True  # type: ignore[arg-type]
+    assert was_used_inside(mirror, facts, *EARLY) is False  # type: ignore[arg-type]
+    assert mirror.asked[-1] == (
+        what,
+        "0.0.3456789",
+        "oldest",
+        {"since": EARLY[0], "until": EARLY[1]},
+    )
+
+
+def test_the_use_of_a_thing_found_by_its_address_is_asked_with_the_id_of_the_ledger() -> None:
+    mirror = StandInMirror()
+    mirror.lists[("calls", "0.0.4567890")] = [{"timestamp": FIRST}]
+    facts = LedgerFacts(ADDRESS, "testnet", NOW, found=True, kind=CONTRACT, ledger_id="0.0.4567890")
+    assert was_used_inside(mirror, facts, BEFORE_ALL, AFTER_ALL) is True  # type: ignore[arg-type]
+
+
+def test_a_token_has_no_such_question() -> None:
+    mirror = StandInMirror()
+    facts = LedgerFacts("0.0.2345678", "testnet", NOW, found=True, kind=TOKEN)
+    assert was_used_inside(mirror, facts, BEFORE_ALL, AFTER_ALL) is False  # type: ignore[arg-type]
+    assert mirror.asked == []  # and the node is not asked

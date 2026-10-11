@@ -95,6 +95,27 @@ def read_facts(
     return LedgerFacts(entity_id=entity_id, network=mirror.network, asked_at=asked_at, found=False)
 
 
+def was_used_inside(
+    mirror: MirrorNode, facts: LedgerFacts, since: datetime, until: datetime
+) -> bool:
+    """Ask whether something happened on the thing between two moments.
+
+    This is the one more question of the proof rule, for a thing that was used both before and
+    after the window of an event. A token has no such question: who sent it to whom is not
+    looked at, so the answer for a token is no.
+    """
+    entity = facts.ledger_id or facts.entity_id
+    if facts.kind == TOPIC:
+        found = mirror.topic_messages(entity, newest_first=False, since=since, until=until)
+    elif facts.kind == CONTRACT:
+        found = mirror.contract_results(entity, newest_first=False, since=since, until=until)
+    elif facts.kind == ACCOUNT:
+        found = mirror.account_transactions(entity, newest_first=False, since=since, until=until)
+    else:
+        found = []
+    return bool(found)
+
+
 def _token(mirror: MirrorNode, entity_id: str) -> dict | None:
     token = mirror.token(entity_id)
     if token is None:
