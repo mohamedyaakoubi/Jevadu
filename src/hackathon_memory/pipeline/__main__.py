@@ -2,13 +2,19 @@
 
     python -m hackathon_memory.pipeline parse              read every saved page that is new
     python -m hackathon_memory.pipeline parse --limit 50   read at most 50, the first ones saved
+    python -m hackathon_memory.pipeline readmes            ask GitHub for the missing READMEs,
+                                                           then read every saved one
+    python -m hackathon_memory.pipeline readmes --repos 5  ask for at most 5 new READMEs
+    python -m hackathon_memory.pipeline readmes --no-requests    read the saved ones only
     python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
 
 "parse" sends no request: it works on the pages that are saved. It also writes the last day of
 each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
-rule needs it and no page gives it (design 7.2). "check" asks the Hedera mirror node, a public API
-made for programs, and no site (design rule 17).
+rule needs it and no page gives it (design 7.2). "readmes" asks GitHub's API, which the
+maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait lets it wait
+for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a public API made
+for programs, and no site (design rule 17).
 
 A step prints numbers. For a page or an id that it could not handle it prints the address or
 the id and the rule that failed. It never prints text of a page, and never the connection text
@@ -19,25 +25,31 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import timedelta
 
 import psycopg
 
+from hackathon_memory import __version__
 from hackathon_memory.check import proof
+from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.ethglobal_site import SITE
+from hackathon_memory.collect.github_readmes import ReadmeRun, fetch_readmes
+from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
+from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.db.runs import Run, recorded_run
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
 from hackathon_memory.parse import event_ends
-from hackathon_memory.pipeline import check_ids, parse_pages
+from hackathon_memory.pipeline import check_ids, parse_pages, readmes
 from hackathon_memory.settings import Settings, SettingsError
 
 USAGE = (
     "usage: python -m hackathon_memory.pipeline parse [--limit N]\n"
+    "       python -m hackathon_memory.pipeline readmes [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline check [--max-age-days N]"
 )
 # What each status of the proof rule means, in plain words (design 7.2).
@@ -60,15 +72,26 @@ class _Quiet(argparse.ArgumentParser):
 
 def _arguments(argv: list[str]) -> argparse.Namespace:
     parser = _Quiet(prog="python -m hackathon_memory.pipeline", add_help=False)
-    parser.add_argument("step", choices=[parse_pages.STEP, check_ids.STEP])
+    parser.add_argument("step", choices=[parse_pages.STEP, readmes.STEP, check_ids.STEP])
     parser.add_argument("--limit", type=int)
     parser.add_argument("--max-age-days", type=float)
+    parser.add_argument("--repos", type=int)
+    parser.add_argument("--no-requests", action="store_true")
+    parser.add_argument("--wait", action="store_true")
     arguments = parser.parse_args(argv)
     is_parse = arguments.step == parse_pages.STEP
+    is_check = arguments.step == check_ids.STEP
+    is_readmes = arguments.step == readmes.STEP
     if arguments.limit is not None and (not is_parse or arguments.limit < 1):
         raise ValueError("--limit goes with parse, and must be 1 or more")
-    if arguments.max_age_days is not None and (is_parse or arguments.max_age_days < 0):
+    if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
+    if arguments.repos is not None and (not is_readmes or arguments.repos < 1):
+        raise ValueError("--repos goes with readmes, and must be 1 or more")
+    if (arguments.no_requests or arguments.wait) and not is_readmes:
+        raise ValueError("--no-requests and --wait go with readmes")
+    if arguments.no_requests and (arguments.repos is not None or arguments.wait):
+        raise ValueError("--no-requests sends nothing, so --repos and --wait do not go with it")
     return arguments
 
 
@@ -117,6 +140,28 @@ def check_lines(run: Run) -> list[str]:
     return lines + _problem_lines(run, "Not checked, with what went wrong:")
 
 
+def _readme_fetch(
+    settings: Settings, arguments: argparse.Namespace, run: Run
+) -> tuple[Callable[[list[str]], ReadmeRun] | None, str | None]:
+    """What asks GitHub for the missing READMEs, or None with the reason in plain words."""
+    if arguments.no_requests:
+        return None, None
+    if not settings.collect_github:
+        return None, "COLLECT_GITHUB is off in .env, so nothing was asked of GitHub."
+    try:
+        client = github.github_client(settings, wait_for_cooldown=arguments.wait)
+    except CollectorRefused as refused:
+        run.problem("GitHub", str(refused))
+        return None, "Nothing was asked of GitHub (see below)."
+    store = RawStore(github.raw_dir(settings))
+    collector = f"{settings.collector_name.strip()}/{__version__}"
+
+    def fetch(wanted: list[str]) -> ReadmeRun:
+        return fetch_readmes(client, store, wanted, collector=collector, limit=arguments.repos)
+
+    return fetch, None
+
+
 def _problem_lines(run: Run, title: str) -> list[str]:
     lines = []
     if run.problems:
@@ -150,6 +195,15 @@ def main(
                 )
                 ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
                 parse_pages.apply_event_ends(projects, ends, SITE, run)
+            elif arguments.step == readmes.STEP:
+                fetch, note = _readme_fetch(settings, arguments, run)
+                readmes.read_readmes(
+                    RepositoryStore(conninfo),
+                    ProjectStore(conninfo),
+                    RawStore(github.raw_dir(settings)),
+                    run,
+                    fetch=fetch,
+                )
             else:
                 if mirrors is None:
                     # Every network that a page can name. An id with no network is asked on
@@ -175,7 +229,13 @@ def main(
     except check_ids.NodeIsAway as away:
         print(f"Stopped: {away}. Nothing more was asked. Try again later.")
         return 1
-    lines = parse_lines(run) if arguments.step == parse_pages.STEP else check_lines(run)
+    if arguments.step == parse_pages.STEP:
+        lines = parse_lines(run)
+    elif arguments.step == readmes.STEP:
+        lines = readmes.readme_lines(run) + ([note] if note else [])
+        lines += _problem_lines(run, "Stopped or not done, and why:")
+    else:
+        lines = check_lines(run)
     print("\n".join(lines))
     return 1 if run.problems else 0
 
