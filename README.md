@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 11 October 2026:** Phase A is built and tested. The four proofs of Gate A passed on the real services on 10 October 2026. Since then the collection was widened, from the projects with a Hedera prize to every project that ETHGlobal's showcase ties to Hedera. That collection is not finished, so the lists proof is open again. The phase sits on its own branch and is not merged yet. See "What works today" below. Everything on this page apart from that is the plan.
+> **State on 11 October 2026:** Phase A is done. The four proofs of Gate A passed on the real services. The last one, the lists proof, passed on 11 October 2026 for every project that ETHGlobal's showcase ties to Hedera: 658 projects. See "What works today" below. Everything on this page apart from that is the plan.
 >
 > **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The pages stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
@@ -55,7 +55,7 @@ There is no website yet and no search. What exists is the ground that they will 
 | Database: PostgreSQL with pgvector answers a vector query | **Passed.** 3,000 vectors of 3,072 numbers, the right neighbours first, an exact search in 27 ms. The result file is in `proofs/results/`. |
 | Hedera write: a topic with no admin key, a message, read back from the ledger | **Passed** on the real test network. The topic has no admin key and one submit key, a 102-byte record was read back from the mirror node, and a topic with a stranger's submit key refused our message. The result file is in `proofs/results/`. |
 | Google models: the two Gemini layers (Gemini 3.1 Pro reads the pages, Gemini 3.8 Flash does the search) and one embedding call | **Passed** on the real service. Both models returned a valid form for one real text, and the embeddings have the right size. The result file is in `proofs/results/`. |
-| Lists: the ETHGlobal collector | **Passed on 10 October 2026 for the first scope, and open again for the wider one.** A walk read the 21 pages of the showcase list with the filter "partner: Hedera": 658 projects in 14 events, 92 of them with a Hedera prize. A run read the pages of these 92 and kept all of them, each without its team part (the result file is in `proofs/results/`). The collection now covers all 658 projects. `python -m proofs.lists` says how far it is. The pages are not in this repository. |
+| Lists: the ETHGlobal collector | **Passed** on 11 October 2026. A walk read the 21 pages of the showcase list with the filter "partner: Hedera": 658 projects in 14 events. A run read the page of every one of them and kept all 658, each without its team part: 92 with a Hedera prize, 81 with a prize of another sponsor only, and 485 with no prize. On every page the block "Winner of" agrees with the list. 732 requests were sent to the site in all, out of the 800 that the tool allows itself for it. The result file is in `proofs/results/`. The pages are not in this repository. |
 
 Two more things work, and both were run on the real services:
 
