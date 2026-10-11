@@ -1,0 +1,299 @@
+"""The store of parsed projects, on a real PostgreSQL. Every page here is invented."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import replace
+
+import psycopg
+import pytest
+from psycopg import sql
+
+from fakes import EVENT, OTHER_ID, PROJECT_PAGE, project_page, won
+from hackathon_memory.db.migrate import migrate
+from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
+from hackathon_memory.parse.ethglobal_page import PARSER_VERSION, read_project_page
+from hackathon_memory.parse.hedera_ids import FoundId
+from hackathon_memory.parse.project import ProjectPage
+
+pytestmark = pytest.mark.integration
+
+SHA_A = "a" * 64
+SHA_B = "b" * 64
+SECOND_PAGE = "https://ethglobal.com/showcase/quartz-notes-q3w4e"
+TABLES = ("events", "projects", "prizes", "links", "sections", "hedera_ids")
+
+
+@pytest.fixture
+def database(empty_database: str) -> str:
+    migrate(empty_database)
+    return empty_database
+
+
+def parsed(**changes: object) -> ProjectPage:
+    return read_project_page(project_page(**changes), PROJECT_PAGE)  # type: ignore[arg-type]
+
+
+def second() -> ProjectPage:
+    html = project_page(name="Quartz Notes", slug="quartz-notes", short_id="q3w4e")
+    return read_project_page(html, SECOND_PAGE)
+
+
+def rows(database: str, query: str, *values: object) -> list[tuple]:
+    with psycopg.connect(database) as conn:
+        return conn.execute(query, values).fetchall()
+
+
+def everything(database: str) -> dict[str, list[tuple]]:
+    """Every row of every table of the projects."""
+    with psycopg.connect(database) as conn:
+        return {
+            table: conn.execute(
+                sql.SQL("SELECT * FROM {} ORDER BY 1, 2").format(sql.Identifier(table))
+            ).fetchall()
+            for table in TABLES
+        }
+
+
+FULL = {
+    "prizes": [won(), won("Other Sponsor", OTHER_ID, track="Best use", kind="track")],
+    "description": (
+        "<p>The coin is the token 0.0.2345678 on the test network.</p><ul><li>one</li></ul>"
+    ),
+    "made": '<p>See <a href="https://hashscan.io/testnet/topic/0.0.3456789">the log</a>.</p>',
+}
+
+
+# --------------------------------------------------------------------- saving
+
+
+def test_a_project_is_saved_with_all_that_the_parser_read(database: str) -> None:
+    store = ProjectStore(database)
+    assert store.save(parsed(**FULL), SHA_A) == NEW
+
+    assert rows(database, "SELECT site, slug, name, starts_at::text, ends_on FROM events") == [
+        ("ethglobal.com", "sample-event", EVENT, "2026-03-06 16:00:00+00", None)
+    ]
+    assert rows(
+        database,
+        "SELECT site, page_url, site_key, entry_kind, name, short_line, prize_state, has_video, "
+        "page_sha256, parser FROM projects",
+    ) == [
+        (
+            "ethglobal.com",
+            PROJECT_PAGE,
+            "pebble-pay-x1y2z",
+            "full_card",
+            "Pebble Pay",
+            "Pay a street vendor with a coin on Hedera.",
+            "hedera_prize",
+            True,
+            SHA_A,
+            PARSER_VERSION,
+        )
+    ]
+    assert rows(
+        database,
+        "SELECT position, sponsor, sponsor_id, track, award, kind, pool, line FROM prizes "
+        "ORDER BY position",
+    ) == [
+        (1, "Hedera", "hed01", "AI, Agents & Hedera Services", "1st place", "tier", False,
+         "Hedera - AI, Agents & Hedera Services 1st place"),
+        (2, "Other Sponsor", OTHER_ID, "Best use", "Best use", "track", False,
+         "Other Sponsor - Best use"),
+    ]  # fmt: skip
+    assert rows(database, "SELECT position, kind, url, label FROM links ORDER BY position") == [
+        (1, "demo", "https://demo.example.test/pebble-pay", "Live Demo"),
+        (2, "code", "https://github.com/sample-org/pebble-pay", "Source Code"),
+    ]
+    assert rows(
+        database, "SELECT position, kind, title, body, blocks FROM sections ORDER BY position"
+    ) == [
+        (
+            1,
+            "description",
+            "Project Description",
+            "The coin is the token 0.0.2345678 on the test network.\none",
+            [
+                {
+                    "kind": "paragraph",
+                    "text": "The coin is the token 0.0.2345678 on the test network.",
+                    "level": 0,
+                },
+                {"kind": "item", "text": "one", "level": 1},
+            ],
+        ),
+        (
+            2,
+            "how_its_made",
+            "How it's Made",
+            "See the log.",
+            [{"kind": "paragraph", "text": "See the log.", "level": 0}],
+        ),
+    ]
+    assert rows(
+        database,
+        "SELECT entity_id, network, said_kind, found_in, in_hashscan_link FROM hedera_ids "
+        "ORDER BY id",
+    ) == [
+        ("0.0.2345678", "testnet", "token", "page", False),
+        ("0.0.3456789", "testnet", "topic", "page", True),
+    ]
+
+
+def test_saving_the_same_page_again_changes_nothing(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(**FULL), SHA_A)
+    before = everything(database)
+    assert store.save(parsed(**FULL), SHA_A) == SAME
+    after = everything(database)
+    assert after == before  # also the time of the parsing
+
+
+def test_a_changed_page_replaces_the_parts_and_keeps_the_project(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(**FULL), SHA_A)
+    (project_id,) = rows(database, "SELECT id FROM projects")[0]
+
+    changed = parsed(short_line="A new short line.", code=None, made="<p>Rewritten.</p>")
+    assert store.save(changed, SHA_B) == CHANGED
+
+    assert rows(database, "SELECT id, short_line, prize_state, page_sha256 FROM projects") == [
+        (project_id, "A new short line.", "no_prize", SHA_B)
+    ]
+    assert rows(database, "SELECT count(*) FROM prizes") == [(0,)]
+    assert rows(database, "SELECT kind FROM links") == [("demo",)]
+    assert rows(database, "SELECT body FROM sections ORDER BY position") == [
+        ("Pebble Pay lets a street vendor take a payment with a coin.",),
+        ("Rewritten.",),
+    ]
+    assert rows(database, "SELECT count(*) FROM hedera_ids") == [(0,)]
+
+
+def test_a_new_parser_reads_a_page_again(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)
+    assert store.save(replace(parsed(), parser="ethglobal-page-2"), SHA_A) == CHANGED
+    assert rows(database, "SELECT parser FROM projects") == [("ethglobal-page-2",)]
+    assert store.already_parsed() == {PROJECT_PAGE: (SHA_A, "ethglobal-page-2")}
+
+
+def test_two_projects_of_one_event_share_it_and_an_end_typed_by_hand_stays(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE events SET ends_on = '2026-03-08'")
+    assert store.save(second(), SHA_B) == NEW
+    assert store.save(parsed(short_line="Changed."), SHA_B) == CHANGED
+
+    assert rows(database, "SELECT slug, starts_at::date::text, ends_on::text FROM events") == [
+        ("sample-event", "2026-03-06", "2026-03-08")
+    ]
+    assert rows(database, "SELECT count(DISTINCT event_id), count(*) FROM projects") == [(1, 2)]
+
+
+def test_an_id_found_in_a_readme_stays_when_the_page_is_parsed_again(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(**FULL), SHA_A)
+    with psycopg.connect(database) as conn:
+        conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) "
+            "SELECT id, '0.0.4567890', NULL, NULL, 'readme', 'the id 0.0.4567890', false "
+            "FROM projects"
+        )
+    store.save(parsed(), SHA_B)  # the page no longer names an id
+    assert rows(database, "SELECT entity_id, found_in FROM hedera_ids") == [
+        ("0.0.4567890", "readme")
+    ]
+
+
+def test_a_project_is_saved_whole_or_not_at_all(database: str) -> None:
+    store = ProjectStore(database)
+    bad_id = FoundId("not an id", None, None, "invented words")
+    with pytest.raises(psycopg.errors.CheckViolation):
+        store.save(replace(parsed(**FULL), hedera_ids=(bad_id,)), SHA_A)
+    assert all(found == [] for found in everything(database).values())
+
+    store.save(parsed(**FULL), SHA_A)
+    before = everything(database)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        store.save(replace(parsed(name="Another Name"), hedera_ids=(bad_id,)), SHA_B)
+    after = everything(database)
+    assert after == before  # the page that was there is still there, whole
+
+
+def test_the_counts_say_what_the_tables_hold(database: str) -> None:
+    store = ProjectStore(database)
+    assert store.already_parsed() == {}
+    store.save(parsed(**FULL), SHA_A)
+    store.save(second(), SHA_B)
+    assert store.counts() == {
+        "events": 1,
+        "projects": 2,
+        "prizes": 2,
+        "links": 4,
+        "sections": 4,
+        "hedera_ids": 2,
+        "hedera_prize": 1,
+        "no_prize": 1,
+    }
+    assert store.already_parsed() == {
+        PROJECT_PAGE: (SHA_A, PARSER_VERSION),
+        SECOND_PAGE: (SHA_B, PARSER_VERSION),
+    }
+
+
+# --------------------------------------------------------------------- the rules of the tables
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "UPDATE projects SET prize_state = 'best'",
+        "UPDATE projects SET entry_kind = 'card'",
+        "UPDATE projects SET page_url = 'http://ethglobal.com/showcase/x'",
+        "UPDATE projects SET page_sha256 = 'abc'",
+        "UPDATE projects SET name = ''",
+        "UPDATE hedera_ids SET network = 'ethereum'",
+        "UPDATE hedera_ids SET said_kind = 'coin'",
+        "UPDATE hedera_ids SET entity_id = '0.0.98x'",
+        "UPDATE hedera_ids SET found_in = 'chat'",
+        "UPDATE links SET kind = 'person'",
+        "UPDATE links SET url = 'javascript:alert(1)'",
+        "UPDATE sections SET blocks = '{}'",
+        "UPDATE events SET ends_on = '2026-03-01'",  # before its start
+    ],
+)
+def test_the_tables_refuse_a_value_that_makes_no_sense(database: str, change: str) -> None:
+    ProjectStore(database).save(parsed(**FULL), SHA_A)
+    with pytest.raises(psycopg.errors.CheckViolation), psycopg.connect(database) as conn:
+        conn.execute(change)
+
+
+def test_the_same_id_is_kept_once_for_a_project_also_with_no_network(database: str) -> None:
+    ProjectStore(database).save(parsed(), SHA_A)
+    insert = (
+        "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+        "words_around, in_hashscan_link) "
+        "SELECT id, '0.0.4567890', NULL, NULL, 'readme', 'words', false FROM projects"
+    )
+    with psycopg.connect(database) as conn:
+        conn.execute(insert)
+    with pytest.raises(psycopg.errors.UniqueViolation), psycopg.connect(database) as conn:
+        conn.execute(insert)
+
+
+def test_no_table_of_the_projects_has_a_column_for_a_person(database: str) -> None:
+    # Design rule 11: no team member names, emails or photos.
+    columns = rows(
+        database,
+        "SELECT table_name || '.' || column_name FROM information_schema.columns "
+        "WHERE table_name = ANY(%s)",
+        list(TABLES),
+    )
+    person = re.compile(
+        r"member|author|email|team|person|user|owner|avatar|photo|handle|profile|hacker"
+    )
+    assert len(columns) > 30
+    assert [name for (name,) in columns if person.search(name)] == []
