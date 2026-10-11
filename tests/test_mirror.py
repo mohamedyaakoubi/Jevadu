@@ -4,17 +4,21 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import UTC, datetime
 
 import pytest
 
 from fakes import FakeSite, FakeTime, Reply, session_for
 from hackathon_memory.hedera.mirror import (
+    MIN_GAP_SECONDS,
     MIRROR_URLS,
     MirrorError,
     MirrorNode,
     decode_message,
     hashscan_topic,
     hashscan_transaction,
+    stamp_of,
+    when,
 )
 
 BASE = "https://testnet.mirrornode.hedera.com/api/v1"
@@ -140,3 +144,184 @@ def test_hashscan_links() -> None:
 def test_an_unknown_network_is_refused() -> None:
     with pytest.raises(MirrorError, match="Unknown network"):
         MirrorNode("somewhere")
+
+
+# --------------------------------------------------------------------- the other kinds of thing
+
+ADDRESS = "0x00000000000000000000000000000000002345ab"
+TOKEN = {
+    "token_id": "0.0.7777",
+    "type": "FUNGIBLE_COMMON",
+    "total_supply": "1000000",
+    "created_timestamp": "1785016492.973922171",
+    "modified_timestamp": "1785016492.973922171",
+    "deleted": False,
+}
+CONTRACT = {
+    "contract_id": "0.0.8888",
+    "created_timestamp": "1724791853.156338494",
+    "deleted": False,
+    "evm_address": ADDRESS,
+    "bytecode": "0x" + "60" * 40,
+}
+
+
+def test_a_token_and_a_contract_are_read_and_an_address_serves_as_an_id() -> None:
+    mirror, site, _ = node(
+        {
+            f"{BASE}/tokens/0.0.7777": reply(TOKEN),
+            f"{BASE}/contracts/0.0.8888": reply(CONTRACT),
+            f"{BASE}/contracts/{ADDRESS}": reply(CONTRACT),
+            f"{BASE}/accounts/{ADDRESS}": reply({"account": "0.0.8888"}),
+        }
+    )
+    assert mirror.token("0.0.7777")["type"] == "FUNGIBLE_COMMON"
+    assert mirror.contract("0.0.8888")["contract_id"] == "0.0.8888"
+    assert mirror.contract(ADDRESS)["contract_id"] == "0.0.8888"
+    assert mirror.account(ADDRESS)["account"] == "0.0.8888"
+    assert mirror.token("0.0.9") is None
+    assert mirror.requests_made == len(site.seen) == 5
+
+
+def test_an_address_is_not_an_id_of_a_token_or_a_topic() -> None:
+    mirror, site, _ = node({})
+    for ask in (mirror.token, mirror.topic):
+        with pytest.raises(MirrorError, match="not a Hedera id"):
+            ask(ADDRESS)
+    with pytest.raises(MirrorError, match="not a Hedera id"):
+        mirror.contract("0x1234")
+    assert site.seen == []
+
+
+# --------------------------------------------------------------------- what happened on a thing
+
+SINCE = datetime(2026, 3, 1, tzinfo=UTC)
+UNTIL = datetime(2026, 3, 21, tzinfo=UTC)
+RANGE = "&timestamp=gte:1772323200.000000000&timestamp=lt:1774051200.000000000"
+
+
+def test_a_time_of_the_mirror_node_is_read_and_written() -> None:
+    assert when("1772323200.500000000") == datetime(2026, 3, 1, 0, 0, 0, 500000, tzinfo=UTC)
+    assert stamp_of(SINCE) == "1772323200.000000000"
+    with pytest.raises(MirrorError, match="time zone"):
+        stamp_of(datetime(2026, 3, 1))  # noqa: DTZ001
+
+
+def test_the_messages_of_a_topic_are_asked_from_one_end_and_inside_a_time() -> None:
+    newest = f"{BASE}/topics/0.0.5555/messages?limit=1&order=desc"
+    oldest = f"{BASE}/topics/0.0.5555/messages?limit=1&order=asc{RANGE}"
+    mirror, site, _ = node(
+        {
+            newest: reply({"messages": [MESSAGE | {"sequence_number": 42}], "links": {}}),
+            oldest: reply({"messages": [MESSAGE], "links": {"next": None}}),
+        }
+    )
+    assert mirror.topic_messages("0.0.5555", newest_first=True)[0]["sequence_number"] == 42
+    inside = mirror.topic_messages("0.0.5555", newest_first=False, since=SINCE, until=UNTIL)
+    assert inside == [MESSAGE]
+    assert site.urls == [newest, oldest]
+
+
+def test_a_thing_of_another_kind_has_an_empty_list_and_not_an_error() -> None:
+    # The real node answers 200 with an empty list for the messages of an account.
+    empty = f"{BASE}/topics/0.0.1234/messages?limit=1&order=desc"
+    mirror, _, _ = node({empty: reply({"messages": [], "links": {"next": None}})})
+    assert mirror.topic_messages("0.0.1234", newest_first=True) == []
+    assert mirror.topic_messages("0.0.9", newest_first=True) == []  # a 404
+    assert mirror.contract_results("0.0.9", newest_first=False) == []
+
+
+def test_the_calls_of_a_contract_are_asked_from_one_end() -> None:
+    first = f"{BASE}/contracts/0.0.8888/results?limit=1&order=asc"
+    last = f"{BASE}/contracts/{ADDRESS}/results?limit=2&order=desc{RANGE}"
+    call = {"timestamp": "1724791900.000000001", "result": "SUCCESS"}
+    mirror, site, _ = node(
+        {first: reply({"results": [call]}), last: reply({"results": [call, call]})}
+    )
+    assert mirror.contract_results("0.0.8888", newest_first=False) == [call]
+    in_range = mirror.contract_results(
+        ADDRESS, newest_first=True, since=SINCE, until=UNTIL, limit=2
+    )
+    assert in_range == [call, call]
+    assert site.urls == [first, last]
+
+
+def transactions_page(found: list[dict], following: str | None) -> Reply:
+    return reply({"transactions": found, "links": {"next": following}})
+
+
+PAID = {"consensus_timestamp": "1775400511.765025000", "name": "CRYPTOTRANSFER"}
+START = "/transactions?account.id=0.0.1234&limit=1&order=desc"
+HOP_1 = f"{START}&timestamp=lt:1786499436.730000001"
+HOP_2 = f"{START}&timestamp=lt:1781315436.730000001"
+HOP_3 = f"{START}&timestamp=lt:1776131436.730000001"
+
+
+def test_the_transactions_of_an_account_are_followed_through_the_empty_answers() -> None:
+    # The real node searches 60 days at a time. An empty answer links to the 60 days before.
+    mirror, site, _ = node(
+        {
+            BASE + START: transactions_page([], "/api/v1" + HOP_1),
+            BASE + HOP_1: transactions_page([], "/api/v1" + HOP_2),
+            BASE + HOP_2: transactions_page([], "/api/v1" + HOP_3),
+            BASE + HOP_3: transactions_page([PAID], "/api/v1" + START + "&timestamp=lt:1.0"),
+        }
+    )
+    assert mirror.account_transactions("0.0.1234", newest_first=True) == [PAID]
+    assert site.urls == [BASE + START, BASE + HOP_1, BASE + HOP_2, BASE + HOP_3]
+
+
+def test_the_links_are_not_followed_past_the_time_that_was_asked_for() -> None:
+    since = datetime.fromtimestamp(1783000000, UTC)  # between the first and the second link
+    ranged = f"{START}&timestamp=gte:1783000000.000000000"
+    first_link = ranged + "&timestamp=lt:1786499436.700000000"
+    second_link = ranged + "&timestamp=lt:1781315436.700000000"
+    mirror, site, _ = node(
+        {
+            BASE + ranged: transactions_page([], "/api/v1" + first_link),
+            BASE + first_link: transactions_page([], "/api/v1" + second_link),
+        }
+    )
+    assert mirror.account_transactions("0.0.1234", newest_first=True, since=since) == []
+    assert len(site.seen) == 2  # the link that starts before `since` was not asked
+
+
+def test_an_account_with_nothing_at_all_ends_at_the_last_link() -> None:
+    mirror, site, _ = node({BASE + START: transactions_page([], None)})
+    assert mirror.account_transactions("0.0.1234", newest_first=True) == []
+    assert len(site.seen) == 1
+
+
+def test_only_a_fixed_number_of_links_is_followed() -> None:
+    forever = transactions_page([], "/api/v1" + START)  # a node that always links to itself
+    mirror, site, _ = node({BASE + START: forever})
+    assert mirror.account_transactions("0.0.1234", newest_first=True, max_links=3) == []
+    assert len(site.seen) == 4  # the first question and three links
+
+
+def test_going_forward_in_time_the_links_stop_at_the_end_that_was_asked_for() -> None:
+    until = datetime.fromtimestamp(1720000000, UTC)
+    asc = "/transactions?account.id=0.0.1234&limit=1&order=asc&timestamp=lt:1720000000.000000000"
+    first_link = asc + "&timestamp=gt:1717180520.600000000"
+    second_link = asc + "&timestamp=gt:1722364520.600000000"
+    mirror, site, _ = node(
+        {
+            BASE + asc: transactions_page([], "/api/v1" + first_link),
+            BASE + first_link: transactions_page([], "/api/v1" + second_link),
+        }
+    )
+    assert mirror.account_transactions("0.0.1234", newest_first=False, until=until) == []
+    assert len(site.seen) == 2
+
+
+# --------------------------------------------------------------------- the pace
+
+
+def test_two_requests_in_a_row_keep_a_gap() -> None:
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": reply(TOPIC)})
+    mirror.topic("0.0.5555")
+    mirror.topic("0.0.5555")
+    assert fake_time.sleeps == [MIN_GAP_SECONDS]
+    fake_time.sleep(5)  # time passes by itself
+    mirror.topic("0.0.5555")
+    assert fake_time.sleeps == [MIN_GAP_SECONDS, 5]  # no wait was added
