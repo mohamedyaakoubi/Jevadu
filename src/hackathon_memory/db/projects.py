@@ -12,13 +12,14 @@ back to "not checked", because the ids of the page may have changed.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date
 
 import psycopg
 from psycopg.types.json import Jsonb
 
+from hackathon_memory.parse.hedera_ids import FoundId
 from hackathon_memory.parse.project import ProjectPage
 
 # What saving a project did.
@@ -27,8 +28,9 @@ CHANGED = "changed"
 SAME = "same"
 
 FULL_CARD = "full_card"
-# Where an id was found. The parser of a page writes only ids of the first kind.
+# Where an id was found: on the page of the project, or in the README of its code.
 ON_THE_PAGE = "page"
+IN_THE_README = "readme"
 
 
 @dataclass
@@ -188,6 +190,43 @@ class ProjectStore:
                     for found in page.hedera_ids
                 ],
             )
+
+    def save_readme_ids(self, project_id: int, ids: Sequence[FoundId]) -> bool:
+        """Keep the ids that the README of the project's code gives, in their order.
+
+        Returns True when they changed. Then the result of the proof rule for the project is
+        set back to "not checked". The same ids again change nothing, and the ids of the page
+        are never touched.
+        """
+        new = [
+            (found.entity_id, found.network, found.said_kind, found.words_around,
+             found.in_hashscan_link)
+            for found in ids
+        ]  # fmt: skip
+        with psycopg.connect(self._conninfo) as conn:
+            old = conn.execute(
+                "SELECT entity_id, network, said_kind, words_around, in_hashscan_link "
+                "FROM hedera_ids WHERE project_id = %s AND found_in = %s ORDER BY id",
+                (project_id, IN_THE_README),
+            ).fetchall()
+            if [tuple(row) for row in old] == new:
+                return False
+            conn.execute(
+                "DELETE FROM hedera_ids WHERE project_id = %s AND found_in = %s",
+                (project_id, IN_THE_README),
+            )
+            with conn.cursor() as cursor:
+                cursor.executemany(
+                    "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, "
+                    "found_in, words_around, in_hashscan_link) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    [
+                        (project_id, entity, network, kind, IN_THE_README, words, in_link)
+                        for entity, network, kind, words, in_link in new
+                    ],
+                )
+            conn.execute("UPDATE projects SET proof_status = NULL WHERE id = %s", (project_id,))
+        return True
 
     def counts(self) -> dict[str, int]:
         """How many rows the tables hold, and how many projects of each prize state."""
