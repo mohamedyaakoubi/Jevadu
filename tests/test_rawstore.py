@@ -100,3 +100,34 @@ def test_the_robots_file_is_kept_next_to_the_pages(tmp_path: Path) -> None:
     )
     assert store.has(robots, ".txt")
     assert not store.has(robots, ".html")
+
+
+def test_the_saved_pages_are_listed_in_a_fixed_order_without_the_robots_file(
+    tmp_path: Path,
+) -> None:
+    store = RawStore(tmp_path)
+    assert store.saved() == []
+    first = "https://ethglobal.com/showcase/pebble-pay-x1y2z"
+    second = "https://ethglobal.com/showcase/quartz-notes-q3w4e"
+    robots = "https://ethglobal.com/robots.txt"
+    for url in (second, first):
+        store.save(fetch(url), url.encode(), received=url.encode(), collector="T/1")
+    store.save(fetch(robots), b"User-agent: *", received=b"x", collector="T/1", suffix=".txt")
+
+    pages = store.saved()
+    assert sorted(page.url for page in pages) == [first, second]
+    assert [page.url for page in pages] == [page.url for page in store.saved()]  # the same order
+    assert all(page.read() == page.url.encode() for page in pages)
+    assert all(page.meta == store.load(page.url).meta for page in pages)  # type: ignore[union-attr]
+    assert [page.url for page in store.saved(".txt")] == [robots]
+
+
+def test_a_small_file_whose_page_is_missing_is_not_listed(tmp_path: Path) -> None:
+    store = RawStore(tmp_path)
+    store.save(fetch(), b"page", received=b"page", collector="T/1")
+    store.load(URL).body_path.unlink()  # type: ignore[union-attr]  # half of a save is left
+    assert store.saved() == []
+
+
+def test_a_folder_that_does_not_exist_yet_holds_no_page(tmp_path: Path) -> None:
+    assert RawStore(tmp_path / "not" / "made" / "yet").saved() == []

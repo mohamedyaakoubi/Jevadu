@@ -68,6 +68,20 @@ class RawStore:
     def has(self, url: str, suffix: str = ".html") -> bool:
         return self.load(url, suffix) is not None
 
+    def saved(self, suffix: str = ".html") -> list[SavedPage]:
+        """Every saved page of this folder, always in the same order.
+
+        A file of another kind (robots.txt) is not a page, and neither is a small file whose
+        page is missing.
+        """
+        pages: list[SavedPage] = []
+        for meta_path in sorted(self.folder.glob("*.meta.json")):
+            body_path = meta_path.with_name(meta_path.name.removesuffix(".meta.json") + suffix)
+            if body_path.exists():
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                pages.append(SavedPage(meta["source_url"], body_path, meta_path, meta))
+        return pages
+
     def save(
         self,
         fetch: FetchResult,

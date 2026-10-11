@@ -12,7 +12,6 @@ events. It holds no text of a page, no address of a project and nothing about a 
 
 from __future__ import annotations
 
-import json
 import statistics
 import sys
 from collections import Counter
@@ -44,16 +43,6 @@ DOES_NOT_PROVE = [
     "That the parser can read these pages. That is the next phase.",
     "Anything about the other sites. Only ethglobal.com was read.",
 ]
-
-
-def _saved_pages(store: RawStore) -> list[dict]:
-    """The small file of every saved project page (not of robots.txt)."""
-    metas = []
-    for meta_path in sorted(store.folder.glob("*.meta.json")):
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        if store.has(meta["source_url"]):  # a page saved as .html
-            metas.append(meta)
-    return metas
 
 
 def _seconds(stamp: str) -> float:
@@ -110,7 +99,7 @@ def run(settings: Settings | None = None) -> int:
     except CollectorRefused as refusal:
         result.check("the records of the runs can be read", False, str(refusal))
         return result.finish()
-    metas = _saved_pages(store)
+    metas = [page.meta for page in store.saved()]  # the project pages, not robots.txt
     saved = {meta["source_url"] for meta in metas}
     accounted = (not_kept | not_found) - saved
     not_read = plan - saved - accounted
