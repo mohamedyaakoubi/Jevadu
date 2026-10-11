@@ -219,6 +219,12 @@ def report(
         True,
         "on" if settings.collect_ethglobal else "off (a live run needs it on, after your yes)",
     )
+    add(
+        "-",
+        "COLLECT_GITHUB (the stop switch)",
+        True,
+        "on" if settings.collect_github else "off (reading READMEs needs it on)",
+    )
 
     for proof, name in PROOFS.items():
         ok, note = latest_result(root, proof)

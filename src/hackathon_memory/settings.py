@@ -93,6 +93,8 @@ class Settings(BaseSettings):
     collector_contact_email: SecretStr = SecretStr("")
     # One switch per site. "off" is the default: a collector runs only when it is turned on.
     collect_ethglobal: bool = Field(False, json_schema_extra=_PUBLIC)
+    # GitHub's API: the README and the facts of the code of each project (design 7.3).
+    collect_github: bool = Field(False, json_schema_extra=_PUBLIC)
 
     @field_validator("llm_environment", mode="before")
     @classmethod
