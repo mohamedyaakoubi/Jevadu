@@ -6,7 +6,8 @@ a second time does nothing. So the step that parses the saved pages is safe to r
 (design 11.6), and it reads a page again only when the page or the parser has changed.
 
 What the check adds later (ids found in a README, facts of the ledger and of the code) is not
-touched when a page is parsed again.
+touched when a page is parsed again. Only the result of the proof rule for that project is set
+back to "not checked", because the ids of the page may have changed.
 """
 
 from __future__ import annotations
@@ -73,8 +74,8 @@ class ProjectStore:
                 conn.execute(
                     "UPDATE projects SET site = %s, site_key = %s, entry_kind = %s, "
                     "event_id = %s, name = %s, short_line = %s, prize_state = %s, "
-                    "has_video = %s, page_sha256 = %s, parser = %s, parsed_at = now() "
-                    "WHERE id = %s",
+                    "has_video = %s, page_sha256 = %s, parser = %s, parsed_at = now(), "
+                    "proof_status = NULL WHERE id = %s",  # its ids may have changed
                     (*facts, project_id),
                 )
                 for table in ("prizes", "links", "sections"):
