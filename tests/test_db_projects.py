@@ -173,9 +173,10 @@ def test_a_changed_page_replaces_the_parts_and_keeps_the_project(database: str) 
 def test_a_new_parser_reads_a_page_again(database: str) -> None:
     store = ProjectStore(database)
     store.save(parsed(), SHA_A)
-    assert store.save(replace(parsed(), parser="ethglobal-page-2"), SHA_A) == CHANGED
-    assert rows(database, "SELECT parser FROM projects") == [("ethglobal-page-2",)]
-    assert store.already_parsed() == {PROJECT_PAGE: (SHA_A, "ethglobal-page-2")}
+    next_version = f"{PARSER_VERSION}-next"
+    assert store.save(replace(parsed(), parser=next_version), SHA_A) == CHANGED
+    assert rows(database, "SELECT parser FROM projects") == [(next_version,)]
+    assert store.already_parsed() == {PROJECT_PAGE: (SHA_A, next_version)}
 
 
 def test_two_projects_of_one_event_share_it_and_an_end_typed_by_hand_stays(database: str) -> None:

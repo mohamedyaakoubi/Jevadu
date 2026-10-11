@@ -14,7 +14,7 @@ from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.db.runs import Run, last_runs, recorded_run
-from hackathon_memory.parse.ethglobal_page import read_project_page
+from hackathon_memory.parse.ethglobal_page import PARSER_VERSION, read_project_page
 from hackathon_memory.parse.project import ProjectPage
 from hackathon_memory.pipeline.__main__ import main
 from hackathon_memory.pipeline.parse_pages import EDITED, STEP, parse_saved_pages
@@ -144,10 +144,12 @@ def test_a_limit_reads_the_pages_that_were_saved_first(database: str, raw: RawSt
 def test_a_new_parser_reads_every_page_again(database: str, raw: RawStore) -> None:
     run_step(database, raw)
 
-    def newer(body: bytes, page: str) -> ProjectPage:
-        return replace(read_project_page(body, page), parser="ethglobal-page-2")
+    next_version = f"{PARSER_VERSION}-next"
 
-    again = run_step(database, raw, read=newer, parser="ethglobal-page-2")
+    def newer(body: bytes, page: str) -> ProjectPage:
+        return replace(read_project_page(body, page), parser=next_version)
+
+    again = run_step(database, raw, read=newer, parser=next_version)
     assert dict(again.counts) == {"pages": 3, "changed": 3}
 
 
