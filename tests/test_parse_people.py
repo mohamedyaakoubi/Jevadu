@@ -11,6 +11,7 @@ from hackathon_memory.parse.people import (
     HIDDEN_LINK,
     PROFILE_SITES,
     hide_in_box,
+    hide_in_code,
     hide_in_text,
     profile_site,
 )
@@ -127,7 +128,7 @@ def test_hiding_twice_changes_nothing_more() -> None:
 # --------------------------------------------------------------------- in a part of a page
 
 
-def test_the_texts_of_a_box_are_hidden_and_its_code_is_left_alone() -> None:
+def test_the_texts_of_a_box_are_hidden_and_in_its_code_only_an_address() -> None:
     page = box(
         "<p>Built by <strong>@quill</strong> and @reed.</p>"
         "<p>We use <code>@sample-scope/sdk</code> and the mark <code>@Override</code>.</p>"
@@ -135,15 +136,43 @@ def test_the_texts_of_a_box_are_hidden_and_its_code_is_left_alone() -> None:
         "<ul><li>Write to quill@example.test</li></ul>"
         "<script>var handle = '@hidden_from_nobody';</script>"
     )
-    assert hide_in_box(page) == 3
+    assert hide_in_box(page) == 4
     text = page.get_text(" ")
     assert f"Built by {HIDDEN_HANDLE} and {HIDDEN_HANDLE}." in " ".join(text.split())
     assert f"Write to {HIDDEN_ADDRESS}" in text
-    # Inside code an @ belongs to the language, and nothing is touched.
+    # Inside code an @ belongs to the language, and only an email address is hidden.
     assert "@sample-scope/sdk" in text and "@Override" in text
-    assert "@media (max-width: 600px)" in text and "someone@example.test" in text
+    assert "@media (max-width: 600px)" in text
+    assert f"mail = '{HIDDEN_ADDRESS}'" in text
     assert "@hidden_from_nobody" in str(page)  # a script is not text of the page
     assert "quill" not in text and "reed" not in text  # no name of a person is left
+
+
+@pytest.mark.parametrize(
+    ("code", "shown"),
+    [
+        ("git config user.email quill@example.test", f"git config user.email {HIDDEN_ADDRESS}"),
+        ("ADMIN = 'quill.invented@mail.example.test'", f"ADMIN = '{HIDDEN_ADDRESS}'"),
+    ],
+)
+def test_in_code_an_email_address_is_hidden(code: str, shown: str) -> None:
+    assert hide_in_code(code) == (shown, 1)
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "@media (max-width: 600px) { }",
+        "@Override public void pay() {}",
+        "import { Client } from '@sample-scope/sdk'",
+        "npm install @sample-scope/sdk@2.1.0",
+        '@app.route("/pay")',
+        'const quill = "@quill_invented"  // a handle in code is code',
+        "see x.com/quill_invented",  # a link in code too
+    ],
+)
+def test_in_code_nothing_but_an_address_is_touched(code: str) -> None:
+    assert hide_in_code(code) == (code, 0)
 
 
 def test_a_box_with_no_word_about_people_is_not_changed() -> None:

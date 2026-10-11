@@ -20,7 +20,8 @@ by `profile_site`. Its address is then not kept: only the name of the site is.
 What is not hidden:
 
 * the name of a package, which has a slash after its first part ("@scope/package");
-* anything inside code. There an "@" belongs to the language, as in "@media" or "@Override";
+* anything inside code but an email address. There an "@" belongs to the language, as in
+  "@media" or "@Override";
 * a link to a video, or to the code: an address on GitHub with an account and a repository.
   The name of the account is part of that link, and the link is what a card needs.
 
@@ -163,8 +164,18 @@ def profile_site(url: str) -> str | None:
     return next((site for site in PROFILE_SITES if host == site or host.endswith("." + site)), None)
 
 
+def hide_in_code(text: str) -> tuple[str, int]:
+    """Code with its email addresses hidden, and how many were hidden.
+
+    Inside code an "@" belongs to the language ("@media", "@Override", "@scope/package"), so
+    nothing else is touched there. An email address is still an address.
+    """
+    return _hide(ADDRESS, _address, text)
+
+
 def hide_in_box(box: Tag) -> int:
-    """Hide the words about people in the texts inside `box`, in place. Code is left alone.
+    """Hide the words about people in the texts inside `box`, in place. In code, only email
+    addresses are hidden.
 
     Returns how many words were hidden.
     """
@@ -172,9 +183,8 @@ def hide_in_box(box: Tag) -> int:
     for string in list(box.find_all(string=True)):
         if type(string) is not NavigableString:  # a comment is not text
             continue
-        if any(parent.name in _CODE_TAGS for parent in string.parents):
-            continue
-        shown, count = hide_in_text(str(string))
+        in_code = any(parent.name in _CODE_TAGS for parent in string.parents)
+        shown, count = (hide_in_code if in_code else hide_in_text)(str(string))
         if count:
             string.replace_with(shown)
             hidden += count
