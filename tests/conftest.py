@@ -48,10 +48,27 @@ def no_setting_in_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name.upper(), raising=False)
 
 
+class ConnectionText(str):
+    """A connection text that does not show itself.
+
+    It holds a password. When a test fails, pytest prints the values that the test was given,
+    and a plain text would be printed whole. This one prints as a short note. It is still the
+    real text for the database driver.
+
+    One way to print it is left: a test that compares this text with another text and fails
+    gets both texts printed side by side. So no test compares a connection text.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "<connection text, not shown>"
+
+
 @pytest.fixture(scope="session")
 def server_conninfo() -> str:
     """The local PostgreSQL server. Holds a password: never print it."""
-    info = Settings(_env_file=ROOT / ".env").database_conninfo()
+    info = ConnectionText(Settings(_env_file=ROOT / ".env").database_conninfo())
     try:
         with psycopg.connect(info, connect_timeout=5):
             pass
@@ -68,7 +85,7 @@ def empty_database(server_conninfo: str) -> Iterator[str]:
     with psycopg.connect(server_conninfo, autocommit=True) as admin:
         admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
     try:
-        yield make_conninfo(server_conninfo, dbname=name)
+        yield ConnectionText(make_conninfo(server_conninfo, dbname=name))
     finally:
         with psycopg.connect(server_conninfo, autocommit=True) as admin:
             admin.execute(
