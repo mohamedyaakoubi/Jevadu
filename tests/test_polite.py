@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -18,6 +18,7 @@ from hackathon_memory.collect.polite import (
     PoliteClient,
     RequestCount,
     StopCollecting,
+    TooManyRequests,
     _NoCookies,
 )
 from hackathon_memory.settings import Settings
@@ -208,6 +209,9 @@ def test_a_request_that_is_not_allowed_is_not_counted(tmp_path: Path) -> None:
         '{"site": "ethglobal.com", "sent": -1, "by_day": {}}',
         '{"site": "ethglobal.com", "sent": "many", "by_day": {}}',
         '{"site": "ethglobal.com", "sent": 1}',
+        '{"site": "ethglobal.com", "sent": 1, "by_day": {}, "not_before": "soon"}',
+        '{"site": "ethglobal.com", "sent": 1, "by_day": {}, "refused": {"status": 403}}',
+        '{"site": "ethglobal.com", "sent": 1, "by_day": {}, "min_pause_seconds": -1}',
     ],
 )
 def test_a_count_that_cannot_be_read_is_never_taken_for_zero(tmp_path: Path, content: str) -> None:
@@ -236,6 +240,198 @@ def test_notes_in_the_count_file_are_kept(tmp_path: Path) -> None:
     record = json.loads(count.path.read_text(encoding="utf-8"))
     assert record["sent"] == 25
     assert record["notes"] == ["by hand"]
+
+
+# --------------------------------------------------- "too many requests" is a speed limit
+
+START = datetime(2026, 10, 11, 0, 0, tzinfo=UTC)
+TOO_MANY = Reply(429, b"slow down")
+
+
+def slowed(tmp_path: Path, pages, **options):
+    """A client whose count keeps time with the fake clock, so that a cooldown can pass."""
+    site, fake_time = FakeSite(pages), FakeTime()
+    count = RequestCount(
+        tmp_path / "requests" / "ethglobal.com.json",
+        "ethglobal.com",
+        now=lambda: START + timedelta(seconds=fake_time.now - 1000.0),
+    )
+    client = PoliteClient(
+        site="ethglobal.com",
+        identity=CollectorIdentity(name=NAME, contact=CONTACT),
+        allow=lambda url: True,
+        is_enabled=lambda: True,
+        session=session_for(site),
+        clock=fake_time.clock,
+        sleep=fake_time.sleep,
+        count=count,
+        **options,
+    )
+    return client, site, fake_time
+
+
+def test_too_many_requests_stops_at_once_and_is_not_a_no(tmp_path: Path) -> None:
+    client, site, _ = slowed(tmp_path, {A: Reply(429, b"slow down", {"Retry-After": "30"}), B: OK})
+    with pytest.raises(TooManyRequests, match="too many requests") as stop:
+        client.get(A)
+    assert "The site asks to wait: 30." in str(stop.value)
+    assert len(site.seen) == 1  # no second try
+    assert client.count.refusal() is None  # a speed limit is not a no
+    assert client.count.wait_left() == 3600  # one hour, although the site asked for less
+    assert client.count.min_pause() == 10.0  # five times the two seconds that were too fast
+    record = json.loads(client.count.path.read_text(encoding="utf-8"))
+    assert record["too_many"] == [
+        {"at": "2026-10-11T00:00:00Z", "asked_to_wait": "30", "pause_seconds": 2.0}
+    ]
+    assert record["not_before"] == "2026-10-11T01:00:00Z"
+
+
+def test_nothing_is_sent_before_the_cooldown_is_over(tmp_path: Path) -> None:
+    client, site, fake_time = slowed(tmp_path, {A: TOO_MANY, B: OK})
+    with pytest.raises(TooManyRequests):
+        client.get(A)
+    with pytest.raises(StopCollecting, match="cooldown runs until 2026-10-11T01:00:00Z"):
+        client.get(B)
+    fake_time.sleep(3599)
+    with pytest.raises(StopCollecting, match="cooldown"):
+        client.get(B)
+    assert site.urls == [A]  # nothing was sent during the hour
+    fake_time.sleep(1)
+    assert client.get(B).status == 200
+
+
+def test_after_a_cooldown_the_pause_is_five_times_longer_for_every_later_client(
+    tmp_path: Path,
+) -> None:
+    client, _, fake_time = slowed(tmp_path, {A: TOO_MANY})
+    with pytest.raises(TooManyRequests):
+        client.get(A)
+    fake_time.sleep(3600)
+
+    later, _, later_time = slowed(tmp_path, {B: OK, C: OK})  # another command, another day
+    later_time.now = fake_time.now
+    later.get(B)
+    later.get(C)
+    assert later.pause_in_use() == 10.0
+    assert later_time.sleeps == [10.0]
+
+
+@pytest.mark.parametrize(
+    ("asked", "seconds"),
+    [
+        ("7200", 7200),  # the site asks for two hours
+        ("Sun, 11 Oct 2026 03:00:00 GMT", 10800),  # the same thing written as a date
+        ("59", 3600),  # less than our hour: the hour stays
+        ("soon", 3600),  # something we cannot read: the hour stays
+    ],
+)
+def test_a_site_that_names_a_longer_wait_gets_it(tmp_path: Path, asked: str, seconds: int) -> None:
+    client, _, _ = slowed(tmp_path, {A: Reply(429, b"", {"Retry-After": asked})})
+    with pytest.raises(TooManyRequests):
+        client.get(A)
+    assert client.count.wait_left() == seconds
+
+
+def test_a_client_that_was_told_to_wait_sleeps_through_the_cooldown_and_goes_on(
+    tmp_path: Path,
+) -> None:
+    client, site, fake_time = slowed(tmp_path, {A: TOO_MANY, B: OK}, wait_for_cooldown=True)
+    with pytest.raises(TooManyRequests):
+        client.get(A)  # the refused request itself is never repeated by the client
+    assert client.get(B).status == 200
+    assert fake_time.sleeps == [3600.0]
+    assert client.cooldowns_waited == 1
+    assert site.urls == [A, B]
+
+
+def test_the_switch_still_stops_a_client_that_waited(tmp_path: Path) -> None:
+    state = {"on": True}
+    client, site, fake_time = slowed(tmp_path, {A: TOO_MANY, B: OK}, wait_for_cooldown=True)
+    client.is_enabled = lambda: state["on"]
+    with pytest.raises(TooManyRequests):
+        client.get(A)
+    client.sleep = lambda seconds: (fake_time.sleep(seconds), state.update(on=False))
+    with pytest.raises(StopCollecting, match="switch"):
+        client.get(B)  # somebody turned the switch off during the hour
+    assert site.urls == [A]
+
+
+def test_a_third_time_within_a_day_is_taken_for_a_no(tmp_path: Path) -> None:
+    pages = {A: TOO_MANY, B: TOO_MANY, C: TOO_MANY}
+    client, site, fake_time = slowed(tmp_path, pages, wait_for_cooldown=True)
+    with pytest.raises(TooManyRequests):
+        client.get(A)
+    with pytest.raises(TooManyRequests):
+        client.get(B)  # after one hour, at 10 seconds: too many again
+    assert client.count.min_pause() == 50.0
+    assert client.count.refusal() is None
+    with pytest.raises(TooManyRequests, match="a person decides now"):
+        client.get(C)
+    assert client.count.refusal()["status"] == 429
+    waited = len(fake_time.sleeps)
+    with pytest.raises(StopCollecting, match="refused a request"):
+        client.get("https://ethglobal.com/showcase/d-four")
+    assert len(site.seen) == 3  # nothing more is sent, and nothing is waited for
+    assert len(fake_time.sleeps) == waited
+
+
+def test_two_times_on_two_days_are_two_speed_limits_and_not_a_no(tmp_path: Path) -> None:
+    client, _, fake_time = slowed(tmp_path, {A: TOO_MANY, B: TOO_MANY, C: TOO_MANY})
+    for url in (A, B, C):
+        with pytest.raises(TooManyRequests):
+            client.get(url)
+        fake_time.sleep(25 * 3600)  # more than a day later
+    assert client.count.refusal() is None
+
+
+# --------------------------------------------------- a no of the site needs a person
+
+
+def test_a_no_of_the_site_is_remembered_until_a_person_decides(tmp_path: Path) -> None:
+    client, site, _ = slowed(tmp_path, {A: Reply(403, b"no"), B: OK})
+    with pytest.raises(StopCollecting, match="says no"):
+        client.get(A)
+    assert client.count.refusal()["status"] == 403
+
+    later, later_site, _ = slowed(tmp_path, {B: OK})  # another command
+    with pytest.raises(StopCollecting, match="refused a request on 2026-10-11T00:00:00Z"):
+        later.get(B)
+    assert later_site.seen == []
+
+    assert later.count.clear_refusal("the site wrote that the tool may go on") is True
+    assert later.count.clear_refusal("again") is False  # there is nothing left to clear
+    assert later.get(B).status == 200
+    record = json.loads(later.count.path.read_text(encoding="utf-8"))
+    assert "refused" not in record
+    assert "the site wrote that the tool may go on" in record["notes"][0]
+    assert later.count.wait_left() == 0  # a no brings no cooldown and no slower pace
+    assert later.pause_in_use() == 2.0
+
+
+def test_a_bot_check_is_a_no_too(tmp_path: Path) -> None:
+    client, _, _ = slowed(tmp_path, {A: Reply(200, b"x", {"cf-mitigated": "challenge"})})
+    with pytest.raises(StopCollecting, match="says no"):
+        client.get(A)
+    assert client.count.refusal()["status"] == 200
+
+
+def test_the_headers_about_limits_are_kept_and_nothing_else(tmp_path: Path) -> None:
+    headers = {
+        "CF-Cache-Status": "HIT",
+        "X-RateLimit-Remaining": "12",
+        "Age": "40",
+        "Set-Cookie": "session=abc",
+        "X-Something-Else": "a value",
+    }
+    client, _, _ = slowed(tmp_path, {A: Reply(200, b"ok", headers), B: Reply(200, b"ok", headers)})
+    client.get(A)
+    client.get(B)
+    assert client.site_headers == {
+        "cf-cache-status": "HIT",
+        "x-ratelimit-remaining": "12",
+        "age": "40",
+    }
+    assert client.cache_answers == {"cf-cache-status: HIT": 2}
 
 
 # --------------------------------------------------- "only the pages we named"
@@ -297,7 +493,7 @@ def test_turning_the_switch_off_during_a_run_stops_it_before_the_next_request() 
 # --------------------------------------------------- "never work around a block"
 
 
-@pytest.mark.parametrize("status", [401, 403, 429, 451])
+@pytest.mark.parametrize("status", [401, 403, 451])
 def test_a_refusal_stops_the_run_at_once_with_no_second_try(status: int) -> None:
     client, site, _ = make({A: Reply(status, b"no")})
     with pytest.raises(StopCollecting, match="says no"):

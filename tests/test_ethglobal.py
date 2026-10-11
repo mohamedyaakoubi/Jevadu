@@ -16,6 +16,7 @@ from hackathon_memory.collect.ethglobal import (
     EthGlobalCollector,
     SiteShape,
     build_collector,
+    clear_refusal,
     is_allowed_url,
     load_project_pages,
     pages_in_run_records,
@@ -971,3 +972,134 @@ def test_the_plan_says_what_would_be_read_and_makes_no_request(tmp_path: Path) -
 def test_the_plan_says_when_the_list_is_missing(tmp_path: Path) -> None:
     text = "\n".join(plan(_settings(tmp_path)))
     assert "missing" in text
+
+
+# --------------------------------------------------------------------- too many requests
+
+
+def _built(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, site_pages: dict, **options):
+    """A collector as the command builds it, with its count on disk, on the invented site."""
+    monkeypatch.delenv("COLLECT_ETHGLOBAL", raising=False)
+    folder = tmp_path / "by-hand" / "ethglobal.com"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "project-pages.txt").write_text(f"{WINNER}\n{SECOND}\n", encoding="utf-8")
+    env_file = tmp_path / ".env"
+    env_file.write_text("COLLECT_ETHGLOBAL=on\n", encoding="utf-8")
+    site, fake_time = FakeSite(site_pages), FakeTime()
+    collector = build_collector(
+        _settings(tmp_path),
+        env_file=env_file,
+        session=session_for(site),
+        clock=fake_time.clock,
+        sleep=fake_time.sleep,
+        **options,
+    )
+    collector.log = lambda message: None
+    return collector, site, fake_time
+
+
+TOO_MANY = Reply(429, b"slow down")
+
+
+def test_too_many_requests_stop_a_run_and_the_next_command_waits_for_the_cooldown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    collector, site, _ = _built(tmp_path, monkeypatch, pages(second=TOO_MANY))
+    summary = collector.run()
+    assert site.urls == [ROBOTS_URL, WINNER, SECOND]  # no second try
+    assert "too many requests" in (summary.stopped or "")
+    assert collector.store.has(WINNER)
+    assert not collector.store.has(SECOND)
+
+    # The next command, a minute later: it is refused before it is built, and it says until when.
+    with pytest.raises(CollectorRefused, match="cooldown runs until") as refusal:
+        _built(tmp_path, monkeypatch, pages())
+    assert "--wait" in str(refusal.value)
+    text = "\n".join(plan(_settings(tmp_path)))
+    assert 'said "too many requests". The cooldown runs until' in text
+    assert "the pause between two requests is 10 seconds" in text
+
+
+def test_a_run_that_was_told_to_wait_goes_on_by_itself_and_slower(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The site says "too many requests" once for the second page, and answers it the next time.
+    site_pages = pages() | {SECOND: [TOO_MANY, winner("Quartz Notes")]}
+    said: list[str] = []
+    collector, site, fake_time = _built(tmp_path, monkeypatch, site_pages, wait_for_cooldown=True)
+    collector.log = said.append
+    summary = collector.run()
+
+    assert site.urls == [ROBOTS_URL, WINNER, SECOND, SECOND]
+    assert summary.stopped is None
+    assert summary.pages_saved == 2
+    assert summary.cooldowns_waited == 1
+    assert any(line.startswith("WAITING: ethglobal.com answered 429") for line in said)
+    assert max(fake_time.sleeps) > 3590  # the hour of the cooldown
+    assert collector.client.pause_in_use() == 10.0  # and five times slower from then on
+
+
+def test_a_run_that_starts_during_a_cooldown_waits_first_when_it_was_told_to(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first, _, _ = _built(tmp_path, monkeypatch, pages(second=TOO_MANY))
+    first.run()
+    later, site, fake_time = _built(tmp_path, monkeypatch, pages(), wait_for_cooldown=True)
+    summary = later.run()
+    assert site.urls == [SECOND]  # robots.txt and the first page are saved
+    assert summary.pages_saved == 1
+    assert fake_time.sleeps[0] > 3590  # it waited before its first request
+    assert summary.pause_seconds == 10.0
+
+
+def test_a_no_of_the_site_stops_every_later_command_until_a_person_decides(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    collector, _, _ = _built(tmp_path, monkeypatch, pages(second=Reply(403, b"no")))
+    assert "says no" in (collector.run().stopped or "")
+    with pytest.raises(CollectorRefused, match="refused a request") as refusal:
+        _built(tmp_path, monkeypatch, pages(), wait_for_cooldown=True)  # waiting does not help
+    assert "--after-refusal" in str(refusal.value)
+    assert "refused a request" in "\n".join(plan(_settings(tmp_path)))
+
+    with pytest.raises(CollectorRefused, match="what was decided"):
+        clear_refusal(_settings(tmp_path), "   ")
+    lines = clear_refusal(
+        _settings(tmp_path), "the site wrote on 12 October that the tool may go on"
+    )
+    assert lines == ["The refusal is cleared, and the decision is written next to the count."]
+    assert clear_refusal(_settings(tmp_path), "again") == ["There is no refusal to clear."]
+    later, site, _ = _built(tmp_path, monkeypatch, pages())
+    assert later.run().pages_saved == 1
+    assert site.urls == [SECOND]
+
+
+def test_the_pause_can_be_made_longer_and_never_shorter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    collector, _, fake_time = _built(tmp_path, monkeypatch, pages(), pause_seconds=7.0)
+    collector.run()
+    assert fake_time.sleeps == [7.0, 7.0]
+    with pytest.raises(CollectorRefused, match="never shorter than 2 seconds"):
+        _built(tmp_path, monkeypatch, pages(), pause_seconds=1.0)
+
+
+def test_the_record_of_a_run_keeps_what_the_site_said_about_its_limits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = sample("project_winner.html")
+    limits = {"Content-Type": "text/html", "CF-Cache-Status": "MISS", "Set-Cookie": "a=b"}
+    site_pages = pages() | {WINNER: Reply(200, body, limits)}
+    said: list[str] = []
+    collector, _, _ = _built(tmp_path, monkeypatch, site_pages)
+    collector.log = said.append
+    collector.run()
+    # Said once, early, so that a person can see it while a long run goes on.
+    assert [line for line in said if line.startswith("the site says about limits")] == [
+        "the site says about limits and caches: {'cf-cache-status': 'MISS'}"
+    ]
+    record = json.loads(next((tmp_path / "runs").glob("*-ethglobal.json")).read_text("utf-8"))
+    assert record["site_headers"] == {"cf-cache-status": "MISS"}
+    assert record["cache_answers"] == {"cf-cache-status: MISS": 1}
+    assert record["pause_seconds"] == 2.0
+    assert "a=b" not in json.dumps(record)  # no cookie, and no other header

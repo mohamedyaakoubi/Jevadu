@@ -62,12 +62,14 @@ from hackathon_memory.collect.ethglobal_site import (
     looks_like_a_project_page,
 )
 from hackathon_memory.collect.polite import (
+    PAUSE_SECONDS,
     CollectorIdentity,
     CollectorRefused,
     FetchFailed,
     PoliteClient,
     RequestCount,
     StopCollecting,
+    TooManyRequests,
 )
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
 from hackathon_memory.collect.robots import RobotsRules, obey_crawl_delay, read_rules
@@ -246,6 +248,11 @@ class RunSummary:
     # Pages of the list that this run did not ask for, because it was told to read only some.
     pages_left_for_later: int = 0
     requests_made: int = 0
+    pause_seconds: float = 0.0  # the pause between two requests in this run
+    cooldowns_waited: int = 0  # how often this run waited for the end of a cooldown
+    # What the answers of the site said about limits and caches: header names and values.
+    site_headers: dict[str, str] = field(default_factory=dict)
+    cache_answers: dict[str, int] = field(default_factory=dict)
     stopped: str | None = None
 
 
@@ -281,6 +288,7 @@ class EthGlobalCollector:
         self._unsafe_in_a_row = 0
         self._without_prize_in_a_row = 0
         self._different_in_a_row = 0
+        self._limits_said = False
 
     # ------------------------------------------------------------------ public
 
@@ -291,7 +299,11 @@ class EthGlobalCollector:
                 "No live run before that."
             )
         not_kept_before = read_and_not_kept(self.runs_dir)
-        summary = RunSummary(started_at=_now(), project_pages_planned=len(self.project_pages))
+        summary = RunSummary(
+            started_at=_now(),
+            project_pages_planned=len(self.project_pages),
+            pause_seconds=self.client.pause_in_use(),
+        )
         asked = 0
         try:
             for url in self.project_pages:
@@ -303,17 +315,33 @@ class EthGlobalCollector:
                     summary.pages_left_for_later += 1
                 else:
                     asked += 1
-                    self._fetch_and_save(url, self.shape.project_cut, summary)
+                    self._fetch_and_save_when_allowed(url, summary)
         except StopCollecting as stop:
             summary.stopped = str(stop)
             self.log(f"STOPPED: {stop}")
         finally:
             summary.finished_at = _now()
             summary.requests_made = self.client.requests_made
+            summary.cooldowns_waited = self.client.cooldowns_waited
+            summary.site_headers = dict(self.client.site_headers)
+            summary.cache_answers = dict(self.client.cache_answers)
             self._write_manifest(summary)
         return summary
 
     # ------------------------------------------------------------------ steps
+
+    def _fetch_and_save_when_allowed(self, url: str, summary: RunSummary) -> None:
+        """One page. After "too many requests" the same page is asked for again, but only when
+        the run was told to wait for the end of a cooldown. The client does the waiting, and it
+        stops for good when the site has said it too often."""
+        while True:
+            try:
+                self._fetch_and_save(url, self.shape.project_cut, summary)
+                return
+            except TooManyRequests as slow_down:
+                if not self.client.wait_for_cooldown:
+                    raise
+                self.log(f"WAITING: {slow_down}")
 
     def _fetch_and_save(self, url: str, policy: CutPolicy, summary: RunSummary) -> SavedPage | None:
         self._check_robots(url)
@@ -322,6 +350,10 @@ class EthGlobalCollector:
         except FetchFailed as error:
             summary.errors.append({"url": url, "kind": str(error)})
             return None
+        if not self._limits_said and self.client.site_headers:
+            # Said once, early, so that a person can see what the site counts while a run goes.
+            self._limits_said = True
+            self.log(f"the site says about limits and caches: {self.client.site_headers}")
         if fetched.status in (404, 410):
             summary.pages_not_found.append(url)
             return None
@@ -609,8 +641,25 @@ def polite_client(
     """A client for this site that may read only what `allow` names.
 
     Every request is counted in one file, so the limit of the site holds over all runs together.
+    The same file remembers a refusal of the site: then nothing is built, and nothing is sent.
     """
     client_options.setdefault("max_requests", REQUEST_LIMIT)
+    pause = client_options.get("pause_seconds")
+    if pause is not None and float(pause) < PAUSE_SECONDS:  # type: ignore[arg-type]
+        raise CollectorRefused(
+            f"The pause between two requests is never shorter than {PAUSE_SECONDS:.0f} seconds."
+        )
+    count = request_count(paths)
+    try:
+        refused = count.refusal()
+    except StopCollecting as stop:
+        raise CollectorRefused(str(stop)) from None
+    if refused:
+        raise CollectorRefused(refusal_line(refused))
+    if count.wait_left() > 0 and not client_options.get("wait_for_cooldown"):
+        raise CollectorRefused(
+            cooldown_line(count) + " Start the command again then, or add --wait to let it wait."
+        )
 
     def still_enabled() -> bool:
         # Read again before every request, so that turning the switch off stops a run at once.
@@ -621,7 +670,7 @@ def polite_client(
         identity=identity,
         allow=allow,
         is_enabled=still_enabled,
-        count=request_count(paths),
+        count=count,
         **client_options,  # type: ignore[arg-type]
     )
 
@@ -745,6 +794,56 @@ def request_count(paths: DataPaths) -> RequestCount:
 def _count_line(paths: DataPaths) -> str:
     count = request_count(paths)
     try:
-        return f"Requests sent to the site so far: {count.sent()} of {count.limit}."
+        lines = [f"Requests sent to the site so far: {count.sent()} of {count.limit}."]
+        refused = count.refusal()
+        if refused:
+            lines.append(refusal_line(refused))
+        if count.wait_left() > 0:
+            lines.append(cooldown_line(count))
+        if count.min_pause() > PAUSE_SECONDS:
+            lines.append(
+                f'Since the site said "too many requests", the pause between two requests is '
+                f"{count.min_pause():.0f} seconds."
+            )
     except StopCollecting as stop:
         return str(stop)
+    return "\n".join(lines)
+
+
+def cooldown_line(count: RequestCount) -> str:
+    until = count.not_before()
+    return (
+        f'{SITE} said "too many requests". The cooldown runs until '
+        f"{until.strftime('%Y-%m-%d %H:%M:%S')} UTC, {count.wait_left() / 60:.0f} minute(s) from "
+        "now. Nothing is sent before."
+    )
+
+
+def refusal_line(refused: dict) -> str:
+    """What to tell a person when the site has said no and nobody has decided how to go on."""
+    wait = refused.get("asked_to_wait")
+    return (
+        f"{SITE} refused a request on {refused['at']} (answer {refused['status']}"
+        + (f", it asks to wait: {wait}" if wait else "")
+        + "). The tool sends nothing to this site until the maintainer has decided how to go "
+        'on. Then: python -m hackathon_memory.collect ethglobal --after-refusal "<the decision>"'
+    )
+
+
+def clear_refusal(settings: Settings, decision: str) -> list[str]:
+    """The maintainer decided how to go on after a no of the site. Sends no request.
+
+    Returns what holds from now on, in plain words.
+    """
+    if not decision.strip():
+        raise CollectorRefused("Say in a few words what was decided, and by whom.")
+    count = request_count(data_paths(settings))
+    try:
+        if not count.clear_refusal(decision.strip()):
+            return ["There is no refusal to clear."]
+        lines = ["The refusal is cleared, and the decision is written next to the count."]
+        if count.wait_left() > 0:
+            lines.append(cooldown_line(count))
+        return lines
+    except StopCollecting as stop:
+        raise CollectorRefused(str(stop)) from None

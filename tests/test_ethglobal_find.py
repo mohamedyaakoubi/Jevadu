@@ -238,8 +238,20 @@ def test_what_was_found_is_written_after_every_page(tmp_path: Path) -> None:
 # --------------------------------------------------------------------- the site says stop
 
 
-def test_a_refusal_stops_the_walk_at_once(tmp_path: Path) -> None:
+def test_too_many_requests_stop_the_walk_and_it_goes_on_later(tmp_path: Path) -> None:
     walker, site, _ = make(tmp_path, the_list(second=Reply(429, b"slow down")))
+    summary = walker.run()
+    assert site.urls == [ROBOTS_URL, LIST, PAGE_2]  # no second try, no page 3
+    assert "too many requests" in (summary.stopped or "")
+    assert found_in(tmp_path).pages_read == 1
+
+    later, site, _ = make(tmp_path, the_list())
+    assert later.run().complete is True
+    assert site.urls == [PAGE_2, PAGE_3]  # it goes on at the page that was not read
+
+
+def test_a_refusal_stops_the_walk_at_once(tmp_path: Path) -> None:
+    walker, site, _ = make(tmp_path, the_list(second=Reply(403, b"no")))
     summary = walker.run()
     assert site.urls == [ROBOTS_URL, LIST, PAGE_2]  # no second try, no page 3
     assert summary.stopped is not None
@@ -416,11 +428,20 @@ def test_the_command_line_takes_one_command_at_a_time(
     assert "Refused" in capsys.readouterr().out
     assert cli.main(["ethglobal", "--pages", "3"]) == 1  # a run in parts: also refused
     assert "Refused" in capsys.readouterr().out
+    assert cli.main(["ethglobal", "--find", "--pause", "10", "--wait"]) == 1  # slower: also refused
+    assert "Refused" in capsys.readouterr().out
+    assert cli.main(["ethglobal", "--pause", "10", "--wait"]) == 1
+    assert "Refused" in capsys.readouterr().out
     for wrong in (
         ["ethglobal", "--find", "--plan"],
         ["ethglobal", "--plan", "--pages", "3"],  # a plan and a look read no part
         ["ethglobal", "--look", "--pages", "2"],
         ["ethglobal", "--pages", "0"],
+        ["ethglobal", "--pause", "1"],  # never shorter than two seconds
+        ["ethglobal", "--plan", "--pause", "10"],
+        ["ethglobal", "--look", "--wait"],
+        ["ethglobal", "--after-refusal"],  # the decision is missing
+        ["ethglobal", "--after-refusal", "fine", "--wait"],
         ["ethglobal", "--find", "--pages", "0"],
         ["ethglobal", "--find", "--pages", "many"],
         ["devpost", "--find"],
@@ -428,3 +449,28 @@ def test_the_command_line_takes_one_command_at_a_time(
     ):
         assert cli.main(wrong) == 2, wrong
         assert "usage:" in capsys.readouterr().out
+
+
+def test_the_command_line_clears_a_refusal_and_sends_no_request(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "Settings", lambda: Settings(_env_file=None, data_dir=str(tmp_path)))
+    monkeypatch.setattr(
+        "requests.Session.get", lambda *a, **k: pytest.fail("this command sent a request")
+    )
+    folder = tmp_path / "requests"
+    folder.mkdir()
+    count = folder / "ethglobal.com.json"
+    refused = {"at": "2026-10-11T00:00:00Z", "status": 403, "asked_to_wait": None}
+    count.write_text(
+        json.dumps({"site": "ethglobal.com", "sent": 5, "by_day": {}, "refused": refused}), "utf-8"
+    )
+    assert cli.main(["ethglobal", "--after-refusal", "the site wrote that it is fine"]) == 0
+    assert "The refusal is cleared" in capsys.readouterr().out
+    record = json.loads(count.read_text(encoding="utf-8"))
+    assert "refused" not in record
+    assert "the site wrote that it is fine" in record["notes"][0]
+    assert cli.main(["ethglobal", "--after-refusal", "once more"]) == 0
+    assert "There is no refusal to clear." in capsys.readouterr().out
+    assert cli.main(["ethglobal", "--after-refusal", "  "]) == 1
+    assert "Refused" in capsys.readouterr().out

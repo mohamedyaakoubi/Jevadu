@@ -227,7 +227,10 @@ The **terms of use** of a site are read before the first request to it. If they 
 - One request at a time for each site, with a pause.
 - Each request says who it is: the name of the tool and a contact address. It does not pretend to be a normal browser.
 - Stop after five errors in a row.
-- No sign-in, no cookie, and no way around a block. An answer of 401, 403, 429 or 451, or a bot check, stops the run at once, with no second try.
+- No sign-in, no cookie, and no way around a block.
+- **A no of the site.** An answer of 401, 403 or 451, or a bot check, stops everything for that site. Nothing is worked around, and nothing is sent again until a person has decided how to go on.
+- **Too many requests.** When the site answers 429, "too many requests", the run stops at once. The tool sends nothing for one hour, or longer if the site names a longer time, and then it goes on five times slower. A third 429 within a day is taken for a no. Every command keeps to this by itself: the cooldown and the slower pace are written next to the count of requests.
+- **A stop order.** The people who run a site can ask for a stop at any time. One switch for each site turns its collector off at once.
 
 Collection by a program is a proof of the idea. Real use would need the sites to give the data themselves.
 
@@ -282,7 +285,9 @@ The way a site is read is fixed in the code, with a test for each rule. ETHGloba
 | One request at a time | One worker, a pause of two seconds, nothing in parallel. |
 | Each request carries the name of the tool and a contact address | Both come from the settings. The collector refuses to start when one of them is empty. |
 | No names, photos or profiles of team members | The team part is cut out before a page is saved (section 5.3). If a page shows a profile link, an avatar or a data key that holds people, the run stops. |
-| It stops at once when asked | One switch for each site in the settings, read again before every request. |
+| Too many requests | When the site answers 429, "too many requests", the run stops at once. The tool sends nothing for one hour, or longer if the site names a longer time, and then it goes on five times slower. A third 429 within a day is taken for a no. |
+| A no of the site | An answer of 401, 403 or 451, or a bot check, stops everything for that site. Nothing is worked around, and nothing is sent again until a person has decided how to go on. |
+| It stops at once when asked | One switch for each site in the settings, read again before every request. It is there for a stop order from the people who run the site. |
 | The collected pages stay on one laptop | The data folder never enters git. No text taken from a collected page is committed, also not in a test file or a result file. The sample pages of the tests are invented. |
 | A new request before anything is published | Before the repository, the tool or its data goes public, the site is asked again. |
 
