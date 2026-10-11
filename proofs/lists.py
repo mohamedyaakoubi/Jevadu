@@ -26,13 +26,13 @@ from hackathon_memory.collect.ethglobal import (
     planned_pages,
     read_and_not_kept,
     request_count,
-    took_a_hedera_prize,
 )
 from hackathon_memory.collect.ethglobal_found import load_found
 from hackathon_memory.collect.ethglobal_site import SITE
 from hackathon_memory.collect.polite import PAUSE_SECONDS, CollectorRefused, StopCollecting
 from hackathon_memory.collect.rawstore import RawStore, fingerprint
 from hackathon_memory.collect.teamcut import CutFailed, cut_team
+from hackathon_memory.parse.ethglobal_page import took_a_hedera_prize
 from hackathon_memory.settings import Settings
 from proofs.result import ProofResult
 
