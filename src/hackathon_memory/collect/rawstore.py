@@ -96,9 +96,14 @@ class RawStore:
         received: bytes,
         collector: str,
         team_cut: dict | None = None,
+        answer: dict | None = None,
         suffix: str = ".html",
     ) -> SavedPage:
-        """Save `body` (after the team part was cut out). `received` is what the site sent."""
+        """Save `body` (after the team part was cut out). `received` is what the site sent.
+
+        `answer` holds facts of the answer that the saved body no longer shows, such as the name
+        of a file that an API sent inside its answer. It holds no text of a page.
+        """
         body_path, meta_path = self._paths(fetch.url, suffix)
         if body_path.exists() and meta_path.exists():
             raise FileExistsError(f"already saved, and a saved page is never edited: {fetch.url}")
@@ -117,6 +122,8 @@ class RawStore:
             "team_cut": team_cut,
             "collector": collector,
         }
+        if answer is not None:
+            meta["answer"] = answer
         self._write_once(body_path, body)
         self._write_once(meta_path, (json.dumps(meta, indent=2) + "\n").encode("utf-8"))
         return SavedPage(url=fetch.url, body_path=body_path, meta_path=meta_path, meta=meta)

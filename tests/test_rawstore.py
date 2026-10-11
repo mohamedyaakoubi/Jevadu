@@ -209,3 +209,20 @@ def test_a_saved_page_is_never_changed_without_a_reason_or_when_it_is_not_there(
     assert store.load(URL).read() == PAGE  # type: ignore[union-attr]
     with pytest.raises(FileNotFoundError):
         store.remove_text("https://ethglobal.com/showcase/another-a1b2c", ADDRESS, "[x]", "why")
+
+
+def test_facts_of_an_answer_are_kept_next_to_the_page_when_given(tmp_path: Path) -> None:
+    store = RawStore(tmp_path)
+    plain = store.save(fetch(), b"<p>a</p>", received=b"<p>a</p>", collector="Tool/0.1.0")
+    assert "answer" not in plain.meta  # a page of a site has none
+    other = "https://api.github.com/repos/sample-org/pebble-pay/readme"
+    saved = store.save(
+        fetch(other),
+        b"# Pebble",
+        received=b'{"content": "IyBQZWJibGU="}',
+        collector="Tool/0.1.0",
+        answer={"name": "README.md", "size": 8},
+        suffix=".txt",
+    )
+    assert store.load(other, ".txt").meta["answer"] == {"name": "README.md", "size": 8}  # type: ignore[union-attr]
+    assert saved.body_path.suffix == ".txt"
