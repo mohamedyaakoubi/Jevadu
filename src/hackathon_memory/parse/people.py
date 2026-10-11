@@ -93,8 +93,10 @@ PACKAGE_SITES = (
     "socket.dev",
     "bundlephobia.com",
 )
+# The name of the site must have a dot, so that a path such as "src/@types" is not a link.
 _LINK_WITH_A_HANDLE = re.compile(
-    r"(?:https?://|www\.)[^\s<>()\[\]\"'/]+(?:/[^\s<>()\[\]\"'/]*)*/@[^\s<>()\[\]\"']*",
+    r"(?<![\w./@-])(?:https?://)?(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}"
+    r"(?:/[^\s<>()\[\]\"'/]*)*/@[^\s<>()\[\]\"']*",
     re.IGNORECASE,
 )
 _HANDLE_PIECE = re.compile(r"/@([^\s<>()\[\]\"'/?#]+)")

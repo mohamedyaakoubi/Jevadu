@@ -305,6 +305,10 @@ def test_the_address_of_a_photo_is_known_as_one() -> None:
         ),
         ("See www.youtube.com/@quill_invented.", f"See www.youtube.com/{HIDDEN_HANDLE}."),
         (
+            "Read medium.com/@quill_invented/our-build now.",  # a link with no scheme
+            f"Read medium.com/{HIDDEN_HANDLE}/our-build now.",
+        ),
+        (
             "https://sample.example.test/@quill/posts?tab=1",
             f"https://sample.example.test/{HIDDEN_HANDLE}/posts?tab=1",
         ),
@@ -323,6 +327,8 @@ def test_a_handle_inside_a_link_is_hidden_and_the_rest_of_the_link_stays(
         "cdn: https://cdn.jsdelivr.net/npm/@sample-scope/sdk@2.1.0/dist/x.js",
         "https://unpkg.com/@sample-scope/sdk and https://esm.sh/@sample-scope/sdk",
         "The path is src/@types/index.d.ts in the code.",  # not a link
+        "packages/pebble.sdk/@scope/x is a folder",  # a dot in a folder is not a site
+        "unpkg.com/@sample-scope/sdk with no scheme",
         "https://sample.example.test/@.",  # no name after the @
     ],
 )
