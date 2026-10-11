@@ -237,13 +237,30 @@ Collection by a program is a proof of the idea. Real use would need the sites to
 - Every page is saved with its address, the date and a **fingerprint** of its content. There are two exceptions to "saved as received", both made before the page is saved.
   1. **The team part is cut out,** because the sites were promised that it is not collected (section 5.7). That means the block that shows the team, the metadata that names an author, and the keys that hold people inside data blocks.
   2. **The page is written again by the HTML parser,** because the cut needs one. A test compares a saved sample page with the original after the team part was removed by hand: the visible text, the links and the order of the tags are the same. The spaces between tags, the case of the doctype and the slash of empty tags may differ. Two fingerprints are kept next to the page: of the page as saved, and of what the site sent.
-- A saved page is never edited.
+- A saved page is never edited afterwards, with one exception: **personal data that is found in a saved page later is taken out.** The store has one function for that, and no other way to change a page. It writes next to the page the reason, the time, the number of places and the fingerprint that the page had before. The text that was taken out is written nowhere. The proof of the lists fails when a page differs from its fingerprint, and it counts the pages that carry such a record.
 - Running the collection again skips pages that are already saved, and pages that an earlier run read and did not keep.
 - Everything else in the system can be rebuilt from the raw pages with one command. This is also the backup.
 
 ### 5.4 Personal data
 
 Project pages can show team members. The tool does not store their names, emails or photos. It needs none of them. The account name inside a repository link is kept because the link needs it.
+
+A team can also name a person inside its own text. The parser hides these words before the text reaches a table, a model or a card:
+
+| What the team wrote | What is kept |
+|---|---|
+| A word that starts with "@", such as a handle on a social network | `@[name hidden]` |
+| An email address | `[address hidden]` |
+| A link to a profile on a social site, such as "x.com/name" or "t.me/name" | `[profile link hidden]` |
+| A link to GitHub with one name only: the profile of an account | `[profile link hidden]` |
+
+The rest of the sentence stays word for word, and so does its full stop. The tool cannot tell a person from a company or from a bot of the project, so it hides all of them. Little is lost, because every card links to the page of the project.
+
+Three things are not hidden. The name of a software package, which has a slash after its first part ("@scope/package"). Anything inside code, where an "@" belongs to the language. A link to a repository or to a video.
+
+**A link of a project is asked the same question.** A demo link can lead to a profile site, for example to a name on Telegram. Such a link is kept without its address: the table says that the link is there, of which kind, and on which site. So a card never says "no demo" where a team gave one. It sends the reader to the page of the project.
+
+The step that reads the saved pages counts how many words and links it hid, and writes the number into its row in the table of runs.
 
 ### 5.5 A start that needs no permission: public repositories
 
@@ -335,6 +352,8 @@ For a Hedera ID there are three rules:
 - An EVM address is kept only when a HashScan link names it, because the same address can live on another chain.
 
 The data of each page also holds scores that the site computes. The parser never reads them, and a test plants loud scores and checks that none comes out.
+
+Words about people are hidden in the short line, in the two texts and among the links before anything else is done with them (section 5.4). A Hedera ID next to a hidden word is still found, and the words that are kept around it name nobody.
 
 ### 6.2 What the LLM is asked
 
