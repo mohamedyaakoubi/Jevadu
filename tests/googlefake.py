@@ -81,6 +81,18 @@ class FakeGoogle:
                 for i in range(count)
             ]
             return httpx.Response(200, json={"predictions": predictions})
+        if request.url.path.endswith(":embedContent"):
+            # One text for each request: the answer of Vertex AI for gemini-embedding-2.
+            text = body["content"]["parts"][0]["text"]
+            values = self.vector_for(text) if self.vector_for else [0.5] * self.embedding_size
+            return httpx.Response(
+                200,
+                json={
+                    "embedding": {"values": values},
+                    "usageMetadata": {"promptTokenCount": 9},
+                    "truncated": self.truncated,
+                },
+            )
         text = self.answer_queue.pop(0) if self.answer_queue else self.answer_text
         reason = self.finish_reasons.pop(0) if self.finish_reasons else self.finish_reason
         parts = [{"text": text}] if text else []
