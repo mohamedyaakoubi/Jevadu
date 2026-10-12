@@ -14,6 +14,9 @@
                                                            whose text changed (it costs money)
     python -m hackathon_memory.pipeline all                parse, readmes, code, check and
                                                            embed, in this order
+    python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json
+                                                           the cards of the LLM for the pages
+                                                           of a set (it costs money)
 
 "parse" sends no request: it works on the pages that are saved, and on the winner entries that a
 person copied by hand into data/by-hand (design 4.6). It also writes the last day of
@@ -22,7 +25,8 @@ rule needs it and no page gives it (design 7.2). "readmes" and "code" ask GitHub
 maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait lets it wait
 for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a public API made
 for programs, and no site (design rule 17). "embed" calls Google's embedding model through the
-meter and its budget (design 11.4).
+meter and its budget (design 11.4). "cards" calls the REWRITE layer of Gemini, through the meter
+too, for the pages of a set only: it is not part of "all" (design 6.2, open question Q29).
 
 A step prints numbers. For a page or an id that it could not handle it prints the address or
 the id and the rule that failed. It never prints text of a page, and never the connection text
@@ -36,6 +40,7 @@ import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import timedelta
+from pathlib import Path
 
 import psycopg
 
@@ -49,6 +54,7 @@ from hackathon_memory.collect.github_once import AnswersRun
 from hackathon_memory.collect.github_readmes import fetch_readmes
 from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.cards import CardStore
 from hackathon_memory.db.embeddings import EmbeddingStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
@@ -60,6 +66,8 @@ from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
 from hackathon_memory.llm.client import GoogleSetupError
 from hackathon_memory.parse import event_ends
 from hackathon_memory.pipeline import check_ids, code, embed, parse_pages, readmes
+from hackathon_memory.read import cards as card_step
+from hackathon_memory.read.sets import SetError, pages_of
 from hackathon_memory.settings import Settings, SettingsError
 
 USAGE = (
@@ -68,7 +76,8 @@ USAGE = (
     "       python -m hackathon_memory.pipeline code [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline check [--max-age-days N]\n"
     "       python -m hackathon_memory.pipeline embed [--limit N]\n"
-    "       python -m hackathon_memory.pipeline all [the options of the steps]"
+    "       python -m hackathon_memory.pipeline all [the options of the steps]\n"
+    "       python -m hackathon_memory.pipeline cards --set FILE [--limit N]"
 )
 # What each status of the proof rule means, in plain words (design 7.2).
 STATUS_WORDS = {
@@ -95,20 +104,25 @@ class _Quiet(argparse.ArgumentParser):
 
 def _arguments(argv: list[str]) -> argparse.Namespace:
     parser = _Quiet(prog="python -m hackathon_memory.pipeline", add_help=False)
-    parser.add_argument("step", choices=[*ALL_STEPS, ALL])
+    parser.add_argument("step", choices=[*ALL_STEPS, card_step.STEP, ALL])
     parser.add_argument("--limit", type=int)
     parser.add_argument("--max-age-days", type=float)
     parser.add_argument("--repos", type=int)
     parser.add_argument("--no-requests", action="store_true")
     parser.add_argument("--wait", action="store_true")
+    parser.add_argument("--set", dest="set_file")
     arguments = parser.parse_args(argv)
     every = arguments.step == ALL  # the options of every step go with it
     is_parse = every or arguments.step == parse_pages.STEP
     is_check = every or arguments.step == check_ids.STEP
     is_readmes = every or arguments.step in (readmes.STEP, code.STEP)  # the steps of GitHub
     is_embed = every or arguments.step == embed.STEP
-    if arguments.limit is not None and (not (is_parse or is_embed) or arguments.limit < 1):
-        raise ValueError("--limit goes with parse or embed, and must be 1 or more")
+    is_cards = arguments.step == card_step.STEP
+    if is_cards != (arguments.set_file is not None):
+        raise ValueError("cards needs --set, the file of a set of pages, and --set goes with it")
+    limited = is_parse or is_embed or is_cards
+    if arguments.limit is not None and (not limited or arguments.limit < 1):
+        raise ValueError("--limit goes with parse, embed or cards, and must be 1 or more")
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
     if arguments.repos is not None and (not is_readmes or arguments.repos < 1):
@@ -255,6 +269,20 @@ def _run_step(
             code.read_code(
                 RepositoryStore(conninfo), RawStore(github.raw_dir(settings)), run, fetch=fetch
             )
+        elif step == card_step.STEP:
+            pages = pages_of(Path(arguments.set_file))  # a wrong set stops before Google
+            google = services.google
+            if google is None:
+                google = metered_client(settings, "rewrite", run_id=f"pipeline-run-{run.id}")
+            card_step.make_cards(
+                CardStore(conninfo),
+                google,
+                run,
+                pages=pages,
+                model=settings.gemini_rewrite_model,
+                thinking_level=settings.gemini_rewrite_thinking_level,
+                limit=arguments.limit,
+            )
         elif step == embed.STEP:
             google = services.google
             if google is None:
@@ -289,6 +317,8 @@ def _run_step(
         lines += _problem_lines(run, "Stopped or not done, and why:")
     elif step == embed.STEP:
         lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
+    elif step == card_step.STEP:
+        lines = card_step.cards_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
     else:
         lines = check_lines(run)
     return run, lines
@@ -335,7 +365,7 @@ def main(
     except BudgetExceeded as over:
         print(f"Stopped by the budget: {over}")
         return 1
-    except GoogleSetupError as problem:
+    except (GoogleSetupError, SetError) as problem:
         print(f"Stopped: {problem}")
         return 1
     return 1 if problems else 0
