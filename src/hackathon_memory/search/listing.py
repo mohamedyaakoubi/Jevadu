@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 import psycopg
 
 from hackathon_memory.check.life import Life, life_of
+from hackathon_memory.parse.project import FULL_CARD, WINNER_ENTRY
 from hackathon_memory.search.engine import Hit
 
 PRIZE_WORDS = {
@@ -66,6 +67,7 @@ class ResultCard:
     made_at: datetime | None = None
     last_push_at: datetime | None = None
     life: Life | None = None
+    entry_kind: str = FULL_CARD
 
 
 # The signs of life of each project (design 7.4): the end of its event, the facts of its code,
@@ -97,7 +99,8 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         projects = {
             row[0]: row[1:]
             for row in conn.execute(
-                "SELECT p.id, p.name, e.name, p.prize_state, p.proof_status, p.page_url, r.url "
+                "SELECT p.id, p.name, e.name, p.prize_state, p.proof_status, p.page_url, r.url, "
+                "p.entry_kind "
                 "FROM projects p JOIN events e ON e.id = p.event_id "
                 "LEFT JOIN repositories r ON r.id = p.repository_id WHERE p.id = ANY(%s)",
                 (ids,),
@@ -119,6 +122,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         if hit.project_id not in projects:
             continue
         end, code_status, made_at, last_push, last_activity = signs[hit.project_id]
+        *facts, entry_kind = projects[hit.project_id]
         life = life_of(
             event_end=end, last_push=last_push, last_ledger_activity=last_activity, now=now
         )
@@ -126,12 +130,13 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
             ResultCard(
                 rank,
                 hit,
-                *projects[hit.project_id],
+                *facts,
                 tuple(ledger.get(hit.project_id, [])),
                 code_status=code_status,
                 made_at=made_at,
                 last_push_at=last_push,
                 life=life,
+                entry_kind=entry_kind,
             )
         )
     return found
@@ -148,6 +153,11 @@ def lines(found: Sequence[ResultCard], *, names: bool = True) -> list[str]:
             f"   prize: {PRIZE_WORDS.get(card.prize_state, card.prize_state)}. "
             f"Hedera proof: {STATUS_WORDS.get(card.proof_status, card.proof_status)}."
         )
+        if card.entry_kind == WINNER_ENTRY:
+            out.append(
+                "   a winner entry: only the winners of this event are public, from the "
+                "organiser's list"
+            )
         if card.life is not None:
             out.append(f"   {_life_words(card, card.life)}")
         if names:

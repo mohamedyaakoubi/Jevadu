@@ -24,6 +24,12 @@ from hackathon_memory.parse.ethglobal_page import (
 )
 from hackathon_memory.parse.event_ends import EventEndsError, read_event_ends
 from hackathon_memory.parse.project import ProjectPage
+from hackathon_memory.parse.winner_entries import PARSER_VERSION as WINNER_PARSER
+from hackathon_memory.parse.winner_entries import (
+    WinnerEntriesError,
+    entry_files,
+    read_entries,
+)
 
 STEP = "parse"
 EDITED = "the file of the page does not have the fingerprint that was written when it was saved"
@@ -69,6 +75,28 @@ def parse_saved_pages(
         run.counts[projects.save(project, sha256)] += 1
         if project.people_words_hidden:
             run.counts["words_about_people_hidden"] += project.people_words_hidden
+
+
+def parse_winner_entries(folder: Path, projects: ProjectStore, run: Run) -> None:
+    """Keep the winner entries that a person copied by hand into `folder` (design 4.6).
+
+    A record that changed is read again, and one that did not is passed over. A file that
+    cannot be read is named in the run, and nothing of it is used.
+    """
+    already = projects.already_parsed()
+    for path in entry_files(folder):
+        try:
+            entries = read_entries(path)
+        except WinnerEntriesError as wrong:
+            run.counts["winner_files_not_read"] += 1
+            run.problem(path.name, str(wrong))
+            continue
+        for entry in entries:
+            run.counts["winner_entries"] += 1
+            if already.get(entry.page.page) == (entry.sha256, WINNER_PARSER):
+                run.counts["winner_entries_same"] += 1
+                continue
+            run.counts["winner_entries_" + projects.save(entry.page, entry.sha256)] += 1
 
 
 def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) -> None:
