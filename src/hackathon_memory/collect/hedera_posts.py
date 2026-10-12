@@ -76,6 +76,10 @@ PEOPLE_LINE = re.compile(
     r"authors?|contributors?)\s*[:\-–—]",
     re.IGNORECASE,
 )
+# The signature under a quote: a long dash and a short name ("— Ann Example"). The post of
+# Beyond Blockchain 2023 signs the answers of its winners so (12 October 2026). No digit, colon
+# or dollar sign, so that a line about a prize is never taken for one.
+SIGNATURE = re.compile(r"^\s*[—–]\s*[^\W\d_][^\d:$]{0,58}$")
 
 
 def is_allowed_url(url: str) -> bool:
@@ -96,10 +100,11 @@ def client_for(settings: Settings, **client_options: object) -> PoliteClient:
 
 def _is_people_line(tag: Tag) -> bool:
     """Its text starts like a list of people, and something follows the label: a <strong>
-    that holds only "Team:" is not the line, the paragraph around it with the names is."""
+    that holds only "Team:" is not the line, the paragraph around it with the names is. Or its
+    text is the signature under a quote."""
     text = tag.get_text(" ", strip=True)
     match = PEOPLE_LINE.match(text)
-    return bool(match) and bool(text[match.end() :].strip())
+    return (bool(match) and bool(text[match.end() :].strip())) or bool(SIGNATURE.match(text))
 
 
 def people_lines(soup: BeautifulSoup) -> list[Tag]:
@@ -115,9 +120,10 @@ def people_lines(soup: BeautifulSoup) -> list[Tag]:
 
 
 def _kind(line: Tag) -> str:
-    """The words that make a line a list of people, such as "team" or "built by"."""
+    """The words that make a line a list of people, such as "team" or "built by", or
+    "signature"."""
     match = PEOPLE_LINE.match(line.get_text(" ", strip=True))
-    return match.group(1).lower() if match else ""
+    return match.group(1).lower() if match else "signature"
 
 
 def look(client: PoliteClient, say: Callable[[str], None] = print) -> bool:

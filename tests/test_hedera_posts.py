@@ -92,6 +92,17 @@ def test_every_label_of_a_list_of_people_is_known(label: str) -> None:
     assert [line.name for line in lines] == ["p", "li"]  # the whole lines, with the name
 
 
+def test_the_signature_under_a_quote_is_a_line_about_people() -> None:
+    soup = BeautifulSoup(
+        "<p>What did you build?</p><p>An invented wallet.</p><p>— Quill Feather</p>"
+        "<p>– Ann van Ledgerwood</p><p>— Prize: $5,000</p><p>- a list item</p>",
+        "lxml",
+    )
+    lines = posts.people_lines(soup)
+    assert [line.get_text() for line in lines] == ["— Quill Feather", "– Ann van Ledgerwood"]
+    assert {posts._kind(line) for line in lines} == {"signature"}
+
+
 def test_a_line_that_only_mentions_a_team_is_not_a_list_of_people() -> None:
     soup = BeautifulSoup("<p>The team built a wallet.</p><p>Teams: see the rules.</p>", "lxml")
     assert posts.people_lines(soup) == []
