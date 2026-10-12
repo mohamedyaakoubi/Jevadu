@@ -30,6 +30,35 @@ from hackathon_memory.parse.hedera_ids import find_ids
 STEP = "readmes"
 
 
+def link_repositories(repositories: RepositoryStore, run: Run) -> dict[int, str]:
+    """Link each project to the repository on GitHub that its link to the code names, and give
+    the link of the repository of each project."""
+    of_project: dict[int, str] = {}
+    for project_id, link in repositories.code_links().items():
+        repository = repository_of(link)
+        if repository is None:
+            run.counts["code_not_on_github"] += 1
+        else:
+            of_project[project_id] = repository
+    run.counts["projects_with_code_on_github"] += len(of_project)
+    run.counts["repositories"] += len(set(of_project.values()))
+    repositories.link(of_project)
+    return of_project
+
+
+def count_the_fetch(done: AnswersRun, run: Run, what: str) -> None:
+    """Count in `run` what a run that asked GitHub did. A stop is named as a problem."""
+    for key, value in (
+        (f"{what}_asked", done.asked),
+        (f"{what}_failed", done.failed),
+        (f"{what}_left_for_later", done.left_for_later),
+    ):
+        if value:
+            run.counts[key] += value
+    if done.stopped:
+        run.problem("GitHub", done.stopped)
+
+
 def read_readmes(
     repositories: RepositoryStore,
     projects: ProjectStore,
@@ -40,29 +69,10 @@ def read_readmes(
 ) -> None:
     """Link each project to its repository, ask for the READMEs that are missing when `fetch` is
     given, and keep the ids of every saved README. Counts what was done in `run`."""
-    of_project: dict[int, str] = {}
-    for project_id, link in repositories.code_links().items():
-        repository = repository_of(link)
-        if repository is None:
-            run.counts["code_not_on_github"] += 1
-        else:
-            of_project[project_id] = repository
+    of_project = link_repositories(repositories, run)
     wanted = sorted(set(of_project.values()))
-    run.counts["projects_with_code_on_github"] += len(of_project)
-    run.counts["repositories"] += len(wanted)
-    repositories.link(of_project)
-
     if fetch is not None:
-        done = fetch(wanted)
-        for key, value in (
-            ("readmes_asked", done.asked),
-            ("readmes_failed", done.failed),
-            ("readmes_left_for_later", done.left_for_later),
-        ):
-            if value:
-                run.counts[key] += value
-        if done.stopped:
-            run.problem("GitHub", done.stopped)
+        count_the_fetch(fetch(wanted), run, "readmes")
 
     readmes = {}
     for repository in wanted:
