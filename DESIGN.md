@@ -463,14 +463,19 @@ For each repository: does it exist, when was it created, when was the first and 
 
 ### 7.4 The life rule
 
+A **sign** is one of two dates: the last push of code to the repository, or the last activity on the ledger of the project's own IDs. A **sign of life** is a sign later than 30 days after the last day of the event. Before that line, the work is most likely still the work of the event, with its late fixes.
+
 | Status | When |
 |---|---|
-| Active | A change to the code or activity on the ledger in the last 90 days |
-| Quiet | Nothing in the last 90 days, but something later than 30 days after the event |
-| Stopped | Nothing later than 30 days after the event |
-| Unknown | No repository and no ID to look at |
+| Active | A sign of life in the last 90 days |
+| Quiet | A sign of life, but none in the last 90 days |
+| Stopped | No sign of life, and the event ended 90 days ago or more |
+| Too early to tell | No sign of life yet, and the event ended less than 90 days ago |
+| Unknown | No date of the code and no activity of an ID, or the end of the event is not known |
 
-**How the rule reads the signs.** The two signs are the last push of code to the repository, and the last activity on the ledger of the project's own IDs. An ID that a project with other code names too is not a sign: it is most likely a shared service used by many teams (section 8.4), and its activity says nothing about this project. The line is the end of the last day of the event plus 30 days. When the end of the event is not known, a project with no sign in the last 90 days cannot be told quiet or stopped: it is unknown, and the reason is shown. The rule guesses no end. The plain listing of the search shows the status, the reason and the date of the last sign.
+**Why these numbers.** The 90 days follow the OpenSSF Scorecard, a common checker of open-source projects. Its check "Maintained" looks at the previous 90 days, and it calls a project younger than 90 days too new to assess. The 30 days leave a margin for the late fixes that follow an event, so that the work of the event is not taken for a project that lives on.
+
+**How the rule reads the signs.** An ID that a project with other code names too is not a sign: it is most likely a shared service used by many teams (section 8.4), and its activity says nothing about this project. The line is the end of the last day of the event plus 30 days. When the end of the event is not known, no sign can be judged: the project is unknown, and the reason is shown. The rule guesses no end. The plain listing of the search shows the status, the reason and the date of the last sign.
 
 ---
 
@@ -856,7 +861,9 @@ Each proof writes a dated result file to `proofs/results/`, with what it does no
 
 ### 14.3 Gate B: the thinnest full path
 
-From an empty database, one command processes 50 real projects through collect, parse, check and store. For three written questions with known answers, the known projects are in the first 10 results, and each result shows facts read from the mirror node. Only a plain debug listing exists.
+From an empty database, one command processes 50 real projects through collect, parse, check and store. For three written ideas, the first 10 results come back, and each result shows facts read from the mirror node. Only a plain debug listing exists.
+
+**How the ideas are judged.** The maintainer writes the three ideas without reading any project page first (a decision of 12 October 2026). Words written after reading a page lean on that page, and the search by words would then find it too easily. A blind idea has no known project, so a person marks each of its first 10 results "yes" (close to the idea, or sharing a big part of it) or "no". The gate passes when each idea has at least one "yes". An idea may still name a known project; then that project must be in the first 10. The proof is `python -m proofs.gate_b`, and `python -m proofs.gate_b --marks` reads the marks. The ideas, the results and the marks stay out of the repository; the result files hold places and numbers only.
 
 ### 14.5 What is cut first if time is short
 
