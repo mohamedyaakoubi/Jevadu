@@ -7,11 +7,13 @@ import json
 from datetime import UTC, datetime
 
 import pytest
+import requests
 
 from fakes import FakeSite, FakeTime, Reply, session_for
 from hackathon_memory.hedera.mirror import (
     MIN_GAP_SECONDS,
     MIRROR_URLS,
+    PAUSES_SECONDS,
     MirrorError,
     MirrorNode,
     decode_message,
@@ -84,10 +86,60 @@ def test_a_missing_thing_is_none_and_not_an_error() -> None:
     assert mirror.topic_message("0.0.9", 1) is None
 
 
-def test_a_server_error_is_a_mirror_error() -> None:
-    mirror, _, _ = node({f"{BASE}/topics/0.0.5555": Reply(500, b"oops")})
+def test_a_server_error_is_a_mirror_error_after_the_pauses() -> None:
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": Reply(500, b"oops")})
     with pytest.raises(MirrorError, match="500"):
         mirror.topic("0.0.5555")
+    assert fake_time.sleeps == list(PAUSES_SECONDS)
+    assert mirror.requests_made == len(PAUSES_SECONDS) + 1
+
+
+# --------------------------------------------------------------------- when the network fails
+
+
+def test_a_broken_connection_is_asked_again_after_a_pause() -> None:
+    dropped = requests.ConnectionError("the network went away")
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": [dropped, reply(TOPIC)]})
+    assert mirror.topic("0.0.5555")["topic_id"] == "0.0.5555"
+    assert fake_time.sleeps == [PAUSES_SECONDS[0]]
+    assert mirror.requests_made == 2
+
+
+def test_too_many_requests_and_a_busy_server_are_asked_again() -> None:
+    answers = [Reply(429, b"slow down"), Reply(503, b"busy"), reply(TOPIC)]
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": answers})
+    assert mirror.topic("0.0.5555")["topic_id"] == "0.0.5555"
+    assert fake_time.sleeps == list(PAUSES_SECONDS[:2])
+
+
+def test_a_longer_pause_that_the_node_asks_for_is_kept() -> None:
+    answers = [Reply(429, b"", {"Retry-After": "30"}), reply(TOPIC)]
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": answers})
+    mirror.topic("0.0.5555")
+    assert fake_time.sleeps == [30.0]
+
+
+def test_a_pause_of_more_than_five_minutes_is_not_waited_for() -> None:
+    too_long = Reply(429, b"", {"Retry-After": "3600"})
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": too_long})
+    with pytest.raises(MirrorError, match="3600 seconds"):
+        mirror.topic("0.0.5555")
+    assert fake_time.sleeps == []
+
+
+def test_a_network_that_stays_away_fails_after_the_pauses() -> None:
+    gone = requests.ConnectionError("no network")
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": [gone]})
+    with pytest.raises(MirrorError, match=r"unreachable \(ConnectionError\)"):
+        mirror.topic("0.0.5555")
+    assert fake_time.sleeps == list(PAUSES_SECONDS)
+
+
+def test_an_answer_that_will_not_change_is_not_asked_again() -> None:
+    mirror, _, fake_time = node({f"{BASE}/topics/0.0.5555": Reply(400, b"bad request")})
+    with pytest.raises(MirrorError, match="400"):
+        mirror.topic("0.0.5555")
+    assert (fake_time.sleeps, mirror.requests_made) == ([], 1)
 
 
 @pytest.mark.parametrize("bad", ["", "0.0", "abc", "0.0.1/../../x", "0.0.1?x=1", "../0.0.1"])

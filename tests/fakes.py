@@ -53,7 +53,7 @@ class FakeSite(BaseAdapter):
 
     def __init__(
         self,
-        pages: dict[str, Reply | list[Reply]] | None = None,
+        pages: dict[str, Reply | list[Reply | Exception]] | None = None,
         during_request: Callable[[], None] | None = None,
     ) -> None:
         super().__init__()
@@ -75,6 +75,8 @@ class FakeSite(BaseAdapter):
             reply = self.pages.get(request.url, Reply(status=404, body=b"not here"))
             if isinstance(reply, list):  # one answer for each visit, the last one for ever
                 reply = reply.pop(0) if len(reply) > 1 else reply[0]
+            if isinstance(reply, Exception):  # the network went away: no answer at all
+                raise reply
             response = requests.Response()
             response.status_code = reply.status
             response._content = reply.body
