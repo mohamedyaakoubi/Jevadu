@@ -198,3 +198,82 @@ def test_the_search_command_refuses_what_makes_no_sense(
 ) -> None:
     assert search_main(argv, Settings(_env_file=None)) == 2
     assert "usage:" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------- the life of a project
+
+NOW = datetime(2026, 10, 12, 12, tzinfo=UTC)
+
+
+def give_an_id(database: str, project: int, entity: str, last_activity: str) -> None:
+    """The project names the id, and the mirror node found it with this last activity."""
+    with psycopg.connect(database) as conn:
+        hedera_id = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, %s, 'testnet', 'topic', 'page', "
+            "'a topic', false) RETURNING id",
+            (project, entity),
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO ledger_facts (entity_id, network, asked_at, found, kind, created_at, "
+            "last_activity_at) VALUES (%s, 'testnet', '2026-10-11T20:00:00Z', true, 'topic', "
+            "'2026-03-05T10:00:00Z', %s) ON CONFLICT DO NOTHING",
+            (entity, last_activity),
+        )
+        conn.execute(
+            "INSERT INTO id_checks (hedera_id, network, status) VALUES (%s, 'testnet', "
+            "'proof_found')",
+            (hedera_id,),
+        )
+
+
+def life_line(database: str, project: int) -> str:
+    [card] = listing.cards(database, [engine.Hit(project, 1.0, 1, None)], now=NOW)
+    return next(line for line in listing.lines([card]) if line.startswith("   life:"))
+
+
+def test_a_project_with_nothing_to_look_at_is_unknown(database: str) -> None:
+    pebble = ids_of(database)["Pebble Pay"]
+    assert life_line(database, pebble) == (
+        "   life: unknown (no date of the code and no activity of its own ids)."
+    )
+
+
+def test_the_dates_of_the_code_make_a_project_active(database: str) -> None:
+    pebble = ids_of(database)["Pebble Pay"]
+    with psycopg.connect(database) as conn:
+        repository = conn.execute(
+            "INSERT INTO repositories (url, code_status, code_fetched_at, made_at, last_push_at) "
+            "VALUES ('https://github.com/sample-org/pebble-pay', 'found', now(), "
+            "'2026-03-06T17:00:00Z', '2026-09-30T08:00:00Z') RETURNING id"
+        ).fetchone()[0]
+        conn.execute("UPDATE projects SET repository_id = %s WHERE id = %s", (repository, pebble))
+    assert life_line(database, pebble) == (
+        "   life: active (a sign of life in the last 90 days, last sign 2026-09-30). "
+        "Code: made 2026-03-06, last push 2026-09-30."
+    )
+
+
+def test_the_ledger_activity_of_an_id_of_its_own_counts(database: str) -> None:
+    pebble = ids_of(database)["Pebble Pay"]
+    give_an_id(database, pebble, "0.0.3456789", "2026-09-01T10:00:00Z")
+    assert life_line(database, pebble).startswith("   life: active (")
+
+
+def test_an_id_that_projects_with_other_code_name_is_not_a_sign(database: str) -> None:
+    ids = ids_of(database)
+    # A shared service: two projects with different code name the same busy token.
+    give_an_id(database, ids["Pebble Pay"], "0.0.4567890", "2026-10-10T10:00:00Z")
+    give_an_id(database, ids["Cedar Post"], "0.0.4567890", "2026-10-10T10:00:00Z")
+    assert life_line(database, ids["Pebble Pay"]).startswith("   life: unknown (")
+
+
+def test_with_no_end_of_the_event_an_old_sign_cannot_be_judged(database: str) -> None:
+    pebble = ids_of(database)["Pebble Pay"]
+    give_an_id(database, pebble, "0.0.3456789", "2026-05-01T10:00:00Z")
+    assert life_line(database, pebble) == (
+        "   life: unknown (the end of the event is not known, last sign 2026-05-01)."
+    )
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE events SET ends_on = '2026-03-08'")
+    assert life_line(database, pebble).startswith("   life: quiet (")

@@ -1,8 +1,9 @@
 """A plain listing of the results of a search (design 14.3: "only a plain debug listing").
 
 For each project it shows the facts that the tool holds, read from the tables: the event, the
-prize, the result of the proof rule, the links, and for each Hedera id what the mirror node
-answered and on which day it was asked (design 7). Nothing here is written by a model
+prize, the result of the proof rule, the life of the project and the dates of its code, the
+links, and for each Hedera id what the mirror node answered and on which day it was asked
+(design 7). Nothing here is written by a model
 (design rule 2), and nothing gives a score of quality (design rule 1): the place in the list
 says only how close a project is to the idea.
 """
@@ -11,10 +12,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 import psycopg
 
+from hackathon_memory.check.life import Life, life_of
 from hackathon_memory.search.engine import Hit
 
 PRIZE_WORDS = {
@@ -60,10 +62,36 @@ class ResultCard:
     page_url: str
     repository: str | None
     ledger: tuple[LedgerLine, ...]
+    code_status: str | None = None  # found, gone or blocked; None when not asked yet
+    made_at: datetime | None = None
+    last_push_at: datetime | None = None
+    life: Life | None = None
 
 
-def cards(conninfo: str, hits: Sequence[Hit]) -> list[ResultCard]:
+# The signs of life of each project (design 7.4): the end of its event, the facts of its code,
+# and the last activity of its own ids. An id counts on a network where the proof rule found
+# it, and only when no project with other code names it too: a shared service is not a sign.
+_SIGNS = """
+SELECT p.id, e.ends_on, r.code_status, r.made_at, r.last_push_at,
+       (SELECT max(f.last_activity_at)
+        FROM hedera_ids h
+        JOIN id_checks c ON c.hedera_id = h.id AND c.status IN (
+            'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
+        JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network
+        WHERE h.project_id = p.id
+          AND NOT EXISTS (
+              SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
+              WHERE o.entity_id = h.entity_id
+                AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id)))
+FROM projects p JOIN events e ON e.id = p.event_id
+LEFT JOIN repositories r ON r.id = p.repository_id
+WHERE p.id = ANY(%s)
+"""
+
+
+def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) -> list[ResultCard]:
     """The facts of each project that was found, in the order of the hits."""
+    now = now or datetime.now(UTC)
     ids = [hit.project_id for hit in hits]
     with psycopg.connect(conninfo) as conn:
         projects = {
@@ -85,11 +113,28 @@ def cards(conninfo: str, hits: Sequence[Hit]) -> list[ResultCard]:
             (ids,),
         ).fetchall():
             ledger.setdefault(row[0], []).append(LedgerLine(*row[1:]))
-    return [
-        ResultCard(rank, hit, *projects[hit.project_id], tuple(ledger.get(hit.project_id, [])))
-        for rank, hit in enumerate(hits, start=1)
-        if hit.project_id in projects
-    ]
+        signs = {row[0]: row[1:] for row in conn.execute(_SIGNS, (ids,)).fetchall()}
+    found: list[ResultCard] = []
+    for rank, hit in enumerate(hits, start=1):
+        if hit.project_id not in projects:
+            continue
+        end, code_status, made_at, last_push, last_activity = signs[hit.project_id]
+        life = life_of(
+            event_end=end, last_push=last_push, last_ledger_activity=last_activity, now=now
+        )
+        found.append(
+            ResultCard(
+                rank,
+                hit,
+                *projects[hit.project_id],
+                tuple(ledger.get(hit.project_id, [])),
+                code_status=code_status,
+                made_at=made_at,
+                last_push_at=last_push,
+                life=life,
+            )
+        )
+    return found
 
 
 def lines(found: Sequence[ResultCard], *, names: bool = True) -> list[str]:
@@ -103,6 +148,8 @@ def lines(found: Sequence[ResultCard], *, names: bool = True) -> list[str]:
             f"   prize: {PRIZE_WORDS.get(card.prize_state, card.prize_state)}. "
             f"Hedera proof: {STATUS_WORDS.get(card.proof_status, card.proof_status)}."
         )
+        if card.life is not None:
+            out.append(f"   {_life_words(card, card.life)}")
         if names:
             out.append(f"   page: {card.page_url}")
             if card.repository:
@@ -134,3 +181,22 @@ def _ledger_words(line: LedgerLine) -> str:
         f"{line.entity_id} on {line.network}, {where}: {', '.join(facts)}. "
         f"{STATUS_WORDS.get(line.status, line.status)}{asked}"
     )
+
+
+CODE_WORDS = {
+    "gone": "the repository is gone or private",
+    "blocked": "GitHub blocked the repository",
+}
+
+
+def _life_words(card: ResultCard, life: Life) -> str:
+    """The life of a project and the dates of its code, in one line."""
+    words = f"life: {life.status} ({life.why}"
+    words += f", last sign {life.last_sign:%Y-%m-%d})" if life.last_sign else ")"
+    if card.code_status == "found" and card.made_at:
+        words += f". Code: made {card.made_at:%Y-%m-%d}"
+        if card.last_push_at:
+            words += f", last push {card.last_push_at:%Y-%m-%d}"
+    elif card.code_status in CODE_WORDS:
+        words += f". Code: {CODE_WORDS[card.code_status]}"
+    return words + "."
