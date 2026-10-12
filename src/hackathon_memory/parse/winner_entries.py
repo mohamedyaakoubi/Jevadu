@@ -62,23 +62,28 @@ def read_entries(path: Path) -> list[WinnerEntry]:
         records = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         raise WinnerEntriesError(f"{path.name} cannot be read as JSON") from error
+    return entries_from_records(records, site=path.parent.name, source=path.name)
+
+
+def entries_from_records(records: object, *, site: str, source: str) -> list[WinnerEntry]:
+    """Every winner of a list of records, as projects of the kind "winner_entry". `source`
+    names the list in an error."""
     if not isinstance(records, list):
-        raise WinnerEntriesError(f"{path.name} is not a list of records")
-    site = path.parent.name
-    entries = []
+        raise WinnerEntriesError(f"{source} is not a list of records")
+    entries: list[WinnerEntry] = []
     for number, record in enumerate(records, start=1):
         if not isinstance(record, dict) or record.get("kind") != WINNER_ENTRY:
-            raise WinnerEntriesError(f"{path.name}, record {number}: not a winner entry")
+            raise WinnerEntriesError(f"{source}, record {number}: not a winner entry")
         missing = [key for key in _REQUIRED if not str(record.get(key) or "").strip()]
         if not missing and not str(record["source_url"]).startswith("https://"):
             missing = ["source_url"]
         if missing:
             raise WinnerEntriesError(
-                f"{path.name}, record {number}: missing or wrong: {', '.join(missing)}"
+                f"{source}, record {number}: missing or wrong: {', '.join(missing)}"
             )
         entry = _entry(site, record)
         if any(other.page.page == entry.page.page for other in entries):
-            raise WinnerEntriesError(f"{path.name}, record {number}: a second winner of that name")
+            raise WinnerEntriesError(f"{source}, record {number}: a second winner of that name")
         entries.append(entry)
     return entries
 
