@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -49,6 +50,38 @@ def test_a_map_keyed_by_handles_does_not_show_the_handles() -> None:
     assert "orchardson" not in text
     assert "users: map of 2 records" in text
     assert "users{}.name: str" in text
+
+
+def pushed_page(*rows: object) -> bytes:
+    """An invented Next.js page whose scripts push these rows of data, one script each."""
+    scripts = []
+    for number, row in enumerate(rows):
+        pushed = json.dumps(f"{number}:{json.dumps(row)}\n")  # a JavaScript string, as JSON
+        scripts.append(f"<script>self.__next_f.push([1,{pushed}])</script>")
+    return f"<html><body><main>Winners</main>{''.join(scripts)}</body></html>".encode()
+
+
+def test_the_data_that_a_next_js_page_pushes_is_shown_as_keys_and_counts() -> None:
+    winners = {
+        "winners": [
+            {"project": "Invented Pay", "track": "Payments", "members": [{"name": "Quillfeather"}]},
+            {"project": "Invented Post", "track": "Logistics", "members": [{"name": "Ledgerwood"}]},
+        ],
+        "byHandle": {"orchardson": {"seen": 1}, "quillfeather": {"seen": 2}},
+    }
+    text = skeleton(pushed_page(winners, ["$", "div", None, {"className": "card"}]))
+    for shown in ("project: 2", "track: 2", "members: 2", "name: 2", "seen: 2"):
+        assert shown in text
+    assert "seen only once, not shown" in text  # winners, byHandle, className
+    for hidden in ("Invented", "Payments", "card", *PEOPLE, "byHandle"):
+        assert hidden not in text
+
+
+def test_a_page_with_no_pushed_data_says_none() -> None:
+    text = skeleton(b"<html><body><p>plain</p></body></html>")
+    assert "Data pushed by the scripts of a Next.js page (key: count, never a value):\n  none" in (
+        text
+    )
 
 
 def test_meta_tags_are_listed_by_name_only() -> None:
