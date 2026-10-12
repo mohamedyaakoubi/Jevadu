@@ -27,7 +27,6 @@ NEW = "new"
 CHANGED = "changed"
 SAME = "same"
 
-FULL_CARD = "full_card"
 # Where an id was found: on the page of the project, or in the README of its code.
 ON_THE_PAGE = "page"
 IN_THE_README = "readme"
@@ -102,7 +101,7 @@ class ProjectStore:
             facts = (
                 page.site,
                 page.site_key,
-                FULL_CARD,
+                page.entry_kind,
                 event_id,
                 page.name,
                 page.short_line,

@@ -67,6 +67,8 @@ def test_every_setting_is_listed_in_the_example_file() -> None:
 def test_collectors_are_off_by_default(clean_env: None) -> None:
     assert make().collect_ethglobal is False
     assert make().collect_github is False
+    assert make().collect_africa_winners is False
+    assert make().collect_hedera_posts is False
 
 
 def test_the_switch_reads_on_and_off(clean_env: None, monkeypatch: pytest.MonkeyPatch) -> None:

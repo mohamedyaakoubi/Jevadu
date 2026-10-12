@@ -98,6 +98,10 @@ class Settings(BaseSettings):
     collect_ethglobal: bool = Field(False, json_schema_extra=_PUBLIC)
     # GitHub's API: the README and the facts of the code of each project (design 7.3).
     collect_github: bool = Field(False, json_schema_extra=_PUBLIC)
+    # The one page with the winners of the Hedera Africa hackathon (design 4.6).
+    collect_africa_winners: bool = Field(False, json_schema_extra=_PUBLIC)
+    # Hedera's own posts with the winners of its older hackathons (design 4.6).
+    collect_hedera_posts: bool = Field(False, json_schema_extra=_PUBLIC)
 
     @field_validator("llm_environment", mode="before")
     @classmethod

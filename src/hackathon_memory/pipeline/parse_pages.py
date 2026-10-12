@@ -12,18 +12,29 @@ when it was saved. The second one must never happen (design rule 5), so it is sa
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
+from hackathon_memory.collect import africa_winners as africa_page
+from hackathon_memory.collect import hedera_posts
 from hackathon_memory.collect.rawstore import RawStore, fingerprint
 from hackathon_memory.db.projects import SAME, ProjectStore
 from hackathon_memory.db.runs import Run
+from hackathon_memory.parse.africa_winners import read_africa_winners
 from hackathon_memory.parse.ethglobal_page import (
     PARSER_VERSION,
     PageShapeChanged,
     read_project_page,
 )
 from hackathon_memory.parse.event_ends import EventEndsError, read_event_ends
+from hackathon_memory.parse.hedera_posts import read_hedera_posts
 from hackathon_memory.parse.project import ProjectPage
+from hackathon_memory.parse.winner_entries import PARSER_VERSION as WINNER_PARSER
+from hackathon_memory.parse.winner_entries import (
+    WinnerEntriesError,
+    entry_files,
+    read_entries,
+)
 
 STEP = "parse"
 EDITED = "the file of the page does not have the fingerprint that was written when it was saved"
@@ -69,6 +80,43 @@ def parse_saved_pages(
         run.counts[projects.save(project, sha256)] += 1
         if project.people_words_hidden:
             run.counts["words_about_people_hidden"] += project.people_words_hidden
+
+
+def parse_winner_entries(
+    folder: Path, projects: ProjectStore, run: Run, saved: Path | None = None
+) -> None:
+    """Keep the winner entries that a person copied by hand into `folder`, and the ones of the
+    saved winners pages in `saved`, the folder of saved pages (design 4.6): the page of the
+    Africa hackathon and Hedera's own winner posts.
+
+    A record that changed is read again, and one that did not is passed over. A file that
+    cannot be read is named in the run, and nothing of it is used.
+    """
+    already = projects.already_parsed()
+    sources = [(path.name, partial(read_entries, path)) for path in entry_files(folder)]
+    if saved is not None:
+        sources.append((africa_page.SITE, partial(read_africa_winners, saved / africa_page.SITE)))
+        sources.append(
+            (
+                hedera_posts.SITE,
+                partial(read_hedera_posts, saved / hedera_posts.SITE, folder / hedera_posts.SITE),
+            )  # fmt: skip
+        )
+    for name, read in sources:
+        try:
+            entries = read()
+        except WinnerEntriesError as wrong:
+            run.counts["winner_files_not_read"] += 1
+            run.problem(name, str(wrong))
+            continue
+        for entry in entries:
+            run.counts["winner_entries"] += 1
+            if already.get(entry.page.page) == (entry.sha256, WINNER_PARSER):
+                run.counts["winner_entries_same"] += 1
+                continue
+            run.counts["winner_entries_" + projects.save(entry.page, entry.sha256)] += 1
+            if entry.page.people_words_hidden:
+                run.counts["words_about_people_hidden"] += entry.page.people_words_hidden
 
 
 def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) -> None:

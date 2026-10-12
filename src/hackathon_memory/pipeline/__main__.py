@@ -15,7 +15,8 @@
     python -m hackathon_memory.pipeline all                parse, readmes, code, check and
                                                            embed, in this order
 
-"parse" sends no request: it works on the pages that are saved. It also writes the last day of
+"parse" sends no request: it works on the pages that are saved, and on the winner entries that a
+person copied by hand into data/by-hand (design 4.6). It also writes the last day of
 each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
 rule needs it and no page gives it (design 7.2). "readmes" and "code" ask GitHub's API, which the
 maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait lets it wait
@@ -129,6 +130,14 @@ def parse_lines(run: Run) -> list[str]:
     ]
     if counts["left_for_later"]:
         lines.append(f"Left for a later run, because of the limit: {counts['left_for_later']}.")
+    if counts["winner_entries"] or counts["winner_files_not_read"]:
+        lines.append(
+            f"Winner entries, copied by hand or read from a saved winners page: "
+            f"{counts['winner_entries']}. New: "
+            f"{counts['winner_entries_new']}. Read again: {counts['winner_entries_changed']}. "
+            f"The same as before: {counts['winner_entries_same']}. Files not read: "
+            f"{counts['winner_files_not_read']}."
+        )
     if counts["words_about_people_hidden"]:
         lines.append(
             "Handles, addresses and profile links that were hidden in the texts and the links: "
@@ -224,6 +233,11 @@ def _run_step(
             projects = ProjectStore(conninfo)
             parse_pages.parse_saved_pages(
                 RawStore(paths.raw_dir), projects, run, limit=arguments.limit
+            )
+            # The winner entries: copied by hand into the folder of what a person typed, or read
+            # from a saved winners page in the folder of saved pages.
+            parse_pages.parse_winner_entries(
+                paths.page_list.parent.parent, projects, run, saved=paths.raw_dir.parent
             )
             ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
             parse_pages.apply_event_ends(projects, ends, SITE, run)

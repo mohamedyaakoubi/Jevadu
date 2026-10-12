@@ -51,6 +51,8 @@ def test_the_example_settings_file_holds_no_value() -> None:
             "COLLECTOR_NAME": "HackathonMemory-research",
             "COLLECT_ETHGLOBAL": "off",
             "COLLECT_GITHUB": "off",
+            "COLLECT_AFRICA_WINNERS": "off",
+            "COLLECT_HEDERA_POSTS": "off",
             # model names and levels, chosen by the maintainer: not secrets
             "GEMINI_REWRITE_MODEL": "gemini-3.1-pro-preview",
             "GEMINI_REWRITE_THINKING_LEVEL": "HIGH",

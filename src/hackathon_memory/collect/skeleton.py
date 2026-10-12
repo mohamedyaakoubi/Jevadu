@@ -12,6 +12,9 @@ a page and none of its text:
 * a link is shown as its host and the shape of its path: the first words of a path are shown only
   when they are known structure words, and the rest becomes {x};
 * a data block (JSON in a script tag) is shown as keys and kinds of values, never values;
+* the data that the scripts of a Next.js page push is shown as its keys and how often each key
+  stands in it, never a value. A key seen once is not shown, and the keys of a map of records
+  are not counted: such a key can be the handle of a person;
 * a meta tag is shown by its name, never by its content.
 
 Nothing the tool prints can name a person, except a class name or an id that happens to hold one.
@@ -20,12 +23,15 @@ Nothing the tool prints can name a person, except a class name or an id that hap
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
+
+from hackathon_memory.parse.pagedata import page_data_text
 
 # Headings that are plain section words. Any other heading is shown by its length only.
 SECTION_WORDS = {
@@ -103,6 +109,48 @@ def _kinds(value: object, path: str, lines: list[str], depth: int = 0) -> None:
             _kinds(value[0], f"{path}[]", lines, depth + 1)
     else:
         lines.append(f"{path}: {type(value).__name__}")
+
+
+_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,40}$")
+_SHOWN_KEYS = 90
+
+
+def _is_map_of_records(value: dict) -> bool:
+    records = list(value.values())
+    shapes = {tuple(sorted(r)) for r in records if isinstance(r, dict)}
+    return len(records) >= 2 and all(isinstance(r, dict) for r in records) and len(shapes) == 1
+
+
+def _count_keys(value: object, counts: Counter[str], depth: int = 0) -> None:
+    if depth > 60:
+        return
+    if isinstance(value, dict):
+        if not _is_map_of_records(value):
+            counts.update(key for key in value if _KEY.match(key))
+        for item in value.values():
+            _count_keys(item, counts, depth + 1)
+    elif isinstance(value, list):
+        for item in value:
+            _count_keys(item, counts, depth + 1)
+
+
+def pushed_keys(text: str) -> Counter[str]:
+    """How often each key stands in the JSON of the text that a Next.js page pushes."""
+    counts: Counter[str] = Counter()
+    decoder = json.JSONDecoder()
+    at = 0
+    while True:
+        starts = [i for i in (text.find("{", at), text.find("[", at)) if i != -1]
+        if not starts:
+            return counts
+        start = min(starts)
+        try:
+            value, end = decoder.raw_decode(text, start)
+        except ValueError:
+            at = start + 1
+            continue
+        _count_keys(value, counts)
+        at = end
 
 
 def _attributes(tag: Tag) -> str:
@@ -192,6 +240,21 @@ def skeleton(html: bytes) -> str:
             out.extend(f"    {line}" for line in lines[:80])
     if not found_data:
         out.append("  none")
+
+    out.append("Data pushed by the scripts of a Next.js page (key: count, never a value):")
+    pushed = page_data_text(soup)
+    if not pushed:
+        out.append("  none")
+    else:
+        counts = pushed_keys(pushed)
+        once = sum(1 for count in counts.values() if count == 1)
+        out.append(
+            f"  {len(pushed)} characters, {len(counts)} different keys "
+            f"({once} seen only once, not shown)"
+        )
+        shown = [f"{key}: {count}" for key, count in counts.most_common() if count >= 2]
+        for at in range(0, min(len(shown), _SHOWN_KEYS), 6):
+            out.append("  " + ", ".join(shown[at : at + 6]))
 
     out.append("Link shapes (count, shape):")
     shapes = Counter(path_shape(str(a["href"])) for a in soup.find_all("a", href=True))
