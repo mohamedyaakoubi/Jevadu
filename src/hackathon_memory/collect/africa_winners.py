@@ -39,18 +39,11 @@ from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
-from hackathon_memory.collect.polite import (
-    CollectorIdentity,
-    CollectorRefused,
-    FetchFailed,
-    FetchResult,
-    PoliteClient,
-    RequestCount,
-    StopCollecting,
-)
+from hackathon_memory.collect import small_site
+from hackathon_memory.collect.polite import CollectorRefused, PoliteClient, StopCollecting
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
-from hackathon_memory.collect.robots import read_rules
 from hackathon_memory.collect.skeleton import skeleton
+from hackathon_memory.collect.small_site import SmallSite, count_line, fetch, obey_robots
 from hackathon_memory.parse.jsdata import NotALiteral, objects_holding, read_literal
 from hackathon_memory.parse.pagedata import page_data_text
 from hackathon_memory.settings import Settings
@@ -62,6 +55,7 @@ ROBOTS_URL = f"https://{SITE}/robots.txt"
 REQUEST_LIMIT = 10
 SCRIPT_LIMIT = 5  # the maintainer's yes of 12 October 2026
 USAGE = "usage: python -m hackathon_memory.collect.africa_winners --look | --read"
+SMALL_SITE = SmallSite(SITE, "collect_africa_winners", REQUEST_LIMIT)
 
 # The address of a winner's project page. No program asks for it.
 WINNER_LINK = re.compile(r"https://dorahacks\.io/[^\s\"'`<>\\)]+")
@@ -110,8 +104,10 @@ class Paths:
 
 
 def paths(settings: Settings) -> Paths:
-    root = Path(settings.data_dir)
-    return Paths(raw_dir=root / "raw" / SITE, request_count=root / "requests" / f"{SITE}.json")
+    return Paths(
+        raw_dir=Path(settings.data_dir) / "raw" / SITE,
+        request_count=small_site.request_count_path(settings, SITE),
+    )
 
 
 def client_for(
@@ -121,69 +117,10 @@ def client_for(
     allow: Callable[[str], bool] = is_allowed_url,
     **client_options: object,
 ) -> PoliteClient:
-    """A polite client that may read what `allow` names, and nothing else.
-
-    It is not made while the switch is off, after a refusal of the site, or during a cooldown.
-    """
-    if not settings.collect_africa_winners:
-        raise CollectorRefused(
-            f"The switch for {SITE} is off. Set COLLECT_AFRICA_WINNERS=on in .env to allow it "
-            "(design rule 17: only after the maintainer's yes for this page)."
-        )
-    identity = CollectorIdentity.from_settings(settings)
-    count = RequestCount(paths(settings).request_count, SITE, limit=REQUEST_LIMIT)
-    try:
-        refused = count.refusal()
-    except StopCollecting as stop:
-        raise CollectorRefused(str(stop)) from None
-    if refused:
-        raise CollectorRefused(
-            f"{SITE} refused a request on {refused['at']} ({refused['status']}). Nothing is sent "
-            "until a person decides how to go on."
-        )
-    if count.wait_left() > 0:
-        raise CollectorRefused(f"{SITE} asked for a pause. Try again in {count.wait_left():.0f} s.")
-    client_options.setdefault("max_requests", REQUEST_LIMIT)
-
-    def still_enabled() -> bool:
-        # Read again before every request, so that turning the switch off stops at once.
-        return Settings(_env_file=env_file or ".env").collect_africa_winners
-
-    return PoliteClient(
-        site=SITE,
-        identity=identity,
-        allow=allow,
-        is_enabled=still_enabled,
-        count=count,
-        **client_options,  # type: ignore[arg-type]
+    """A polite client that may read what `allow` names, and nothing else (small_site.py)."""
+    return small_site.client_for(
+        settings, SMALL_SITE, allow=allow, env_file=env_file, **client_options
     )
-
-
-def _fetch(client: PoliteClient, url: str, what: str) -> FetchResult:
-    try:
-        fetched = client.get(url)
-    except FetchFailed as error:
-        raise StopCollecting(f"{what} could not be read: {error}") from None
-    if fetched.status != 200:
-        raise StopCollecting(f"{what} answered {fetched.status}")
-    return fetched
-
-
-def _robots(client: PoliteClient, say: Callable[[str], None]) -> None:
-    rules, robots = read_rules(client, ROBOTS_URL, SITE)
-    if robots.status == 404:
-        say("robots.txt: none (404), so nothing is forbidden by it.")
-    else:
-        say(f"robots.txt: read, {len(robots.body)} bytes. It is obeyed.")
-    if not rules.allows(client.identity.name, PAGE):
-        raise StopCollecting(f"robots.txt of {SITE} does not allow this tool to read the page")
-
-
-def _count_line(client: PoliteClient) -> str:
-    count = client.count
-    if count is None:
-        return "No count of requests."
-    return f"Requests sent to {SITE} so far: {count.sent()} of {count.limit}."
 
 
 # --------------------------------------------------------------------- the look
@@ -193,8 +130,8 @@ def look(client: PoliteClient, say: Callable[[str], None] = print) -> bool:
     """robots.txt, then the page, kept in memory only, and its shape printed. True if all went
     well. Nothing is saved."""
     try:
-        _robots(client, say)
-        fetched = _fetch(client, PAGE, "the page")
+        obey_robots(client, SMALL_SITE, PAGE, say)
+        fetched = fetch(client, PAGE, "the page")
         say(
             f"--- The page: status {fetched.status}, {len(fetched.body)} bytes, "
             f"type {fetched.content_type or 'not given'}. It is not saved."
@@ -205,7 +142,7 @@ def look(client: PoliteClient, say: Callable[[str], None] = print) -> bool:
         say(f"STOPPED: {stop}")
         return False
     finally:
-        say(_count_line(client))
+        say(count_line(client))
 
 
 # --------------------------------------------------------------------- the read
@@ -296,8 +233,8 @@ def read_and_save(
         say("The page is saved already, and it is never asked for twice: nothing is sent.")
         return None
     try:
-        _robots(client, say)
-        page = _fetch(client, PAGE, "the page")
+        obey_robots(client, SMALL_SITE, PAGE, say)
+        page = fetch(client, PAGE, "the page")
         if shows_members(page.body):
             raise StopCollecting("the page shows a block about a team or its members: nothing "
                                  "is saved, and the cut must be written first")  # fmt: skip
@@ -306,7 +243,7 @@ def read_and_save(
         allowed.scripts.update(sources)
         say(f"The page shows {len(on_page)} winner link(s). Script files to try: {len(sources)}.")
         for number, url in enumerate(sources, start=1):
-            script = _fetch(client, url, f"script file {number}")
+            script = fetch(client, url, f"script file {number}")
             text = script.body.decode("utf-8", errors="replace")
             links = set(WINNER_LINK.findall(text))
             if len(links) <= len(on_page) or not links & on_page:
@@ -349,7 +286,7 @@ def read_and_save(
         say(f"STOPPED: {stop}")
         return None
     finally:
-        say(_count_line(client))
+        say(count_line(client))
 
 
 def main(argv: list[str]) -> int:
