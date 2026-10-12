@@ -34,7 +34,6 @@ from hackathon_memory.collect.ethglobal import (
     is_allowed_url,
     load_project_pages,
     polite_client,
-    took_a_hedera_prize,
 )
 from hackathon_memory.collect.ethglobal_site import ROBOTS_URL, SITE
 from hackathon_memory.collect.polite import (
@@ -47,6 +46,7 @@ from hackathon_memory.collect.polite import (
 from hackathon_memory.collect.robots import RobotsRules, read_rules
 from hackathon_memory.collect.skeleton import skeleton
 from hackathon_memory.collect.teamcut import CutFailed, cut_team
+from hackathon_memory.parse.ethglobal_page import took_a_hedera_prize
 from hackathon_memory.settings import Settings
 
 LOOK_REQUESTS = 2  # robots.txt and one project page

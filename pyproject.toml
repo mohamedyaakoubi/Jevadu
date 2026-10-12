@@ -23,6 +23,7 @@ dependencies = [
     "pgvector>=0.5,<0.6",
     "hiero-sdk-python==0.2.10",
     "google-genai>=2.29,<3",
+    "httpx>=0.28.1,<1",  # the network errors of google-genai's requests are named in the code
 ]
 
 [project.optional-dependencies]
@@ -58,7 +59,7 @@ src = ["src", "."]
 select = ["E", "F", "I", "B", "UP", "S"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["hackathon_memory", "proofs", "fakes", "googlefake"]
+known-first-party = ["hackathon_memory", "proofs", "fakes", "googlefake", "searchfakes"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests may use assert, and may hold fake passwords that protect nothing.

@@ -86,6 +86,16 @@ def test_an_embedding_call_is_counted_and_its_cost_is_not_guessed() -> None:
     assert line.cost_usd is None  # the price of this model was not read from Google
 
 
+def test_an_embedding_of_the_search_model_is_counted_with_its_price() -> None:
+    client, store = metered(FakeGoogle(), purpose="embed_document")
+    embeddings.embed_documents(client, ["a text", "another"], model=embeddings.SEARCH_MODEL)
+    lines = store.calls()
+    assert len(lines) == 2  # one request for each text
+    assert {(line.model, line.input_tokens) for line in lines} == {("gemini-embedding-2", 9)}
+    assert all(line.cost_usd == pytest.approx(9 * 0.20 / 1_000_000) for line in lines)
+    assert PAGE_CANARY not in repr(lines)
+
+
 def test_a_call_that_fails_gets_a_line_with_the_class_of_its_error_and_no_text() -> None:
     fake = FakeGoogle(answer())
     fake.fail_with = (403, "Permission denied for SECRET-CANARY-PROJECT")

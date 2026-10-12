@@ -12,6 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from googlefake import PAGE_CANARY, FakeGoogle, answer, valid_form
+from hackathon_memory.llm import client as client_module
 from hackathon_memory.llm import embeddings
 from hackathon_memory.llm.card_form import CardFields, Category, Label
 from hackathon_memory.llm.gemini import (
@@ -290,6 +291,16 @@ def test_three_bad_answers_in_a_row_are_an_error_that_counts_the_cost() -> None:
     assert failure.value.usage == Usage(3000, 600, 900, 4500)  # money was spent on all three
 
 
+def test_a_broken_connection_is_made_again_and_is_not_an_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(client_module, "PAUSES_AFTER_A_DROP", (0.0, 0.0, 0.0))
+    google = FakeGoogle(answer())
+    google.drop_first = 1
+    result = fill_card(google.client(), PAGE, model=FLASH, thinking_level="HIGH")
+    assert (result.attempts, google.dropped_requests) == (1, 1)
+
+
 def test_the_number_of_attempts_can_be_set() -> None:
     google = FakeGoogle("not json")
     with pytest.raises(CardFormatError):
@@ -316,3 +327,50 @@ def test_the_error_says_how_the_json_failed_and_never_what_it_said() -> None:
     assert "finish reason STOP" in message
     assert "at character" in message
     assert PAGE_CANARY not in message  # nothing of the answer
+
+
+# ------------------------------------------------------------------ the model of the search
+
+SEARCH = embeddings.SEARCH_MODEL
+
+
+def test_the_search_model_gets_one_text_with_a_prefix_in_each_request() -> None:
+    google = FakeGoogle()
+    client = google.client()
+    found = embeddings.embed_documents(
+        client, ["Pay a vendor.", "Log a parcel."], model=SEARCH, titles=["Pebble Pay", None]
+    )
+    embeddings.embed_query(client, "a coin for vendors", model=SEARCH)
+    assert len(found) == 2 and all(len(one.values) == 3072 for one in found)
+    assert found[0].token_count == 9
+    paths = [path for path, _ in google.requests]
+    assert all(path.endswith("/publishers/google/models/gemini-embedding-2:embedContent")
+               for path in paths)  # fmt: skip
+    texts = [body["content"]["parts"][0]["text"] for _, body in google.requests]
+    assert texts == [
+        "title: Pebble Pay | text: Pay a vendor.",
+        "title: none | text: Log a parcel.",
+        "task: search result | query: a coin for vendors",
+    ]
+    for _, body in google.requests:
+        assert body["embedContentConfig"] == {"outputDimensionality": 3072}  # no task type
+
+
+def test_the_search_model_says_when_a_text_was_cut() -> None:
+    google = FakeGoogle()
+    google.truncated = True
+    [one] = embeddings.embed_documents(google.client(), ["a long text"], model=SEARCH)
+    assert one.truncated is True
+
+
+def test_titles_must_match_the_texts() -> None:
+    google = FakeGoogle()
+    with pytest.raises(embeddings.EmbeddingError, match="one title"):
+        embeddings.embed_documents(google.client(), ["a", "b"], model=SEARCH, titles=["x"])
+    assert google.requests == []
+
+
+def test_the_search_model_is_counted_by_the_meter_with_its_price() -> None:
+    from hackathon_memory.finops import prices
+
+    assert prices.price_on(SEARCH, prices.today()) is not None

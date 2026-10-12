@@ -49,10 +49,17 @@ class FakeGoogle:
         # Optional: HTTP statuses to answer with, one for each request, before the real answer.
         self.fail_first: list[int] = []
         self.failed_requests = 0
+        # Optional: how many requests lose their connection, before any answer is given.
+        self.drop_first = 0
+        self.dropped_requests = 0
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else {}
         self.requests.append((request.url.path, body))
+        if self.drop_first:
+            self.drop_first -= 1
+            self.dropped_requests += 1
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
         if self.fail_first:
             status = self.fail_first.pop(0)
             self.failed_requests += 1
@@ -81,6 +88,18 @@ class FakeGoogle:
                 for i in range(count)
             ]
             return httpx.Response(200, json={"predictions": predictions})
+        if request.url.path.endswith(":embedContent"):
+            # One text for each request: the answer of Vertex AI for gemini-embedding-2.
+            text = body["content"]["parts"][0]["text"]
+            values = self.vector_for(text) if self.vector_for else [0.5] * self.embedding_size
+            return httpx.Response(
+                200,
+                json={
+                    "embedding": {"values": values},
+                    "usageMetadata": {"promptTokenCount": 9},
+                    "truncated": self.truncated,
+                },
+            )
         text = self.answer_queue.pop(0) if self.answer_queue else self.answer_text
         reason = self.finish_reasons.pop(0) if self.finish_reasons else self.finish_reason
         parts = [{"text": text}] if text else []

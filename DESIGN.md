@@ -2,7 +2,7 @@
 
 This document explains what the tool is, how it is built, and why. The code and the tests point to its sections by number, for example "design 5.7" or "design section 11.6". So the numbers are fixed: a new section is added at the end, never in the middle.
 
-**State on 11 October 2026.** Phase A is done: the setup and four small proofs, which all passed (section 14.2). Sections 6 to 13 describe what comes next. They are a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
+**State on 11 October 2026.** Phase A is done: the setup and four small proofs, which all passed (section 14.2). Phase B is being built: the parser (section 6.1) and the check on the ledger (sections 7.1 and 7.2) already run on the saved pages. The rest of sections 6 to 13 describes what comes next. It is a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
 
 Words in **bold** on first use are explained in section 17.
 
@@ -237,13 +237,40 @@ Collection by a program is a proof of the idea. Real use would need the sites to
 - Every page is saved with its address, the date and a **fingerprint** of its content. There are two exceptions to "saved as received", both made before the page is saved.
   1. **The team part is cut out,** because the sites were promised that it is not collected (section 5.7). That means the block that shows the team, the metadata that names an author, and the keys that hold people inside data blocks.
   2. **The page is written again by the HTML parser,** because the cut needs one. A test compares a saved sample page with the original after the team part was removed by hand: the visible text, the links and the order of the tags are the same. The spaces between tags, the case of the doctype and the slash of empty tags may differ. Two fingerprints are kept next to the page: of the page as saved, and of what the site sent.
-- A saved page is never edited.
+- The README of a project's code is saved as text, after the part about the team and the words about people were taken out (section 5.4). The fingerprint of what GitHub sent, the numbers of what was taken out, and the name, size and version of the file are kept next to it.
+- A saved page is never edited afterwards, with one exception: **personal data that is found in a saved page later is taken out.** The store has one function for that, and no other way to change a page. It writes next to the page the reason, the time, the number of places and the fingerprint that the page had before. The text that was taken out is written nowhere. The proof of the lists fails when a page differs from its fingerprint, and it counts the pages that carry such a record.
 - Running the collection again skips pages that are already saved, and pages that an earlier run read and did not keep.
 - Everything else in the system can be rebuilt from the raw pages with one command. This is also the backup.
 
 ### 5.4 Personal data
 
 Project pages can show team members. The tool does not store their names, emails or photos. It needs none of them. The account name inside a repository link is kept because the link needs it.
+
+A team can also name a person inside its own text. The parser hides these words before the text reaches a table, a model or a card:
+
+| What the team wrote | What is kept |
+|---|---|
+| A word that starts with "@", such as a handle on a social network | `@[name hidden]` |
+| An email address | `[address hidden]` |
+| A link to a profile on a social site, such as "x.com/name" or "t.me/name" | `[profile link hidden]` |
+| A link to GitHub with one name only: the profile of an account | `[profile link hidden]` |
+| A link to the photo of an account on GitHub | `[photo hidden]` |
+| A handle inside a link, such as "medium.com/@name/a-post" | the handle becomes `@[name hidden]`, and the rest of the link stays |
+
+The rest of the sentence stays word for word, and so does its full stop. The tool cannot tell a person from a company or from a bot of the project, so it hides all of them. Little is lost, because every card links to the page of the project.
+
+Three things are not hidden. The name of a software package, which has a slash after its first part ("@scope/package"), also inside the link of a site of packages. Anything inside code, where an "@" belongs to the language, except an email address. A link to a repository or to a video.
+
+**A link of a project is asked the same question.** A demo link can lead to a profile site, for example to a name on Telegram. Such a link is kept without its address: the table says that the link is there, of which kind, and on which site. So a card never says "no demo" where a team gave one. It sends the reader to the page of the project.
+
+The step that reads the saved pages counts how many words and links it hid, and writes the number into its row in the table of runs.
+
+**A README is cleaned before it is saved.** The README of a project's code (section 7.3) is written by the team for other developers, and it often has a part about the team: names, photos, links to profiles. Before a README is saved, two things are done:
+
+1. A part about the team is cut out whole: its title and everything under it, up to the next title of the same or a higher level, or up to a title that names a part of the project, such as "Installation". The titles are a fixed list ("Team", "Our Team", "Contributors", "Built by", "Contact" and a few more), compared after signs, emoji and a name after a colon are taken away.
+2. In the rest, the words of the table above are hidden. A Markdown or HTML link to a profile goes with its words, because those words are most often a name.
+
+Both are counted next to the saved README. So is every Hedera ID that stood in a part that was cut out, so that one can see whether the cut ever takes something that the check needs. The text that was cut is kept nowhere.
 
 ### 5.5 A start that needs no permission: public repositories
 
@@ -326,6 +353,18 @@ A page of ETHGlobal's showcase has a fixed shape instead: a short line, "Project
 
 A trap for the parser: a version number like "0.0.3" has the same shape as a Hedera ID. The words around a number decide what it is.
 
+**The parser of ETHGlobal's pages.** A page tells each fact twice: in what it shows, and in the data of the page. The parser reads both and refuses a page where they differ, for the name, the short line, the event and the prizes. It guesses nothing. A text is kept block by block (a paragraph, an item of a list, a title, code), word for word, and a test compares the blocks with the page letter by letter. A title that a team wrote inside a text stays a block of that text.
+
+For a Hedera ID there are three rules:
+
+- A number below 1001 belongs to the network itself and is never taken as an ID. The first number that a user can own is 1001: the setting `firstUserEntity` of the node software.
+- The network is taken from the words only when the words near the ID name one network and no other. A wrong network is worse than none: the ledger would be asked about another thing.
+- An EVM address is kept only when a HashScan link names it, because the same address can live on another chain.
+
+The data of each page also holds scores that the site computes. The parser never reads them, and a test plants loud scores and checks that none comes out.
+
+Words about people are hidden in the short line, in the two texts and among the links before anything else is done with them (section 5.4). A Hedera ID next to a hidden word is still found, and the words that are kept around it name nobody.
+
 ### 6.2 What the LLM is asked
 
 The LLM gets the page text and the sections the parser copied. It fills the LLM fields of section 4.1 in a fixed form. It is told:
@@ -355,6 +394,14 @@ IDs, links, dates, counts and statuses are produced only by the parser, the code
 ### 6.5 Cache and versions
 
 Each LLM answer is stored with the model name, the version of the instructions and a fingerprint of the input. Running again with the same three gives the stored answer and costs nothing. A change in any of the three is visible in the data.
+
+**The caches.** Only exact caches: a stored answer is given back only for exactly the same input, so a cache cannot change an answer. They all live in PostgreSQL, next to the ledger of the costs: the saved page, the card fields, the embeddings, the facts of the ledger and of the code with the time of their reading, the embedding of a typed idea, and the comparison of the search.
+
+- A fact is never inside a cached text. It is read from the tables when the page is drawn, so a cached text cannot carry an old fact.
+- The list of results never waits for the model. The comparison appears when the model has finished.
+- No cache gives the answer of one question to a similar question. That kind of cache can show the answer to another idea.
+- The answers of the mirror node are asked again after seven days.
+- Of a typed idea, only a fingerprint is kept, and its comparison for 24 hours.
 
 ---
 
@@ -386,22 +433,49 @@ The window of an event runs from 30 days before it started to 14 days after it e
 
 The numbers 30 and 14 are a first choice. Test 3 (section 13.4) tells whether they are right.
 
+**What the code adds to the table.**
+
+- Two more statuses that the table implies. *Found, but as another kind of thing:* the ledger says that the ID is another kind of thing than the page says. *The end of the event is not typed in yet:* the dates are not judged, in place of a guess.
+- A word of the page can mean more than one kind. A contract can make a token, and a contract has an account, so "token" and "account" fit a contract. "Topic" fits only a topic. The ledger decides what a thing is, never the page.
+- A thing that was made before the window and was used both before and after it gets one more question: did anything happen on it inside the window?
+- For a project, the best status of its IDs counts. An ID whose page names no network is asked on the test network and on the main network.
+- No page gives the end of its event, so it is typed into a file by hand. For an event of one weekend, the last day is the day of the judging, which the data of its project pages shows.
+
 **What this check does not show.** It does not show that the project is good. It does not prove that the ID belongs to the team: a team could paste somebody else's ID. Two things reduce that risk: the same ID must also appear in the team's own code or README, and the dates on Hedera must fit the dates of the code.
 
 ### 7.3 Facts from the code
 
 The GitHub API is asked with a read-only token. Without a token the limit is 60 requests per hour. With a token it is 5,000 per hour. Requests go one after the other, the limit headers are read, and every answer is stored so it is never asked twice.
 
+**How GitHub is asked.** The rules of section 5.7 hold here too: the name of the tool and a contact address in every request, at least one second between two requests, a limit of requests counted on disk over all runs, and a stop switch in `.env` (`COLLECT_GITHUB`), read again before every request. GitHub's own rules, read on its documentation on 11 October 2026, are kept as well:
+
+- The version of the API is named in every request: 2026-03-10, the newest. None of its changes touches what the tool asks.
+- A 404 ("no README", "no repository") and one blocked repository are answers. They are saved, and the run goes on.
+- A rate limit (a 403 or 429 with "x-ratelimit-remaining: 0", a retry-after or a message) is handled like a 429 of any site: the run stops, the tool waits at least one hour and goes on five times slower. The run also stops by itself when fewer than 100 requests are left in GitHub's hour.
+- A 401 or any other no stops everything until a person decides.
+- A moved repository answers 301. The new address is followed, and only inside the API, so the token is never sent anywhere else.
+
+**The README.** One request for each repository asks for its README. Projects with the same code share one repository and one README. The Hedera IDs in a README are found by the same rules as on a page (section 6.1), kept for each project of the repository, marked as found in the README, and judged by the same proof rule (section 7.2). The step is `python -m hackathon_memory.pipeline readmes`. Run again, it asks only for what is missing, and it writes the IDs of a project again only when they changed.
+
 For each repository: does it exist, when was it created, when was the first and the last change, how many changes, how many contributors, which languages. The package files are read to see whether a Hedera library is named. The README is searched for Hedera IDs, because many project pages give none.
+
+**The facts of a repository, as built.** One request for each repository asks for its facts (`python -m hackathon_memory.pipeline code`). The answer also holds the account that owns the repository: its photo, and for some accounts a name and an email address. None of it is kept. Before saving, only a fixed list of fields stays: the link, the dates (made, last push), the state (archived, a fork), the language, the size, the short name of the license, and the description with the words about people hidden. The number of changes, the contributors and the libraries are not read yet.
 
 ### 7.4 The life rule
 
+A **sign** is one of two dates: the last push of code to the repository, or the last activity on the ledger of the project's own IDs. A **sign of life** is a sign later than 30 days after the last day of the event. Before that line, the work is most likely still the work of the event, with its late fixes.
+
 | Status | When |
 |---|---|
-| Active | A change to the code or activity on the ledger in the last 90 days |
-| Quiet | Nothing in the last 90 days, but something later than 30 days after the event |
-| Stopped | Nothing later than 30 days after the event |
-| Unknown | No repository and no ID to look at |
+| Active | A sign of life in the last 90 days |
+| Quiet | A sign of life, but none in the last 90 days |
+| Stopped | No sign of life, and the event ended 90 days ago or more |
+| Too early to tell | No sign of life yet, and the event ended less than 90 days ago |
+| Unknown | No date of the code and no activity of an ID, or the end of the event is not known |
+
+**Why these numbers.** The 90 days follow the OpenSSF Scorecard, a common checker of open-source projects. Its check "Maintained" looks at the previous 90 days, and it calls a project younger than 90 days too new to assess. The 30 days leave a margin for the late fixes that follow an event, so that the work of the event is not taken for a project that lives on.
+
+**How the rule reads the signs.** An ID that a project with other code names too is not a sign: it is most likely a shared service used by many teams (section 8.4), and its activity says nothing about this project. The line is the end of the last day of the event plus 30 days. When the end of the event is not known, no sign can be judged: the project is unknown, and the reason is shown. The rule guesses no end. The plain listing of the search shows the status, the reason and the date of the last sign.
 
 ---
 
@@ -413,6 +487,8 @@ An **embedding** model turns a text into a list of numbers. Texts with close mea
 
 Which fields give the best search is not known yet. Test 2 (section 13.3) compares the choices, including "the page as it is".
 
+**What runs today: the page as it is.** Until the fields of the card exist, each project is embedded from its name (as the title), its short line and its two texts, with the words about people already hidden (section 5.4). The step is `python -m hackathon_memory.pipeline embed`. Every call goes through the meter and its budget (section 11.4). The fingerprint of the text is kept with the embedding, so a project is embedded again only when its text or the model changes.
+
 ### 8.2 The search
 
 The search uses two methods together and merges their results:
@@ -421,6 +497,14 @@ The search uses two methods together and merges their results:
 - by words, with a normal text search over the name, the short line, the card fields and the original text.
 
 Each method finds what the other misses. The original text is always searched, so a weak LLM field cannot hide a project.
+
+**How it runs today** (`python -m hackathon_memory.search "<an idea>"`):
+
+- **By meaning.** The idea is embedded as a search question and compared with every project embedding (an exact search, section 11.6).
+- **By words.** BM25 over the name, the short line and the two texts, on PostgreSQL's own English stems, with the usual numbers k1 = 1.2 and b = 0.75. PostgreSQL's own ranking was tried first and dropped: its documentation says that its ranking functions "do not use any global information". They count how often a word stands in a project, not how rare the word is, and every project here says "Hedera" and "token".
+- **The merge.** Reciprocal rank fusion with the constant 60 (Cormack, Clarke and Buettcher, 2009). Each list gives as many projects as the listing shows, the default of Elasticsearch's own fusion. A first try with 50 projects from each list put the closest project in meaning out of the first ten. Test 2 compares these numbers.
+- **The listing.** For each project: the event, the prize, the result of the proof rule, the links, and for each Hedera ID what the mirror node answered and on which day. Nothing in it is written by a model, and the place in the list says only how close a project is to the idea.
+- **The idea.** It is kept nowhere. Its embedding is kept for one day under the fingerprint of the idea, so the same idea is not paid for twice.
 
 The user can filter by event, year, category, proof status and life status.
 
@@ -543,6 +627,10 @@ Each choice is justified by what the job needs and by a source. "Already install
 | A local LLM | The reading needs a strong model, and the data is public, so there is no privacy reason. |
 | A separate JavaScript website | It would put the rules in two languages. Two copies drift apart. |
 | Big data tools | Section 11.6. |
+| Redis | A table in PostgreSQL holds the caches (section 6.5), and PostgreSQL also holds the list of jobs (section 11.6). There is one program on one machine. |
+| Cache-augmented generation (CAG) as the search | It puts all the knowledge into the prompt of the model. The knowledge is too big for that and it changes, each search would cost more, and the model, not the code, would pick the projects. |
+| A cache that answers a similar question | It can give the answer of another idea. Redis's own documentation says that such a cache gives up the guarantee that a hit is correct. |
+| A GitHub Actions job for the pipeline | A job of GitHub starts on an empty machine, and the pages and the database stay on one laptop (section 5.7). GitHub runs the lint and the tests on every push. |
 
 ### 11.3 The LLM and the embedding model
 
@@ -563,7 +651,7 @@ There are two layers of LLM. The models and their thinking levels are settings, 
 
 **The cost of every call is counted.** Every call goes through one client that writes a line to a ledger: the model, the tokens, the time and the cost, from a dated price list. There are two budgets, one for the work before the tool is shown and one for the tool while people use it. A call that could go over the budget is not made. A price that is not in the list is never guessed.
 
-**The embedding model.** Google's `gemini-embedding-001` has one mode for stored documents and one for search questions, which fits a short idea matched against a longer description. The first live run returned vectors of 3,072 numbers. Test 2 compares it with another model on the same known pairs.
+**The embedding model.** The search uses `gemini-embedding-2` (the setting `GEMINI_EMBEDDING_MODEL`), chosen on 11 October 2026 from Google's pages. It is generally available on Vertex AI, also in the region "global". It reads 8,192 tokens of a text, so almost every page is read whole, and its price is on Google's price page, so every call is counted with its cost. It takes no task type: a short prefix in the text says whether it is a document or a search question. The first proof used `gemini-embedding-001`, which reads 2,048 tokens and whose price is not on that page. Test 2 compares the models on the same known pairs.
 
 None of these choices is trusted blindly. Test 1 measures the LLM fields, and Test 2 the search.
 
@@ -719,6 +807,7 @@ Rules for every test:
 - **Cases:** pairs of projects that are the same idea, and pairs that only look alike. The exact repeats of section 8.4 give some pairs for free. The maintainer also writes ideas in plain words, as a builder would type them.
 - **The number:** how many of the known similar projects appear in the first 10 results.
 - **What is compared:** the page as it is against the LLM fields, and one embedding model against another.
+- **Code against model, on the same pages.** A card made by code alone is made for every page. The model reads the 15 pages for tuning and the 60 pages of Test 1. On those 60, the maintainer marks once which Hedera services each page names and which theme fits. Code then scores each way against these marks: the search, the services, the theme, and the cost of a page. The rule for "better" is written before the run, and the first layer runs on all pages only after it.
 
 ### 13.4 Test 3: Hedera IDs and the proof rule
 
@@ -772,7 +861,13 @@ Each proof writes a dated result file to `proofs/results/`, with what it does no
 
 ### 14.3 Gate B: the thinnest full path
 
-From an empty database, one command processes 50 real projects through collect, parse, check and store. For three written questions with known answers, the known projects are in the first 10 results, and each result shows facts read from the mirror node. Only a plain debug listing exists.
+From an empty database, one command processes 50 real projects through collect, parse, check and store. For three written ideas, the first 10 results come back, and each result shows facts read from the mirror node. Only a plain debug listing exists.
+
+**How the ideas are judged.** The ideas are written without reading any project page first (a decision of 12 October 2026). Words written after reading a page lean on that page, and the search by words would then find it too easily. A blind idea has no known project, so each of its first 10 results is marked on the maintainer's scale of three: "yes" (close to the idea, or sharing a big part of it), "n/a" (about something else, but of some small use for the idea) or "no" (unrelated, and of no use). A scale of three shows more than yes or no, above all when nothing is close.
+
+Two kinds of ideas are judged. Three ideas were written on purpose about things that the data may not hold, because a builder's idea may really be new. They say "expect: none": they show what the search does when nothing is close, and they need only their marks. Three more ideas, about common themes of Hedera hackathons, expect close projects: each needs at least one "yes" in its first 10 results. Every result is marked. An idea may still name a known project; then that project must be in the first 10.
+
+The proof is `python -m proofs.gate_b`, with `--questions` and `--results` for another file of ideas. `python -m proofs.gate_b --marks` reads the marks of one or more results files. The ideas, the results and the marks stay out of the repository; the result files hold file names, places and numbers only.
 
 ### 14.5 What is cut first if time is short
 

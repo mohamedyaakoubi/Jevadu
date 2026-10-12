@@ -12,7 +12,6 @@ events. It holds no text of a page, no address of a project and nothing about a 
 
 from __future__ import annotations
 
-import json
 import statistics
 import sys
 from collections import Counter
@@ -26,13 +25,13 @@ from hackathon_memory.collect.ethglobal import (
     planned_pages,
     read_and_not_kept,
     request_count,
-    took_a_hedera_prize,
 )
 from hackathon_memory.collect.ethglobal_found import load_found
 from hackathon_memory.collect.ethglobal_site import SITE
 from hackathon_memory.collect.polite import PAUSE_SECONDS, CollectorRefused, StopCollecting
 from hackathon_memory.collect.rawstore import RawStore, fingerprint
 from hackathon_memory.collect.teamcut import CutFailed, cut_team
+from hackathon_memory.parse.ethglobal_page import took_a_hedera_prize
 from hackathon_memory.settings import Settings
 from proofs.result import ProofResult
 
@@ -44,16 +43,6 @@ DOES_NOT_PROVE = [
     "That the parser can read these pages. That is the next phase.",
     "Anything about the other sites. Only ethglobal.com was read.",
 ]
-
-
-def _saved_pages(store: RawStore) -> list[dict]:
-    """The small file of every saved project page (not of robots.txt)."""
-    metas = []
-    for meta_path in sorted(store.folder.glob("*.meta.json")):
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        if store.has(meta["source_url"]):  # a page saved as .html
-            metas.append(meta)
-    return metas
 
 
 def _seconds(stamp: str) -> float:
@@ -110,7 +99,7 @@ def run(settings: Settings | None = None) -> int:
     except CollectorRefused as refusal:
         result.check("the records of the runs can be read", False, str(refusal))
         return result.finish()
-    metas = _saved_pages(store)
+    metas = [page.meta for page in store.saved()]  # the project pages, not robots.txt
     saved = {meta["source_url"] for meta in metas}
     accounted = (not_kept | not_found) - saved
     not_read = plan - saved - accounted
@@ -150,10 +139,14 @@ def run(settings: Settings | None = None) -> int:
         except CutFailed:
             unsafe += 1
         other_tool += meta.get("collector") != f"{settings.collector_name}/{__version__}"
+    # A page from which personal data was removed later says so in its small file, with the
+    # reason. Its fingerprint is the one of the page after the removal.
+    removed = sum(1 for meta in metas if meta.get("removed"))
     result.check(
-        "no saved page was edited after it was saved (fingerprints)",
+        "no saved page was changed without a written reason (fingerprints)",
         edited == 0,
-        f"{edited} edited",
+        f"{edited} changed. {removed} page(s) had personal data removed after saving, each "
+        "with its reason written next to it",
     )
     result.check(
         'the list and the "Winner of" block of each saved page agree about a Hedera prize',
@@ -225,6 +218,7 @@ def run(settings: Settings | None = None) -> int:
             "pages_saved": len(metas),
             "pages_read_and_not_kept_or_gone": len(accounted & plan),
             "pages_where_the_list_and_the_page_differ": differ,
+            "pages_with_personal_data_removed_after_saving": removed,
             "requests_sent_over_all_commands": sent,
             "request_limit": count.limit,
             "smallest_gap_between_two_saved_pages_s": smallest,

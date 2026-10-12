@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from typing import NoReturn
 from urllib.parse import urljoin
 
 import requests
@@ -311,6 +312,11 @@ def _moment(stamp: str) -> datetime:
     return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
 
 
+def _asked_to_wait(headers: requests.structures.CaseInsensitiveDict) -> str | None:
+    """What the Retry-After header of an answer says, as it came, or None."""
+    return (headers.get("Retry-After") or "").strip()[:40] or None
+
+
 def _asked_seconds(asked: str | None, refused_at: datetime) -> float:
     """What a Retry-After header asks for, in seconds: a number, or a date. Zero if unclear."""
     if not asked:
@@ -347,7 +353,9 @@ class _NoCookies(http.cookiejar.CookiePolicy):
 
 
 @dataclass
-class _Raw:
+class RawAnswer:
+    """An answer of a site as it came: its status, its headers and its body."""
+
     status: int
     headers: requests.structures.CaseInsensitiveDict
     body: bytes
@@ -512,7 +520,7 @@ class PoliteClient:
             chunks.append(chunk)
         return b"".join(chunks)
 
-    def _request_once(self, url: str) -> _Raw:
+    def _request_once(self, url: str) -> RawAnswer:
         self._wait_turn()
         self.requests_made += 1
         if self.count is not None:
@@ -539,28 +547,47 @@ class PoliteClient:
             raise FetchFailed(f"network error {type(error).__name__}") from None
         self._last_end = self.clock()
 
-        status = response.status_code
-        self._note_site_headers(response.headers)
-        asked = (response.headers.get("Retry-After") or "").strip()[:40] or None
-        if status in _BLOCK_STATUSES or "cf-mitigated" in response.headers:
-            if self.count is not None:
-                # Remembered for every later command: a person decides how to go on.
-                self.count.note_refusal(status, asked, self.pause_in_use())
-            raise StopCollecting(
-                f"{self.site} answered {status}: the site says no. Nothing is worked around."
-            )
-        if status == TOO_MANY_REQUESTS:
-            pace = self.pause_in_use()
-            goes_on = self.count.note_too_many(asked, pace) if self.count is not None else True
-            raise TooManyRequests(
-                f"{self.site} answered 429: too many requests, with {pace:.0f} seconds between "
-                "two of them. Nothing is asked again before the cooldown is over, and then "
-                "the tool goes on more slowly."
-                + (f" The site asks to wait: {asked}." if asked else "")
-                + ("" if goes_on else " This was one time too many: a person decides now.")
-            )
-        if status >= 500:
-            self._note_error(f"status {status}")
-            raise FetchFailed(f"status {status}")
+        raw = RawAnswer(status=response.status_code, headers=response.headers, body=body)
+        self._note_site_headers(raw.headers)
+        self._judge(raw)
         self._errors_in_a_row = 0
-        return _Raw(status=status, headers=response.headers, body=body)
+        return raw
+
+    def _judge(self, raw: RawAnswer) -> None:
+        """What an answer means for the run. Raises when the run must stop or the page failed.
+
+        This is the one place that reads the status of an answer. A client for a site whose
+        answers mean something else, such as an API, changes this method only.
+        """
+        asked = _asked_to_wait(raw.headers)
+        if raw.status in _BLOCK_STATUSES or "cf-mitigated" in raw.headers:
+            self._refused(raw.status, asked)
+        if raw.status == TOO_MANY_REQUESTS:
+            self._too_many(raw.status, asked)
+        if raw.status >= 500:
+            self._failed(f"status {raw.status}")
+
+    def _refused(self, status: int, asked: str | None) -> NoReturn:
+        """The site says no. It is remembered for every later command: a person decides."""
+        if self.count is not None:
+            self.count.note_refusal(status, asked, self.pause_in_use())
+        raise StopCollecting(
+            f"{self.site} answered {status}: the site says no. Nothing is worked around."
+        )
+
+    def _too_many(self, status: int, asked: str | None) -> NoReturn:
+        """The site says "too many requests": a cooldown, and then a slower pace."""
+        pace = self.pause_in_use()
+        goes_on = self.count.note_too_many(asked, pace) if self.count is not None else True
+        raise TooManyRequests(
+            f"{self.site} answered {status}: too many requests, with {pace:.0f} seconds between "
+            "two of them. Nothing is asked again before the cooldown is over, and then "
+            "the tool goes on more slowly."
+            + (f" The site asks to wait: {asked}." if asked else "")
+            + ("" if goes_on else " This was one time too many: a person decides now.")
+        )
+
+    def _failed(self, reason: str) -> NoReturn:
+        """This page failed. The run may go on, until too many fail in a row."""
+        self._note_error(reason)
+        raise FetchFailed(reason)

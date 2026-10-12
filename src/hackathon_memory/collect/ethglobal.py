@@ -40,14 +40,11 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from collections.abc import Callable, Collection
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
-
-from bs4 import BeautifulSoup
 
 from hackathon_memory.collect.ethglobal_found import (
     SponsorNotKnown,
@@ -79,6 +76,7 @@ from hackathon_memory.collect.teamcut import (
     TeamTextRemains,
     cut_team,
 )
+from hackathon_memory.parse.ethglobal_page import prize_sponsors, took_a_hedera_prize
 from hackathon_memory.settings import Settings
 
 # Pages in a row that cannot be saved safely. Three in a row means the shape is wrong, not bad luck.
@@ -94,10 +92,6 @@ MAX_DIFFERENT_IN_A_ROW = 3
 
 # robots.txt takes one of the requests of the site, so a run may read one page less.
 MAX_LISTED_PAGES = REQUEST_LIMIT - 1
-
-# The line of a prize on a project page: the sponsor, a dash, the prize name, the place.
-HEDERA_PRIZE_LINE = re.compile(r"^\s*hedera\s*[-‐-―]\s*\S", re.IGNORECASE)
-_BEFORE_THE_DASH = re.compile(r"\s+[-\u2010-\u2015]\s+")
 
 
 @dataclass(frozen=True)
@@ -197,33 +191,6 @@ def load_project_pages(path: Path) -> list[str]:
             f"requests, and robots.txt is one of them, so the list may hold {MAX_LISTED_PAGES}."
         )
     return pages
-
-
-def prize_lines(html: bytes) -> list[str]:
-    """The lines of the "Winner of" blocks of a page, one for each prize, with plain spaces."""
-    soup = BeautifulSoup(html.decode("utf-8", errors="replace"), "lxml")
-    lines: list[str] = []
-    for heading in soup.find_all("h3"):
-        if " ".join(heading.get_text().split()).lower() != "winner of":
-            continue
-        block = heading.find_next_sibling()
-        if block is not None:
-            lines.extend(" ".join(line.get_text(" ").split()) for line in block.find_all("h4"))
-    return lines
-
-
-def took_a_hedera_prize(html: bytes) -> bool:
-    """True if a "Winner of" block of the page has a line that starts with "Hedera -"."""
-    return any(HEDERA_PRIZE_LINE.match(line) for line in prize_lines(html))
-
-
-def prize_sponsors(html: bytes) -> list[str]:
-    """The sponsors that the "Winner of" blocks name: the part of each line before the dash.
-
-    Only for a message of the run, so that a person can see what a page shows.
-    """
-    names = (_BEFORE_THE_DASH.split(line, maxsplit=1)[0][:60] for line in prize_lines(html))
-    return list(dict.fromkeys(name for name in names if name))
 
 
 @dataclass

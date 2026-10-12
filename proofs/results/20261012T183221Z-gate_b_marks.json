@@ -1,0 +1,226 @@
+{
+  "proof": "gate_b_marks",
+  "gate": "B",
+  "ran_at": "2026-10-12T18:32:21Z",
+  "passed": true,
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "checks": [
+    {
+      "name": "at least 3 ideas that expect close projects",
+      "passed": true,
+      "detail": "3 of 6 idea(s)"
+    },
+    {
+      "name": "gate-b-results.txt, idea 1: expects nothing close, and every result is marked",
+      "passed": true,
+      "detail": "0 yes, 3 n/a, 7 no, 0 not marked"
+    },
+    {
+      "name": "gate-b-results.txt, idea 2: expects nothing close, and every result is marked",
+      "passed": true,
+      "detail": "0 yes, 6 n/a, 4 no, 0 not marked"
+    },
+    {
+      "name": "gate-b-results.txt, idea 3: expects nothing close, and every result is marked",
+      "passed": true,
+      "detail": "0 yes, 4 n/a, 6 no, 0 not marked"
+    },
+    {
+      "name": "gate-b-hedera-results.txt, idea 1: at least one \"yes\" in the first 10, and every result marked",
+      "passed": true,
+      "detail": "8 yes, 2 n/a, 0 no, 0 not marked; the first yes at place 1"
+    },
+    {
+      "name": "gate-b-hedera-results.txt, idea 2: at least one \"yes\" in the first 10, and every result marked",
+      "passed": true,
+      "detail": "3 yes, 5 n/a, 2 no, 0 not marked; the first yes at place 1"
+    },
+    {
+      "name": "gate-b-hedera-results.txt, idea 3: at least one \"yes\" in the first 10, and every result marked",
+      "passed": true,
+      "detail": "1 yes, 6 n/a, 3 no, 0 not marked; the first yes at place 1"
+    }
+  ],
+  "measurements": {
+    "ideas": [
+      {
+        "file": "gate-b-results.txt",
+        "idea": 1,
+        "expect": "none",
+        "results": 10,
+        "yes": 0,
+        "n/a": 3,
+        "no": 7,
+        "not_marked": 0,
+        "first_yes_at": null,
+        "places": {
+          "yes": [],
+          "n/a": [
+            1,
+            2,
+            3
+          ],
+          "no": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ]
+        }
+      },
+      {
+        "file": "gate-b-results.txt",
+        "idea": 2,
+        "expect": "none",
+        "results": 10,
+        "yes": 0,
+        "n/a": 6,
+        "no": 4,
+        "not_marked": 0,
+        "first_yes_at": null,
+        "places": {
+          "yes": [],
+          "n/a": [
+            1,
+            3,
+            4,
+            5,
+            6,
+            8
+          ],
+          "no": [
+            2,
+            7,
+            9,
+            10
+          ]
+        }
+      },
+      {
+        "file": "gate-b-results.txt",
+        "idea": 3,
+        "expect": "none",
+        "results": 10,
+        "yes": 0,
+        "n/a": 4,
+        "no": 6,
+        "not_marked": 0,
+        "first_yes_at": null,
+        "places": {
+          "yes": [],
+          "n/a": [
+            1,
+            3,
+            4,
+            6
+          ],
+          "no": [
+            2,
+            5,
+            7,
+            8,
+            9,
+            10
+          ]
+        }
+      },
+      {
+        "file": "gate-b-hedera-results.txt",
+        "idea": 1,
+        "expect": "close",
+        "results": 10,
+        "yes": 8,
+        "n/a": 2,
+        "no": 0,
+        "not_marked": 0,
+        "first_yes_at": 1,
+        "places": {
+          "yes": [
+            1,
+            2,
+            3,
+            5,
+            6,
+            7,
+            9,
+            10
+          ],
+          "n/a": [
+            4,
+            8
+          ],
+          "no": []
+        }
+      },
+      {
+        "file": "gate-b-hedera-results.txt",
+        "idea": 2,
+        "expect": "close",
+        "results": 10,
+        "yes": 3,
+        "n/a": 5,
+        "no": 2,
+        "not_marked": 0,
+        "first_yes_at": 1,
+        "places": {
+          "yes": [
+            1,
+            2,
+            3
+          ],
+          "n/a": [
+            4,
+            5,
+            6,
+            7,
+            9
+          ],
+          "no": [
+            8,
+            10
+          ]
+        }
+      },
+      {
+        "file": "gate-b-hedera-results.txt",
+        "idea": 3,
+        "expect": "close",
+        "results": 10,
+        "yes": 1,
+        "n/a": 6,
+        "no": 3,
+        "not_marked": 0,
+        "first_yes_at": 1,
+        "places": {
+          "yes": [
+            1
+          ],
+          "n/a": [
+            2,
+            3,
+            5,
+            6,
+            8,
+            9
+          ],
+          "no": [
+            4,
+            7,
+            10
+          ]
+        }
+      }
+    ]
+  },
+  "does_not_prove": [
+    "That the search is good. A few ideas show that the path works from end to end. How well the search finds similar projects is measured by the test of the search (design 13.3), on many more cases.",
+    "That another reader would mark the results in the same way. A mark is the judgment of the one who wrote the idea.",
+    "That an id belongs to the team that names it, or that a project is still alive."
+  ]
+}

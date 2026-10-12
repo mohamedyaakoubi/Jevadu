@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     gemini_rewrite_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
     gemini_search_model: str = Field("gemini-3.8-flash", json_schema_extra=_PUBLIC)
     gemini_search_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
+    # The embedding model of the search (design 8.1). Chosen on 11 October 2026 for its known
+    # price and its length of 8,192 tokens (llm/embeddings.py).
+    gemini_embedding_model: str = Field("gemini-embedding-2", json_schema_extra=_PUBLIC)
 
     # What the models may cost (finops). "test" is all the work before the tool is shown: the
     # proofs, the tests, the first runs. "prod" is the tool while people use it. Each has its own
@@ -93,6 +96,8 @@ class Settings(BaseSettings):
     collector_contact_email: SecretStr = SecretStr("")
     # One switch per site. "off" is the default: a collector runs only when it is turned on.
     collect_ethglobal: bool = Field(False, json_schema_extra=_PUBLIC)
+    # GitHub's API: the README and the facts of the code of each project (design 7.3).
+    collect_github: bool = Field(False, json_schema_extra=_PUBLIC)
 
     @field_validator("llm_environment", mode="before")
     @classmethod
@@ -104,7 +109,7 @@ class Settings(BaseSettings):
     def _level_in_capitals(cls, value: object) -> object:
         return value.strip().upper() if isinstance(value, str) else value
 
-    @field_validator("gemini_rewrite_model", "gemini_search_model")
+    @field_validator("gemini_rewrite_model", "gemini_search_model", "gemini_embedding_model")
     @classmethod
     def _a_gemini_model(cls, value: str) -> str:
         """Design rule 7: the LLM is a Gemini model on Vertex AI, and no other service."""

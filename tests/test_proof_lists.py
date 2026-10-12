@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -41,6 +42,7 @@ DUNE_ROW = listed("dune-notes", "p0o9i")  # the row that the two pages of the li
 
 AGREE = 'the list and the "Winner of" block of each saved page agree about a Hedera prize'
 NO_PERSON = "no saved page holds a personal tag, a profile link, an avatar or a data key for people"
+CHANGED = "no saved page was changed without a written reason (fingerprints)"
 
 
 def html(body: bytes) -> Reply:
@@ -162,6 +164,7 @@ def test_the_proof_passes_on_what_a_walk_and_a_run_left(
         5,
     )  # every project, not only winners
     assert numbers["pages_where_the_list_and_the_page_differ"] == 0
+    assert numbers["pages_with_personal_data_removed_after_saving"] == 0
     assert numbers["requests_sent_over_all_commands"] == 9  # robots.txt twice, 2 + 5 pages
     assert numbers["smallest_gap_between_two_saved_pages_s"] == 3
     assert numbers["by_event"] == {
@@ -211,7 +214,7 @@ def test_the_result_file_holds_no_project_and_no_page_text(
         assert kept_out not in text
 
 
-def test_a_page_that_was_edited_fails_the_proof(
+def test_a_page_that_was_changed_by_hand_fails_the_proof(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, results_dir: Path
 ) -> None:
     settings = collected(tmp_path, monkeypatch)
@@ -219,7 +222,20 @@ def test_a_page_that_was_edited_fails_the_proof(
     assert page is not None
     page.body_path.write_bytes(page.read() + b"<!-- one more line -->")
     assert lists.run(settings) == 1
-    assert failed(results_dir) == ["no saved page was edited after it was saved (fingerprints)"]
+    assert failed(results_dir) == [CHANGED]
+
+
+def test_personal_data_removed_through_the_store_passes_and_is_counted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, results_dir: Path
+) -> None:
+    settings = collected(tmp_path, monkeypatch)
+    words = re.compile("street vendor")  # stands for an address of a person
+    assert raw_store(tmp_path).remove_text(PEBBLE, words, "[removed]", "an invented reason")
+    assert lists.run(settings) == 0
+    result = the_result(results_dir)
+    assert result["measurements"]["pages_with_personal_data_removed_after_saving"] == 1
+    (check,) = [c for c in result["checks"] if c["name"] == CHANGED]
+    assert check["detail"].startswith("0 changed. 1 page(s) had personal data removed")
 
 
 @pytest.mark.parametrize("missing", [FIG, DUNE])  # a winner, and a project with no prize

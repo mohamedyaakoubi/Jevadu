@@ -36,6 +36,7 @@ from pydantic import ValidationError
 
 from hackathon_memory.finops import prices
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION, SYSTEM_INSTRUCTIONS, CardFields
+from hackathon_memory.llm.client import again_if_dropped
 
 THINKING_LEVELS = ("LOW", "MEDIUM", "HIGH")
 MAX_OUTPUT_TOKENS = 16384  # thinking tokens count against this limit too, and HIGH thinks a lot
@@ -186,7 +187,9 @@ def fill_card(
     spent = Usage(0, 0, 0, 0)
     failures: list[str] = []
     for attempt in range(1, max(1, attempts) + 1):
-        response = client.models.generate_content(model=model, contents=page_text, config=config)
+        response = again_if_dropped(
+            lambda: client.models.generate_content(model=model, contents=page_text, config=config)
+        )
         spent = spent + _usage_of(response)
         finish = _finish_reason(response)
         try:
