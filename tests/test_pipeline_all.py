@@ -67,13 +67,14 @@ def test_one_command_runs_every_step_in_order(
     assert main(["all"], settings, mirrors, client) == 0  # type: ignore[arg-type]
     said = capsys.readouterr().out
     headers = [line for line in said.splitlines() if line.startswith("== ")]
-    assert headers == ["== parse ==", "== readmes ==", "== check ==", "== embed =="]
+    assert headers == ["== parse ==", "== readmes ==", "== code ==", "== check ==", "== embed =="]
     assert "Saved pages: 2. New: 2." in said
     assert "Projects with a Hedera id in their README: 1 (1 ids)." in said
     assert "Projects: 2. Embeddings made: 2" in said
     assert [row["step"] for row in reversed(last_runs(settings.database_conninfo()))] == [
         "parse",
         "readmes",
+        "code",
         "check",
         "embed",
     ]

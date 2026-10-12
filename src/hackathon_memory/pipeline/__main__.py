@@ -6,16 +6,18 @@
                                                            then read every saved one
     python -m hackathon_memory.pipeline readmes --repos 5  ask for at most 5 new READMEs
     python -m hackathon_memory.pipeline readmes --no-requests    read the saved ones only
+    python -m hackathon_memory.pipeline code               the facts of each repository, in
+                                                           the same way (same options)
     python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
-    python -m hackathon_memory.pipeline all                parse, readmes, check and embed, in
-                                                           this order: the whole path at once
+    python -m hackathon_memory.pipeline all                parse, readmes, code, check and
+                                                           embed, in this order
 
 "parse" sends no request: it works on the pages that are saved. It also writes the last day of
 each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
-rule needs it and no page gives it (design 7.2). "readmes" asks GitHub's API, which the
+rule needs it and no page gives it (design 7.2). "readmes" and "code" ask GitHub's API, which the
 maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait lets it wait
 for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a public API made
 for programs, and no site (design rule 17). "embed" calls Google's embedding model through the
@@ -41,6 +43,7 @@ from hackathon_memory.check import proof
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.ethglobal_site import SITE
+from hackathon_memory.collect.github_facts import fetch_facts
 from hackathon_memory.collect.github_once import AnswersRun
 from hackathon_memory.collect.github_readmes import fetch_readmes
 from hackathon_memory.collect.polite import CollectorRefused
@@ -55,15 +58,16 @@ from hackathon_memory.finops.meter import metered_client
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
 from hackathon_memory.llm.client import GoogleSetupError
 from hackathon_memory.parse import event_ends
-from hackathon_memory.pipeline import check_ids, embed, parse_pages, readmes
+from hackathon_memory.pipeline import check_ids, code, embed, parse_pages, readmes
 from hackathon_memory.settings import Settings, SettingsError
 
 USAGE = (
     "usage: python -m hackathon_memory.pipeline parse [--limit N]\n"
     "       python -m hackathon_memory.pipeline readmes [--repos N | --no-requests] [--wait]\n"
+    "       python -m hackathon_memory.pipeline code [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline check [--max-age-days N]\n"
     "       python -m hackathon_memory.pipeline embed [--limit N]\n"
-    "       python -m hackathon_memory.pipeline all [the options of the four steps]"
+    "       python -m hackathon_memory.pipeline all [the options of the steps]"
 )
 # What each status of the proof rule means, in plain words (design 7.2).
 STATUS_WORDS = {
@@ -80,7 +84,7 @@ STATUS_WORDS = {
 
 # The whole path, in its order (design 14.3: one command processes the projects).
 ALL = "all"
-ALL_STEPS = (parse_pages.STEP, readmes.STEP, check_ids.STEP, embed.STEP)
+ALL_STEPS = (parse_pages.STEP, readmes.STEP, code.STEP, check_ids.STEP, embed.STEP)
 
 
 class _Quiet(argparse.ArgumentParser):
@@ -100,16 +104,16 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     every = arguments.step == ALL  # the options of every step go with it
     is_parse = every or arguments.step == parse_pages.STEP
     is_check = every or arguments.step == check_ids.STEP
-    is_readmes = every or arguments.step == readmes.STEP
+    is_readmes = every or arguments.step in (readmes.STEP, code.STEP)  # the steps of GitHub
     is_embed = every or arguments.step == embed.STEP
     if arguments.limit is not None and (not (is_parse or is_embed) or arguments.limit < 1):
         raise ValueError("--limit goes with parse or embed, and must be 1 or more")
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
     if arguments.repos is not None and (not is_readmes or arguments.repos < 1):
-        raise ValueError("--repos goes with readmes, and must be 1 or more")
+        raise ValueError("--repos goes with readmes or code, and must be 1 or more")
     if (arguments.no_requests or arguments.wait) and not is_readmes:
-        raise ValueError("--no-requests and --wait go with readmes")
+        raise ValueError("--no-requests and --wait go with readmes or code")
     if arguments.no_requests and (arguments.repos is not None or arguments.wait):
         raise ValueError("--no-requests sends nothing, so --repos and --wait do not go with it")
     return arguments
@@ -160,10 +164,14 @@ def check_lines(run: Run) -> list[str]:
     return lines + _problem_lines(run, "Not checked, with what went wrong:")
 
 
-def _readme_fetch(
-    settings: Settings, arguments: argparse.Namespace, run: Run
+def _github_fetch(
+    settings: Settings,
+    arguments: argparse.Namespace,
+    run: Run,
+    ask: Callable[..., AnswersRun],
 ) -> tuple[Callable[[list[str]], AnswersRun] | None, str | None]:
-    """What asks GitHub for the missing READMEs, or None with the reason in plain words."""
+    """What asks GitHub for the missing answers with `ask` (the READMEs or the facts), or None
+    with the reason in plain words."""
     if arguments.no_requests:
         return None, None
     if not settings.collect_github:
@@ -177,7 +185,7 @@ def _readme_fetch(
     collector = f"{settings.collector_name.strip()}/{__version__}"
 
     def fetch(wanted: list[str]) -> AnswersRun:
-        return fetch_readmes(client, store, wanted, collector=collector, limit=arguments.repos)
+        return ask(client, store, wanted, collector=collector, limit=arguments.repos)
 
     return fetch, None
 
@@ -220,13 +228,18 @@ def _run_step(
             ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
             parse_pages.apply_event_ends(projects, ends, SITE, run)
         elif step == readmes.STEP:
-            fetch, note = _readme_fetch(settings, arguments, run)
+            fetch, note = _github_fetch(settings, arguments, run, fetch_readmes)
             readmes.read_readmes(
                 RepositoryStore(conninfo),
                 ProjectStore(conninfo),
                 RawStore(github.raw_dir(settings)),
                 run,
                 fetch=fetch,
+            )
+        elif step == code.STEP:
+            fetch, note = _github_fetch(settings, arguments, run, fetch_facts)
+            code.read_code(
+                RepositoryStore(conninfo), RawStore(github.raw_dir(settings)), run, fetch=fetch
             )
         elif step == embed.STEP:
             google = services.google
@@ -256,6 +269,9 @@ def _run_step(
         lines = parse_lines(run)
     elif step == readmes.STEP:
         lines = readmes.readme_lines(run) + ([note] if note else [])
+        lines += _problem_lines(run, "Stopped or not done, and why:")
+    elif step == code.STEP:
+        lines = code.code_lines(run) + ([note] if note else [])
         lines += _problem_lines(run, "Stopped or not done, and why:")
     elif step == embed.STEP:
         lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")

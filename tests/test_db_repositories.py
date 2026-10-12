@@ -222,4 +222,4 @@ def test_the_table_of_repositories_has_no_column_for_a_person(database: str) -> 
     # A count of what was taken out names nobody: it is a number.
     about_people = {name: kind for name, kind in columns if person.search(name)}
     assert about_people == {"team_lines_cut": "integer"}
-    assert len(columns) == 9
+    assert len(columns) == 17

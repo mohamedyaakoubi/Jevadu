@@ -12,6 +12,7 @@ from collections.abc import Mapping
 
 import psycopg
 
+from hackathon_memory.collect.github_facts import RepositoryFacts
 from hackathon_memory.collect.github_readmes import Readme
 from hackathon_memory.db.projects import IN_THE_README
 
@@ -90,6 +91,26 @@ class RepositoryStore:
                     int(taken_out.get("words_hidden", 0)),
                     int(taken_out.get("team_lines_cut", 0)),
                     int(taken_out.get("ids_in_the_cut", 0)),
+                    url,
+                ),
+            )
+
+    def save_facts(self, url: str, facts: RepositoryFacts) -> None:
+        """Write what GitHub answered about a repository: its dates and its state."""
+        with psycopg.connect(self._conninfo) as conn:
+            conn.execute(
+                "UPDATE repositories SET code_status = %s, code_fetched_at = %s::timestamptz, "
+                "made_at = %s, last_push_at = %s, archived = %s, fork = %s, language = %s, "
+                "current_url = %s WHERE url = %s",
+                (
+                    facts.status,
+                    facts.fetched_at,
+                    facts.created_at,
+                    facts.pushed_at,
+                    facts.archived,
+                    facts.fork,
+                    facts.language,
+                    facts.current_url,
                     url,
                 ),
             )
