@@ -16,6 +16,7 @@ from functools import partial
 from pathlib import Path
 
 from hackathon_memory.collect import africa_winners as africa_page
+from hackathon_memory.collect import hedera_posts
 from hackathon_memory.collect.rawstore import RawStore, fingerprint
 from hackathon_memory.db.projects import SAME, ProjectStore
 from hackathon_memory.db.runs import Run
@@ -26,6 +27,7 @@ from hackathon_memory.parse.ethglobal_page import (
     read_project_page,
 )
 from hackathon_memory.parse.event_ends import EventEndsError, read_event_ends
+from hackathon_memory.parse.hedera_posts import read_hedera_posts
 from hackathon_memory.parse.project import ProjectPage
 from hackathon_memory.parse.winner_entries import PARSER_VERSION as WINNER_PARSER
 from hackathon_memory.parse.winner_entries import (
@@ -84,7 +86,8 @@ def parse_winner_entries(
     folder: Path, projects: ProjectStore, run: Run, saved: Path | None = None
 ) -> None:
     """Keep the winner entries that a person copied by hand into `folder`, and the ones of the
-    saved winners page of the Africa hackathon in `saved`, the folder of saved pages (design 4.6).
+    saved winners pages in `saved`, the folder of saved pages (design 4.6): the page of the
+    Africa hackathon and Hedera's own winner posts.
 
     A record that changed is read again, and one that did not is passed over. A file that
     cannot be read is named in the run, and nothing of it is used.
@@ -93,6 +96,12 @@ def parse_winner_entries(
     sources = [(path.name, partial(read_entries, path)) for path in entry_files(folder)]
     if saved is not None:
         sources.append((africa_page.SITE, partial(read_africa_winners, saved / africa_page.SITE)))
+        sources.append(
+            (
+                hedera_posts.SITE,
+                partial(read_hedera_posts, saved / hedera_posts.SITE, folder / hedera_posts.SITE),
+            )  # fmt: skip
+        )
     for name, read in sources:
         try:
             entries = read()
