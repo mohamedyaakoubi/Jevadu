@@ -478,6 +478,8 @@ An **embedding** model turns a text into a list of numbers. Texts with close mea
 
 Which fields give the best search is not known yet. Test 2 (section 13.3) compares the choices, including "the page as it is".
 
+**What runs today: the page as it is.** Until the fields of the card exist, each project is embedded from its name (as the title), its short line and its two texts, with the words about people already hidden (section 5.4). The step is `python -m hackathon_memory.pipeline embed`. Every call goes through the meter and its budget (section 11.4). The fingerprint of the text is kept with the embedding, so a project is embedded again only when its text or the model changes.
+
 ### 8.2 The search
 
 The search uses two methods together and merges their results:
@@ -486,6 +488,14 @@ The search uses two methods together and merges their results:
 - by words, with a normal text search over the name, the short line, the card fields and the original text.
 
 Each method finds what the other misses. The original text is always searched, so a weak LLM field cannot hide a project.
+
+**How it runs today** (`python -m hackathon_memory.search "<an idea>"`):
+
+- **By meaning.** The idea is embedded as a search question and compared with every project embedding (an exact search, section 11.6).
+- **By words.** BM25 over the name, the short line and the two texts, on PostgreSQL's own English stems, with the usual numbers k1 = 1.2 and b = 0.75. PostgreSQL's own ranking was tried first and dropped: its documentation says that its ranking functions "do not use any global information". They count how often a word stands in a project, not how rare the word is, and every project here says "Hedera" and "token".
+- **The merge.** Reciprocal rank fusion with the constant 60 (Cormack, Clarke and Buettcher, 2009). Each list gives as many projects as the listing shows, the default of Elasticsearch's own fusion. A first try with 50 projects from each list put the closest project in meaning out of the first ten. Test 2 compares these numbers.
+- **The listing.** For each project: the event, the prize, the result of the proof rule, the links, and for each Hedera ID what the mirror node answered and on which day. Nothing in it is written by a model, and the place in the list says only how close a project is to the idea.
+- **The idea.** It is kept nowhere. Its embedding is kept for one day under the fingerprint of the idea, so the same idea is not paid for twice.
 
 The user can filter by event, year, category, proof status and life status.
 
@@ -632,7 +642,7 @@ There are two layers of LLM. The models and their thinking levels are settings, 
 
 **The cost of every call is counted.** Every call goes through one client that writes a line to a ledger: the model, the tokens, the time and the cost, from a dated price list. There are two budgets, one for the work before the tool is shown and one for the tool while people use it. A call that could go over the budget is not made. A price that is not in the list is never guessed.
 
-**The embedding model.** Google's `gemini-embedding-001` has one mode for stored documents and one for search questions, which fits a short idea matched against a longer description. The first live run returned vectors of 3,072 numbers. Test 2 compares it with another model on the same known pairs.
+**The embedding model.** The search uses `gemini-embedding-2` (the setting `GEMINI_EMBEDDING_MODEL`), chosen on 11 October 2026 from Google's pages. It is generally available on Vertex AI, also in the region "global". It reads 8,192 tokens of a text, so almost every page is read whole, and its price is on Google's price page, so every call is counted with its cost. It takes no task type: a short prefix in the text says whether it is a document or a search question. The first proof used `gemini-embedding-001`, which reads 2,048 tokens and whose price is not on that page. Test 2 compares the models on the same known pairs.
 
 None of these choices is trusted blindly. Test 1 measures the LLM fields, and Test 2 the search.
 
