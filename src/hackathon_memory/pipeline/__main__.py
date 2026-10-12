@@ -132,7 +132,8 @@ def parse_lines(run: Run) -> list[str]:
         lines.append(f"Left for a later run, because of the limit: {counts['left_for_later']}.")
     if counts["winner_entries"] or counts["winner_files_not_read"]:
         lines.append(
-            f"Winner entries copied by hand: {counts['winner_entries']}. New: "
+            f"Winner entries, copied by hand or read from a saved winners page: "
+            f"{counts['winner_entries']}. New: "
             f"{counts['winner_entries_new']}. Read again: {counts['winner_entries_changed']}. "
             f"The same as before: {counts['winner_entries_same']}. Files not read: "
             f"{counts['winner_files_not_read']}."
@@ -233,8 +234,11 @@ def _run_step(
             parse_pages.parse_saved_pages(
                 RawStore(paths.raw_dir), projects, run, limit=arguments.limit
             )
-            # The folder of what a person typed or copied by hand: the winner entries.
-            parse_pages.parse_winner_entries(paths.page_list.parent.parent, projects, run)
+            # The winner entries: copied by hand into the folder of what a person typed, or read
+            # from a saved winners page in the folder of saved pages.
+            parse_pages.parse_winner_entries(
+                paths.page_list.parent.parent, projects, run, saved=paths.raw_dir.parent
+            )
             ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
             parse_pages.apply_event_ends(projects, ends, SITE, run)
         elif step == readmes.STEP:

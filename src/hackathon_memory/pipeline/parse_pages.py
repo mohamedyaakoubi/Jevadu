@@ -12,11 +12,14 @@ when it was saved. The second one must never happen (design rule 5), so it is sa
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
+from hackathon_memory.collect import africa_winners as africa_page
 from hackathon_memory.collect.rawstore import RawStore, fingerprint
 from hackathon_memory.db.projects import SAME, ProjectStore
 from hackathon_memory.db.runs import Run
+from hackathon_memory.parse.africa_winners import read_africa_winners
 from hackathon_memory.parse.ethglobal_page import (
     PARSER_VERSION,
     PageShapeChanged,
@@ -77,19 +80,25 @@ def parse_saved_pages(
             run.counts["words_about_people_hidden"] += project.people_words_hidden
 
 
-def parse_winner_entries(folder: Path, projects: ProjectStore, run: Run) -> None:
-    """Keep the winner entries that a person copied by hand into `folder` (design 4.6).
+def parse_winner_entries(
+    folder: Path, projects: ProjectStore, run: Run, saved: Path | None = None
+) -> None:
+    """Keep the winner entries that a person copied by hand into `folder`, and the ones of the
+    saved winners page of the Africa hackathon in `saved`, the folder of saved pages (design 4.6).
 
     A record that changed is read again, and one that did not is passed over. A file that
     cannot be read is named in the run, and nothing of it is used.
     """
     already = projects.already_parsed()
-    for path in entry_files(folder):
+    sources = [(path.name, partial(read_entries, path)) for path in entry_files(folder)]
+    if saved is not None:
+        sources.append((africa_page.SITE, partial(read_africa_winners, saved / africa_page.SITE)))
+    for name, read in sources:
         try:
-            entries = read_entries(path)
+            entries = read()
         except WinnerEntriesError as wrong:
             run.counts["winner_files_not_read"] += 1
-            run.problem(path.name, str(wrong))
+            run.problem(name, str(wrong))
             continue
         for entry in entries:
             run.counts["winner_entries"] += 1

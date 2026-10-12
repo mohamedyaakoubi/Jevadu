@@ -9,7 +9,9 @@ A winner entry is a thin card: the name, the event, the track, the prize, the de
 was published, and its source. It has ledger facts only when its description gives an id. Most
 do not. Each entry becomes a project of the kind "winner_entry". Its address is the address of
 the page with a "#" and the name of the project, so that two winners of one page are two
-projects. Words about people are hidden in the description, as in any text (people.py).
+projects. Words about people are hidden in the description, as in any text (people.py). A record
+may also name the page of the project itself ("project_page"); it is kept as a link for a person
+to open, and no program asks for it.
 
 A record that lacks what a card needs refuses the whole file, with the number of the record: a
 file read in part would leave some winners out with no sign of it.
@@ -30,6 +32,7 @@ from hackathon_memory.parse.project import (
     HEDERA_PRIZE,
     WINNER_ENTRY,
     EventRef,
+    Link,
     Prize,
     ProjectPage,
     Section,
@@ -115,7 +118,7 @@ def _entry(site: str, record: dict) -> WinnerEntry:
             ),
         ),
         prize_state=HEDERA_PRIZE,  # a prize in a hackathon of Hedera
-        links=(),
+        links=_project_page(record),
         sections=(Section(AS_PUBLISHED, "As published", (Block(PARAGRAPH, description),)),),
         hedera_ids=tuple(find_ids(description)),
         has_video=False,
@@ -125,6 +128,12 @@ def _entry(site: str, record: dict) -> WinnerEntry:
     )
     fingerprint = hashlib.sha256(json.dumps(record, sort_keys=True).encode()).hexdigest()
     return WinnerEntry(page, fingerprint)
+
+
+def _project_page(record: dict) -> tuple[Link, ...]:
+    """The page of the project itself, when the record names one, for a person to open."""
+    url = str(record.get("project_page") or "").strip()
+    return (Link("other", url, "The project's page"),) if url.startswith("https://") else ()
 
 
 def entry_files(folder: Path) -> list[Path]:
