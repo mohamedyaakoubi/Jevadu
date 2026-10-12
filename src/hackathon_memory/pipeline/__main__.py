@@ -10,6 +10,8 @@
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
+    python -m hackathon_memory.pipeline all                parse, readmes, check and embed, in
+                                                           this order: the whole path at once
 
 "parse" sends no request: it works on the pages that are saved. It also writes the last day of
 each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
@@ -59,7 +61,8 @@ USAGE = (
     "usage: python -m hackathon_memory.pipeline parse [--limit N]\n"
     "       python -m hackathon_memory.pipeline readmes [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline check [--max-age-days N]\n"
-    "       python -m hackathon_memory.pipeline embed [--limit N]"
+    "       python -m hackathon_memory.pipeline embed [--limit N]\n"
+    "       python -m hackathon_memory.pipeline all [the options of the four steps]"
 )
 # What each status of the proof rule means, in plain words (design 7.2).
 STATUS_WORDS = {
@@ -74,6 +77,11 @@ STATUS_WORDS = {
 }
 
 
+# The whole path, in its order (design 14.3: one command processes the projects).
+ALL = "all"
+ALL_STEPS = (parse_pages.STEP, readmes.STEP, check_ids.STEP, embed.STEP)
+
+
 class _Quiet(argparse.ArgumentParser):
     def error(self, message: str) -> None:  # argparse would exit; the caller prints the usage
         raise ValueError(message)
@@ -81,19 +89,18 @@ class _Quiet(argparse.ArgumentParser):
 
 def _arguments(argv: list[str]) -> argparse.Namespace:
     parser = _Quiet(prog="python -m hackathon_memory.pipeline", add_help=False)
-    parser.add_argument(
-        "step", choices=[parse_pages.STEP, readmes.STEP, check_ids.STEP, embed.STEP]
-    )
+    parser.add_argument("step", choices=[*ALL_STEPS, ALL])
     parser.add_argument("--limit", type=int)
     parser.add_argument("--max-age-days", type=float)
     parser.add_argument("--repos", type=int)
     parser.add_argument("--no-requests", action="store_true")
     parser.add_argument("--wait", action="store_true")
     arguments = parser.parse_args(argv)
-    is_parse = arguments.step == parse_pages.STEP
-    is_check = arguments.step == check_ids.STEP
-    is_readmes = arguments.step == readmes.STEP
-    is_embed = arguments.step == embed.STEP
+    every = arguments.step == ALL  # the options of every step go with it
+    is_parse = every or arguments.step == parse_pages.STEP
+    is_check = every or arguments.step == check_ids.STEP
+    is_readmes = every or arguments.step == readmes.STEP
+    is_embed = every or arguments.step == embed.STEP
     if arguments.limit is not None and (not (is_parse or is_embed) or arguments.limit < 1):
         raise ValueError("--limit goes with parse or embed, and must be 1 or more")
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
@@ -268,11 +275,16 @@ def main(
         print(f"{problem}\n{USAGE}")
         return 2
     settings = settings or Settings()
+    steps = ALL_STEPS if arguments.step == ALL else (arguments.step,)
+    problems = False
     try:
         conninfo = settings.database_conninfo()
-        run, lines = _run_step(
-            arguments.step, arguments, settings, conninfo, _Services(mirrors, google)
-        )
+        for step in steps:
+            run, lines = _run_step(step, arguments, settings, conninfo, _Services(mirrors, google))
+            if len(steps) > 1:
+                print(f"== {step} ==")
+            print("\n".join(lines), flush=True)  # each step as soon as it is done
+            problems = problems or bool(run.problems)
     except SettingsError as problem:
         print(f"Stopped: {problem}")
         return 1
@@ -295,8 +307,7 @@ def main(
     except GoogleSetupError as problem:
         print(f"Stopped: {problem}")
         return 1
-    print("\n".join(lines))
-    return 1 if run.problems else 0
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":
