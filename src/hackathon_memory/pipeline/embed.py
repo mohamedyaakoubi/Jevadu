@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
 from google.genai import errors as google_errors
 
 from hackathon_memory.db.embeddings import EmbeddingStore
@@ -22,6 +23,9 @@ from hackathon_memory.llm.embeddings import EmbeddingError, embed_documents
 STEP = "embed"
 # Google errors in a row (after the client's own retries) that stop the step: Google is away.
 MAX_ERRORS_IN_A_ROW = 3
+# What a call may end with when Google cannot be used: an error answer, or a network that stayed
+# away through every pause (llm/client.py). The project is left for the next run.
+FAILED_CALLS = (EmbeddingError, google_errors.APIError, httpx.TransportError)
 
 
 class GoogleIsAway(Exception):
@@ -52,7 +56,7 @@ def embed_pages(
             continue
         try:
             [embedding] = embed_documents(client, [page.text], model=model, titles=[page.title])
-        except (EmbeddingError, google_errors.APIError) as error:
+        except FAILED_CALLS as error:
             # The kind of the error only: its text could hold a piece of the page.
             run.problem(f"project {page.project_id}", type(error).__name__)
             errors_in_a_row += 1

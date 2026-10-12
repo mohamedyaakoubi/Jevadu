@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
 import pytest
 from google.auth.exceptions import DefaultCredentialsError
 from google.genai import errors as genai_errors
@@ -15,6 +16,7 @@ from hackathon_memory.llm import client as client_module
 from hackathon_memory.llm import embeddings
 from hackathon_memory.llm.client import (
     GoogleSetupError,
+    again_if_dropped,
     default_http_options,
     load_key_file,
     make_client,
@@ -169,6 +171,57 @@ def test_it_gives_up_after_the_attempts() -> None:
     with pytest.raises(genai_errors.ServerError):
         embeddings.embed_documents(google.client(quick_retry(attempts=3)), ["text"])
     assert google.failed_requests == 3
+
+
+# ------------------------------------------------------------------ a connection that broke
+
+
+@pytest.fixture
+def no_pauses(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(client_module, "PAUSES_AFTER_A_DROP", (0.0, 0.0, 0.0))
+
+
+def test_the_library_does_not_try_again_when_a_connection_breaks() -> None:
+    """The reason for again_if_dropped. If this test fails, google-genai changed: read its
+    _api_client.py again (_HTTPX_TRANSIENT_EXC) and see whether DROPPED is still needed."""
+    google = FakeGoogle()
+    google.drop_first = 1
+    with pytest.raises(httpx.RemoteProtocolError):
+        google.client(quick_retry()).models.embed_content(model="gemini-embedding-2", contents="x")
+    assert google.dropped_requests == 1
+
+
+def test_a_broken_connection_is_made_again_after_a_pause(no_pauses: None) -> None:
+    google = FakeGoogle()
+    google.drop_first = 2
+    [vector] = embeddings.embed_documents(google.client(quick_retry()), ["text"])
+    assert len(vector.values) == 3072
+    assert google.dropped_requests == 2
+
+
+def test_a_network_that_stays_away_fails_after_the_pauses() -> None:
+    slept: list[float] = []
+    tries: list[str] = []
+
+    def call() -> str:
+        tries.append("a try")
+        raise httpx.ConnectError("no network")
+
+    with pytest.raises(httpx.ConnectError):
+        again_if_dropped(call, sleep=slept.append)
+    assert slept == [5.0, 15.0, 45.0]
+    assert len(tries) == 4
+
+
+def test_an_error_that_is_not_a_broken_connection_is_not_made_again() -> None:
+    slept: list[float] = []
+
+    def call() -> str:
+        raise ValueError("not the network")
+
+    with pytest.raises(ValueError, match="not the network"):
+        again_if_dropped(call, sleep=slept.append)
+    assert slept == []
 
 
 def test_make_client_uses_the_retry_options_by_default() -> None:

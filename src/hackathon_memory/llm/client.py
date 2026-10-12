@@ -12,7 +12,11 @@ uses Application Default Credentials, which `gcloud auth application-default log
 from __future__ import annotations
 
 import json
+import time
+from collections.abc import Callable
+from typing import TypeVar
 
+import httpx
 from google import genai
 from google.auth.credentials import Credentials
 from google.auth.exceptions import GoogleAuthError
@@ -27,6 +31,30 @@ SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 # The codes that mean "try again in a moment": the request timed out, too many requests, and the
 # errors of the server (500 was seen from Gemini 3.1 Pro preview on the second live run).
 RETRYABLE_CODES = [408, 429, 500, 502, 503, 504]
+
+# A connection that broke before Google answered: the network went away (a change of Wi-Fi broke
+# a run on 12 October 2026), or the server closed it. google-genai 2.29.0 tries again only after
+# a timeout or a connection that could not be made (`_HTTPX_TRANSIENT_EXC` in `_api_client.py`),
+# and stops after about 15 seconds. These pauses are long enough for a change of network.
+DROPPED = (httpx.NetworkError, httpx.RemoteProtocolError)
+PAUSES_AFTER_A_DROP = (5.0, 15.0, 45.0)
+
+T = TypeVar("T")
+
+
+def again_if_dropped(call: Callable[[], T], *, sleep: Callable[[float], None] = time.sleep) -> T:
+    """Make the call. If its connection breaks, wait and make it again, once after each pause.
+
+    Each call goes through the meter, so a call that broke is counted, with the class of its
+    error. Google may still have done a call whose answer was lost, and billed it: a rare second
+    cost, paid so that a long run goes on.
+    """
+    for pause in PAUSES_AFTER_A_DROP:
+        try:
+            return call()
+        except DROPPED:
+            sleep(pause)
+    return call()
 
 
 class GoogleSetupError(Exception):
