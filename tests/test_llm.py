@@ -12,6 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from googlefake import PAGE_CANARY, FakeGoogle, answer, valid_form
+from hackathon_memory.llm import client as client_module
 from hackathon_memory.llm import embeddings
 from hackathon_memory.llm.card_form import CardFields, Category, Label
 from hackathon_memory.llm.gemini import (
@@ -288,6 +289,16 @@ def test_three_bad_answers_in_a_row_are_an_error_that_counts_the_cost() -> None:
     assert generate_calls(google) == 3
     assert failure.value.attempts == 3
     assert failure.value.usage == Usage(3000, 600, 900, 4500)  # money was spent on all three
+
+
+def test_a_broken_connection_is_made_again_and_is_not_an_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(client_module, "PAUSES_AFTER_A_DROP", (0.0, 0.0, 0.0))
+    google = FakeGoogle(answer())
+    google.drop_first = 1
+    result = fill_card(google.client(), PAGE, model=FLASH, thinking_level="HIGH")
+    assert (result.attempts, google.dropped_requests) == (1, 1)
 
 
 def test_the_number_of_attempts_can_be_set() -> None:

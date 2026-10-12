@@ -27,6 +27,11 @@ Two things that only a real answer showed (11 October 2026):
 
 Hedera's own page says that the public node allows 50 requests a second for one address. This
 client asks one thing at a time and at most five times a second.
+
+A question is asked again after a pause (5, 15, then 45 seconds) when the network went away (a
+change of Wi-Fi broke a run on 12 October 2026), when the node says "too many requests" (429),
+or when one of its servers fails (500, 502, 503, 504). A longer pause that the node asks for
+("Retry-After") is kept, up to five minutes. Only then does the question fail.
 """
 
 from __future__ import annotations
@@ -34,7 +39,7 @@ from __future__ import annotations
 import base64
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 
 import requests
@@ -48,6 +53,11 @@ MIRROR_URLS = {
 }
 # The shortest time between two requests of one client, in seconds.
 MIN_GAP_SECONDS = 0.2
+# The answers that are asked again after a pause, and the pauses, in seconds.
+TRY_AGAIN_CODES = frozenset({429, 500, 502, 503, 504})
+PAUSES_SECONDS = (5.0, 15.0, 45.0)
+# A "Retry-After" that asks for more than this is not waited for: the question fails.
+MAX_ASKED_PAUSE = 300.0
 # How many links "to the 60 days before" are followed for the transactions of an account: 24
 # links are about four years.
 MAX_LINKS = 24
@@ -60,6 +70,14 @@ _AFTER = re.compile(r"timestamp=gte?:(\d+\.\d+)")
 
 class MirrorError(Exception):
     """The mirror node could not answer."""
+
+
+def _asked_seconds(value: str | None) -> float:
+    """The pause that a "Retry-After" asks for, in seconds. A date or nothing counts as 0."""
+    try:
+        return max(0.0, float(value)) if value else 0.0
+    except ValueError:
+        return 0.0
 
 
 def hashscan_topic(network: str, topic_id: str) -> str:
@@ -97,6 +115,7 @@ class MirrorNode:
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
         min_gap: float = MIN_GAP_SECONDS,
+        pauses: Sequence[float] = PAUSES_SECONDS,
     ) -> None:
         if network not in MIRROR_URLS:
             raise MirrorError(f"Unknown network: {network}")
@@ -107,30 +126,47 @@ class MirrorNode:
         self.sleep = sleep
         self.clock = clock
         self.min_gap = min_gap
+        self.pauses = tuple(pauses)
         self.requests_made = 0
         self._last_answer: float | None = None
         # No contact address is sent: the mirror node is a public API (design 5.6).
         self.headers = {"User-Agent": f"HackathonMemory-research/{__version__}"}
 
     def _get(self, path: str) -> dict | None:
-        if self._last_answer is not None:
-            wait = self.min_gap - (self.clock() - self._last_answer)
-            if wait > 0:
-                self.sleep(wait)
-        try:
-            response = self.session.get(
-                self.base + path, headers=self.headers, timeout=self.timeout
-            )
-        except requests.RequestException as error:
-            raise MirrorError(f"mirror node unreachable ({type(error).__name__})") from None
-        finally:
-            self.requests_made += 1
-            self._last_answer = self.clock()
-        if response.status_code == 404:
-            return None
-        if response.status_code != 200:
-            raise MirrorError(f"mirror node answered {response.status_code} for {path}")
-        return response.json()
+        """The answer of the node, or None when it has no such thing. A broken connection, a 429
+        and an error of a server are asked again after the pauses, then fail as a MirrorError."""
+        for pause in (*self.pauses, None):
+            if self._last_answer is not None:
+                wait = self.min_gap - (self.clock() - self._last_answer)
+                if wait > 0:
+                    self.sleep(wait)
+            asked = 0.0
+            try:
+                response = self.session.get(
+                    self.base + path, headers=self.headers, timeout=self.timeout
+                )
+            except (requests.ConnectionError, requests.Timeout) as error:
+                problem = f"mirror node unreachable ({type(error).__name__})"
+            except requests.RequestException as error:
+                raise MirrorError(f"mirror node unreachable ({type(error).__name__})") from None
+            else:
+                if response.status_code == 404:
+                    return None
+                if response.status_code == 200:
+                    return response.json()
+                problem = f"mirror node answered {response.status_code} for {path}"
+                if response.status_code not in TRY_AGAIN_CODES:
+                    raise MirrorError(problem)
+                asked = _asked_seconds(response.headers.get("Retry-After"))
+            finally:
+                self.requests_made += 1
+                self._last_answer = self.clock()
+            if pause is None:
+                raise MirrorError(problem)
+            if asked > MAX_ASKED_PAUSE:
+                raise MirrorError(f"{problem}, with a pause of {asked:.0f} seconds asked")
+            self.sleep(max(pause, asked))
+        raise AssertionError("not reached: the last turn of the loop returns or raises")
 
     @staticmethod
     def _entity(entity_id: str) -> str:

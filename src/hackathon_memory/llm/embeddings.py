@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import types
 
+from hackathon_memory.llm.client import again_if_dropped
+
 MODEL = "gemini-embedding-001"  # the default, for the first proof
 SEARCH_MODEL = "gemini-embedding-2"  # the default of the setting GEMINI_EMBEDDING_MODEL
 DIMENSIONS = 3072
@@ -99,19 +101,23 @@ def embed(
         ]
     if len(texts) > MAX_TEXTS_PER_REQUEST:
         raise EmbeddingError(f"One request takes {MAX_TEXTS_PER_REQUEST} texts at most.")
-    response = client.models.embed_content(
-        model=model,
-        contents=texts,
-        config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=DIMENSIONS),
+    response = again_if_dropped(
+        lambda: client.models.embed_content(
+            model=model,
+            contents=texts,
+            config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=DIMENSIONS),
+        )
     )
     return _read(response, len(texts))
 
 
 def _one(client: genai.Client, model: str, text: str) -> Embedding:
-    response = client.models.embed_content(
-        model=model,
-        contents=text,
-        config=types.EmbedContentConfig(output_dimensionality=DIMENSIONS),
+    response = again_if_dropped(
+        lambda: client.models.embed_content(
+            model=model,
+            contents=text,
+            config=types.EmbedContentConfig(output_dimensionality=DIMENSIONS),
+        )
     )
     return _read(response, 1)[0]
 

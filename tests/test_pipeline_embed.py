@@ -10,6 +10,7 @@ import pytest
 
 from hackathon_memory.db.embeddings import EmbeddingStore
 from hackathon_memory.db.runs import recorded_run
+from hackathon_memory.llm import client as client_module
 from hackathon_memory.llm.embeddings import SEARCH_MODEL
 from hackathon_memory.pipeline import embed
 from hackathon_memory.pipeline.__main__ import main as pipeline_main
@@ -65,6 +66,30 @@ def test_google_failing_three_times_in_a_row_stops_the_step(database: str) -> No
         embed.embed_pages(EmbeddingStore(database), client, run, model=SEARCH_MODEL)
     # Three projects that failed, then the step itself, which stopped.
     assert [problem["rule"] for problem in run.problems] == ["ClientError"] * 3 + ["GoogleIsAway"]
+
+
+def test_a_broken_connection_costs_a_pause_and_not_the_step(
+    database: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(client_module, "PAUSES_AFTER_A_DROP", (0.0, 0.0, 0.0))
+    client, fake, calls = google()
+    fake.drop_first = 1
+    run = embed_all(database, client)
+    assert (run.counts["made"], fake.dropped_requests, run.problems) == (3, 1, [])
+    # The meter counted the call that broke, with the class of its error.
+    assert [call.error_kind for call in calls.calls() if not call.ok] == ["RemoteProtocolError"]
+
+
+def test_a_network_that_stays_away_stops_the_step(
+    database: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(client_module, "PAUSES_AFTER_A_DROP", (0.0, 0.0, 0.0))
+    client, fake, _ = google()
+    fake.drop_first = 1000
+    with pytest.raises(embed.GoogleIsAway), recorded_run(database, embed.STEP) as run:
+        embed.embed_pages(EmbeddingStore(database), client, run, model=SEARCH_MODEL)
+    rules = [problem["rule"] for problem in run.problems]
+    assert rules == ["RemoteProtocolError"] * 3 + ["GoogleIsAway"]
 
 
 def test_the_embed_step_of_the_pipeline_says_what_it_did(
