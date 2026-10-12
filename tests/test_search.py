@@ -10,8 +10,11 @@ from datetime import UTC, datetime, timedelta
 import psycopg
 import pytest
 
+from fakes import project_page
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
+from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.llm.embeddings import SEARCH_MODEL
+from hackathon_memory.parse.ethglobal_page import read_project_page
 from hackathon_memory.search import engine, listing
 from hackathon_memory.search.__main__ import main as search_main
 from hackathon_memory.settings import Settings
@@ -48,6 +51,22 @@ def test_the_words_of_the_idea_find_the_projects_that_use_them(database: str) ->
     ids = ids_of(database)
     assert engine.by_words(database, "a parcel tracker") == [ids["Cedar Post"]]
     assert engine.by_words(database, "the and of") == []  # no word that counts
+
+
+def test_a_rare_word_counts_more_than_a_word_that_every_project_has(database: str) -> None:
+    # Every invented short line says "invented". A fourth project says it thirty times more.
+    echo = project_page(
+        name="Echo Echo",
+        slug="echo-echo",
+        short_line="Invented, invented.",
+        description="<p>" + "Invented words. " * 30 + "</p>",
+    )
+    page = "https://ethglobal.com/showcase/echo-echo-x1y2z"
+    ProjectStore(database).save(read_project_page(echo, page), "b" * 64)
+    ids = ids_of(database)
+    ranked = engine.by_words(database, "invented parcel")
+    assert ranked[0] == ids["Cedar Post"]  # one rare word wins over thirty common ones
+    assert set(ranked) == set(ids.values())
 
 
 def test_the_closest_project_in_meaning_comes_first(database: str) -> None:

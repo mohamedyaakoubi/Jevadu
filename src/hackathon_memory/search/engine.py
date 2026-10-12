@@ -3,15 +3,32 @@
 Two lists are made, and merged:
 
 * **By meaning.** The idea is embedded as a question, and every project embedding is compared
-  with it (an exact search, design 11.6). The 50 closest are kept.
-* **By words.** PostgreSQL's own text search over the name (weighted most), the short line and
-  the two texts of each project, in English, with any of the words of the idea. The 50 best are
-  kept. The texts of the page are always searched, so a weak field can never hide a project.
+  with it (an exact search, design 11.6).
+* **By words.** BM25 over the name, the short line and the two texts of each project, with the
+  words of the idea. The texts of the page are always searched, so a weak
+  field can never hide a project.
+
+Why BM25 and not PostgreSQL's own ranking: PostgreSQL's ranking functions "do not use any
+global information" (its documentation, 12.3.3, read on 12 October 2026). They count how
+often a word of the idea stands in a project, but not how rare the word is. In this collection
+every project says "Hedera" and "token", so these words decided the order of the first try.
+BM25 gives a word a weight that grows as the word gets rarer across the projects, and it stops
+counting a word that is repeated many times. The words are cut into their stems by
+PostgreSQL's own English rules (to_tsvector), which also drop the small words such as "the".
+The two numbers are the usual ones, k1 = 1.2 and b = 0.75: Robertson and Zaragoza, "The
+Probabilistic Relevance Framework: BM25 and Beyond", 2009.
 
 The two lists are merged by reciprocal rank fusion: each list gives a project 1 / (60 + its
 rank), and the sums decide. The number 60 is the one of the paper that brought the method in:
 Cormack, Clarke and Buettcher, "Reciprocal rank fusion outperforms Condorcet and individual rank
 learning methods", SIGIR 2009. It needs no tuning, which is why it is used before any test.
+
+Each list gives as many projects as the listing shows (the window). This is the default of
+Elasticsearch's own reciprocal rank fusion, whose rank_window_size "defaults to the value of
+size" (its reference page, read on 12 October 2026). A first try merged 50 of each list: a
+project in the middle of both lists then beat the best one of each, and the closest project
+in meaning fell out of the first ten. The window and the constant are compared by the test of
+the search (design 13.3).
 
 The idea itself is kept nowhere. Its embedding is kept for a day under the fingerprint of the
 idea, so that the same idea is not paid for twice (db/embeddings.py).
@@ -29,29 +46,43 @@ from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.llm.embeddings import embed_query
 
 RRF_K = 60
-CANDIDATES = 50  # from each of the two lists
+CANDIDATES = 10  # from each of the two lists, when no other number is asked for
 LANGUAGE = "english"  # the texts of the showcase are in English
 
-# The text search of one project: its name counts most, then its short line, then its texts.
-# The words of the idea are taken with "or" in place of "and": a project that has some of them
-# is found, and one that has more of them ranks higher. They are cast, not parsed again, so that
-# a word is not shortened twice.
+BM25_K1 = 1.2
+BM25_B = 0.75
+
+# BM25 over every project. One document is the name, the short line and the two texts. tf is
+# how often a stem stands in it, dl its length in stems, and the weight of a stem is
+# ln(1 + (n - df + 0.5) / (df + 0.5)), with df the number of projects that have it.
 _WORDS = """
-WITH idea AS (
-    SELECT replace(plainto_tsquery(%(language)s, %(idea)s)::text, '&', '|')::tsquery AS words
-), documents AS (
-    SELECT p.id,
-           setweight(to_tsvector(%(language)s, p.name), 'A')
-           || setweight(to_tsvector(%(language)s, p.short_line), 'B')
-           || setweight(to_tsvector(%(language)s, coalesce(string_agg(s.body, ' '), '')), 'C')
-           AS document
+WITH documents AS (
+    SELECT p.id, to_tsvector(%(language)s, concat_ws(' ', p.name, p.short_line,
+                                                    string_agg(s.body, ' '))) AS document
     FROM projects p LEFT JOIN sections s ON s.project_id = p.id
     GROUP BY p.id
+), terms AS (
+    SELECT d.id, t.lexeme, cardinality(t.positions) AS tf
+    FROM documents d, unnest(d.document) AS t
+), lengths AS (
+    SELECT id, sum(tf) AS dl FROM terms GROUP BY id
+), corpus AS (
+    SELECT count(*) AS n, avg(dl) AS avgdl FROM lengths
+), idea AS (
+    SELECT lexeme FROM unnest(to_tsvector(%(language)s, %(idea)s))
+), frequency AS (
+    SELECT t.lexeme, count(*) AS df FROM terms t JOIN idea USING (lexeme) GROUP BY t.lexeme
 )
-SELECT d.id, ts_rank_cd(d.document, i.words) AS rank
-FROM documents d, idea i
-WHERE numnode(i.words) > 0 AND d.document @@ i.words
-ORDER BY rank DESC, d.id
+SELECT t.id,
+       sum(ln(1 + (c.n - f.df + 0.5) / (f.df + 0.5))
+           * t.tf * (%(k1)s + 1)
+           / (t.tf + %(k1)s * (1 - %(b)s + %(b)s * l.dl / c.avgdl))) AS score
+FROM terms t
+JOIN frequency f USING (lexeme)
+JOIN lengths l USING (id)
+CROSS JOIN corpus c
+GROUP BY t.id
+ORDER BY score DESC, t.id
 LIMIT %(limit)s
 """
 
@@ -81,9 +112,10 @@ def merge(by_meaning: list[int], by_words: list[int], *, k: int = RRF_K) -> list
 
 
 def by_words(conninfo: str, idea: str, *, limit: int = CANDIDATES) -> list[int]:
-    """The projects whose words match any word of the idea, best first."""
+    """The projects that have words of the idea, best first by BM25."""
+    values = {"language": LANGUAGE, "idea": idea, "limit": limit, "k1": BM25_K1, "b": BM25_B}
     with psycopg.connect(conninfo) as conn:
-        rows = conn.execute(_WORDS, {"language": LANGUAGE, "idea": idea, "limit": limit})
+        rows = conn.execute(_WORDS, values)
         return [project for project, _ in rows.fetchall()]
 
 
@@ -122,8 +154,8 @@ def search(
         return []
     store = EmbeddingStore(conninfo)
     meaning = (
-        by_meaning(store, client, idea, model=model, now=now)
+        by_meaning(store, client, idea, model=model, limit=limit, now=now)
         if store.counts(model)["embeddings"]
         else []
     )
-    return merge(meaning, by_words(conninfo, idea))[:limit]
+    return merge(meaning, by_words(conninfo, idea, limit=limit))[:limit]
