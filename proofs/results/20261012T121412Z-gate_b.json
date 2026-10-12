@@ -1,0 +1,73 @@
+{
+  "proof": "gate_b",
+  "gate": "B",
+  "ran_at": "2026-10-12T12:14:12Z",
+  "passed": true,
+  "environment": {
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "checks": [
+    {
+      "name": "at least 3 written ideas",
+      "passed": true,
+      "detail": "3 idea(s), 0 of them with known projects"
+    },
+    {
+      "name": "the database starts empty",
+      "passed": true,
+      "detail": "a new database, 0 projects"
+    },
+    {
+      "name": "one command took the projects through every step of the path",
+      "passed": true,
+      "detail": "steps ['parse', 'readmes', 'code', 'check', 'embed'], exit code 0"
+    },
+    {
+      "name": "at least 50 real projects went the whole way",
+      "passed": true,
+      "detail": "658 projects, 658 embeddings"
+    },
+    {
+      "name": "idea 1: each result shows what the mirror node said, or that it gives no id",
+      "passed": true,
+      "detail": "10 result(s)"
+    },
+    {
+      "name": "idea 2: each result shows what the mirror node said, or that it gives no id",
+      "passed": true,
+      "detail": "10 result(s)"
+    },
+    {
+      "name": "idea 3: each result shows what the mirror node said, or that it gives no id",
+      "passed": true,
+      "detail": "10 result(s)"
+    },
+    {
+      "name": "the results of every idea are written for a person to mark",
+      "passed": true,
+      "detail": "3 idea(s) in gate-b-results.txt"
+    }
+  ],
+  "measurements": {
+    "database": "a new one, deleted after the proof",
+    "projects": 658,
+    "embeddings": 658,
+    "projects_with_an_id": 285,
+    "answers_of_the_mirror_node": 1008,
+    "ideas": 3,
+    "ideas_with_known_projects": 0,
+    "places_of_the_known_projects": [],
+    "results_shown": {
+      "results": 30,
+      "with_ledger_facts": 5,
+      "saying_no_id": 25
+    },
+    "embedding_model": "gemini-embedding-2"
+  },
+  "does_not_prove": [
+    "That the search is good. Three ideas show that the path works from end to end. How well the search finds similar projects is measured by the test of the search (design 13.3), on many more cases.",
+    "That another person would mark the results in the same way. A mark is the judgment of the person who wrote the idea.",
+    "That an id belongs to the team that names it, or that a project is still alive."
+  ]
+}
