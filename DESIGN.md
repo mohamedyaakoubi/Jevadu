@@ -856,7 +856,9 @@ Each proof writes a dated result file to `proofs/results/`, with what it does no
 
 ### 14.3 Gate B: the thinnest full path
 
-From an empty database, one command processes 50 real projects through collect, parse, check and store. For three written questions with known answers, the known projects are in the first 10 results, and each result shows facts read from the mirror node. Only a plain debug listing exists.
+From an empty database, one command processes 50 real projects through collect, parse, check and store. For three written ideas, the first 10 results come back, and each result shows facts read from the mirror node. Only a plain debug listing exists.
+
+**How the ideas are judged.** The maintainer writes the three ideas without reading any project page first (a decision of 12 October 2026). Words written after reading a page lean on that page, and the search by words would then find it too easily. A blind idea has no known project, so a person marks each of its first 10 results "yes" (close to the idea, or sharing a big part of it) or "no". The gate passes when each idea has at least one "yes". An idea may still name a known project; then that project must be in the first 10. The proof is `python -m proofs.gate_b`, and `python -m proofs.gate_b --marks` reads the marks. The ideas, the results and the marks stay out of the repository; the result files hold places and numbers only.
 
 ### 14.5 What is cut first if time is short
 
