@@ -212,7 +212,7 @@ def test_the_command_does_not_show_the_connection_text_when_the_database_is_away
     assert "a-password-that-protects-nothing" not in said
 
 
-@pytest.mark.parametrize("argv", [[], ["embed"], ["parse", "--limit", "0"], ["parse", "--fast"]])
+@pytest.mark.parametrize("argv", [[], ["rewrite"], ["parse", "--limit", "0"], ["parse", "--fast"]])
 def test_the_command_refuses_what_it_does_not_know(
     argv: list[str], capsys: pytest.CaptureFixture[str]
 ) -> None:

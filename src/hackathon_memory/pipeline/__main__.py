@@ -8,13 +8,16 @@
     python -m hackathon_memory.pipeline readmes --no-requests    read the saved ones only
     python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
+    python -m hackathon_memory.pipeline embed              make the embedding of every project
+                                                           whose text changed (it costs money)
 
 "parse" sends no request: it works on the pages that are saved. It also writes the last day of
 each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
 rule needs it and no page gives it (design 7.2). "readmes" asks GitHub's API, which the
 maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait lets it wait
 for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a public API made
-for programs, and no site (design rule 17).
+for programs, and no site (design rule 17). "embed" calls Google's embedding model through the
+meter and its budget (design 11.4).
 
 A step prints numbers. For a page or an id that it could not handle it prints the address or
 the id and the rule that failed. It never prints text of a page, and never the connection text
@@ -38,19 +41,24 @@ from hackathon_memory.collect.ethglobal_site import SITE
 from hackathon_memory.collect.github_readmes import ReadmeRun, fetch_readmes
 from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.embeddings import EmbeddingStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.db.runs import Run, recorded_run
+from hackathon_memory.finops.budget import BudgetExceeded
+from hackathon_memory.finops.meter import metered_client
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
+from hackathon_memory.llm.client import GoogleSetupError
 from hackathon_memory.parse import event_ends
-from hackathon_memory.pipeline import check_ids, parse_pages, readmes
+from hackathon_memory.pipeline import check_ids, embed, parse_pages, readmes
 from hackathon_memory.settings import Settings, SettingsError
 
 USAGE = (
     "usage: python -m hackathon_memory.pipeline parse [--limit N]\n"
     "       python -m hackathon_memory.pipeline readmes [--repos N | --no-requests] [--wait]\n"
-    "       python -m hackathon_memory.pipeline check [--max-age-days N]"
+    "       python -m hackathon_memory.pipeline check [--max-age-days N]\n"
+    "       python -m hackathon_memory.pipeline embed [--limit N]"
 )
 # What each status of the proof rule means, in plain words (design 7.2).
 STATUS_WORDS = {
@@ -72,7 +80,9 @@ class _Quiet(argparse.ArgumentParser):
 
 def _arguments(argv: list[str]) -> argparse.Namespace:
     parser = _Quiet(prog="python -m hackathon_memory.pipeline", add_help=False)
-    parser.add_argument("step", choices=[parse_pages.STEP, readmes.STEP, check_ids.STEP])
+    parser.add_argument(
+        "step", choices=[parse_pages.STEP, readmes.STEP, check_ids.STEP, embed.STEP]
+    )
     parser.add_argument("--limit", type=int)
     parser.add_argument("--max-age-days", type=float)
     parser.add_argument("--repos", type=int)
@@ -82,8 +92,9 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     is_parse = arguments.step == parse_pages.STEP
     is_check = arguments.step == check_ids.STEP
     is_readmes = arguments.step == readmes.STEP
-    if arguments.limit is not None and (not is_parse or arguments.limit < 1):
-        raise ValueError("--limit goes with parse, and must be 1 or more")
+    is_embed = arguments.step == embed.STEP
+    if arguments.limit is not None and (not (is_parse or is_embed) or arguments.limit < 1):
+        raise ValueError("--limit goes with parse or embed, and must be 1 or more")
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
     if arguments.repos is not None and (not is_readmes or arguments.repos < 1):
@@ -177,6 +188,7 @@ def main(
     argv: list[str],
     settings: Settings | None = None,
     mirrors: Mapping[str, MirrorNode] | None = None,
+    google: object = None,
 ) -> int:
     try:
         arguments = _arguments(argv)
@@ -204,6 +216,18 @@ def main(
                     run,
                     fetch=fetch,
                 )
+            elif arguments.step == embed.STEP:
+                if google is None:
+                    google = metered_client(
+                        settings, "embed_document", run_id=f"pipeline-run-{run.id}"
+                    )
+                embed.embed_pages(
+                    EmbeddingStore(conninfo),
+                    google,
+                    run,
+                    model=settings.gemini_embedding_model,
+                    limit=arguments.limit,
+                )
             else:
                 if mirrors is None:
                     # Every network that a page can name. An id with no network is asked on
@@ -229,11 +253,22 @@ def main(
     except check_ids.NodeIsAway as away:
         print(f"Stopped: {away}. Nothing more was asked. Try again later.")
         return 1
+    except embed.GoogleIsAway as away:
+        print(f"Stopped: {away}. What was made is kept. Try again later.")
+        return 1
+    except BudgetExceeded as over:
+        print(f"Stopped by the budget: {over}")
+        return 1
+    except GoogleSetupError as problem:
+        print(f"Stopped: {problem}")
+        return 1
     if arguments.step == parse_pages.STEP:
         lines = parse_lines(run)
     elif arguments.step == readmes.STEP:
         lines = readmes.readme_lines(run) + ([note] if note else [])
         lines += _problem_lines(run, "Stopped or not done, and why:")
+    elif arguments.step == embed.STEP:
+        lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
     else:
         lines = check_lines(run)
     print("\n".join(lines))
