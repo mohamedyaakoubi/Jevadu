@@ -41,7 +41,8 @@ from hackathon_memory.check import proof
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.ethglobal_site import SITE
-from hackathon_memory.collect.github_readmes import ReadmeRun, fetch_readmes
+from hackathon_memory.collect.github_once import AnswersRun
+from hackathon_memory.collect.github_readmes import fetch_readmes
 from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.embeddings import EmbeddingStore
@@ -161,7 +162,7 @@ def check_lines(run: Run) -> list[str]:
 
 def _readme_fetch(
     settings: Settings, arguments: argparse.Namespace, run: Run
-) -> tuple[Callable[[list[str]], ReadmeRun] | None, str | None]:
+) -> tuple[Callable[[list[str]], AnswersRun] | None, str | None]:
     """What asks GitHub for the missing READMEs, or None with the reason in plain words."""
     if arguments.no_requests:
         return None, None
@@ -175,7 +176,7 @@ def _readme_fetch(
     store = RawStore(github.raw_dir(settings))
     collector = f"{settings.collector_name.strip()}/{__version__}"
 
-    def fetch(wanted: list[str]) -> ReadmeRun:
+    def fetch(wanted: list[str]) -> AnswersRun:
         return fetch_readmes(client, store, wanted, collector=collector, limit=arguments.repos)
 
     return fetch, None

@@ -14,7 +14,8 @@ import pytest
 
 from fakes import project_page
 from hackathon_memory.collect.github import raw_dir, readme_address
-from hackathon_memory.collect.github_readmes import SUFFIX, ReadmeRun, kept_of
+from hackathon_memory.collect.github_once import AnswersRun
+from hackathon_memory.collect.github_readmes import SUFFIX, kept_of
 from hackathon_memory.collect.polite import FetchResult
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.ledger import LedgerStore
@@ -171,10 +172,10 @@ def test_the_missing_readmes_are_asked_for_before_the_saved_ones_are_read(
     raw = RawStore(tmp_path)
     asked: list[list[str]] = []
 
-    def fetch(wanted: list[str]) -> ReadmeRun:
+    def fetch(wanted: list[str]) -> AnswersRun:
         asked.append(wanted)
         save_answer(raw, PEBBLE, 200, README)  # as GitHub would have answered
-        return ReadmeRun(repositories=len(wanted), asked=2, failed=1, left_for_later=0)
+        return AnswersRun(repositories=len(wanted), asked=2, failed=1, left_for_later=0)
 
     run = run_step(database, raw, fetch=fetch)
     assert asked == [[CEDAR, PEBBLE]]
@@ -186,8 +187,8 @@ def test_the_missing_readmes_are_asked_for_before_the_saved_ones_are_read(
 def test_a_stop_of_github_is_named_in_the_run(database: str, tmp_path: Path) -> None:
     projects_in(database)
 
-    def fetch(wanted: list[str]) -> ReadmeRun:
-        return ReadmeRun(repositories=len(wanted), stopped="api.github.com answered 401")
+    def fetch(wanted: list[str]) -> AnswersRun:
+        return AnswersRun(repositories=len(wanted), stopped="api.github.com answered 401")
 
     run = run_step(database, RawStore(tmp_path), fetch=fetch)
     assert run.problems == [{"what": "GitHub", "rule": "api.github.com answered 401"}]

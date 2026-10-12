@@ -19,7 +19,8 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from hackathon_memory.collect.github import repository_of
-from hackathon_memory.collect.github_readmes import FOUND, STATUSES, ReadmeRun, saved_readme
+from hackathon_memory.collect.github_once import AnswersRun
+from hackathon_memory.collect.github_readmes import FOUND, STATUSES, saved_readme
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
@@ -35,7 +36,7 @@ def read_readmes(
     raw: RawStore,
     run: Run,
     *,
-    fetch: Callable[[list[str]], ReadmeRun] | None = None,
+    fetch: Callable[[list[str]], AnswersRun] | None = None,
 ) -> None:
     """Link each project to its repository, ask for the READMEs that are missing when `fetch` is
     given, and keep the ids of every saved README. Counts what was done in `run`."""

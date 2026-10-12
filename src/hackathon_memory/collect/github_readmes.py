@@ -27,7 +27,8 @@ import json
 from dataclasses import dataclass
 
 from hackathon_memory.collect.github import api_message, readme_address
-from hackathon_memory.collect.polite import FetchFailed, FetchResult, PoliteClient, StopCollecting
+from hackathon_memory.collect.github_once import AnswersRun, fetch_once
+from hackathon_memory.collect.polite import FetchResult, PoliteClient
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
 from hackathon_memory.parse.markdown import hide_in_markdown
 
@@ -108,19 +109,6 @@ def saved_readme(store: RawStore, repository: str) -> Readme | None:
     return read_readme(saved) if saved is not None else None
 
 
-@dataclass
-class ReadmeRun:
-    """What a run that asks for READMEs did."""
-
-    repositories: int = 0
-    already_saved: int = 0
-    asked: int = 0
-    failed: int = 0
-    left_for_later: int = 0
-    stopped: str | None = None  # why the run stopped before the end, in plain words
-    by_status: dict[str, int] | None = None
-
-
 def fetch_readmes(
     client: PoliteClient,
     store: RawStore,
@@ -128,45 +116,22 @@ def fetch_readmes(
     *,
     collector: str,
     limit: int | None = None,
-) -> ReadmeRun:
+) -> AnswersRun:
     """Ask for the README of every repository that has none saved yet, one after the other.
 
     With `limit`, at most that many are asked for in this run. A README that fails is counted
     and asked for again by a later run. A stop (the switch, a no, too many requests) ends the
     run, and what was saved stays saved.
     """
-    run = ReadmeRun(repositories=len(repositories), by_status=dict.fromkeys(STATUSES, 0))
-    for repository in repositories:
-        address = readme_address(repository)
-        if store.has(address, SUFFIX):
-            run.already_saved += 1
-            continue
-        if limit is not None and run.asked >= limit:
-            run.left_for_later += 1
-            continue
-        if run.stopped is not None:
-            run.left_for_later += 1
-            continue
-        try:
-            fetch = client.get(address)
-        except FetchFailed:
-            run.asked += 1
-            run.failed += 1
-            continue
-        except StopCollecting as stop:
-            run.stopped = str(stop)
-            run.left_for_later += 1
-            continue
-        run.asked += 1
-        body, facts, taken_out = kept_of(fetch)
-        saved = store.save(
-            fetch,
-            body,
-            received=fetch.body,
-            collector=collector,
-            team_cut=taken_out,
-            answer=facts,
-            suffix=SUFFIX,
-        )
-        run.by_status[read_readme(saved).status] += 1  # type: ignore[index]
-    return run
+    return fetch_once(
+        client,
+        store,
+        repositories,
+        address_of=readme_address,
+        keep=kept_of,
+        status_of=lambda saved: read_readme(saved).status,
+        statuses=STATUSES,
+        suffix=SUFFIX,
+        collector=collector,
+        limit=limit,
+    )
