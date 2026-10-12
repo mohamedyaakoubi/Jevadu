@@ -17,6 +17,11 @@ HEDERA_PRIZE = "hedera_prize"
 OTHER_PRIZE = "other_prize"  # a prize of another sponsor only
 NO_PRIZE = "no_prize"
 
+# The two kinds of entry (design 4.6). A full card comes from the team's own page. A winner
+# entry comes from an organiser's list of winners, where the submission pages are not public.
+FULL_CARD = "full_card"
+WINNER_ENTRY = "winner_entry"
+
 # The kinds of a link.
 CODE_LINK = "code"
 DEMO_LINK = "demo"
@@ -89,6 +94,7 @@ class ProjectPage:
     # How many handles, addresses and links to profiles were hidden, in the texts and among
     # the links (people.py).
     people_words_hidden: int = 0
+    entry_kind: str = FULL_CARD  # FULL_CARD or WINNER_ENTRY
 
     def section(self, kind: str) -> Section | None:
         return next((section for section in self.sections if section.kind == kind), None)
