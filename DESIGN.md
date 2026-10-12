@@ -459,6 +459,8 @@ The GitHub API is asked with a read-only token. Without a token the limit is 60 
 
 For each repository: does it exist, when was it created, when was the first and the last change, how many changes, how many contributors, which languages. The package files are read to see whether a Hedera library is named. The README is searched for Hedera IDs, because many project pages give none.
 
+**The facts of a repository, as built.** One request for each repository asks for its facts (`python -m hackathon_memory.pipeline code`). The answer also holds the account that owns the repository: its photo, and for some accounts a name and an email address. None of it is kept. Before saving, only a fixed list of fields stays: the link, the dates (made, last push), the state (archived, a fork), the language, the size, the short name of the license, and the description with the words about people hidden. The number of changes, the contributors and the libraries are not read yet.
+
 ### 7.4 The life rule
 
 | Status | When |
@@ -467,6 +469,8 @@ For each repository: does it exist, when was it created, when was the first and 
 | Quiet | Nothing in the last 90 days, but something later than 30 days after the event |
 | Stopped | Nothing later than 30 days after the event |
 | Unknown | No repository and no ID to look at |
+
+**How the rule reads the signs.** The two signs are the last push of code to the repository, and the last activity on the ledger of the project's own IDs. An ID that a project with other code names too is not a sign: it is most likely a shared service used by many teams (section 8.4), and its activity says nothing about this project. The line is the end of the last day of the event plus 30 days. When the end of the event is not known, a project with no sign in the last 90 days cannot be told quiet or stopped: it is unknown, and the reason is shown. The rule guesses no end. The plain listing of the search shows the status, the reason and the date of the last sign.
 
 ---
 

@@ -69,10 +69,11 @@ Phase B, the first full path, is being built. What runs on the real data today:
 - **The parser.** It reads every saved project page into its facts: the name, the short line, the event, the prizes, the links, the two texts word for word, and the Hedera IDs with their network and kind. It refuses a page whose visible part and data disagree. Words about people that a team wrote into its texts are hidden first (design 5.4).
 - **The check on the ledger.** Every Hedera ID is asked of the public mirror node, and the proof rule of design 7.2 says whether the dates fit the event.
 - **The README of the code.** The README of each project's repository is read once through GitHub's API, cleaned of the part about the team, and searched for Hedera IDs, which are then checked like the IDs of a page (design 7.3).
+- **The facts of the code and the life rule.** The dates of each repository (made, last push) are read once through GitHub's API, without anything about the account that owns it. With the activity of the project's own IDs on the ledger, they say whether a project is active, quiet or stopped (design 7.4).
 - **The search, as a plain listing.** Each project is embedded with Google's embedding model. An idea is searched by meaning and by words, and the two lists are merged. Each result shows its facts and what the mirror node said about its IDs (design 8.2).
 - **One command for the whole path**, and the proof of Gate B that runs it from an empty database. The proof waits for its three written questions.
 
-What does not exist yet: the cards, the other facts of the code (dates, languages, a Hedera library), the website, the register, and the tests that measure the quality of the AI fields and of the search.
+What does not exist yet: the cards, the other facts of the code (the number of changes, the contributors, a Hedera library in the package files), the website, the register, and the tests that measure the quality of the AI fields and of the search.
 
 ## Run it
 
@@ -119,9 +120,10 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m hackathon_memory.collect ethglobal` | The run. It reads the page of every project that the walk found, and saves each one without its team part. `--pages 3` asks for three new pages, so the first saved pages can be looked at before the rest is read. `--pause 10` leaves ten seconds between two requests. `--wait` lets the run wait for the end of a cooldown by itself. |
 | `python -m hackathon_memory.pipeline parse` | Reads every saved project page into the database. It sends no request, and a page that was read before by the same parser is passed over. |
 | `python -m hackathon_memory.pipeline readmes` | Asks GitHub for the README of every project's code that is not saved yet, then reads every saved README for Hedera IDs. `--repos 5` asks for at most five new ones, `--no-requests` sends nothing, `--wait` waits for the end of a cooldown. |
+| `python -m hackathon_memory.pipeline code` | Asks GitHub for the facts of every repository that are not saved yet (the same options as `readmes`), then writes them. |
 | `python -m hackathon_memory.pipeline check` | Asks the Hedera mirror node about every ID and applies the proof rule. An answer is used again for seven days. |
 | `python -m hackathon_memory.pipeline embed` | Makes the embedding of every project whose text changed. It costs money, through the meter and its budget. |
-| `python -m hackathon_memory.pipeline all` | The four steps above, in order. |
+| `python -m hackathon_memory.pipeline all` | The five steps above, in order. |
 | `python -m hackathon_memory.search "an idea"` | The closest projects to an idea, as a plain listing with the facts of each one. `--numbers-only` shows no name or link. |
 | `python -m proofs.gate_b` | Gate B: a new empty database, the whole path with one command, and the written questions of `data/by-hand/gate-b-questions.txt`. |
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
