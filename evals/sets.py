@@ -28,16 +28,15 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from hackathon_memory.read.sets import SetError, pages_of
+
 SETS = Path(__file__).parent / "sets"
 TUNING = SETS / "tuning.json"
 TEST1 = SETS / "test1.json"
 SEED = 20261013
 TUNING_SIZE = 15
 TEST1_PER_GROUP = 10
-
-
-class SetError(ValueError):
-    """A set file cannot be read, or would be written over."""
+__all__ = ["SetError", "pages_of", "draw", "write_set"]
 
 
 @dataclass(frozen=True)
@@ -109,18 +108,6 @@ def write_set(path: Path, name: str, cases: list[dict], cuts: tuple[int, int]) -
         "cases": cases,
     }
     path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8", newline="\n")
-
-
-def pages_of(path: Path) -> list[str]:
-    """The addresses of the pages of a set file."""
-    try:
-        record = json.loads(path.read_text(encoding="utf-8"))
-        pages = [str(case["page"]) for case in record["cases"]]
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        raise SetError(f"{path.name} cannot be read as a set") from error
-    if not pages or len(set(pages)) != len(pages):
-        raise SetError(f"{path.name} has no page, or the same page twice")
-    return pages
 
 
 def candidates_from_the_data() -> list[Candidate]:
