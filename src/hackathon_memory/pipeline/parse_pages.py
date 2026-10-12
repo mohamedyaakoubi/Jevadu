@@ -97,6 +97,8 @@ def parse_winner_entries(folder: Path, projects: ProjectStore, run: Run) -> None
                 run.counts["winner_entries_same"] += 1
                 continue
             run.counts["winner_entries_" + projects.save(entry.page, entry.sha256)] += 1
+            if entry.page.people_words_hidden:
+                run.counts["words_about_people_hidden"] += entry.page.people_words_hidden
 
 
 def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) -> None:

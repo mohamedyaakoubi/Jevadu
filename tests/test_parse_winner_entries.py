@@ -137,7 +137,11 @@ def test_the_parse_step_keeps_the_winner_entries_and_reads_a_changed_one_again(
 ) -> None:
     write(tmp_path, RECORDS)
     first = run_step(database, tmp_path)
-    assert dict(first.counts) == {"winner_entries": 2, "winner_entries_new": 2}
+    assert dict(first.counts) == {
+        "winner_entries": 2,
+        "winner_entries_new": 2,
+        "words_about_people_hidden": 1,
+    }
     with psycopg.connect(database) as conn:
         rows = conn.execute(
             "SELECT p.name, p.entry_kind, e.site, p.proof_status FROM projects p "
@@ -153,6 +157,7 @@ def test_the_parse_step_keeps_the_winner_entries_and_reads_a_changed_one_again(
         "winner_entries": 2,
         "winner_entries_changed": 1,
         "winner_entries_same": 1,
+        "words_about_people_hidden": 1,  # the changed record, read again
     }
 
 
