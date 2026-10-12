@@ -6,7 +6,12 @@ import re
 
 import pytest
 
-from hackathon_memory.parse.jsdata import NotALiteral, objects_holding, read_literal
+from hackathon_memory.parse.jsdata import (
+    NotALiteral,
+    enclosing_object,
+    objects_holding,
+    read_literal,
+)
 
 LINK = re.compile(r"https://example\.test/p/\d+")
 
@@ -59,6 +64,31 @@ def test_the_objects_that_hold_a_link_are_found_with_the_place_of_each_value() -
 
 def test_a_link_in_code_and_not_in_an_object_is_not_found() -> None:
     assert objects_holding('fetch("https://example.test/p/9").then(r=>r.json())', LINK) == []
+
+
+def test_a_lenient_read_passes_over_code_and_keeps_the_rest() -> None:
+    text = (
+        '{title:"Pay",logo:H.pay,fn:f(1,[2],"a,b"),t:`x${y}`,list:[1,g(),2],link:"https://x.test"}'
+    )
+    with pytest.raises(NotALiteral):
+        read_literal(text, 0)
+    value, end = read_literal(text + ";next()", 0, lenient=True)
+    assert value == {"title": "Pay", "list": [1, 2], "link": "https://x.test"}
+    assert end == len(text)
+
+
+def test_the_object_around_the_records_is_found() -> None:
+    script = (
+        'x=1;m={onchain:[{title:"A",logo:H.a,url:"https://example.test/p/1"}],'
+        'ai:[{title:"B",url:"https://example.test/p/2"}]};f=[{id:"ai"}];'
+    )
+    first, second = objects_holding(script, LINK, lenient=True)
+    assert (first.value["title"], second.value["title"]) == ("A", "B")
+    around = enclosing_object(script, first, lenient=True)
+    assert around is not None and around.value == {
+        "onchain": [{"title": "A", "url": "https://example.test/p/1"}],
+        "ai": [{"title": "B", "url": "https://example.test/p/2"}],
+    }
 
 
 def test_a_link_held_by_an_inner_object_finds_the_inner_object() -> None:

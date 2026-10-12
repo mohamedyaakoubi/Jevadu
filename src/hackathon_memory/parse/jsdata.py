@@ -6,6 +6,10 @@ quotes, and `!0` and `!1` for true and false. This module reads such literals an
 no function, no variable, no expression is read or run. A value that is not a literal ends the
 literal that holds it, which is then not read at all.
 
+One exception, asked for by name (`lenient=True`): a record whose values are mostly data, with
+one value that is code, such as `logo:H.silsilat` (a picture that the script imports). Then the
+code is passed over, its key is left out of the record, and the rest is read.
+
 Written for the winners page of the Hedera Africa hackathon on 12 October 2026. Nothing here
 knows about one site.
 """
@@ -85,8 +89,50 @@ def _string(text: str, at: int) -> tuple[str, int]:
     raise NotALiteral("a string with no end")
 
 
+def _after_string(text: str, at: int) -> int:
+    """The index just after the string that starts at `at`, with what a template holds."""
+    quote = text[at]
+    i = at + 1
+    while i < len(text):
+        if text[i] == "\\":
+            i += 2
+        elif text[i] == quote:
+            return i + 1
+        elif quote == "`" and text.startswith("${", i):
+            i = _end_of_code(text, i + 2) + 1  # the "}" that closes the expression
+        else:
+            i += 1
+    raise NotALiteral("a string with no end")
+
+
+def _end_of_code(text: str, at: int) -> int:
+    """The index of the "," or closing sign that ends the code starting at `at`, outside of any
+    string and of any bracket that the code opens itself."""
+    depth = 0
+    i = at
+    while i < len(text):
+        char = text[i]
+        if char in "\"'`":
+            i = _after_string(text, i)
+            continue
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            if depth == 0:
+                return i
+            depth -= 1
+        elif char == "," and depth == 0:
+            return i
+        i += 1
+    raise NotALiteral("code with no end")
+
+
 def _object(
-    text: str, at: int, depth: int, spans: dict[str, tuple[int, int]] | None = None
+    text: str,
+    at: int,
+    depth: int,
+    lenient: bool,
+    spans: dict[str, tuple[int, int]] | None = None,
 ) -> tuple[dict, int]:
     result: dict = {}
     i = _skip(text, at + 1)
@@ -106,9 +152,15 @@ def _object(
         if i >= len(text) or text[i] != ":":
             raise NotALiteral("a key with no value")  # a method or a short form: not data
         start = _skip(text, i + 1)
-        result[key], i = _value(text, start, depth + 1)
-        if spans is not None:
-            spans[key] = (start, i)
+        try:
+            result[key], i = _value(text, start, depth + 1, lenient)
+        except NotALiteral:
+            if not lenient:
+                raise
+            i = _end_of_code(text, start)  # code, not data: its key is left out
+        else:
+            if spans is not None:
+                spans[key] = (start, i)
         i = _skip(text, i)
         if i < len(text) and text[i] == ",":
             i = _skip(text, i + 1)
@@ -116,7 +168,7 @@ def _object(
             raise NotALiteral("an object that goes on with something else")
 
 
-def _array(text: str, at: int, depth: int) -> tuple[list, int]:
+def _array(text: str, at: int, depth: int, lenient: bool) -> tuple[list, int]:
     result: list = []
     i = _skip(text, at + 1)
     while True:
@@ -124,8 +176,14 @@ def _array(text: str, at: int, depth: int) -> tuple[list, int]:
             raise NotALiteral("a list with no end")
         if text[i] == "]":
             return result, i + 1
-        item, i = _value(text, i, depth + 1)
-        result.append(item)
+        try:
+            item, i = _value(text, i, depth + 1, lenient)
+        except NotALiteral:
+            if not lenient:
+                raise
+            i = _end_of_code(text, i)  # code, not data: the item is left out
+        else:
+            result.append(item)
         i = _skip(text, i)
         if i < len(text) and text[i] == ",":
             i = _skip(text, i + 1)
@@ -133,7 +191,7 @@ def _array(text: str, at: int, depth: int) -> tuple[list, int]:
             raise NotALiteral("a list that goes on with something else")
 
 
-def _value(text: str, at: int, depth: int) -> tuple[object, int]:
+def _value(text: str, at: int, depth: int, lenient: bool = False) -> tuple[object, int]:
     if depth > _MAX_DEPTH:
         raise NotALiteral("too deep")
     at = _skip(text, at)
@@ -143,9 +201,9 @@ def _value(text: str, at: int, depth: int) -> tuple[object, int]:
     if char in "\"'`":
         return _string(text, at)
     if char == "{":
-        return _object(text, at, depth)
+        return _object(text, at, depth, lenient)
     if char == "[":
-        return _array(text, at, depth)
+        return _array(text, at, depth, lenient)
     if text.startswith(("!0", "!1"), at):
         return text[at + 1] == "0", at + 2
     number = _NUMBER.match(text, at)
@@ -159,21 +217,21 @@ def _value(text: str, at: int, depth: int) -> tuple[object, int]:
     raise NotALiteral("not a literal")
 
 
-def read_literal(text: str, at: int) -> tuple[object, int]:
+def read_literal(text: str, at: int, *, lenient: bool = False) -> tuple[object, int]:
     """The literal that starts at `at` (after spaces), and the index just after it."""
-    return _value(text, at, 0)
+    return _value(text, at, 0, lenient)
 
 
-def read_object(text: str, at: int) -> Found:
+def read_object(text: str, at: int, *, lenient: bool = False) -> Found:
     """The object whose "{" stands at `at`, with the place of each of its own values."""
     if not text.startswith("{", at):
         raise NotALiteral("no object here")
     spans: dict[str, tuple[int, int]] = {}
-    value, end = _object(text, at, 0, spans)
+    value, end = _object(text, at, 0, lenient, spans)
     return Found(at, end, value, spans)
 
 
-def objects_holding(text: str, pattern: re.Pattern[str]) -> list[Found]:
+def objects_holding(text: str, pattern: re.Pattern[str], *, lenient: bool = False) -> list[Found]:
     """Every object that holds, as one of its own values, a string that `pattern` matches, in
     the order of the text.
 
@@ -188,7 +246,7 @@ def objects_holding(text: str, pattern: re.Pattern[str]) -> list[Found]:
             if start == -1:
                 break
             try:
-                candidate = read_object(text, start)
+                candidate = read_object(text, start, lenient=lenient)
             except (NotALiteral, ValueError, OverflowError):
                 continue
             if candidate.end <= match.start():
@@ -197,3 +255,20 @@ def objects_holding(text: str, pattern: re.Pattern[str]) -> list[Found]:
                 found.setdefault(start, candidate)
                 break
     return [found[start] for start in sorted(found)]
+
+
+def enclosing_object(text: str, inner: Found, *, lenient: bool = False) -> Found | None:
+    """The nearest object around `inner`: the first "{" to its left that starts an object that
+    reaches past it."""
+    start = inner.start
+    for _ in range(_MAX_STARTS * 5):
+        start = text.rfind("{", 0, start)
+        if start == -1:
+            return None
+        try:
+            candidate = read_object(text, start, lenient=lenient)
+        except (NotALiteral, ValueError, OverflowError):
+            continue
+        if candidate.end >= inner.end:
+            return candidate
+    return None
