@@ -115,6 +115,128 @@ def test_a_refusal_stops_the_look_and_is_remembered(tmp_path: Path) -> None:
         client(tmp_path, answering(Reply(200, b"")), FakeTime())
 
 
-def test_the_command_needs_the_word_look(capsys: pytest.CaptureFixture[str]) -> None:
+def test_the_command_needs_look_or_read(capsys: pytest.CaptureFixture[str]) -> None:
     assert africa.main([]) == 2
+    assert africa.main(["--look", "--read"]) == 2
     assert africa.USAGE in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------- the read
+
+STATIC = f"https://{africa.SITE}/_next/static/chunks"
+NO_DATA = "self.webpackChunk=[];function a(){return 1}"
+WINNERS = (
+    'const w=[{name:"Invented Pay",track:"cross",place:"1st",about:"Pays shops.",'
+    'link:"https://dorahacks.io/buidl/1",team:["Quillfeather","Ledgerwood"],'
+    'contact:"quill@example.org",logo:"/logos/pay@2x.png"},'
+    '{name:"Invented Post",track:"cross",place:"2nd",about:"Moves parcels.",'
+    'link:"https://dorahacks.io/buidl/2"},'
+    "{name:'Invented Vote',track:'ai',place:'1st',about:'Counts ballots.',"
+    "link:'https://dorahacks.io/buidl/3',members:[{name:'Orchardson'}]}];export default w;"
+)
+
+
+def page_with_scripts() -> bytes:
+    """Two winner cards, the script tags of a Next.js page, and its data that names one script."""
+    pushed = json.dumps('2:I[77,["static/chunks/bbb.js"],"default"]\n')
+    return (
+        "<html><head>"
+        '<script src="/_next/static/chunks/aaa.js?dpl=x" async></script>'
+        '<script src="/_next/static/chunks/bbb.js?dpl=x" async></script>'
+        '<script src="/_next/static/chunks/ccc.js?dpl=x" async></script>'
+        '<script src="/_next/static/chunks/polyfills.js" nomodule></script>'
+        '<script src="https://cdn.example.test/x.js"></script>'
+        "</head><body><section id='winners'>"
+        '<a class="winner-card" href="https://dorahacks.io/buidl/1"><h3>Invented Pay</h3></a>'
+        '<a class="winner-card" href="https://dorahacks.io/buidl/2"><h3>Invented Post</h3></a>'
+        f"</section><script>self.__next_f.push([1,{pushed}])</script></body></html>"
+    ).encode()
+
+
+def site_with(page: bytes, scripts: dict[str, str]) -> FakeSite:
+    pages: dict = {africa.ROBOTS_URL: Reply(404, b"not here"), africa.PAGE: Reply(200, page)}
+    for url, text in scripts.items():
+        pages[url] = Reply(200, text.encode(), {"Content-Type": "application/javascript"})
+    return FakeSite(pages)
+
+
+def read(tmp_path: Path, site: FakeSite, said: list[str]) -> africa.Read | None:
+    allowed = africa.AllowedUrls()
+    collector = africa.client_for(
+        settings(tmp_path), env_file=env_file(tmp_path), allow=allowed,
+        session=session_for(site), sleep=FakeTime().sleep, clock=FakeTime().clock,
+    )  # fmt: skip
+    store = africa.RawStore(africa.paths(settings(tmp_path)).raw_dir)
+    return africa.read_and_save(collector, allowed, store, said.append)
+
+
+def test_the_script_files_are_the_page_s_own_and_the_named_ones_come_first() -> None:
+    assert africa.script_sources(page_with_scripts()) == [
+        f"{STATIC}/bbb.js",  # named by the data of the page; its tag (with "?dpl=x") is the same
+        f"{STATIC}/aaa.js?dpl=x",
+        f"{STATIC}/ccc.js?dpl=x",
+    ]  # no script for old browsers, nothing from another site
+
+
+def test_the_read_stops_at_the_winners_and_saves_them_without_people(tmp_path: Path) -> None:
+    site = site_with(page_with_scripts(), {f"{STATIC}/bbb.js": WINNERS,
+                                           f"{STATIC}/aaa.js?dpl=x": NO_DATA})  # fmt: skip
+    said: list[str] = []
+    done = read(tmp_path, site, said)
+    assert done is not None and done.winners == 3
+    assert site.urls == [africa.ROBOTS_URL, africa.PAGE, f"{STATIC}/bbb.js"]  # then it stopped
+    saved = done.script.body_path.read_text(encoding="utf-8")
+    for kept in ("Invented Pay", "Invented Vote", "https://dorahacks.io/buidl/3", "pay@2x.png"):
+        assert kept in saved
+    for person in (*PEOPLE, "Orchardson", "quill@example.org"):
+        assert person not in saved
+    assert dict(done.cut) == {"team": 1, "members": 1, "address": 1}
+    assert done.script.meta["team_cut"] == {"people_values_cut": dict(done.cut)}
+    assert done.page.body_path.read_bytes() == page_with_scripts()  # the page, as received
+    text = "\n".join(said)
+    assert "name: 3" in text and "link: 3" in text
+    for hidden in ("Invented", "Quillfeather", "dorahacks.io/buidl", CONTACT):
+        assert hidden not in text
+
+
+def test_no_script_with_the_winners_saves_nothing(tmp_path: Path) -> None:
+    scripts = {f"{STATIC}/bbb.js": NO_DATA, f"{STATIC}/aaa.js?dpl=x": NO_DATA,
+               f"{STATIC}/ccc.js?dpl=x": 'x="https://dorahacks.io/buidl/1"'}  # fmt: skip
+    site = site_with(page_with_scripts(), scripts)
+    said: list[str] = []
+    assert read(tmp_path, site, said) is None
+    assert len(site.urls) == 5  # robots.txt, the page, and each of the three files once
+    assert any("none of the 3 script files holds the winners" in line for line in said)
+    assert not africa.paths(settings(tmp_path)).raw_dir.exists()
+
+
+def test_a_page_with_a_block_about_members_is_not_saved(tmp_path: Path) -> None:
+    page = page_with_scripts().replace(b"<section id='winners'>", b"<section class='team-list'>")
+    site = site_with(page, {f"{STATIC}/bbb.js": WINNERS})
+    said: list[str] = []
+    assert read(tmp_path, site, said) is None
+    assert site.urls == [africa.ROBOTS_URL, africa.PAGE]  # no script file was asked for
+    assert not africa.paths(settings(tmp_path)).raw_dir.exists()
+
+
+def test_a_saved_page_is_never_asked_for_again(tmp_path: Path) -> None:
+    site = site_with(page_with_scripts(), {f"{STATIC}/bbb.js": WINNERS})
+    assert read(tmp_path, site, []) is not None
+    again = site_with(page_with_scripts(), {f"{STATIC}/bbb.js": WINNERS})
+    said: list[str] = []
+    assert read(tmp_path, again, said) is None
+    assert again.urls == []
+    assert "never asked for twice" in said[0]
+
+
+def test_only_literal_values_of_keys_about_people_are_cut() -> None:
+    text = (
+        'a={team:["Ann"],"members":[{name:"Bo"}],founder:"Cy",author:e.name,'
+        'name:"Kept",photo:"",x:"mail@example.org",y:"icon@2x.png"}'
+    )
+    cut, counts = africa.cut_people(text)
+    assert cut == (
+        'a={team:[],"members":[],founder:"",author:e.name,'
+        'name:"Kept",photo:"",x:"address-cut",y:"icon@2x.png"}'
+    )
+    assert dict(counts) == {"team": 1, "members": 1, "founder": 1, "address": 1}
