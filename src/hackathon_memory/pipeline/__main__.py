@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from datetime import timedelta
 
 import psycopg
@@ -184,6 +185,77 @@ def _problem_lines(run: Run, title: str) -> list[str]:
     return lines
 
 
+@dataclass
+class _Services:
+    """What the steps need from outside. A test hands in stand-ins."""
+
+    mirrors: Mapping[str, MirrorNode] | None = None
+    google: object = None
+
+
+def _run_step(
+    step: str,
+    arguments: argparse.Namespace,
+    settings: Settings,
+    conninfo: str,
+    services: _Services,
+) -> tuple[Run, list[str]]:
+    """Run one step in its own row of the table of runs. Returns the run and its lines."""
+    note: str | None = None
+    with recorded_run(conninfo, step) as run:
+        if step == parse_pages.STEP:
+            paths = data_paths(settings)
+            projects = ProjectStore(conninfo)
+            parse_pages.parse_saved_pages(
+                RawStore(paths.raw_dir), projects, run, limit=arguments.limit
+            )
+            ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
+            parse_pages.apply_event_ends(projects, ends, SITE, run)
+        elif step == readmes.STEP:
+            fetch, note = _readme_fetch(settings, arguments, run)
+            readmes.read_readmes(
+                RepositoryStore(conninfo),
+                ProjectStore(conninfo),
+                RawStore(github.raw_dir(settings)),
+                run,
+                fetch=fetch,
+            )
+        elif step == embed.STEP:
+            google = services.google
+            if google is None:
+                google = metered_client(settings, "embed_document", run_id=f"pipeline-run-{run.id}")
+            embed.embed_pages(
+                EmbeddingStore(conninfo),
+                google,
+                run,
+                model=settings.gemini_embedding_model,
+                limit=arguments.limit,
+            )
+        else:
+            mirrors = services.mirrors
+            if mirrors is None:
+                # Every network that a page can name. An id with no network is asked on
+                # the ones of check_ids.NETWORKS_WHEN_OPEN only.
+                mirrors = {name: MirrorNode(name) for name in MIRROR_URLS}
+            days = arguments.max_age_days
+            check_ids.check_ids(
+                LedgerStore(conninfo),
+                mirrors,
+                run,
+                max_age=check_ids.MAX_AGE if days is None else timedelta(days=days),
+            )
+    if step == parse_pages.STEP:
+        lines = parse_lines(run)
+    elif step == readmes.STEP:
+        lines = readmes.readme_lines(run) + ([note] if note else [])
+        lines += _problem_lines(run, "Stopped or not done, and why:")
+    elif step == embed.STEP:
+        lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
+    else:
+        lines = check_lines(run)
+    return run, lines
+
+
 def main(
     argv: list[str],
     settings: Settings | None = None,
@@ -198,48 +270,9 @@ def main(
     settings = settings or Settings()
     try:
         conninfo = settings.database_conninfo()
-        with recorded_run(conninfo, arguments.step) as run:
-            if arguments.step == parse_pages.STEP:
-                paths = data_paths(settings)
-                projects = ProjectStore(conninfo)
-                parse_pages.parse_saved_pages(
-                    RawStore(paths.raw_dir), projects, run, limit=arguments.limit
-                )
-                ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
-                parse_pages.apply_event_ends(projects, ends, SITE, run)
-            elif arguments.step == readmes.STEP:
-                fetch, note = _readme_fetch(settings, arguments, run)
-                readmes.read_readmes(
-                    RepositoryStore(conninfo),
-                    ProjectStore(conninfo),
-                    RawStore(github.raw_dir(settings)),
-                    run,
-                    fetch=fetch,
-                )
-            elif arguments.step == embed.STEP:
-                if google is None:
-                    google = metered_client(
-                        settings, "embed_document", run_id=f"pipeline-run-{run.id}"
-                    )
-                embed.embed_pages(
-                    EmbeddingStore(conninfo),
-                    google,
-                    run,
-                    model=settings.gemini_embedding_model,
-                    limit=arguments.limit,
-                )
-            else:
-                if mirrors is None:
-                    # Every network that a page can name. An id with no network is asked on
-                    # the ones of check_ids.NETWORKS_WHEN_OPEN only.
-                    mirrors = {name: MirrorNode(name) for name in MIRROR_URLS}
-                days = arguments.max_age_days
-                check_ids.check_ids(
-                    LedgerStore(conninfo),
-                    mirrors,
-                    run,
-                    max_age=check_ids.MAX_AGE if days is None else timedelta(days=days),
-                )
+        run, lines = _run_step(
+            arguments.step, arguments, settings, conninfo, _Services(mirrors, google)
+        )
     except SettingsError as problem:
         print(f"Stopped: {problem}")
         return 1
@@ -262,15 +295,6 @@ def main(
     except GoogleSetupError as problem:
         print(f"Stopped: {problem}")
         return 1
-    if arguments.step == parse_pages.STEP:
-        lines = parse_lines(run)
-    elif arguments.step == readmes.STEP:
-        lines = readmes.readme_lines(run) + ([note] if note else [])
-        lines += _problem_lines(run, "Stopped or not done, and why:")
-    elif arguments.step == embed.STEP:
-        lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
-    else:
-        lines = check_lines(run)
     print("\n".join(lines))
     return 1 if run.problems else 0
 
