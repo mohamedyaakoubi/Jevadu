@@ -863,7 +863,11 @@ Each proof writes a dated result file to `proofs/results/`, with what it does no
 
 From an empty database, one command processes 50 real projects through collect, parse, check and store. For three written ideas, the first 10 results come back, and each result shows facts read from the mirror node. Only a plain debug listing exists.
 
-**How the ideas are judged.** The maintainer writes the three ideas without reading any project page first (a decision of 12 October 2026). Words written after reading a page lean on that page, and the search by words would then find it too easily. A blind idea has no known project, so a person marks each of its first 10 results "yes" (close to the idea, or sharing a big part of it) or "no". The gate passes when each idea has at least one "yes". An idea may still name a known project; then that project must be in the first 10. The proof is `python -m proofs.gate_b`, and `python -m proofs.gate_b --marks` reads the marks. The ideas, the results and the marks stay out of the repository; the result files hold places and numbers only.
+**How the ideas are judged.** The ideas are written without reading any project page first (a decision of 12 October 2026). Words written after reading a page lean on that page, and the search by words would then find it too easily. A blind idea has no known project, so each of its first 10 results is marked on the maintainer's scale of three: "yes" (close to the idea, or sharing a big part of it), "n/a" (about something else, but of some small use for the idea) or "no" (unrelated, and of no use). A scale of three shows more than yes or no, above all when nothing is close.
+
+Two kinds of ideas are judged. Three ideas were written on purpose about things that the data may not hold, because a builder's idea may really be new. They say "expect: none": they show what the search does when nothing is close, and they need only their marks. Three more ideas, about common themes of Hedera hackathons, expect close projects: each needs at least one "yes" in its first 10 results. Every result is marked. An idea may still name a known project; then that project must be in the first 10.
+
+The proof is `python -m proofs.gate_b`, with `--questions` and `--results` for another file of ideas. `python -m proofs.gate_b --marks` reads the marks of one or more results files. The ideas, the results and the marks stay out of the repository; the result files hold file names, places and numbers only.
 
 ### 14.5 What is cut first if time is short
 
