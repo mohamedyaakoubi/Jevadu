@@ -106,6 +106,67 @@ def test_a_refusal_stops_at_once_and_is_remembered(tmp_path: Path) -> None:
         client(tmp_path, site)
 
 
-def test_the_command_needs_the_word_look(capsys: pytest.CaptureFixture[str]) -> None:
+def test_the_command_needs_look_or_read(capsys: pytest.CaptureFixture[str]) -> None:
     assert posts.main([]) == 2
+    assert posts.main(["--look", "--read"]) == 2
     assert posts.USAGE in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------- the read
+
+WITH_AUTHOR = POST.replace(
+    b"<head>",
+    b'<head><meta name="author" content="Invented Writer">'
+    b'<script type="application/ld+json">{"@context":"https://schema.org","@graph":['
+    b'{"@type":"Article","headline":"Invented winners"},'
+    b'{"@type":"Person","name":"Invented Writer"}]}</script>',
+)
+
+
+def all_posts(**instead: Reply) -> FakeSite:
+    """robots.txt (none) and the nine posts, each with a team line and an author."""
+    pages: dict = {ROBOTS: Reply(404, b"")}
+    for event, url in posts.POSTS.items():
+        pages[url] = instead.get(event, Reply(200, WITH_AUTHOR, {"Content-Type": "text/html"}))
+    return FakeSite(pages)
+
+
+def read(tmp_path: Path, site: FakeSite, said: list[str]) -> list | None:
+    store = posts.RawStore(posts.raw_dir(settings(tmp_path)))
+    return posts.read_and_save(client(tmp_path, site), store, said.append)
+
+
+def test_the_read_saves_each_post_once_without_the_people(tmp_path: Path) -> None:
+    site = all_posts()
+    said: list[str] = []
+    saved = read(tmp_path, site, said)
+    assert saved is not None and len(saved) == 9
+    assert site.urls == [ROBOTS, *posts.POSTS.values()]
+    body = saved[0].body_path.read_text(encoding="utf-8")
+    assert "Invented Pay" in body and '"@type": "Article"' in body
+    for person in ("Quillfeather", "Ledgerwood", "Orchardson", "Invented Writer"):
+        assert person not in body
+    assert saved[0].meta["team_cut"] == {"people_cut": {"author": 2, "team": 1, "built by": 1}}
+    assert "Hedera20: saved, " in said[1] and "cut out: author: 2, team: 1, built by: 1" in said[1]
+
+
+def test_a_post_with_nothing_to_cut_is_saved_as_received() -> None:
+    plain = b"<html><body><h3>Invented Pay</h3><p>Pays shops.</p></body></html>"
+    assert posts.cut_people(plain) == (plain, {})
+
+
+def test_a_saved_post_is_never_asked_for_again(tmp_path: Path) -> None:
+    assert read(tmp_path, all_posts(), []) is not None
+    again = all_posts()
+    said: list[str] = []
+    assert read(tmp_path, again, said) == []
+    assert again.urls == [ROBOTS]
+    assert sum("not asked for again" in line for line in said) == 9
+
+
+def test_a_refusal_stops_the_read_and_the_rest_is_not_asked(tmp_path: Path) -> None:
+    site = all_posts(Hedera22=Reply(403, b"no"))
+    said: list[str] = []
+    assert read(tmp_path, site, said) is None
+    assert site.urls == [ROBOTS, *list(posts.POSTS.values())[:3]]
+    assert any("Posts saved before the stop: 2" in line for line in said)

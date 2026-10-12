@@ -1,6 +1,7 @@
 """Hedera's own posts with the winners of its older hackathons: nine pages of hedera.com.
 
     python -m hackathon_memory.collect.hedera_posts --look    robots.txt and one post, nothing saved
+    python -m hackathon_memory.collect.hedera_posts --read    the nine posts, each once, saved
 
 The maintainer's yes of 9 October 2026 (design rule 17): "For hedera by program if the tool call
 wasnt refused by the server." If the server refuses the program, nothing is worked around: the
@@ -15,20 +16,28 @@ nine posts below, on hedera.com or on www.hedera.com if the site sends a request
 A post may name the people of a team. The look keeps one post in memory, prints its SHAPE with
 the skeleton printer, and counts the lines that start like a list of people ("Team:", "Built
 by:"), without printing them, so that such lines can be cut out before any post is saved.
+
+The look at the post of Hedera20 (12 October 2026) found no such line, and found the name of the
+post's author in its head: a meta tag and a "Person" in its structured data. The read takes each
+post once and, before it is saved, cuts the lines that list a team, the meta tag of the author and
+every "Person" of the structured data (design rule 5; nothing needs the author).
 """
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from collections import Counter
 from collections.abc import Callable
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup, Tag
 
 from hackathon_memory.collect import small_site
 from hackathon_memory.collect.polite import CollectorRefused, PoliteClient, StopCollecting
+from hackathon_memory.collect.rawstore import RawStore, SavedPage
 from hackathon_memory.collect.skeleton import skeleton
 from hackathon_memory.collect.small_site import SmallSite, count_line, fetch, obey_robots
 from hackathon_memory.settings import Settings
@@ -56,7 +65,7 @@ POSTS = {
 # robots.txt and the nine posts, a look first, and room for one failure on each.
 REQUEST_LIMIT = 25
 SMALL_SITE = SmallSite(SITE, "collect_hedera_posts", REQUEST_LIMIT)
-USAGE = "usage: python -m hackathon_memory.collect.hedera_posts --look"
+USAGE = "usage: python -m hackathon_memory.collect.hedera_posts --look | --read"
 
 _PATHS = frozenset(urlsplit(url).path for url in POSTS.values())
 # A line that starts like a list of the people of a team.
@@ -138,16 +147,80 @@ def look(client: PoliteClient, say: Callable[[str], None] = print) -> bool:
         say(count_line(client))
 
 
+def raw_dir(settings: Settings) -> Path:
+    return Path(settings.data_dir) / "raw" / SITE
+
+
+def _is_person(node: object) -> bool:
+    kind = node.get("@type") if isinstance(node, dict) else None
+    return kind == "Person" or (isinstance(kind, list) and "Person" in kind)
+
+
+def cut_people(html: bytes) -> tuple[bytes, Counter[str]]:
+    """The post without the lines that list a team, the meta tag of its author and the "Person"
+    of its structured data. The post as received when there is nothing to cut."""
+    soup = BeautifulSoup(html.decode("utf-8", errors="replace"), "lxml")
+    cut: Counter[str] = Counter()
+    for line in people_lines(soup):
+        cut[_kind(line)] += 1
+        line.decompose()
+    for meta in soup.find_all("meta", attrs={"name": "author"}):
+        cut["author"] += 1
+        meta.decompose()
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        try:
+            data = json.loads(script.string or "")
+        except ValueError:
+            continue
+        graph = data.get("@graph") if isinstance(data, dict) else None
+        if isinstance(graph, list) and any(_is_person(node) for node in graph):
+            data["@graph"] = [node for node in graph if not _is_person(node)]
+            cut["author"] += len(graph) - len(data["@graph"])
+            script.string = json.dumps(data, ensure_ascii=False)
+    if not cut:
+        return html, cut
+    return str(soup).encode("utf-8"), cut
+
+
+def read_and_save(
+    client: PoliteClient, store: RawStore, say: Callable[[str], None] = print
+) -> list[SavedPage] | None:
+    """Each post once, saved with the people cut out. None if the read stopped."""
+    saved: list[SavedPage] = []
+    try:
+        obey_robots(client, SMALL_SITE, next(iter(POSTS.values())), say)
+        collector = f"{client.identity.name}/{client.identity.version}"
+        for event, url in POSTS.items():
+            if store.load(url) is not None:
+                say(f"{event}: saved already, and not asked for again.")
+                continue
+            fetched = fetch(client, url, f"the post of {event}")
+            body, cut = cut_people(fetched.body)
+            saved.append(store.save(fetched, body, received=fetched.body, collector=collector,
+                                    team_cut={"people_cut": dict(cut)}))  # fmt: skip
+            what = ", ".join(f"{kind}: {count}" for kind, count in cut.most_common())
+            say(f"{event}: saved, {len(fetched.body)} bytes; cut out: {what or 'nothing'}.")
+        return saved
+    except StopCollecting as stop:
+        say(f"STOPPED: {stop}. Posts saved before the stop: {len(saved)}.")
+        return None
+    finally:
+        say(count_line(client))
+
+
 def main(argv: list[str]) -> int:
-    if argv != ["--look"]:
+    if argv not in (["--look"], ["--read"]):
         print(USAGE)
         return 2
+    settings = Settings()
     try:
-        client = client_for(Settings())
+        client = client_for(settings)
     except CollectorRefused as refusal:
         print(f"Refused: {refusal}")
         return 1
-    return 0 if look(client) else 2
+    if argv == ["--look"]:
+        return 0 if look(client) else 2
+    return 0 if read_and_save(client, RawStore(raw_dir(settings))) is not None else 2
 
 
 if __name__ == "__main__":
