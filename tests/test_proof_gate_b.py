@@ -73,6 +73,15 @@ def the_result(results_dir: Path, proof: str = "gate_b") -> dict:
     return json.loads(files[-1].read_text(encoding="utf-8"))
 
 
+def gate_databases(server_conninfo: str) -> set[str]:
+    """The names of the databases that a run of the proof makes, on the server now."""
+    with psycopg.connect(server_conninfo) as conn:
+        rows = conn.execute(
+            "SELECT datname FROM pg_database WHERE datname LIKE 'gate_b_%'"
+        ).fetchall()
+    return {name for (name,) in rows}
+
+
 def failed(saved: dict) -> list[str]:
     return [check["name"] for check in saved["checks"] if not check["passed"]]
 
@@ -121,6 +130,7 @@ def test_the_path_passes_and_finds_the_known_projects(
 ) -> None:
     settings = Settings(_env_file=None, database_url=empty_database, data_dir=str(data(tmp_path)))
     client, _, _ = google()
+    before = gate_databases(server_conninfo)
     code = gate_b.run(settings, mirrors=stand_ins(), google=client, minimum_projects=3)
     saved = the_result(results_dir)
     assert code == 0, failed(saved)
@@ -130,11 +140,9 @@ def test_the_path_passes_and_finds_the_known_projects(
     text = json.dumps(saved)
     for words in ("vendor", "parcel", "ballot", "ethglobal.com", "Pebble"):
         assert words not in text  # no idea, no name, no address
-    with psycopg.connect(server_conninfo) as conn:  # the new database was deleted
-        left = conn.execute(
-            "SELECT count(*) FROM pg_database WHERE datname LIKE 'gate_b_%'"
-        ).fetchone()[0]
-    assert left == 0
+    # The new database of this run was deleted. Another run of the proof, on the same server
+    # at the same time, may have one of its own: only the ones that this run made count.
+    assert gate_databases(server_conninfo) <= before
 
 
 def test_a_known_project_that_is_not_found_fails_the_path(
