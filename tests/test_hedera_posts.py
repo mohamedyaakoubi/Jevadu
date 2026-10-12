@@ -82,6 +82,21 @@ def test_the_people_lines_are_found_and_counted_but_not_shown(tmp_path: Path) ->
     assert not (tmp_path / "data" / "raw").exists()
 
 
+@pytest.mark.parametrize(
+    "label",
+    ["Team Member:", "Team members –", "Team lead:", "Led by:", "Co-founder -", "Members:"],
+)
+def test_every_label_of_a_list_of_people_is_known(label: str) -> None:
+    html = f"<p>{label} Quillfeather</p><ul><li><strong>{label}</strong> Quillfeather</li></ul>"
+    lines = posts.people_lines(BeautifulSoup(html, "lxml"))
+    assert [line.name for line in lines] == ["p", "li"]  # the whole lines, with the name
+
+
+def test_a_line_that_only_mentions_a_team_is_not_a_list_of_people() -> None:
+    soup = BeautifulSoup("<p>The team built a wallet.</p><p>Teams: see the rules.</p>", "lxml")
+    assert posts.people_lines(soup) == []
+
+
 def test_a_people_line_is_the_whole_line_with_the_names() -> None:
     lines = posts.people_lines(BeautifulSoup(POST, "lxml"))
     assert [line.name for line in lines] == ["p", "p"]  # not the <strong> that holds "Team:"

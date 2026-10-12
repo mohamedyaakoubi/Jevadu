@@ -68,10 +68,12 @@ SMALL_SITE = SmallSite(SITE, "collect_hedera_posts", REQUEST_LIMIT)
 USAGE = "usage: python -m hackathon_memory.collect.hedera_posts --look | --read"
 
 _PATHS = frozenset(urlsplit(url).path for url in POSTS.values())
-# A line that starts like a list of the people of a team.
+# A line that starts like a list of the people of a team. "Team Member:" in the singular stood in
+# a saved post that the first form of this pattern missed (12 October 2026).
 PEOPLE_LINE = re.compile(
-    r"^\s*(team members|team|members|built by|created by|developed by|founders?|developers?|"
-    r"builders?|creators?|hackers?)\s*[:\-–—]",
+    r"^\s*(team\s+members?|team\s+leads?|team|members?|built\s+by|created\s+by|developed\s+by|"
+    r"made\s+by|led\s+by|co-?founders?|founders?|developers?|builders?|creators?|hackers?|"
+    r"authors?|contributors?)\s*[:\-–—]",
     re.IGNORECASE,
 )
 
