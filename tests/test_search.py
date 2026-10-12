@@ -227,6 +227,11 @@ def give_an_id(database: str, project: int, entity: str, last_activity: str) -> 
         )
 
 
+def end_the_event(database: str, last_day: str) -> None:
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE events SET ends_on = %s", (last_day,))
+
+
 def life_line(database: str, project: int) -> str:
     [card] = listing.cards(database, [engine.Hit(project, 1.0, 1, None)], now=NOW)
     return next(line for line in listing.lines([card]) if line.startswith("   life:"))
@@ -248,6 +253,7 @@ def test_the_dates_of_the_code_make_a_project_active(database: str) -> None:
             "'2026-03-06T17:00:00Z', '2026-09-30T08:00:00Z') RETURNING id"
         ).fetchone()[0]
         conn.execute("UPDATE projects SET repository_id = %s WHERE id = %s", (repository, pebble))
+    end_the_event(database, "2026-03-08")
     assert life_line(database, pebble) == (
         "   life: active (a sign of life in the last 90 days, last sign 2026-09-30). "
         "Code: made 2026-03-06, last push 2026-09-30."
@@ -257,6 +263,7 @@ def test_the_dates_of_the_code_make_a_project_active(database: str) -> None:
 def test_the_ledger_activity_of_an_id_of_its_own_counts(database: str) -> None:
     pebble = ids_of(database)["Pebble Pay"]
     give_an_id(database, pebble, "0.0.3456789", "2026-09-01T10:00:00Z")
+    end_the_event(database, "2026-03-08")
     assert life_line(database, pebble).startswith("   life: active (")
 
 
@@ -265,15 +272,27 @@ def test_an_id_that_projects_with_other_code_name_is_not_a_sign(database: str) -
     # A shared service: two projects with different code name the same busy token.
     give_an_id(database, ids["Pebble Pay"], "0.0.4567890", "2026-10-10T10:00:00Z")
     give_an_id(database, ids["Cedar Post"], "0.0.4567890", "2026-10-10T10:00:00Z")
-    assert life_line(database, ids["Pebble Pay"]).startswith("   life: unknown (")
-
-
-def test_with_no_end_of_the_event_an_old_sign_cannot_be_judged(database: str) -> None:
-    pebble = ids_of(database)["Pebble Pay"]
-    give_an_id(database, pebble, "0.0.3456789", "2026-05-01T10:00:00Z")
-    assert life_line(database, pebble) == (
-        "   life: unknown (the end of the event is not known, last sign 2026-05-01)."
+    end_the_event(database, "2026-03-08")  # so that a sign would make it active
+    assert life_line(database, ids["Pebble Pay"]) == (
+        "   life: unknown (no date of the code and no activity of its own ids)."
     )
-    with psycopg.connect(database) as conn:
-        conn.execute("UPDATE events SET ends_on = '2026-03-08'")
-    assert life_line(database, pebble).startswith("   life: quiet (")
+
+
+def test_the_work_of_a_recent_event_is_too_early_to_tell(database: str) -> None:
+    pebble = ids_of(database)["Pebble Pay"]
+    give_an_id(database, pebble, "0.0.3456789", "2026-09-30T10:00:00Z")
+    end_the_event(database, "2026-09-16")
+    assert life_line(database, pebble) == (
+        "   life: too early to tell (the event ended less than 90 days ago, nothing later than "
+        "30 days yet, last sign 2026-09-30)."
+    )
+
+
+def test_with_no_end_of_the_event_no_sign_can_be_judged(database: str) -> None:
+    pebble = ids_of(database)["Pebble Pay"]
+    give_an_id(database, pebble, "0.0.3456789", "2026-10-01T10:00:00Z")
+    assert life_line(database, pebble) == (
+        "   life: unknown (the end of the event is not known, last sign 2026-10-01)."
+    )
+    end_the_event(database, "2026-03-08")
+    assert life_line(database, pebble).startswith("   life: active (")
