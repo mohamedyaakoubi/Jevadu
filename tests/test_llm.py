@@ -90,7 +90,7 @@ def test_a_valid_answer_becomes_a_card_with_its_cost() -> None:
 
     assert result.model == FLASH
     assert result.thinking_level == "LOW"
-    assert result.instructions_version == "card-form-0"
+    assert result.instructions_version == "card-form-1"
     assert result.fields.what_it_does.label is Label.STATED
     assert result.fields.category.category is Category.PAYMENTS
     assert result.fields.problem.label is Label.NOT_FOUND

@@ -25,15 +25,19 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, model_validator
 
 # The version of the instructions below. It is stored with every answer (design 6.5).
-INSTRUCTIONS_VERSION = "card-form-0"
+# card-form-1, 13 October 2026, written on the 15 tuning pages only (design 13.2): shorter and
+# plainer sentences for a reader whose first language is not English (design rule 13), and
+# stricter labels, because the first cards called "stated" what a page only suggested.
+INSTRUCTIONS_VERSION = "card-form-1"
 
 SYSTEM_INSTRUCTIONS = """\
 You read the text of one hackathon project page and fill a form about it.
 
 Rules:
 - Use only what the page says. Do not use what you know about the project from elsewhere.
-- For each field, give a label: "stated" if the page says it, "inferred" if you worked it out \
-from other sentences of the page, "not_found" if the page gives nothing about it.
+- For each field, give a label. "stated": one sentence of the page says it. "inferred": you put \
+it together from several sentences, or the page suggests it without saying it. "not_found": \
+the page gives nothing about it.
 - For each field that is not "not_found", copy the exact sentences of the page that support it, \
 word for word, into "quotes". A quote must be a piece of the page and nothing else.
 - A field with the label "not_found" has empty text, no steps and no quotes.
@@ -41,8 +45,11 @@ word for word, into "quotes". A quote must be a piece of the page and nothing el
 - Do not score the project, do not rank it, and do not say that it is a copy of anything.
 - "category" is the field of life the project serves, not the technology inside. Use \
 "AI agents and automation" or "Developer tools" only when the agent or the tool is itself \
-the product.
-- Write in plain English, in short sentences.
+the product. The category is "stated" only when the page itself names that field of life; \
+otherwise it is "inferred".
+- Write for a reader whose first language is not English: short sentences of at most 20 \
+words, common words, and a short explanation for any technical word. "what_it_does" is one \
+sentence. Each step of "how_it_works" is one short sentence.
 """
 
 
