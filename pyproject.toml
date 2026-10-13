@@ -28,6 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "playwright>=1.62,<2",
     "pytest>=9.1,<10",
     "ruff>=0.16,<0.17",
 ]
@@ -46,6 +47,7 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 markers = [
     "integration: needs the local PostgreSQL that docker compose starts",
+    "browser: needs Playwright and its Chromium (python -m playwright install chromium)",
 ]
 
 [tool.ruff]
