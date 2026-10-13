@@ -325,6 +325,10 @@ def write_sheet(folder: Path, data: dict, key: dict, template: Path = TEMPLATE) 
 
 def show(folder: Path, number: int, *, card: bool) -> int:
     """Prints the page or the card of one project of the sheet, for a grader in a terminal."""
+    if hasattr(sys.stdout, "reconfigure"):
+        # A terminal that cannot show a sign (an arrow, on a Windows console) shows "?" instead
+        # of stopping in the middle of a page.
+        sys.stdout.reconfigure(errors="replace")
     data = json.loads((folder / DATA_FILE).read_text(encoding="utf-8"))
     cases = data["cases"]
     if not 1 <= number <= len(cases):

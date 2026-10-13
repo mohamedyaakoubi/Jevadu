@@ -3,8 +3,10 @@ places of the quotes. Every project here is invented."""
 
 from __future__ import annotations
 
+import io
 import json
 import re
+import sys
 from pathlib import Path
 
 import psycopg
@@ -106,6 +108,22 @@ def test_show_prints_the_page_and_then_the_card(
     assert "-- Solution  [stated, dropped]\n(empty)" in shown
     assert "-- How it works  [inferred, kept]\n  1. " in shown and "   quote: " in shown
     assert sheet.show(tmp_path, 5, card=False) == 2
+
+
+def test_show_prints_a_sign_that_the_terminal_cannot_show_as_a_question_mark(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    item = case(1)
+    item = Case(item.page, (*item.blocks, Block("section", "Notes", "A ↔ B")), item.card)
+    data, key = build([item, case(2), case(3)], donors=[DONOR], model=MODEL,
+                      version="card-form-9", grades_file="grades.json", rng=seeded(1))  # fmt: skip
+    write_sheet(tmp_path, data, key)
+    shown = io.BytesIO()
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(shown, encoding="cp1252"))
+    number = [c["page"] for c in data["cases"]].index(item.page) + 1
+    assert sheet.show(tmp_path, number, card=False) == 0
+    sys.stdout.flush()
+    assert b"A ? B" in shown.getvalue()
 
 
 # ----------------------------------------------------------------- from the database
