@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test 1 grading</title>
+<!-- The review sheet of Test 1 (design 13.2). evals/test1/sheet.py fills in the data below.
+     It needs no network: every text comes from the data, and nothing is sent anywhere. -->
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1f2328; --soft: #5b616b; --line: #d9d6cf;
+  --accent: #1d5fa8; --accent-ink: #ffffff; --mark: #ffe58a; --mark-ink: #1f2328;
+  --good: #1f7a3d; --warn: #9a5b00; --bad: #b42318; --chip: #eceae4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: #1e2125; --ink: #e8e6e1; --soft: #a3a8b0; --line: #343840;
+    --accent: #6aa7ec; --accent-ink: #0c1117; --mark: #7a6418; --mark-ink: #fff7d6;
+    --good: #5cc17f; --warn: #e2a64a; --bad: #f07b6f; --chip: #2b2f35;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: #1e2125; --ink: #e8e6e1; --soft: #a3a8b0; --line: #343840;
+  --accent: #6aa7ec; --accent-ink: #0c1117; --mark: #7a6418; --mark-ink: #fff7d6;
+  --good: #5cc17f; --warn: #e2a64a; --bad: #f07b6f; --chip: #2b2f35;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px 16px;
+  align-items: center; padding: 10px 16px; background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+header h1 { font-size: 18px; margin: 0 8px 0 0; }
+header .nav { display: flex; gap: 6px; align-items: center; }
+header .files { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+#progress { color: var(--soft); }
+#status { width: 100%; font-size: 14px; color: var(--soft); }
+#status.warn { color: var(--warn); }
+button, select {
+  font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 12px; cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.choice[aria-pressed="true"] {
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+}
+button.link { border: none; background: none; color: var(--accent); padding: 0; }
+main {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px;
+  height: calc(100vh - var(--header, 100px));
+}
+.column {
+  overflow-y: auto; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 16px 20px;
+}
+#page .where { display: flex; justify-content: space-between; gap: 12px; color: var(--soft); }
+#page h2 { margin: 8px 0 4px; font-size: 22px; }
+#page .short { font-style: italic; margin-top: 0; }
+#page h3 { margin: 20px 0 6px; font-size: 17px; }
+#page .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; }
+mark.here { outline: 2px solid var(--accent); }
+details#guide { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; }
+details#guide summary { cursor: pointer; font-weight: 600; }
+details#guide table { border-collapse: collapse; margin: 6px 0; }
+details#guide td, details#guide th {
+  border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top;
+}
+.step { margin-top: 18px; }
+.step h3 { margin: 0 0 4px; }
+.hint { color: var(--soft); margin: 0 0 10px; font-size: 15px; }
+fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 12px; padding: 8px 12px; }
+legend { font-weight: 600; padding: 0 4px; }
+fieldset:disabled { opacity: 0.75; }
+.options { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
+.options label { display: flex; gap: 6px; align-items: baseline; }
+.options small { color: var(--soft); }
+.field { border-top: 1px solid var(--line); padding: 12px 0; }
+.field h4 { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin: 0 0 4px; }
+.field .help { color: var(--soft); font-size: 14px; font-weight: normal; }
+.chip { font-size: 13px; font-weight: 600; background: var(--chip); border-radius: 10px; padding: 1px 8px; }
+.chip.inferred { color: var(--warn); }
+.chip.removed { color: var(--bad); }
+.value { margin: 4px 0; }
+.value.empty { color: var(--soft); }
+.value ol { margin: 0; padding-left: 22px; }
+.quotes { margin: 6px 0; padding-left: 0; list-style: none; font-size: 14px; color: var(--soft); }
+.quotes li { margin: 2px 0; }
+.quotes button.link { text-align: left; }
+.question { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.question span.ask { min-width: 190px; }
+textarea {
+  width: 100%; min-height: 70px; font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px;
+}
+.left { font-weight: 600; color: var(--warn); }
+.left.done { color: var(--good); }
+.locked { color: var(--soft); font-size: 14px; }
+.banner { background: var(--chip); border-radius: 6px; padding: 8px 12px; margin-top: 12px; }
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; height: auto; }
+  .column { overflow: visible; }
+  .options { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Test 1 grading</h1>
+  <div class="nav">
+    <button id="previous" title="The project before">&larr; Previous</button>
+    <select id="jump" aria-label="Go to a project"></select>
+    <button id="next" title="The project after">Next &rarr;</button>
+  </div>
+  <span id="progress"></span>
+  <div class="files">
+    <button id="save" class="primary">Save to a file</button>
+    <button id="open">Open a saved file</button>
+    <input id="open-file" type="file" accept=".json,application/json" hidden>
+  </div>
+  <div id="status" role="status"></div>
+</header>
+<main>
+  <section class="column" id="page" aria-label="The page"></section>
+  <section class="column" id="form" aria-label="The questions"></section>
+</main>
+<script id="sheet-data" type="application/json">__SHEET_DATA__</script>
+<script>
+'use strict';
+const DATA = JSON.parse(document.getElementById('sheet-data').textContent);
+const STORE = 'test1-grades-' + DATA.fingerprint;
+const PLACE = 'test1-place-' + DATA.fingerprint;
+const FILE_NAME = 'grades-maintainer.json';
+const GRADES = [['right', 'Right'], ['partly', 'Partly'], ['wrong', 'Wrong']];
+const YES_NO = [['right', 'Yes'], ['wrong', 'No']];
+const HAS_IT = [['yes', 'Yes'], ['no', 'No']];
+const PARSER = [['same', 'The same'], ['different', 'Different']];
+const LABELS = { stated: 'Stated', inferred: 'Inferred: less sure', not_found: 'Not found' };
+
+let state = { sheet: DATA.fingerprint, grader: 'maintainer', saved_at: null, cases: {} };
+let current = 0;
+let highlight = null;  // { field, quote } : the quotes shown in the page
+let fileHandle = null;  // the file chosen with "Save to a file", written again after each change
+let fileTimer = null;
+let browserKeeps = false;  // whether this browser can keep the grades between visits
+let savedInBrowser = null;
+let savedInFile = null;  // when the chosen file was last written
+let downloaded = null;  // when the grades were last downloaded, where no file can be chosen
+let problem = '';
+
+const $ = (selector) => document.querySelector(selector);
+
+function element(tag, attributes = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attributes)) {
+    if (value === false || value === null || value === undefined) continue;
+    if (name === 'text') node.textContent = value;
+    else if (name === 'className') node.className = value;
+    else node.setAttribute(name, value === true ? '' : value);
+  }
+  node.append(...children.filter((child) => child !== null && child !== undefined));
+  return node;
+}
+
+function grades(page) {
+  if (!state.cases[page]) {
+    state.cases[page] = {
+      category: null, services: [], parser: null, card_shown: false,
+      changed_after_card: false, fields: {}, note: '',
+    };
+  }
+  return state.cases[page];
+}
+
+const filled = (field) => field.state === 'kept';
+
+function stillToAnswer(item) {
+  const given = state.cases[item.page];
+  let left = 0;
+  if (!given || !given.category) left += 1;
+  if (!given || given.services.length === 0) left += 1;
+  if (item.parser_check && (!given || !given.parser)) left += 1;
+  for (const field of DATA.fields) {
+    const answer = (given && given.fields[field.name]) || {};
+    if (filled(item.card[field.name])) {
+      if (!answer.grade) left += 1;
+      if (!answer.label) left += 1;
+    } else if (!answer.has_it) {
+      left += 1;
+    }
+  }
+  return left;
+}
+
+function beforeCardDone(item) {
+  const given = grades(item.page);
+  return Boolean(given.category) && given.services.length > 0 && (!item.parser_check || given.parser);
+}
+
+// ---------------------------------------------------------------- saving
+
+function clock(date) {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function showStatus() {
+  const parts = [];
+  if (problem) parts.push(problem);
+  if (!browserKeeps) parts.push('This browser keeps nothing: save to a file often.');
+  else if (savedInBrowser) parts.push('Saved in this browser at ' + clock(savedInBrowser) + '.');
+  let safe = false;
+  if (fileHandle && savedInFile) {
+    parts.push('Saved to the file ' + fileHandle.name + ' at ' + clock(savedInFile) + '.');
+    safe = true;
+  } else if (downloaded) {
+    parts.push('Downloaded at ' + clock(downloaded) + ': move the file into the folder named in the guide.');
+    safe = true;
+  } else {
+    parts.push('Not saved to a file: click "Save to a file".');
+  }
+  const status = $('#status');
+  status.textContent = parts.join(' ');
+  status.className = problem || !safe ? 'warn' : '';
+}
+
+function changed() {
+  state.saved_at = new Date().toISOString();
+  try {
+    localStorage.setItem(STORE, JSON.stringify(state));
+    savedInBrowser = new Date();
+    browserKeeps = true;
+  } catch (error) {
+    savedInBrowser = null;
+    browserKeeps = false;
+  }
+  downloaded = null;  // a download holds the grades of its moment only
+  if (fileHandle) {
+    clearTimeout(fileTimer);
+    fileTimer = setTimeout(writeFile, 600);
+  }
+  showProgress();
+  showStatus();
+}
+
+async function writeFile() {
+  if (!fileHandle) return;
+  try {
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(state, null, 1) + '\n');
+    await writable.close();
+    savedInFile = new Date();
+    problem = '';
+  } catch (error) {
+    fileHandle = null;
+    savedInFile = null;
+    problem = 'The file could not be written. Click "Save to a file" again.';
+  }
+  showStatus();
+}
+
+function download() {
+  const blob = new Blob([JSON.stringify(state, null, 1) + '\n'], { type: 'application/json' });
+  const link = element('a', { href: URL.createObjectURL(blob), download: FILE_NAME });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+  downloaded = new Date();
+  problem = '';
+  showStatus();
+}
+
+async function saveToFile() {
+  if (typeof window.showSaveFilePicker !== 'function') {
+    download();
+    return;
+  }
+  try {
+    fileHandle = await window.showSaveFilePicker({
+      suggestedName: FILE_NAME,
+      types: [{ description: 'Grades', accept: { 'application/json': ['.json'] } }],
+    });
+  } catch (error) {
+    if (error && error.name === 'AbortError') return;
+    download();
+    return;
+  }
+  await writeFile();
+}
+
+async function openFile(file) {
+  let loaded = null;
+  try {
+    loaded = JSON.parse(await file.text());
+  } catch (error) {
+    loaded = null;
+  }
+  if (!loaded || typeof loaded !== 'object' || !loaded.cases) {
+    problem = 'That file is not a file of grades.';
+  } else if (loaded.sheet !== DATA.fingerprint) {
+    problem = 'That file holds the grades of another sheet. Nothing was changed.';
+  } else {
+    state = loaded;
+    problem = '';
+    changed();
+    render();
+    return;
+  }
+  showStatus();
+}
+
+// ---------------------------------------------------------------- the page, on the left
+
+function spansOf(item) {
+  const spans = {};
+  if (!highlight) return spans;
+  const field = item.card[highlight.field];
+  field.quotes.forEach((quote, index) => {
+    if (highlight.quote !== null && highlight.quote !== index) return;
+    for (const [block, start, end] of quote.at) {
+      (spans[block] = spans[block] || []).push([start, end]);
+    }
+  });
+  return spans;
+}
+
+function withMarks(node, text, spans) {
+  const ordered = spans.slice().sort((a, b) => a[0] - b[0]);
+  let at = 0;
+  for (const [start, end] of ordered) {
+    const from = Math.max(start, at);
+    if (from >= end) continue;
+    if (from > at) node.append(text.slice(at, from));
+    node.append(element('mark', { text: text.slice(from, end) }));
+    at = end;
+  }
+  node.append(text.slice(at));
+  return node;
+}
+
+function renderPage(scroll) {
+  const item = DATA.cases[current];
+  const spans = spansOf(item);
+  const page = $('#page');
+  page.replaceChildren(element('div', { className: 'where' },
+    element('span', { text: 'Project ' + item.number + ' of ' + DATA.cases.length }),
+    element('a', { href: item.page, target: '_blank', rel: 'noopener noreferrer', text: 'Open the real page' })));
+  item.blocks.forEach((block, index) => {
+    const marks = spans[index] || [];
+    if (block.kind === 'name') page.append(withMarks(element('h2'), block.text, marks));
+    else if (block.kind === 'short_line') page.append(withMarks(element('p', { className: 'short' }), block.text, marks));
+    else {
+      page.append(element('h3', { text: block.title || 'Text' }));
+      page.append(withMarks(element('div', { className: 'text' }), block.text, marks));
+    }
+  });
+  if (scroll) {
+    const first = page.querySelector('mark');
+    if (first) {
+      first.classList.add('here');
+      first.scrollIntoView({ block: 'center' });
+    }
+  }
+}
+
+// ---------------------------------------------------------------- the questions, on the right
+
+function choices(group, options, chosen, onChoose) {
+  const row = element('span', { className: 'choices', 'data-group': group });
+  for (const [value, text] of options) {
+    const button = element('button', {
+      className: 'choice', type: 'button', 'data-value': value, 'aria-pressed': String(chosen === value), text,
+    });
+    button.addEventListener('click', () => {
+      onChoose(value);
+      for (const other of row.querySelectorAll('button')) {
+        other.setAttribute('aria-pressed', String(other === button));
+      }
+      changed();
+      showLeft();
+    });
+    row.append(button);
+  }
+  return row;
+}
+
+function guide() {
+  const anyGrade = Object.values(state.cases).some((given) => given.category || given.card_shown);
+  const rows = (pairs) => element('table', {}, ...pairs.map(([a, b]) =>
+    element('tr', {}, element('th', { text: a }), element('td', { text: b }))));
+  return element('details', { id: 'guide', open: !anyGrade },
+    element('summary', { text: 'How to grade (the short version of guideline.md)' }),
+    element('p', { text: 'For each project: read the page on the left. Answer the questions of step 1. Then open the card and answer the questions of each field. Compare with the page only, not with what you know from elsewhere.' }),
+    rows([
+      ['Right', 'The page supports everything in the field.'],
+      ['Partly', 'The main point is supported, but a detail is not, or an important part is missing.'],
+      ['Wrong', 'The page does not support the main point, or says the opposite.'],
+    ]),
+    rows([
+      ['Stated', 'One sentence of the page says it.'],
+      ['Inferred', 'No single sentence says it: it follows from several, or the page only suggests it.'],
+      ['Not found', 'The page gives nothing about it.'],
+    ]),
+    element('p', { text: 'An empty field: answer whether the page gives this information anywhere, with or without a title.' }),
+    element('p', { text: 'Category: the one that fits best, by who the project serves. "AI agents and automation" and "Developer tools" only when the agent or the tool is itself the product. "Other" only when nothing fits.' }),
+    element('p', { text: 'Services: tick what the page says the project uses now. Not what it only plans.' }),
+    element('p', { text: 'A few fields were made wrong on purpose. Grade every field as it is.' }),
+    element('p', { text: 'Save your grades in this file: ' + DATA.grades_file }));
+}
+
+function stepOne(item) {
+  const given = grades(item.page);
+  const locked = given.card_shown && !given.changed_after_card;
+  const box = element('section', { className: 'step', id: 'before' },
+    element('h3', { text: '1. Before you see the card' }),
+    element('p', { className: 'hint', text: 'Read the page first. Your answers here are your own, before the card can lean on them.' }));
+
+  const categories = element('div', { className: 'options' });
+  for (const name of DATA.categories) {
+    const input = element('input', { type: 'radio', name: 'category', value: name, checked: given.category === name });
+    input.addEventListener('change', () => { given.category = name; changed(); showOpenCard(item); showLeft(); });
+    categories.append(element('label', {}, input, element('span', { text: name })));
+  }
+  box.append(element('fieldset', { disabled: locked },
+    element('legend', { text: 'Which one category fits this project best?' }), categories));
+
+  const services = element('div', { className: 'options' });
+  for (const service of DATA.services) {
+    const input = element('input', { type: 'checkbox', value: service.key, checked: given.services.includes(service.key) });
+    input.addEventListener('change', () => {
+      let chosen = given.services.filter((key) => key !== service.key);
+      if (input.checked) chosen = service.key === 'none' ? ['none'] : chosen.filter((key) => key !== 'none').concat(service.key);
+      given.services = chosen;
+      for (const other of services.querySelectorAll('input')) other.checked = chosen.includes(other.value);
+      changed(); showOpenCard(item); showLeft();
+    });
+    services.append(element('label', {}, input, element('span', {}, service.title + ' ', element('small', { text: service.words }))));
+  }
+  box.append(element('fieldset', { disabled: locked },
+    element('legend', { text: 'Which Hedera services does the page say the project uses?' }), services));
+
+  if (item.parser_check) {
+    box.append(element('fieldset', { disabled: locked },
+      element('legend', { text: 'Open the real page (link at the top left). Are the texts on the left the same as there?' }),
+      choices('parser', PARSER, given.parser, (value) => { given.parser = value; showOpenCard(item); })));
+  }
+  if (locked) {
+    const unlock = element('button', { className: 'link', type: 'button', text: 'I made a mistake: let me change these answers' });
+    unlock.addEventListener('click', () => { given.changed_after_card = true; changed(); renderForm(); });
+    box.append(element('p', { className: 'locked' }, 'These answers are closed, because you have seen the card. ', unlock));
+  } else {
+    const open = element('button', { id: 'open-card', className: 'primary', type: 'button', text: given.card_shown ? 'The card is open below' : 'Show the card' });
+    open.addEventListener('click', () => {
+      given.card_shown = true;
+      changed();
+      renderForm();
+      const card = document.getElementById('card');
+      if (card) card.scrollIntoView({ block: 'start' });
+    });
+    box.append(open, element('span', { className: 'hint', id: 'open-hint' }));
+  }
+  return box;
+}
+
+function showOpenCard(item) {
+  const open = document.getElementById('open-card');
+  if (!open) return;
+  const ready = beforeCardDone(item);
+  open.disabled = !ready && !grades(item.page).card_shown;
+  const hint = document.getElementById('open-hint');
+  if (hint) hint.textContent = ready ? '' : ' Answer the questions above first.';
+}
+
+function fieldBox(item, field) {
+  const given = grades(item.page);
+  const shown = item.card[field.name];
+  const answer = given.fields[field.name] || (given.fields[field.name] = {});
+  const chip = shown.state === 'dropped'
+    ? element('span', { className: 'chip removed', text: 'Removed by the quote check' })
+    : element('span', { className: 'chip ' + shown.label, text: LABELS[shown.label] || shown.label });
+  const box = element('article', { className: 'field', 'data-field': field.name },
+    element('h4', {}, element('span', { text: field.title }), chip, element('span', { className: 'help', text: field.help })));
+
+  if (filled(shown)) {
+    if (Array.isArray(shown.value)) {
+      box.append(element('div', { className: 'value' }, element('ol', {}, ...shown.value.map((step) => element('li', { text: step })))));
+    } else {
+      box.append(element('p', { className: 'value', text: shown.value }));
+    }
+    const quotes = element('ul', { className: 'quotes' });
+    shown.quotes.forEach((quote, index) => {
+      const text = '“' + quote.text + '”' + (quote.at.length ? '' : ' (not marked in the page)');
+      const button = element('button', { className: 'link', type: 'button', text });
+      button.addEventListener('click', () => { highlight = { field: field.name, quote: index }; renderPage(true); });
+      quotes.append(element('li', {}, button));
+    });
+    const all = element('button', { className: 'link', type: 'button', text: 'Show all its quotes in the page' });
+    all.addEventListener('click', () => { highlight = { field: field.name, quote: null }; renderPage(true); });
+    const found = shown.quotes.length + (shown.quotes.length === 1 ? ' quote' : ' quotes') + ' found in the page'
+      + (shown.removed ? ', ' + shown.removed + ' removed by the check' : '') + '. ';
+    box.append(element('p', { className: 'hint' }, found, all), quotes);
+    box.append(element('div', { className: 'question' }, element('span', { className: 'ask', text: 'Is it right?' }),
+      choices('grade', GRADES, answer.grade, (value) => { answer.grade = value; })));
+    box.append(element('div', { className: 'question' }, element('span', { className: 'ask', text: 'Is the label right?' }),
+      choices('label', YES_NO, answer.label, (value) => { answer.label = value; })));
+  } else {
+    box.append(element('p', { className: 'value empty', text: '(empty)' }));
+    box.append(element('div', { className: 'question' }, element('span', { className: 'ask', text: 'Does the page give this?' }),
+      choices('has_it', HAS_IT, answer.has_it, (value) => { answer.has_it = value; })));
+  }
+  return box;
+}
+
+function showLeft() {
+  const item = DATA.cases[current];
+  const left = stillToAnswer(item);
+  const line = document.getElementById('left');
+  if (line) {
+    line.textContent = left === 0 ? 'This project is done.' : 'Still to answer: ' + left + '.';
+    line.className = left === 0 ? 'left done' : 'left';
+  }
+  showProgress();
+}
+
+function renderForm() {
+  const item = DATA.cases[current];
+  const given = grades(item.page);
+  const form = $('#form');
+  form.replaceChildren(guide(), stepOne(item));
+  showOpenCard(item);
+  if (given.card_shown) {
+    const card = element('section', { className: 'step', id: 'card' },
+      element('h3', { text: '2. The card' }),
+      element('p', { className: 'hint', text: 'Grade each field against the page. Click a quote to see it in the page.' }));
+    for (const field of DATA.fields) card.append(fieldBox(item, field));
+    const note = element('textarea', { id: 'note', 'aria-label': 'A note' });
+    note.value = given.note || '';
+    note.addEventListener('input', () => { given.note = note.value; changed(); });
+    card.append(element('label', { className: 'step' },
+      element('span', { text: 'A note, if you want one (it stays on this laptop):' }), note));
+    form.append(card);
+  }
+  const next = element('button', { className: 'primary', type: 'button', text: 'Next project →' });
+  next.addEventListener('click', () => go(current + 1));
+  form.append(element('p', { className: 'left', id: 'left' }), next);
+  if (DATA.cases.every((one) => stillToAnswer(one) === 0)) {
+    form.append(element('p', { className: 'banner', text: 'All ' + DATA.cases.length + ' projects are done. Save to a file one last time.' }));
+  }
+  showLeft();
+}
+
+// ---------------------------------------------------------------- moving around
+
+function showProgress() {
+  const done = DATA.cases.filter((item) => stillToAnswer(item) === 0).length;
+  $('#progress').textContent = done + ' of ' + DATA.cases.length + ' projects done';
+  const jump = $('#jump');
+  DATA.cases.forEach((item, index) => {
+    const text = 'Project ' + item.number + (stillToAnswer(item) === 0 ? ' ✓' : '');
+    if (jump.options[index].textContent !== text) jump.options[index].textContent = text;
+  });
+  $('#previous').disabled = current === 0;
+  $('#next').disabled = current === DATA.cases.length - 1;
+}
+
+function go(index) {
+  if (index < 0 || index >= DATA.cases.length) return;
+  current = index;
+  highlight = null;
+  try { localStorage.setItem(PLACE, String(current)); } catch (error) { /* only a convenience */ }
+  $('#jump').value = String(current);
+  render();
+  $('#form').scrollTop = 0;
+  $('#page').scrollTop = 0;
+}
+
+function render() {
+  renderPage(false);
+  renderForm();
+  showProgress();
+}
+
+function start() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (saved && saved.sheet === DATA.fingerprint && saved.cases) state = saved;
+    const place = Number(localStorage.getItem(PLACE));
+    if (Number.isInteger(place) && place >= 0 && place < DATA.cases.length) current = place;
+    localStorage.setItem(PLACE, String(current));
+    browserKeeps = true;
+  } catch (error) {
+    /* the browser keeps nothing: the grades live in this page until they are saved to a file */
+  }
+  const jump = $('#jump');
+  DATA.cases.forEach((item, index) => jump.append(element('option', { value: String(index), text: 'Project ' + item.number })));
+  jump.value = String(current);
+  jump.addEventListener('change', () => go(Number(jump.value)));
+  $('#previous').addEventListener('click', () => go(current - 1));
+  $('#next').addEventListener('click', () => go(current + 1));
+  $('#save').addEventListener('click', saveToFile);
+  $('#open').addEventListener('click', () => $('#open-file').click());
+  $('#open-file').addEventListener('change', () => {
+    const file = $('#open-file').files[0];
+    if (file) openFile(file);
+    $('#open-file').value = '';
+  });
+  const fit = () => document.documentElement.style.setProperty('--header', $('header').offsetHeight + 'px');
+  window.addEventListener('resize', fit);
+  render();
+  fit();
+  showStatus();
+}
+
+start();
+</script>
+</body>
+</html>
