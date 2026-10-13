@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from evals.cards_report import summary, write
+from evals.cards_report import counts_of, summary, write
 
 
 def field(label: str, value: object, state: str = "kept") -> dict:
@@ -43,3 +43,10 @@ def test_a_result_file_is_dated_and_holds_no_text(tmp_path: Path) -> None:
     assert path.name.endswith("-cards-tuning-card-form-9.json")
     text = path.read_text(encoding="utf-8")
     assert "It pays" not in text and json.loads(text)["cards"] == 1
+
+
+def test_the_file_says_what_its_counts_are() -> None:
+    assert counts_of("tuning").startswith("a run of the cards, for writing the instructions")
+    assert counts_of("test1") == (
+        "the cards of a test set, counted before any grading; not a test result"
+    )

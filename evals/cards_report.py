@@ -65,6 +65,13 @@ def summary(rows: list[tuple], pages: int) -> dict:
     }
 
 
+def counts_of(set_name: str) -> str:
+    """What the counts of a set are, in words, for the reader of the result file."""
+    if set_name == "tuning":
+        return "a run of the cards, for writing the instructions; not a test result"
+    return "the cards of a test set, counted before any grading; not a test result"
+
+
 def rows_of(conninfo: str, pages: list[str], model: str, version: str) -> list[tuple]:
     with psycopg.connect(conninfo) as conn:
         return conn.execute(
@@ -99,7 +106,7 @@ def main(argv: list[str]) -> int:
         "thinking_level": settings.gemini_rewrite_thinking_level,
         "instructions_version": version,
         "made_on": datetime.now(UTC).strftime("%Y-%m-%d"),
-        "counts_of": "a run of the cards, for writing the instructions; not a test result",
+        "counts_of": counts_of(set_file.stem),
         **summary(rows_of(settings.database_conninfo(), pages, model, version), len(pages)),
     }
     path = write(result, set_file.stem, version)
