@@ -52,7 +52,7 @@ from pydantic import SecretStr
 
 from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.runs import last_runs
-from hackathon_memory.finops.meter import metered_client
+from hackathon_memory.finops.meter import MeteredClient, metered_client
 from hackathon_memory.pipeline.__main__ import ALL_STEPS
 from hackathon_memory.pipeline.__main__ import main as pipeline_main
 from hackathon_memory.search import engine, listing
@@ -287,9 +287,12 @@ def run(
             before = conn.execute("SELECT count(*) FROM projects").fetchone()[0]
         result.check("the database starts empty", before == 0, f"a new database, {before} projects")
         fresh = settings.model_copy(update={"database_url": SecretStr(conninfo)})
+        # The calls are counted in the main database, not in the new one: the new one is deleted
+        # at the end, and the cost of a proof is a real cost that the budget must see.
+        counted = google or metered_client(settings, "embed_document", run_id=name)
 
         print("--- one command: python -m hackathon_memory.pipeline all --no-requests")
-        code = pipeline_main(["all", "--no-requests"], fresh, mirrors, google)
+        code = pipeline_main(["all", "--no-requests"], fresh, mirrors, counted)
         runs = list(reversed(last_runs(conninfo, limit=len(ALL_STEPS))))
         steps = [row["step"] for row in runs]
         with psycopg.connect(conninfo) as conn:
@@ -310,7 +313,9 @@ def run(
             f"{projects} projects, {embedded} embeddings",
         )
 
-        client = google or metered_client(fresh, "gate_b", run_id=name)
+        client = counted
+        if isinstance(counted, MeteredClient):
+            client = counted.tagged(purpose="embed_query")
         model = settings.gemini_embedding_model
         with psycopg.connect(conninfo) as conn:
             page_ids = dict(conn.execute("SELECT page_url, id FROM projects").fetchall())
