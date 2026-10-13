@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from googlefake import valid_form
 from hackathon_memory.llm.card_form import CardFields
-from hackathon_memory.read.quotes import DROPPED, KEPT, NOT_FOUND, check_card, uniform
+from hackathon_memory.read.quotes import (
+    DROPPED,
+    KEPT,
+    NOT_FOUND,
+    check_card,
+    place_of,
+    uniform,
+)
 
 PAGE = (
     "Zed Widget lets a shop keep a public list of small facts.\n\n"
@@ -91,3 +98,20 @@ def test_the_counts_and_the_stored_form() -> None:
 
 def test_uniform() -> None:
     assert uniform("  A “B”—C  d\n") == 'a "b"-c d'
+
+
+def test_the_place_of_a_quote_covers_its_letters_in_the_text() -> None:
+    text = "Farmers scan a sack.  Buyers in\nEurope check “this” record."
+    start, end = place_of('buyers in Europe check "this" record.', text)
+    assert text[start:end] == "Buyers in\nEurope check “this” record"
+
+
+def test_a_quote_that_is_not_in_the_text_has_no_place() -> None:
+    assert place_of("buyers in Asia", "Buyers in Europe check it.") is None
+    assert place_of(" . ", "Buyers in Europe check it.") is None
+
+
+def test_a_letter_that_becomes_two_keeps_one_place() -> None:
+    text = "Die Straße ist lang."
+    start, end = place_of("strasse ist", text)
+    assert text[start:end] == "Straße ist"

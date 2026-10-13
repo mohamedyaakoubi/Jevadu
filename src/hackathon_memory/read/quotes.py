@@ -111,6 +111,40 @@ def found_in(quote: str, page: str) -> bool:
     return len(words.split()) >= MIN_WORDS and words in page
 
 
+def _uniform_with_places(text: str) -> tuple[str, list[int]]:
+    """The text made uniform letter by letter, and for each letter the place in the text of the
+    letter it came from."""
+    letters: list[str] = []
+    places: list[int] = []
+    for place, letter in enumerate(text):
+        for one in unicodedata.normalize("NFKC", letter).translate(_SAME).casefold():
+            if one.isspace():
+                if not letters or letters[-1] == " ":
+                    continue
+                one = " "
+            letters.append(one)
+            places.append(place)
+    while letters and letters[-1] == " ":
+        letters.pop()
+        places.pop()
+    return "".join(letters), places
+
+
+def place_of(quote: str, text: str) -> tuple[int, int] | None:
+    """Where the quote stands in the text: the start and the end of the letters it covers, or
+    None. The two are compared as the check compares them, so a sheet can show a quote in the
+    page. A letter that becomes another one only next to its neighbours (a rare accent written
+    as two signs) can hide a quote here that the check found."""
+    words = uniform(quote).strip(_ENDS)
+    if not words:
+        return None
+    letters, places = _uniform_with_places(text)
+    start = letters.find(words)
+    if start < 0:
+        return None
+    return places[start], places[start + len(words) - 1] + 1
+
+
 def check_card(card: CardFields, page_text: str) -> CheckedCard:
     """Every field of the card, with its quotes checked against the text the model was given."""
     page = uniform(page_text)
