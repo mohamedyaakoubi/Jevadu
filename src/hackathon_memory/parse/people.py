@@ -21,7 +21,8 @@ by `profile_site`. Its address is then not kept: only the name of the site is.
 
 What is not hidden:
 
-* the name of a package, which has a slash after its first part ("@scope/package");
+* the name of a package, which has a slash after its first part ("@scope/package"), also after
+  the name of a framework or a file ("Node.js/@scope/package");
 * anything inside code but an email address. There an "@" belongs to the language, as in
   "@media" or "@Override";
 * a link to a video, or to the code: an address on GitHub with an account and a repository.
@@ -93,6 +94,11 @@ PACKAGE_SITES = (
     "socket.dev",
     "bundlephobia.com",
 )
+# The end of a name such as "Node.js" or "Vault.sol" is a kind of file, not the end of a site
+# on the web: in "Node.js/@scope/sdk" the "@" starts the name of a package, not of a person.
+FILE_ENDINGS = frozenset(
+    "js ts jsx tsx mjs cjs sol json yaml yml toml java kt rb php vue svelte txt lock env".split()
+)
 # The name of the site must have a dot, so that a path such as "src/@types" is not a link.
 _LINK_WITH_A_HANDLE = re.compile(
     r"(?<![\w./@-])(?:https?://)?(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}"
@@ -150,6 +156,8 @@ def _link_with_a_handle(match: re.Match[str]) -> str:
     host = re.sub(r"^(?:https?://)?", "", link, flags=re.IGNORECASE).split("/", 1)[0].lower()
     if any(host == site or host.endswith("." + site) for site in PACKAGE_SITES):
         return link  # the name of a package
+    if host.rsplit(".", 1)[-1] in FILE_ENDINGS:
+        return link  # "Node.js/@scope/sdk": a framework or a file, then a package
     return _HANDLE_PIECE.sub(_hidden_piece, link)
 
 
