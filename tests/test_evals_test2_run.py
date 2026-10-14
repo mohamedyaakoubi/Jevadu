@@ -99,6 +99,26 @@ def test_a_run_gives_the_number_the_pass_mark_and_the_look_alikes_apart() -> Non
     assert all("idea" not in key for row in result["cases"] for key in row if key != "idea_sha256")
 
 
+def test_other_setups_are_counted_on_the_same_cases() -> None:
+    found_cases = [
+        Case(SAME_IDEA, "same name", PEBBLE.page, (CEDAR.page,), "x", True, "pair 1"),
+        Case(LOOK_ALIKE, "same name", PEBBLE.page, (FERN.page,), "x", False, "pair 2"),
+    ]
+
+    def search(idea: str, limit: int) -> list[int]:
+        return [1, 3]  # the product misses Cedar
+
+    def setups(idea: str) -> dict[str, list[int]]:
+        return {"meaning only": [1, 2], "words only": [3]}
+
+    result = run(found_cases, search, PROJECTS, PAGE_OF, draws=50, setups=setups)
+    assert result["numbers"]["all"]["found"] == 0
+    assert result["other_setups"] == {
+        "meaning only": {"found": 1, "known": 1, "share": 1.0},
+        "words only": {"found": 0, "known": 1, "share": 0.0},
+    }
+
+
 def test_the_frozen_pairs_are_well_formed() -> None:
     assert len(PAIRS) == len({frozenset((p.first, p.second)) for p in PAIRS})
     assert all(p.first != p.second for p in PAIRS)

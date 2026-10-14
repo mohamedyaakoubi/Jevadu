@@ -160,12 +160,36 @@ def share(groups: dict[str, tuple[int, int]], draws: int = DRAWS, seed: int = SE
             "found": found, "known": known}  # fmt: skip
 
 
+def compare(
+    cases: list[Case],
+    setups: Callable[[str], dict[str, list[int]]],
+    projects: dict[str, Project],
+    page_of: dict[int, str],
+) -> dict:
+    """The same number for other setups of the search, on the counted cases. Each setup gives
+    its ranked projects for an idea; the asking project is left out, and 10 stay."""
+    totals: dict[str, list[int]] = {}
+    for case in cases:
+        if not case.counted:
+            continue
+        own = projects[case.asked_by].id if case.asked_by else None
+        for name, ranked in setups(case.idea).items():
+            shown = [page_of[pid] for pid in ranked if pid != own][:FIRST]
+            total = totals.setdefault(name, [0, 0])
+            total[0] += sum(page in shown for page in case.known)
+            total[1] += len(case.known)
+    return {name: {"found": found, "known": known,
+                   "share": round(found / known, 4) if known else None}
+            for name, (found, known) in totals.items()}  # fmt: skip
+
+
 def run(
     cases: list[Case],
     search: Callable[[str, int], list[int]],
     projects: dict[str, Project],
     page_of: dict[int, str],
     draws: int = DRAWS,
+    setups: Callable[[str], dict[str, list[int]]] | None = None,
 ) -> dict:
     rows = []
     groups: dict[str, dict[str, tuple[int, int]]] = {"all": {}, "pairs": {}, "ideas": {}}
@@ -199,6 +223,7 @@ def run(
             "found": sum(p is not None for row in apart for p in row["places"]),
             "known": sum(len(row["known"]) for row in apart),
         },
+        "other_setups": compare(cases, setups, projects, page_of) if setups else {},
         "cases": rows,
     }
 
@@ -213,6 +238,7 @@ def write(result: dict, folder: Path | None = None) -> Path:
 
 
 def main(argv: Sequence[str]) -> int:
+    from hackathon_memory.db.embeddings import EmbeddingStore
     from hackathon_memory.finops.meter import metered_client
     from hackathon_memory.search import engine
     from hackathon_memory.search.engine import RRF_K
@@ -240,19 +266,34 @@ def main(argv: Sequence[str]) -> int:
         hits = engine.search(conninfo, client, idea, model=model, limit=limit)
         return [hit.project_id for hit in hits]
 
+    store = EmbeddingStore(conninfo)
+
+    def setups(idea: str) -> dict[str, list[int]]:
+        """Other setups, from the first 50 of each list. The idea's embedding is kept for a
+        day, so it is not paid for twice."""
+        meaning = engine.by_meaning(store, client, idea, model=model, limit=50)
+        words = engine.by_words(conninfo, idea, limit=50)
+        found = {"meaning only": meaning[: FIRST + 1], "words only": words[: FIRST + 1]}
+        for window in (20, 30, 50):
+            merged = engine.merge(meaning[:window], words[:window])
+            found[f"merged, window {window}"] = [hit.project_id for hit in merged][: FIRST + 1]
+        return found
+
     result = {
         "test": "test2",
         "made_on": datetime.now(UTC).strftime("%Y-%m-%d"),
         "search": {"embedding_model": model, "merge_constant": RRF_K,
                    "asked": FIRST + 1, "kept": FIRST, "the_asking_project": "left out"},
         "projects_searched": len(page_of),
-        **run(cases, search, projects, page_of),
+        **run(cases, search, projects, page_of, setups=setups),
     }  # fmt: skip
     path = write(result)
     for name, number in result["numbers"].items():
         print(f"{name}: {number['found']} of {number['known']} = {number['share']} "
               f"{number['range']}")  # fmt: skip
     print(f"look-alike shown: {result['look_alike_shown']}; passes: {result['passes']}")
+    for name, number in result["other_setups"].items():
+        print(f"  other setup, {name}: {number['found']} of {number['known']}")
     print(f"Written: {path.as_posix()}")
     return 0
 

@@ -40,6 +40,10 @@ The share of the known projects that are in the first 10 results, over the pairs
 
 **Pass mark** (design 13.6, fixed on 9 October 2026): at least 80% of the known similar projects in the first 10 results.
 
+## Other setups of the search, on the same cases
+
+Added on 15 October 2026, after the first run had shown that some known projects were in the first 10 by meaning but fell out when the two lists were merged. The search's own code says that its window and its merge are to be compared by this test. Each run now also counts, on the same cases: meaning only, words only, and the merge with a window of 20, 30 and 50 projects from each list. They are for comparison only. The product keeps its setup unless another one finds more than the high end of the product's range.
+
 ## What this run does not compare
 
 Design 13.3 also asks to compare the page text with the fields of the model, and one embedding model with another. The fields of the model exist for 75 pages only, and a fair comparison needs them for every project in the search, so that comparison waits for the cards of all pages. A second embedding model is not in use. This run measures the search as it is.
