@@ -796,6 +796,7 @@ Rules for every test:
 - **Cases:** 60 real projects, picked at random from groups. The groups depend on the source. On ETHGlobal's pages they are formed from what really differs there, for example the length of the text and whether a Hedera ID is given. The groups are fixed before the 60 are drawn.
 - **Not used for tuning:** the instructions of the LLM are written and improved on 15 other projects, never on these 60.
 - **Grading:** the maintainer sees the page and the card side by side, field by field, with the quotes, and grades each field right, partly or wrong. A second grading of the same sample is made separately, by a model that is not the one under test, before it sees the first grades. The report says how often the two agree.
+- **When a grading does not cover every project:** a grader's numbers come from the projects it graded in full, and the pass marks use a grader who graded every project. In the run of October 2026, the second grading covered all 60 projects and the maintainer graded 10 of them. This rule was added on 15 October 2026, after the grading and before the key of the planted cards was opened.
 - **Four numbers:**
   1. Faithful: of the filled fields, how many the page really supports.
   2. Kept: when the page had the information, how often the card has it.
@@ -827,7 +828,7 @@ No outside standard gives these numbers. A pass mark is a decision about how muc
 | Test 1, faithful | At most 5% of the filled fields are graded wrong. The low end of the range for "not wrong" is 90% or more. | A wrong sentence about a real team's project is the worst error of this tool, so it gets the strictest mark. |
 | Test 1, honest labels | At least 90% of the labels are right. | The "less sure" mark tells the reader what to trust less. If more than one label in ten is wrong, the mark means nothing. |
 | Test 1, kept | At least 85%. | A missing detail does less harm than a wrong one: the original text stays on the card and in the search. |
-| Test 1, planted cards | Both graders catch every planted wrong card. | This tests the graders, not the model. |
+| Test 1, planted cards | Each grader catches every planted wrong card in the projects it graded, and every planted card is graded. | This tests the graders, not the model. |
 | Test 2 | At least 80% of the known similar projects are in the first 10 results. | A builder reads the first screen. If one known project in five is missing there, "nothing similar" cannot be trusted. |
 | Test 3 | At least 95% of the IDs found, at most 2% invented, and the proof status agrees with the hand check at least 90% of the time. | This is ordinary code with exact right answers, so the marks are high, and a miss is a bug to fix. |
 | Test 4 | The maintainer can do every task without help, and no "sure" finding stays open. | A screen that cannot be used alone is not finished. |
