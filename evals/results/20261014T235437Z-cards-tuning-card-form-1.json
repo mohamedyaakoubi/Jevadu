@@ -1,0 +1,88 @@
+{
+  "set": "tuning",
+  "model": "gemini-4-argon",
+  "thinking_level": "HIGH",
+  "instructions_version": "card-form-1",
+  "made_on": "2026-10-14",
+  "counts_of": "a run of the cards, for writing the instructions; not a test result",
+  "pages_of_the_set": 15,
+  "cards": 15,
+  "quotes_given": 261,
+  "quotes_found": 261,
+  "fields": {
+    "kept": 102,
+    "not_found": 3
+  },
+  "labels": {
+    "category": {
+      "stated": 6,
+      "inferred": 9
+    },
+    "for_whom": {
+      "stated": 8,
+      "inferred": 7
+    },
+    "hedera_services": {
+      "inferred": 10,
+      "stated": 4,
+      "not_found": 1
+    },
+    "how_it_works": {
+      "stated": 3,
+      "inferred": 12
+    },
+    "problem": {
+      "stated": 6,
+      "inferred": 8,
+      "not_found": 1
+    },
+    "solution": {
+      "stated": 9,
+      "inferred": 5,
+      "not_found": 1
+    },
+    "what_it_does": {
+      "stated": 13,
+      "inferred": 2
+    }
+  },
+  "words": {
+    "for_whom": {
+      "middle": 16,
+      "longest": 34
+    },
+    "hedera_services": {
+      "middle": 33.5,
+      "longest": 38
+    },
+    "problem": {
+      "middle": 28.0,
+      "longest": 36
+    },
+    "solution": {
+      "middle": 29.0,
+      "longest": 35
+    },
+    "what_it_does": {
+      "middle": 18,
+      "longest": 19
+    }
+  },
+  "steps": {
+    "4": 4,
+    "5": 9,
+    "6": 2
+  },
+  "categories": {
+    "Developer tools": 4,
+    "AI agents and automation": 3,
+    "Payments and remittance": 2,
+    "Lending, saving and investing": 2,
+    "Gaming and entertainment": 1,
+    "Other": 1,
+    "Social and community": 1,
+    "Sustainability, energy and climate": 1
+  },
+  "cost_usd": 0.9494,
+  "cost_usd_a_card": 0.0633
+}
