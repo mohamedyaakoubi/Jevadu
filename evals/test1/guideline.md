@@ -18,7 +18,7 @@ Test 1 has 60 project pages. A program drew them at random from six groups (`eva
 
 Each field has a label (stated, inferred or not found) and the sentences of the page that support it, called quotes. A program has already checked that every quote stands in the page, and it removed every field with no quote left (design 6.3). That check catches invention. It cannot see a true sentence that the model read wrongly. A person can, and that is what this test measures.
 
-Two graders grade the same 60 cards, each alone: the maintainer and a second grader. Neither sees the grades of the other before both are done. The model never grades its own work.
+Two graders grade the cards, each alone: the maintainer, and a second grader, a model that is not the model under test (design 13.2). The second grader grades before it sees any grade of the maintainer. The model under test never grades its own work. In the run of October 2026, the second grader graded all 60 projects and the maintainer graded 10 of them.
 
 ## The order of work for each project
 
@@ -128,7 +128,7 @@ For 10 projects the sheet asks whether the texts on the left are the same as on 
 
 ## Planted fields
 
-A program changed a few fields of the sheet on purpose, so that they are wrong. It picked them at random and wrote them in a key that neither grader opens before both have graded. A planted field is **caught** when it is graded partly or wrong. The test passes this point only if both graders catch every planted field (design 13.6). The planted fields are not counted in the four numbers.
+A program changed a few fields of the sheet on purpose, so that they are wrong. It picked them at random and wrote them in a key that neither grader opens before both have graded. A planted field is **caught** when it is graded partly or wrong. The test passes this point only if each grader catches every planted field in the projects it graded, and every planted field is graded by at least one of them (design 13.6). The planted fields are not counted in the four numbers.
 
 ## Notes
 
@@ -136,7 +136,9 @@ Every project has a box for a note: a doubt, the second category, what differs o
 
 ## The numbers
 
-`evals/test1/report.py` computes four numbers (design 13.2). The numbers that meet the pass marks come from the maintainer's grades. The same numbers from the second grader's grades stand next to them, with how often the two graders agree, so that a reader sees how far a number depends on its grader.
+`evals/test1/report.py` computes four numbers (design 13.2). A grader's numbers come from the projects that it graded in full, every question of every field answered. The numbers that meet the pass marks come from a grader who graded every project: the maintainer when the maintainer did, otherwise the second grader. On the projects that both graded, the report puts the two graders' numbers side by side and says how often they give the same answer, so that a reader sees how far a number depends on its grader.
+
+These rules for a grading that does not cover every project were added on 15 October 2026, after the grading and before the key of the planted fields was opened. Before, the rule was that the numbers come from the maintainer's grades.
 
 1. **Faithful.** Of the filled fields, the share graded right or partly ("not wrong"). The share graded wrong is given too.
 2. **Kept.** Of the fields where the page gives the information, the share that the card has. The page gives the information when a filled field is graded right or partly, or when the grader answered yes for an empty field. A filled field graded wrong is left out of this number: it already counts against "faithful".
@@ -156,9 +158,9 @@ These marks were fixed on 9 October 2026 (design 13.6). They are not moved after
 | Faithful | At most 5% of the filled fields graded wrong, and the low end of the range of "not wrong" at 90% or more. |
 | Honest labels | At least 90% of the labels right. |
 | Kept | At least 85%. |
-| Planted fields | Both graders catch every planted field. |
+| Planted fields | Each grader catches every planted field in the projects it graded, and every planted field is graded. |
 
-The list of categories is accepted when the two graders' own picks agree on at least 80% of the projects, and at most 15% of each grader's picks are "Other" (design 4.5). If not, categories are merged or split once, before the cards of all pages are made.
+The list of categories is accepted when the two graders' own picks agree on at least 80% of the projects where both picked one, and at most 15% of each grader's picks are "Other" (design 4.5). If not, categories are merged or split once, before the cards of all pages are made.
 
 ## What is kept, and where
 

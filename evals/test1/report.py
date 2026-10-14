@@ -8,9 +8,12 @@ with their ranges, the pass marks, the planted fields and whether each grader ca
 check of the list of categories, how often the graders agree, and every grade by page address
 and field name. No text of a page, of a card or of a note goes into that file (design 13.1).
 
-The numbers that meet the pass marks come from the maintainer's grades. A range is computed by
-project: the projects are drawn again with replacement, DRAWS times, with a fixed seed, and the
-range holds the middle 95 of every 100 results (design 13.1).
+A grader's numbers come from the projects that grader graded in full: every question of every
+field answered. The numbers that meet the pass marks come from a grader who graded every project:
+the maintainer when the maintainer did, otherwise the second grader. The projects that both
+graded show how often the two agree. A range is computed by project: the projects are drawn
+again with replacement, DRAWS times, with a fixed seed, and the range holds the middle 95 of every
+100 results (design 13.1).
 """
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ RESULTS = Path(__file__).parent.parent / "results"
 DRAWS = 10_000
 SEED = 20261017
 NOT_WRONG = ("right", "partly")
+GRADES = ("right", "partly", "wrong")
 # The pass marks of design 13.6, fixed on 9 October 2026, and of design 4.5 for the categories.
 MOST_WRONG = 0.05
 LOWEST_NOT_WRONG = 0.90
@@ -80,16 +84,41 @@ def _counts(rows: list[list[tuple[int, int]]]) -> Counts:
                   tuple(sum(o for _, o in row) for row in rows))  # fmt: skip
 
 
-def numbers(sheet: dict, grades: dict, planted: set[tuple[str, str]], draws: int = DRAWS) -> dict:
-    """The four numbers of one grader (guideline.md, "The numbers")."""
+def _answered(shown: dict, answer: dict) -> bool:
+    if shown["state"] == "kept":
+        return answer.get("grade") in GRADES and answer.get("label") in ("right", "wrong")
+    return answer.get("has_it") in ("yes", "no")
+
+
+def graded(sheet: dict, grades: dict) -> list[str]:
+    """The pages whose every field this grader answered, in the order of the sheet."""
+    pages = []
+    for case in sheet["cases"]:
+        given = grades["cases"].get(case["page"], {}).get("fields", {})
+        if all(_answered(shown, given.get(name, {})) for name, shown in case["card"].items()):
+            pages.append(case["page"])
+    return pages
+
+
+def numbers(
+    sheet: dict,
+    grades: dict,
+    planted: set[tuple[str, str]],
+    draws: int = DRAWS,
+    pages: Sequence[str] | None = None,
+) -> dict:
+    """The four numbers of one grader (guideline.md, "The numbers"), on the projects that it
+    graded in full, or on `pages` when they are given."""
+    chosen = set(graded(sheet, grades) if pages is None else pages)
     names = [field["name"] for field in sheet["fields"]]
     tallies: dict[str, list[list[tuple[int, int]]]] = {
         key: []
         for key in ("not_wrong", "wrong", "right", "kept", "labels", "inferred_not_wrong",
                     "quote_check")
     }  # fmt: skip
-    not_graded = 0
     for case in sheet["cases"]:
+        if case["page"] not in chosen:
+            continue
         given = grades["cases"].get(case["page"], {}).get("fields", {})
         rows: dict[str, list[tuple[int, int]]] = {key: [] for key in tallies}
         for name in names:
@@ -100,10 +129,7 @@ def numbers(sheet: dict, grades: dict, planted: set[tuple[str, str]], draws: int
                 continue
             answer = given.get(name, {})
             if shown["state"] == "kept":
-                grade, label = answer.get("grade"), answer.get("label")
-                if grade not in ("right", "partly", "wrong") or label not in ("right", "wrong"):
-                    not_graded += 1
-                    continue
+                grade, label = answer["grade"], answer["label"]
                 rows["not_wrong"].append((int(grade in NOT_WRONG), 1))
                 rows["wrong"].append((int(grade == "wrong"), 1))
                 rows["right"].append((int(grade == "right"), 1))
@@ -113,34 +139,43 @@ def numbers(sheet: dict, grades: dict, planted: set[tuple[str, str]], draws: int
                 if shown["label"] == "inferred":
                     rows["inferred_not_wrong"].append((int(grade in NOT_WRONG), 1))
                 continue
-            has_it = answer.get("has_it")
-            if has_it not in ("yes", "no"):
-                not_graded += 1
-                continue
+            has_it = answer["has_it"]
             if has_it == "yes":
                 rows["kept"].append((0, 1))
             if shown["state"] == "not_found":
                 rows["labels"].append((int(has_it == "no"), 1))
         for key, row in rows.items():
             tallies[key].append(row)
-    result = {key: share(_counts(rows), draws) for key, rows in tallies.items()}
-    result["fields_not_graded"] = not_graded
+    result: dict = {"projects_graded": len(chosen)}
+    result |= {key: share(_counts(rows), draws) for key, rows in tallies.items()}
     return result
 
 
-def catches(grades: dict, plants: list[dict]) -> list[dict]:
-    """Each planted field, with this grader's grade and whether it was caught."""
+def catches(grades: dict, plants: list[dict], pages: Sequence[str]) -> list[dict]:
+    """Each planted field, with this grader's grade and whether it was caught. A planted field
+    in a project that this grader did not grade is neither caught nor missed."""
     found = []
     for plant in plants:
         answer = grades["cases"].get(plant["page"], {}).get("fields", {}).get(plant["field"], {})
         grade = answer.get("grade")
-        found.append({**plant, "grade": grade, "caught": grade in ("partly", "wrong")})
+        in_graded = plant["page"] in pages
+        found.append({**plant, "graded": in_graded, "grade": grade if in_graded else None,
+                      "caught": (grade in ("partly", "wrong")) if in_graded else None})  # fmt: skip
     return found
 
 
+def numbers_from(sheet: dict, graded_by: dict[str, list[str]]) -> str | None:
+    """The grader whose numbers meet the pass marks: one who graded every project."""
+    every = len(sheet["cases"])
+    for who in ("maintainer", "second"):
+        if len(graded_by[who]) == every:
+            return who
+    return None
+
+
 def categories(sheet: dict, first: dict, second: dict, planted: set[tuple[str, str]]) -> dict:
-    """The check of the list of categories (design 4.5), and the model's category against each
-    grader's own pick."""
+    """The check of the list of categories (design 4.5), on the projects where both graders
+    picked one, and the model's category against each grader's own pick."""
     pages = [case["page"] for case in sheet["cases"]]
     picks = [{page: g["cases"].get(page, {}).get("category") for page in pages}
              for g in (first, second)]  # fmt: skip
@@ -180,10 +215,15 @@ def categories(sheet: dict, first: dict, second: dict, planted: set[tuple[str, s
     }
 
 
-def agreement(sheet: dict, first: dict, second: dict, planted: set[tuple[str, str]]) -> dict:
-    """How often the two graders give the same answer to the same question."""
+def agreement(
+    sheet: dict, first: dict, second: dict, planted: set[tuple[str, str]], pages: Sequence[str]
+) -> dict:
+    """How often the two graders give the same answer to the same question, on the projects
+    that both graded."""
     tallies: dict[str, list[int]] = {"grade": [0, 0], "label": [0, 0], "has_it": [0, 0]}
     for case in sheet["cases"]:
+        if case["page"] not in pages:
+            continue
         answers = [g["cases"].get(case["page"], {}).get("fields", {}) for g in (first, second)]
         for name in case["card"]:
             if (case["page"], name) in planted:
@@ -194,24 +234,31 @@ def agreement(sheet: dict, first: dict, second: dict, planted: set[tuple[str, st
                 if one and two:
                     tally[0] += one == two
                     tally[1] += 1
-    return {question: {"same": same, "of": of, "share": round(same / of, 4) if of else None}
-            for question, (same, of) in tallies.items()}  # fmt: skip
+    result: dict = {"projects_graded_by_both": len(pages)}
+    result |= {question: {"same": same, "of": of, "share": round(same / of, 4) if of else None}
+               for question, (same, of) in tallies.items()}  # fmt: skip
+    return result
 
 
-def passes(maintainer: dict, caught: dict[str, list[dict]]) -> dict:
-    """The pass marks of design 13.6, on the maintainer's numbers."""
-    not_wrong = maintainer["not_wrong"]
-    marks = {
+def passes(main: dict | None, caught: dict[str, list[dict]]) -> dict:
+    """The pass marks of design 13.6, on the numbers of the grader who graded every project.
+    The planted fields: each grader catches every planted field in the projects it graded, and
+    every planted field is graded by at least one of them."""
+    if main is None:
+        return {"why_not_decided": "no grader graded every project"}
+    not_wrong = main["not_wrong"]
+    graded_plants = [plant for plants in caught.values() for plant in plants if plant["graded"]]
+    every_plant_seen = all(
+        any(p["graded"] for p in plants_of) for plants_of in zip(*caught.values(), strict=True)
+    )
+    return {
         "faithful": not_wrong["range"] is not None
-        and maintainer["wrong"]["share"] <= MOST_WRONG
+        and main["wrong"]["share"] <= MOST_WRONG
         and not_wrong["range"][0] >= LOWEST_NOT_WRONG,
-        "honest_labels": (maintainer["labels"]["share"] or 0) >= LEAST_HONEST_LABELS,
-        "kept": (maintainer["kept"]["share"] or 0) >= LEAST_KEPT,
-        "planted": all(plant["caught"] for plants in caught.values() for plant in plants),
+        "honest_labels": (main["labels"]["share"] or 0) >= LEAST_HONEST_LABELS,
+        "kept": (main["kept"]["share"] or 0) >= LEAST_KEPT,
+        "planted": every_plant_seen and all(plant["caught"] for plant in graded_plants),
     }
-    if maintainer["fields_not_graded"]:
-        return {name: None for name in marks} | {"why_not_decided": "some fields are not graded"}
-    return marks
 
 
 def every_grade(sheet: dict, first: dict, second: dict) -> list[dict]:
@@ -245,10 +292,13 @@ def report(sheet: dict, key: dict, first: dict, second: dict, draws: int = DRAWS
     if key.get("sheet") != sheet["fingerprint"]:
         raise ReportError("the key of the planted fields belongs to another sheet")
     planted = {(plant["page"], plant["field"]) for plant in key["plants"]}
-    graders = {"maintainer": numbers(sheet, first, planted, draws),
-               "second": numbers(sheet, second, planted, draws)}  # fmt: skip
-    caught = {"maintainer": catches(first, key["plants"]),
-              "second": catches(second, key["plants"])}  # fmt: skip
+    graded_by = {"maintainer": graded(sheet, first), "second": graded(sheet, second)}
+    both = [page for page in graded_by["maintainer"] if page in set(graded_by["second"])]
+    graders = {"maintainer": numbers(sheet, first, planted, draws, graded_by["maintainer"]),
+               "second": numbers(sheet, second, planted, draws, graded_by["second"])}  # fmt: skip
+    caught = {"maintainer": catches(first, key["plants"], graded_by["maintainer"]),
+              "second": catches(second, key["plants"], graded_by["second"])}  # fmt: skip
+    main = numbers_from(sheet, graded_by)
     to_check = [case["page"] for case in sheet["cases"] if case["parser_check"]]
     checks = [first["cases"].get(page, {}).get("parser") for page in to_check]
     return {
@@ -258,21 +308,28 @@ def report(sheet: dict, key: dict, first: dict, second: dict, draws: int = DRAWS
         "model": sheet["model"],
         "instructions_version": sheet["instructions_version"],
         "projects": len(sheet["cases"]),
+        "projects_graded": {who: len(pages) for who, pages in graded_by.items()},
         "planted_fields": len(key["plants"]),
         "draws_for_the_ranges": draws,
         "seed_of_the_ranges": SEED,
         "numbers": graders,
+        "numbers_that_meet_the_pass_marks": main,
         "pass_marks": {
             "faithful": f"at most {MOST_WRONG:.0%} wrong, and the low end of not wrong at "
             f"{LOWEST_NOT_WRONG:.0%} or more",
             "honest_labels": f"at least {LEAST_HONEST_LABELS:.0%}",
             "kept": f"at least {LEAST_KEPT:.0%}",
-            "planted": "both graders catch every planted field",
+            "planted": "each grader catches every planted field in the projects it graded, "
+            "and every planted field is graded",
         },
-        "passes": passes(graders["maintainer"], caught),
+        "passes": passes(graders[main] if main else None, caught),
         "planted": caught,
         "categories": categories(sheet, first, second, planted),
-        "agreement": agreement(sheet, first, second, planted),
+        "agreement": agreement(sheet, first, second, planted, both),
+        "agreement_numbers": {
+            "maintainer": graders["maintainer"],
+            "second_on_the_same_projects": numbers(sheet, second, planted, draws, both),
+        },
         "parser_check": dict(Counter(str(answer) for answer in checks)),
         "answers_before_the_card": {
             "maintainer": _project_answers(sheet, first),
@@ -315,10 +372,14 @@ def main(argv: Sequence[str]) -> int:
         print(f"Stopped: {error}")
         return 1
     path = write(result)
-    mine = result["numbers"]["maintainer"]
+    print(f"projects graded: {result['projects_graded']}; the pass marks use the numbers of: "
+          f"{result['numbers_that_meet_the_pass_marks']}")  # fmt: skip
+    main_numbers = result["numbers"].get(result["numbers_that_meet_the_pass_marks"] or "", {})
     for name in ("not_wrong", "wrong", "kept", "labels", "quote_check"):
-        number = mine[name]
-        print(f"{name}: {number['share']} {number['range']} ({number['count']} of {number['of']})")
+        if name in main_numbers:
+            number = main_numbers[name]
+            print(f"{name}: {number['share']} {number['range']} "
+                  f"({number['count']} of {number['of']})")  # fmt: skip
     print(f"passes: {result['passes']}")
     print(f"Written: {path.as_posix()}")
     return 0

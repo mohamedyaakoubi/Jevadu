@@ -64,17 +64,40 @@ def test_the_four_numbers_of_one_grader() -> None:
     assert (found["labels"]["count"], found["labels"]["of"]) == (29 + 6, 30 + 6)
     assert (found["inferred_not_wrong"]["count"], found["inferred_not_wrong"]["of"]) == (12, 12)
     assert (found["quote_check"]["count"], found["quote_check"]["of"]) == (30, 36)
-    assert found["fields_not_graded"] == 0
+    assert found["projects_graded"] == 6
 
 
-def test_a_field_left_unanswered_is_counted_and_blocks_the_pass_marks() -> None:
+def test_a_project_not_graded_in_full_is_left_out_of_that_graders_numbers() -> None:
     data, _ = made(count=6, seed=1)
     grades = graded(data)
     del grades["cases"][data["cases"][2]["page"]]["fields"]["for_whom"]
     found = numbers(data, grades, set(), DRAWS)
-    assert found["fields_not_graded"] == 1 and found["not_wrong"]["of"] == 29
-    decided = passes(found, {"maintainer": [], "second": []})
-    assert decided["faithful"] is None and decided["why_not_decided"]
+    assert found["projects_graded"] == 5 and found["not_wrong"]["of"] == 25
+
+
+def test_the_pass_marks_use_a_grader_who_graded_every_project() -> None:
+    data, key = made(count=6, seed=4)
+    plants = key["plants"]
+    first = graded(data)
+    planted_pages = {plant["page"] for plant in plants}
+    unplanted = [item["page"] for item in data["cases"] if item["page"] not in planted_pages]
+    for page in list(first["cases"]):
+        if page not in unplanted[:1]:
+            del first["cases"][page]  # the maintainer graded one project, with no planted field
+    second = graded(data, wrong=tuple((p["page"], p["field"]) for p in plants))
+    result = report.report(data, key, first, second, DRAWS)
+    assert result["projects_graded"] == {"maintainer": 1, "second": 6}
+    assert result["numbers_that_meet_the_pass_marks"] == "second"
+    assert result["agreement"]["projects_graded_by_both"] == 1
+    unseen = result["planted"]["maintainer"]
+    assert all(p["graded"] is False and p["caught"] is None for p in unseen)
+    assert all(p["caught"] for p in result["planted"]["second"])
+    assert result["passes"]["planted"] is True and result["passes"]["faithful"] is True
+    assert result["agreement_numbers"]["second_on_the_same_projects"]["projects_graded"] == 1
+    del second["cases"][data["cases"][0]["page"]]
+    result = report.report(data, key, first, second, DRAWS)
+    assert result["numbers_that_meet_the_pass_marks"] is None
+    assert result["passes"] == {"why_not_decided": "no grader graded every project"}
 
 
 def test_the_planted_fields_are_left_out_and_caught_when_not_graded_right() -> None:
@@ -96,10 +119,10 @@ def test_the_planted_fields_are_left_out_and_caught_when_not_graded_right() -> N
 def test_the_pass_marks_of_design_13_6() -> None:
     def mine(wrong: float, low: float, labels: float, kept: float) -> dict:
         return {"not_wrong": {"range": [low, 0.99]}, "wrong": {"share": wrong},
-                "labels": {"share": labels}, "kept": {"share": kept},
-                "fields_not_graded": 0}  # fmt: skip
+                "labels": {"share": labels}, "kept": {"share": kept}}  # fmt: skip
 
-    caught = {"maintainer": [{"caught": True}], "second": [{"caught": True}]}
+    caught = {"maintainer": [{"graded": True, "caught": True}],
+              "second": [{"graded": True, "caught": True}]}  # fmt: skip
     assert passes(mine(0.05, 0.90, 0.90, 0.85), caught) == {
         "faithful": True, "honest_labels": True, "kept": True, "planted": True}  # fmt: skip
     assert passes(mine(0.06, 0.95, 0.95, 0.95), caught)["faithful"] is False
