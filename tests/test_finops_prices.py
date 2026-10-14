@@ -26,6 +26,17 @@ def test_the_prices_of_the_two_models_are_the_ones_that_were_read() -> None:
     assert (pro.long_above_tokens, pro.long_input_usd, pro.long_output_usd) == (200_000, 4.0, 18.0)
 
 
+def test_argon_costs_double_from_the_first_of_december_2026() -> None:
+    tokens = {"input_tokens": 1_000_000, "output_tokens": 500_000, "thinking_tokens": 500_000}
+    assert cost_usd("gemini-4-argon", date(2026, 11, 30), **tokens) == 12.0
+    assert cost_usd("gemini-4-argon", date(2026, 12, 1), **tokens) == 24.0
+    assert cost_usd("gemini-4-argon", date(2026, 10, 12), **tokens) is None  # before its release
+    long_prompt = {"input_tokens": 300_000, "output_tokens": 0}
+    assert cost_usd("gemini-4-argon", date(2026, 10, 15), **long_prompt) == 0.6  # no long price
+    argon = price_on("gemini-4-argon", date(2026, 10, 15))
+    assert argon is not None and argon.read_on == date(2026, 10, 15)
+
+
 def test_flash_costs_double_from_the_first_of_january_2027() -> None:
     tokens = {"input_tokens": 1_000_000, "output_tokens": 1_000_000}
     assert cost_usd(FLASH, date(2026, 12, 31), **tokens) == pytest.approx(0.75 + 3.75)

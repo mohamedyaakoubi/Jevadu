@@ -15,6 +15,13 @@ Read on 10 October 2026 from Google's page "Gemini Developer API pricing" (last 
   gemini-embedding-001, which this project uses, so its price is NOT KNOWN here and its cost is
   never guessed.
 
+Read on 15 October 2026 from the same page (last updated 14 October 2026). Vertex AI lists the
+model as generally available from 13 October 2026, on its global endpoint:
+
+* Gemini 4 Argon (gemini-4-argon): 2.00 for a million input tokens and 10.00 for a million output
+  tokens, thinking included, until 30 November 2026. From 1 December 2026 both double: 4.00 and
+  20.00. No higher price for a long prompt. Cached input: 0.10, then 0.20. A batch job costs half.
+
 A price that is not in this book gives no cost: the call is counted, and its cost is "not known".
 When Google changes a price, add a line with the new day. Never edit an old line: the old calls
 were billed at the old price.
@@ -26,6 +33,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 READ_ON = date(2026, 10, 10)
+ARGON_READ_ON = date(2026, 10, 15)  # the day the prices of Gemini 4 Argon were read
 SOURCE = "Google, Gemini Developer API pricing (ai.google.dev/gemini-api/docs/pricing)"
 PER = 1_000_000  # prices are for a million tokens
 BATCH_FACTOR = 0.5  # a batch job costs half of the standard price
@@ -64,6 +72,9 @@ PRICE_BOOK: tuple[Price, ...] = (
         long_cached_input_usd=0.40,
     ),
     Price("gemini-embedding-2", date(2026, 1, 1), 0.20, 0.0),
+    # From its release on Vertex AI, then the price that begins on 1 December 2026.
+    Price("gemini-4-argon", date(2026, 10, 13), 2.00, 10.00, 0.10, read_on=ARGON_READ_ON),
+    Price("gemini-4-argon", date(2026, 12, 1), 4.00, 20.00, 0.20, read_on=ARGON_READ_ON),
 )
 
 
