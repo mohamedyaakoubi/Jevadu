@@ -17,7 +17,7 @@
 
 <section class="source page-source">
   <h2>From the project's page <span class="who">copied word for word, no AI</span></h2>
-  <p class="where">From <a href="{{ facts.page_url }}" rel="noopener">{{ facts.page_url }}</a>{% if card.parsed_at %}, read on {{ card.parsed_at.strftime("%d %B %Y") }}{% endif %}.</p>
+  <p class="where">From <a href="{{ facts.page_url }}" rel="noopener">{{ facts.page_url }}</a>{% if card.collected_at %}, as the page stood on {{ card.collected_at.strftime("%d %B %Y") }}{% endif %}.{% if card.parsed_at %} Copied by the parser on {{ card.parsed_at.strftime("%d %B %Y") }}.{% endif %}</p>
   {% for prize in card.prizes %}
   <p class="prize">Prize: {{ prize.sponsor }}{% if prize.track %}, {{ prize.track }}{% endif %}{% if prize.award %}, {{ prize.award }}{% endif %}</p>
   {% endfor %}

@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.conninfo import make_conninfo
 
+from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
@@ -102,6 +103,7 @@ def create_app(settings: Settings | None = None, google: Any = None) -> FastAPI:
                 project_id,
                 model=settings.gemini_rewrite_model,
                 version=INSTRUCTIONS_VERSION,
+                raw_dir=data_paths(settings).raw_dir,
             )
         except (SettingsError, psycopg.OperationalError):
             return page(request, "project.html", 503, card=None, idea=idea,

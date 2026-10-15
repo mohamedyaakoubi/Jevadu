@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import psycopg
 import pytest
 
+from fakes import project_page
+from hackathon_memory.collect.polite import FetchResult
+from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.settings import Settings
 from searchfakes import embed_all, google, three_projects
@@ -26,7 +30,7 @@ def field(label: str, value: object, quotes: list[str], state: str = "kept") -> 
 
 
 @pytest.fixture
-def site(empty_database: str):  # noqa: ANN201
+def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
     from fastapi.testclient import TestClient
 
     from hackathon_memory.web.app import create_app
@@ -34,7 +38,14 @@ def site(empty_database: str):  # noqa: ANN201
     database = three_projects(empty_database)
     client, fake, _ = google()
     embed_all(database, client)
-    settings = Settings(_env_file=None, database_url=database)
+    settings = Settings(_env_file=None, database_url=database, data_dir=str(tmp_path / "data"))
+    # The saved copy of one page, with the day it was taken from its site.
+    url = "https://ethglobal.com/showcase/pebble-pay-x1y2z"
+    body = project_page(name="Pebble Pay", slug="pebble-pay")
+    saved = FetchResult(url, url, 200, body, "text/html", "2026-10-10T19:00:00Z")
+    RawStore(tmp_path / "data" / "raw" / "ethglobal.com").save(
+        saved, body, received=body, collector="TestTool/0.1.0"
+    )
     with psycopg.connect(database) as conn:
         ids = dict(conn.execute("SELECT name, id FROM projects").fetchall())
         fields = {
@@ -94,6 +105,7 @@ def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
     assert f"&ldquo;{ON_PEBBLE}&rdquo;" in text  # the quote that the field rests on
     assert "Not shown: none of the sentences that the model gave was found" in text
     assert "Neither the page nor the code names a Hedera ID" in text
+    assert "as the page stood on 10 October 2026" in text  # the day it was saved from its site
 
 
 def test_a_project_without_a_model_card_says_so(site) -> None:  # noqa: ANN001

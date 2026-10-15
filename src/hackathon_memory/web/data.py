@@ -16,9 +16,11 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 import psycopg
 
+from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
 from hackathon_memory.search.engine import Hit
@@ -101,6 +103,7 @@ class ProjectCard:
     links: tuple[PageLink, ...]
     prizes: tuple[Prize, ...]
     parsed_at: datetime | None
+    collected_at: datetime | None  # when the page was saved from its site
     language: str | None
     card: ModelCard | None
 
@@ -134,7 +137,13 @@ def summaries(
 
 
 def project_card(
-    conninfo: str, project_id: int, *, model: str, version: str, now: datetime | None = None
+    conninfo: str,
+    project_id: int,
+    *,
+    model: str,
+    version: str,
+    raw_dir: Path | None = None,
+    now: datetime | None = None,
 ) -> ProjectCard | None:
     """Everything that the card of one project shows, or None when there is no such project."""
     found = listing.cards(conninfo, [Hit(project_id, 0.0, None, None)], now=now)
@@ -181,4 +190,15 @@ def project_card(
                        fields[name]["value"], tuple(fields[name]["quotes"]))
             for name in FIELDS
         ))  # fmt: skip
-    return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at, language, card)
+    return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
+                       collected_at(raw_dir, found[0].page_url), language, card)  # fmt: skip
+
+
+def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:
+    """When the page was saved from its site, from the record kept next to the saved page."""
+    saved = RawStore(raw_dir).load(page_url) if raw_dir is not None else None
+    fetched = saved.meta.get("fetched_at") if saved else None
+    try:
+        return datetime.fromisoformat(fetched.replace("Z", "+00:00")) if fetched else None
+    except ValueError:
+        return None
