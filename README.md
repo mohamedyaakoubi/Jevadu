@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 11 October 2026:** Phase A is done. The four proofs of Gate A passed on the real services. The last one, the lists proof, passed on 11 October 2026 for every project that ETHGlobal's showcase ties to Hedera: 658 projects. See "What works today" below. Everything on this page apart from that is the plan.
+> **State on 15 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the two tests of quality have run. A first website runs on one laptop and is being built. See "What works today" below. The register on Hedera is still the plan.
 >
 > **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The pages stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
@@ -48,7 +48,7 @@ Many tools score hackathon submissions with AI. This tool does not score.
 
 ## What works today
 
-There is no website yet and no search. What exists is the ground that they will stand on, and four small proofs that it holds.
+First the four small proofs that the ground holds (Gate A), then what runs on the real data today, the two tests of quality, and the website.
 
 | Proof of Gate A | State on 11 October 2026 |
 |---|---|
@@ -62,9 +62,9 @@ Two more things work, and both were run on the real services:
 - **The cost of the models is counted.** Every call to a model leaves one line in a ledger: the model, the tokens, the time, the cost. A budget stops a call before it is made when it could go over the cap. `python -m hackathon_memory.finops report` shows where the money went. The ledger holds numbers only, never the text of a call.
 - **The history is searched for secrets.** `python -m hackathon_memory.secret_scan` looks for each secret of `.env` in every commit.
 
-The tests (1,200 of them on 12 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+The tests (1,441 of them on 15 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
 
-Phase B, the first full path, is being built. What runs on the real data today:
+What runs on the real data today:
 
 - **The parser.** It reads every saved project page into its facts: the name, the short line, the event, the prizes, the links, the two texts word for word, and the Hedera IDs with their network and kind. It refuses a page whose visible part and data disagree. Words about people that a team wrote into its texts are hidden first (design 5.4).
 - **The check on the ledger.** Every Hedera ID is asked of the public mirror node, and the proof rule of design 7.2 says whether the dates fit the event.
@@ -73,7 +73,16 @@ Phase B, the first full path, is being built. What runs on the real data today:
 - **The search, as a plain listing.** Each project is embedded with Google's embedding model. An idea is searched by meaning and by words, and the two lists are merged. Each result shows its facts and what the mirror node said about its IDs (design 8.2).
 - **One command for the whole path**, and the proof of Gate B that runs it from an empty database, searches ideas written blind, and leaves the results to be marked on a scale of three: yes, n/a or no.
 
-What does not exist yet: the cards, the other facts of the code (the number of changes, the contributors, a Hedera library in the package files), the website, the register, and the tests that measure the quality of the AI fields and of the search.
+- **The cards.** Gemini 3.1 Pro reads a page and writes seven fields: what the project does, how it works, for whom, its Hedera services, its category, its problem and its solution. Each field carries a label and quotes, and a field whose quotes are not found on the page is dropped (design 6.3). So far the cards exist for the 75 pages of the two test sets.
+
+The two tests of quality, with their short reports:
+
+- **Test 1, the fields of the model** (design 13.2): 60 pages, each card graded field by field against its page. In the second run, with the list of 17 categories, no field was graded wrong, 98.5% were fully right, 99.5% of the labels were right, and all four pass marks were met. See `evals/test1/report-gemini-3.1-pro.md`.
+- **Test 2, the search** (design 13.3): of the known similar projects, 34 of 57 (59.7%) were in the first 10 results, under the pass mark of 80%. Most misses are tools for AI agents, a theme with many projects close to each other. See `evals/test2/report-2026-10.md`.
+
+The website, on one laptop: `python -m hackathon_memory.web` serves the search (S1) and the project card (S2) at http://127.0.0.1:8000, for this computer only (design 12.1). For the first results it also shows what each project shares with the idea and how it differs, written by a fast model that names the texts it used (design 8.3). It is not online, and its screens have not passed their two reviews yet.
+
+What does not exist yet: the register on Hedera, the overview of an event, filters on the search, the cards of all pages, and the other facts of the code (the number of changes, the contributors, a Hedera library in the package files).
 
 ## Run it
 
@@ -127,7 +136,12 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m evals.sets draw` | Draws, once, the 15 pages for writing the instructions of the LLM and the 60 pages of Test 1, from six fixed groups (design 13.2). A set is never drawn again. |
 | `python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json` | Makes the card of every page of a set with Gemini, and checks every quote against the page (design 6.3). It costs money, through the meter and its budget; a card whose text did not change costs nothing. `--limit N` makes at most N cards. |
 | `python -m evals.cards_report evals/sets/test1.json` | Counts the cards of a set in numbers only (quotes found, labels, lengths, categories, cost) into a dated file of `evals/results`. |
-| `python -m evals.test1.sheet` | Writes, once, the review sheet of Test 1 into `data/evals/test1`: each page next to its card, to be graded as `evals/test1/guideline.md` says. Open `sheet.html` there in a browser. |
+| `python -m evals.test1.sheet` | Writes, once, the review sheet of Test 1 into `data/evals/test1`: each page next to its card, to be graded as `evals/test1/guideline.md` says. Open `sheet.html` there in a browser. `--name test1-card-form-2` writes the sheet of another run into its own folder. |
+| `python -m evals.test1.report` | The numbers of Test 1, from the grades, into a dated file of `evals/results`. `--name` reads the sheet of another run. |
+| `python -m evals.test2.ideas draw` | Writes, once, the list of projects for which the maintainer writes ideas in their own words (Test 2). `check` counts the written ideas. |
+| `python -m evals.test2.run` | Test 2, the search test, into a dated file of `evals/results`. |
+| `python -m evals.compare_levels data/evals/test2/ideas.txt` | How long the comparison under the results takes at each thinking level, and what it costs, in numbers only. `--show` prints the sentences on the screen. |
+| `python -m hackathon_memory.web` | The website, at http://127.0.0.1:8000, on this computer only. `--port` picks another port. |
 | `python -m hackathon_memory.search "an idea"` | The closest projects to an idea, as a plain listing with the facts of each one. `--numbers-only` shows no name or link. |
 | `python -m proofs.gate_b` | Gate B, part 1: a new empty database, the whole path with one command, and the first 10 results of each idea of `data/by-hand/gate-b-questions.txt`, written to `data/by-hand/gate-b-results.txt` to be marked. |
 | `python -m proofs.gate_b --questions Q --results R` | Gate B, part 1, for the ideas of another file of `data/by-hand`. |
