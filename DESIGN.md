@@ -175,13 +175,14 @@ An empty field is right only when the page really has nothing. When the informat
 - **Proof status** of the Hedera IDs: section 7.2.
 - **Life status** of the project: section 7.4.
 
-### 4.5 Categories (first version, confirmed by a test)
+### 4.5 Categories (split once after Test 1)
 
-Payments and remittance. Lending, saving and investing. Real-world assets and tokens. Identity and credentials. Supply chain and provenance. Sustainability, energy and climate. Health. Education. Agriculture. Gaming and entertainment. Social and community. AI agents and automation. Developer tools. Data and devices. Public services. Other.
+Payments and remittance. Lending, saving and investing. Real-world assets and tokens. Identity and credentials. Supply chain and provenance. Sustainability, energy and climate. Health. Education. Agriculture. Gaming and entertainment. Social and community. AI agents and automation. Tools for AI agents. Developer tools. Data and devices. Public services. Other.
 
 - **Why a list of our own.** The tracks of the events cannot do this job. They change from one event to the next, and some say nothing about the subject, like "Open Track" and "Legacy Builders".
-- **One category for each project.** It is chosen by who the project serves, not by the technology inside. "AI agents and automation" and "Developer tools" are used only when the agent or the tool is itself the product.
+- **One category for each project.** It is chosen by who the project serves, not by the technology inside. "AI agents and automation" is used only when an agent or an automation is what people run or get, such as a trading agent. "Tools for AI agents" is used when the project is built for AI agents to use, such as limits on what an agent may spend, an identity for agents, or a market where agents buy services. "Developer tools" is used for tools for people who build software.
 - **How the list is confirmed.** On the projects of Test 1 (section 13.2), two graders each pick a category, separately. The list is accepted if they agree on at least 80% of the projects and if at most 15% land in "Other". If not, categories are merged or split once, before the full run.
+- **The split of 15 October 2026.** In the run of October 2026 the two graders picked the same category on 4 of 11 projects, and neither picked "Other", so the first list of 16 was not accepted. Most differences were about tools built for AI agents, so "Tools for AI agents" came out of "AI agents and automation". The cards are made again with the new list.
 
 ### 4.6 Winner entries: a thinner card
 
