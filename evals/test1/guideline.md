@@ -138,6 +138,8 @@ For 10 projects the sheet asks whether the texts on the left are the same as on 
 
 A program changed a few fields of the sheet on purpose, so that they are wrong. It picked them at random and wrote them in a key that neither grader opens before both have graded. A planted field is **caught** when it is graded partly or wrong. The test passes this point only if each grader catches every planted field in the projects it graded, and every planted field is graded by at least one of them (design 13.6). The planted fields are not counted in the four numbers.
 
+From 15 October 2026, a planted category comes from a group of categories far from the right one. A plant of the first run put a tool for AI agents under "Developer tools", which is close to a fair choice, so it tested how close two categories are rather than the attention of a grader.
+
 ## Notes
 
 Every project has a box for a note: a doubt, the second category, what differs on the real page. The notes stay on the maintainer's laptop, like the texts of the pages. They never go into a result file.

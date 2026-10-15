@@ -13,7 +13,16 @@ import psycopg
 import pytest
 
 from evals.test1 import sheet
-from evals.test1.sheet import Block, Case, SheetError, build, fingerprint, plant, write_sheet
+from evals.test1.sheet import (
+    Block,
+    Case,
+    SheetError,
+    build,
+    far_from,
+    fingerprint,
+    plant,
+    write_sheet,
+)
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from searchfakes import three_projects
 from sheetfakes import DONOR, MODEL, SALE, card, case, field, made, seeded
@@ -65,7 +74,8 @@ def test_a_few_fields_are_planted_and_only_the_key_names_them(seed: int) -> None
             elif kind == sheet.SWAP:
                 assert shown["value"] == DONOR[name]["value"]
             else:
-                assert shown["value"] in data["categories"] and shown["value"] != "Other"
+                assert shown["value"] in data["categories"]
+                assert shown["value"] not in far_from(own[name]["value"])  # clearly wrong
 
 
 def test_too_few_fields_to_plant_stop_the_sheet() -> None:
@@ -174,3 +184,11 @@ def test_a_page_of_the_set_without_its_card_stops_the_sheet(empty_database: str)
     database = three_projects(empty_database)
     with pytest.raises(SheetError, match="1 page"):
         sheet.cases_of(database, ["https://ethglobal.com/showcase/pebble-pay-x1y2z"], MODEL, "v")
+
+
+def test_a_category_is_far_only_from_another_group() -> None:
+    assert far_from("Payments and remittance") == {
+        "Payments and remittance", "Lending, saving and investing",
+        "Real-world assets and tokens", "Other"}  # fmt: skip
+    assert "Health" not in far_from("Tools for AI agents")
+    assert far_from("Health") == {"Health", "Other"}

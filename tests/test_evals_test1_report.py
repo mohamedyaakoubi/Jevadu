@@ -182,3 +182,25 @@ def test_the_result_file_holds_numbers_and_names_but_no_text(
     (folder / report.SECOND_GRADES).unlink()
     assert report.main([]) == 1
     assert "Stopped: grades-second.json cannot be read" in capsys.readouterr().out
+
+
+def test_a_sheet_graded_by_the_second_grader_alone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from hackathon_memory.settings import Settings
+
+    data, key = made(count=4, seed=6)
+    folder = tmp_path / "data" / "evals" / "test1-card-form-9"
+    write_sheet(folder, data, key)
+    (folder / report.SECOND_GRADES).write_text(json.dumps(graded(data)), encoding="utf-8")
+    settings = Settings(_env_file=None, data_dir=str(tmp_path / "data"))
+    monkeypatch.setattr(report, "Settings", lambda: settings)
+    monkeypatch.setattr(report, "RESULTS", tmp_path / "results")
+    monkeypatch.setattr(report, "DRAWS", DRAWS)
+    assert report.main(["--name", "test1-card-form-9"]) == 0
+    (written,) = (tmp_path / "results").iterdir()
+    assert written.name.endswith("-test1-card-form-9.json")
+    saved = json.loads(written.read_text(encoding="utf-8"))
+    assert saved["projects_graded"] == {"maintainer": 0, "second": 4}
+    assert saved["numbers_that_meet_the_pass_marks"] == "second"
+    assert report.main(["--wrong"]) == 2
