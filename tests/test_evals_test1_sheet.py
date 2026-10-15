@@ -28,7 +28,7 @@ def test_the_sheet_holds_each_page_its_card_and_where_each_quote_stands() -> Non
     (block, start, end), = quote["at"]  # fmt: skip
     assert first["blocks"][block]["text"][start:end] == SALE.rstrip(".")
     assert [field["name"] for field in data["fields"]][:2] == ["what_it_does", "how_it_works"]
-    assert len(data["categories"]) == 16 and data["services"][-1]["key"] == "none"
+    assert len(data["categories"]) == 17 and data["services"][-1]["key"] == "none"
     assert sum(item["parser_check"] for item in data["cases"]) == sheet.PARSER_CHECKS
 
 

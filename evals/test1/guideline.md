@@ -91,6 +91,14 @@ Pick the one category that fits the project best. Choose it by who the project s
 
 The 16 categories: Payments and remittance. Lending, saving and investing. Real-world assets and tokens. Identity and credentials. Supply chain and provenance. Sustainability, energy and climate. Health. Education. Agriculture. Gaming and entertainment. Social and community. AI agents and automation. Developer tools. Data and devices. Public services. Other.
 
+**From 15 October 2026, 17 categories.** The first run did not accept the list (see "Pass marks"), so it was split once, as design 4.5 says. "Tools for AI agents" came out of "AI agents and automation", and the rule for the three categories of agents and tools became:
+
+- **AI agents and automation:** an agent or an automation is what people run or get. Example: a trading agent that anyone can start.
+- **Tools for AI agents:** the project is built for AI agents to use. Examples: limits on what an agent may spend, an identity or a reputation for agents, a market where agents buy services.
+- **Developer tools:** a tool for people who build software. Example: a kit of code for building on Hedera.
+
+The runs from that day on use the 17 categories.
+
 - A wallet that lets street vendors take payments: **Payments and remittance**, not Developer tools.
 - A kit of code that helps other developers build on Hedera: **Developer tools**.
 - An AI agent that books farm machines for farmers: **Agriculture**, because the agent serves farmers.

@@ -28,7 +28,9 @@ from pydantic import BaseModel, Field, model_validator
 # card-form-1, 13 October 2026, written on the 15 tuning pages only (design 13.2): shorter and
 # plainer sentences for a reader whose first language is not English (design rule 13), and
 # stricter labels, because the first cards called "stated" what a page only suggested.
-INSTRUCTIONS_VERSION = "card-form-1"
+# card-form-2, 15 October 2026: the list of categories split once (design 4.5), because the two
+# graders of Test 1 agreed on 4 of 11 categories, most often on tools built for AI agents.
+INSTRUCTIONS_VERSION = "card-form-2"
 
 SYSTEM_INSTRUCTIONS = """\
 You read the text of one hackathon project page and fill a form about it.
@@ -44,9 +46,12 @@ word for word, into "quotes". A quote must be a piece of the page and nothing el
 - Do not write Hedera account, token, topic or contract ids, links, dates or numbers as facts.
 - Do not score the project, do not rank it, and do not say that it is a copy of anything.
 - "category" is the field of life the project serves, not the technology inside. Use \
-"AI agents and automation" or "Developer tools" only when the agent or the tool is itself \
-the product. The category is "stated" only when the page itself names that field of life; \
-otherwise it is "inferred".
+"AI agents and automation" only when an agent or an automation is what people run or get, \
+such as a trading agent or an agent that books travel. Use "Tools for AI agents" when the \
+project is built for AI agents to use, such as limits on what an agent may spend, an \
+identity or a reputation for agents, or a market where agents buy services. Use "Developer \
+tools" when the project is a tool for people who build software. The category is "stated" \
+only when the page itself names that field of life; otherwise it is "inferred".
 - Write for a reader whose first language is not English: short sentences of at most 20 \
 words, common words, and a short explanation for any technical word. "what_it_does" is one \
 sentence. Each step of "how_it_works" is one short sentence.
@@ -60,7 +65,9 @@ class Label(StrEnum):
 
 
 class Category(StrEnum):
-    """The first version of the list of design 4.5. A test (Test 1) confirms or changes it."""
+    """The list of design 4.5. Test 1 did not accept its first version of 16 categories, so it
+    was split once, on 15 October 2026: "Tools for AI agents" came out of "AI agents and
+    automation"."""
 
     PAYMENTS = "Payments and remittance"
     LENDING = "Lending, saving and investing"
@@ -74,6 +81,7 @@ class Category(StrEnum):
     GAMING = "Gaming and entertainment"
     SOCIAL = "Social and community"
     AI_AGENTS = "AI agents and automation"
+    AGENT_TOOLS = "Tools for AI agents"  # split from AI_AGENTS on 15 October 2026
     DEVELOPER_TOOLS = "Developer tools"
     DATA_DEVICES = "Data and devices"
     PUBLIC_SERVICES = "Public services"
