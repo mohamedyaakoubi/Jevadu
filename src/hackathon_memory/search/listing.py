@@ -91,6 +91,12 @@ WHERE p.id = ANY(%s)
 """
 
 
+def signs_of_life(conn: psycopg.Connection, ids: Sequence[int]) -> dict[int, tuple]:
+    """For each project: the end of its event, the status, start and last push of its code, and
+    the last activity of its own ids (design 7.4)."""
+    return {row[0]: row[1:] for row in conn.execute(_SIGNS, (list(ids),)).fetchall()}
+
+
 def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) -> list[ResultCard]:
     """The facts of each project that was found, in the order of the hits."""
     now = now or datetime.now(UTC)
@@ -116,7 +122,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
             (ids,),
         ).fetchall():
             ledger.setdefault(row[0], []).append(LedgerLine(*row[1:]))
-        signs = {row[0]: row[1:] for row in conn.execute(_SIGNS, (ids,)).fetchall()}
+        signs = signs_of_life(conn, ids)
     found: list[ResultCard] = []
     for rank, hit in enumerate(hits, start=1):
         if hit.project_id not in projects:
