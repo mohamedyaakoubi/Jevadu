@@ -1,0 +1,6053 @@
+{
+ "test": "test1-card-form-2",
+ "made_on": "2026-10-15",
+ "sheet": "8760e3b14ad7ff4d10ab8d2ccdc96a9152538b6f1fff41c43eff39c6bacfe055",
+ "model": "gemini-3.1-pro-preview",
+ "instructions_version": "card-form-2",
+ "projects": 60,
+ "projects_graded": {
+  "maintainer": 0,
+  "second": 60
+ },
+ "planted_fields": 6,
+ "draws_for_the_ranges": 10000,
+ "seed_of_the_ranges": 20261017,
+ "numbers": {
+  "maintainer": {
+   "projects_graded": 0,
+   "not_wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "right": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "kept": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "labels": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "inferred_not_wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "quote_check": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   }
+  },
+  "second": {
+   "projects_graded": 60,
+   "not_wrong": {
+    "share": 1.0,
+    "range": [
+     1.0,
+     1.0
+    ],
+    "count": 407,
+    "of": 407
+   },
+   "wrong": {
+    "share": 0.0,
+    "range": [
+     0.0,
+     0.0
+    ],
+    "count": 0,
+    "of": 407
+   },
+   "right": {
+    "share": 0.9853,
+    "range": [
+     0.9732,
+     0.9951
+    ],
+    "count": 401,
+    "of": 407
+   },
+   "kept": {
+    "share": 1.0,
+    "range": [
+     1.0,
+     1.0
+    ],
+    "count": 407,
+    "of": 407
+   },
+   "labels": {
+    "share": 0.9952,
+    "range": [
+     0.9879,
+     1.0
+    ],
+    "count": 412,
+    "of": 414
+   },
+   "inferred_not_wrong": {
+    "share": 1.0,
+    "range": [
+     1.0,
+     1.0
+    ],
+    "count": 110,
+    "of": 110
+   },
+   "quote_check": {
+    "share": 1.0,
+    "range": [
+     1.0,
+     1.0
+    ],
+    "count": 413,
+    "of": 413
+   }
+  }
+ },
+ "numbers_that_meet_the_pass_marks": "second",
+ "pass_marks": {
+  "faithful": "at most 5% wrong, and the low end of not wrong at 90% or more",
+  "honest_labels": "at least 90%",
+  "kept": "at least 85%",
+  "planted": "each grader catches every planted field in the projects it graded, and every planted field is graded"
+ },
+ "passes": {
+  "faithful": true,
+  "honest_labels": true,
+  "kept": true,
+  "planted": true
+ },
+ "planted": {
+  "maintainer": [
+   {
+    "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+    "field": "category",
+    "kind": "another category",
+    "graded": false,
+    "grade": null,
+    "caught": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+    "field": "category",
+    "kind": "another category",
+    "graded": false,
+    "grade": null,
+    "caught": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/chemical-01b4r",
+    "field": "category",
+    "kind": "another category",
+    "graded": false,
+    "grade": null,
+    "caught": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+    "field": "category",
+    "kind": "another category",
+    "graded": false,
+    "grade": null,
+    "caught": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/humanos-mk20p",
+    "field": "what_it_does",
+    "kind": "another project's words",
+    "graded": false,
+    "grade": null,
+    "caught": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/corpus-j7an5",
+    "field": "for_whom",
+    "kind": "another project's words",
+    "graded": false,
+    "grade": null,
+    "caught": null
+   }
+  ],
+  "second": [
+   {
+    "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+    "field": "category",
+    "kind": "another category",
+    "graded": true,
+    "grade": "wrong",
+    "caught": true
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+    "field": "category",
+    "kind": "another category",
+    "graded": true,
+    "grade": "wrong",
+    "caught": true
+   },
+   {
+    "page": "https://ethglobal.com/showcase/chemical-01b4r",
+    "field": "category",
+    "kind": "another category",
+    "graded": true,
+    "grade": "wrong",
+    "caught": true
+   },
+   {
+    "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+    "field": "category",
+    "kind": "another category",
+    "graded": true,
+    "grade": "wrong",
+    "caught": true
+   },
+   {
+    "page": "https://ethglobal.com/showcase/humanos-mk20p",
+    "field": "what_it_does",
+    "kind": "another project's words",
+    "graded": true,
+    "grade": "wrong",
+    "caught": true
+   },
+   {
+    "page": "https://ethglobal.com/showcase/corpus-j7an5",
+    "field": "for_whom",
+    "kind": "another project's words",
+    "graded": true,
+    "grade": "wrong",
+    "caught": true
+   }
+  ]
+ },
+ "categories": {
+  "projects_picked_by_both": 0,
+  "same_category": 0,
+  "agreement": null,
+  "other_share": {
+   "maintainer": null,
+   "second": 0.0
+  },
+  "list_accepted": false,
+  "model_against_maintainer": {
+   "same": 0,
+   "of": 0
+  },
+  "model_against_second": {
+   "same": 41,
+   "of": 56
+  },
+  "picks": {
+   "maintainer": {},
+   "second": {
+    "Social and community": 4,
+    "Lending, saving and investing": 12,
+    "Tools for AI agents": 16,
+    "Supply chain and provenance": 3,
+    "Payments and remittance": 4,
+    "Gaming and entertainment": 4,
+    "AI agents and automation": 4,
+    "Public services": 1,
+    "Identity and credentials": 1,
+    "Real-world assets and tokens": 2,
+    "Health": 1,
+    "Data and devices": 3,
+    "Developer tools": 4,
+    "Sustainability, energy and climate": 1
+   }
+  }
+ },
+ "agreement": {
+  "projects_graded_by_both": 0,
+  "grade": {
+   "same": 0,
+   "of": 0,
+   "share": null
+  },
+  "label": {
+   "same": 0,
+   "of": 0,
+   "share": null
+  },
+  "has_it": {
+   "same": 0,
+   "of": 0,
+   "share": null
+  }
+ },
+ "agreement_numbers": {
+  "maintainer": {
+   "projects_graded": 0,
+   "not_wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "right": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "kept": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "labels": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "inferred_not_wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "quote_check": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   }
+  },
+  "second_on_the_same_projects": {
+   "projects_graded": 0,
+   "not_wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "right": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "kept": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "labels": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "inferred_not_wrong": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   },
+   "quote_check": {
+    "share": null,
+    "range": null,
+    "count": 0,
+    "of": 0
+   }
+  }
+ },
+ "parser_check": {
+  "None": 10
+ },
+ "answers_before_the_card": {
+  "maintainer": [
+   {
+    "page": "https://ethglobal.com/showcase/truelens-40d1x",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/credence-ea4oo",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/assay-26egq",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/allowance-x9syo",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/adralis-v042p",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/accrue-racfy",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/noforma-3efoh",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/tenor-8wx00",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/azimuth-7w256",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/mars-ua1qc",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/chemical-01b4r",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/squash-4x5ep",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/paybound-kcezf",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/corpus-j7an5",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/humanos-mk20p",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/hedron-msiu8",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/play-network-sps8r",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/eth-various-swusm",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/stage-6540h",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sonos-txqdm",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/namegate-63d0m",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   },
+   {
+    "page": "https://ethglobal.com/showcase/scree-rprid",
+    "category": null,
+    "services": null,
+    "parser": null,
+    "changed_after_card": null
+   }
+  ],
+  "second": [
+   {
+    "page": "https://ethglobal.com/showcase/truelens-40d1x",
+    "category": "Social and community",
+    "services": [
+     "consensus"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+    "category": "Lending, saving and investing",
+    "services": [
+     "accounts",
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/credence-ea4oo",
+    "category": "Tools for AI agents",
+    "services": [
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": true
+   },
+   {
+    "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+    "category": "Social and community",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/assay-26egq",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts",
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+    "category": "Lending, saving and investing",
+    "services": [
+     "none"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts",
+     "consensus"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+    "category": "Supply chain and provenance",
+    "services": [
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+    "category": "Tools for AI agents",
+    "services": [
+     "contracts",
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+    "category": "Lending, saving and investing",
+    "services": [
+     "contracts",
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts",
+     "contracts",
+     "consensus",
+     "schedule",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+    "category": "Supply chain and provenance",
+    "services": [
+     "consensus",
+     "token",
+     "file"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+    "category": "Lending, saving and investing",
+    "services": [
+     "accounts",
+     "consensus",
+     "token",
+     "schedule",
+     "mirror",
+     "agent_kit"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/allowance-x9syo",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts",
+     "consensus",
+     "contracts",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/adralis-v042p",
+    "category": "Tools for AI agents",
+    "services": [
+     "contracts",
+     "consensus",
+     "token",
+     "schedule",
+     "agent_kit"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/accrue-racfy",
+    "category": "Payments and remittance",
+    "services": [
+     "contracts",
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+    "category": "Tools for AI agents",
+    "services": [
+     "consensus"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+    "category": "Gaming and entertainment",
+    "services": [
+     "accounts",
+     "contracts",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/noforma-3efoh",
+    "category": "AI agents and automation",
+    "services": [
+     "contracts",
+     "consensus"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+    "category": "Public services",
+    "services": [
+     "consensus",
+     "contracts",
+     "agent_kit"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/tenor-8wx00",
+    "category": "Lending, saving and investing",
+    "services": [
+     "contracts",
+     "token",
+     "schedule",
+     "consensus"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+    "category": "Identity and credentials",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+    "category": "Real-world assets and tokens",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts",
+     "consensus"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+    "category": "AI agents and automation",
+    "services": [
+     "consensus",
+     "agent_kit"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+    "category": "Health",
+    "services": [
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/azimuth-7w256",
+    "category": "Data and devices",
+    "services": [
+     "contracts",
+     "token",
+     "schedule",
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/mars-ua1qc",
+    "category": "Tools for AI agents",
+    "services": [
+     "consensus",
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/chemical-01b4r",
+    "category": "Gaming and entertainment",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+    "category": "Lending, saving and investing",
+    "services": [
+     "contracts",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/squash-4x5ep",
+    "category": "Payments and remittance",
+    "services": [
+     "accounts",
+     "consensus",
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+    "category": "Lending, saving and investing",
+    "services": [
+     "none"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/paybound-kcezf",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts",
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+    "category": "Payments and remittance",
+    "services": [
+     "contracts",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/corpus-j7an5",
+    "category": "AI agents and automation",
+    "services": [
+     "contracts",
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+    "category": "Tools for AI agents",
+    "services": [
+     "contracts",
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+    "category": "Developer tools",
+    "services": [
+     "contracts",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/humanos-mk20p",
+    "category": "Data and devices",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+    "category": "Sustainability, energy and climate",
+    "services": [
+     "none"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/hedron-msiu8",
+    "category": "AI agents and automation",
+    "services": [
+     "accounts",
+     "consensus",
+     "agent_kit"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+    "category": "Tools for AI agents",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+    "category": "Lending, saving and investing",
+    "services": [
+     "none"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+    "category": "Supply chain and provenance",
+    "services": [
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+    "category": "Payments and remittance",
+    "services": [
+     "contracts",
+     "consensus",
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+    "category": "Social and community",
+    "services": [
+     "schedule"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+    "category": "Lending, saving and investing",
+    "services": [
+     "accounts",
+     "token",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/play-network-sps8r",
+    "category": "Gaming and entertainment",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/eth-various-swusm",
+    "category": "Developer tools",
+    "services": [
+     "accounts",
+     "consensus",
+     "file"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+    "category": "Data and devices",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+    "category": "Tools for AI agents",
+    "services": [
+     "accounts",
+     "consensus",
+     "token",
+     "mirror",
+     "agent_kit"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+    "category": "Lending, saving and investing",
+    "services": [
+     "contracts",
+     "token",
+     "consensus",
+     "schedule",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/stage-6540h",
+    "category": "Social and community",
+    "services": [
+     "token",
+     "consensus",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+    "category": "Lending, saving and investing",
+    "services": [
+     "contracts"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/sonos-txqdm",
+    "category": "Gaming and entertainment",
+    "services": [
+     "accounts",
+     "consensus",
+     "token",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+    "category": "Developer tools",
+    "services": [
+     "none"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+    "category": "Developer tools",
+    "services": [
+     "contracts",
+     "token"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/namegate-63d0m",
+    "category": "Real-world assets and tokens",
+    "services": [
+     "contracts",
+     "schedule"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   },
+   {
+    "page": "https://ethglobal.com/showcase/scree-rprid",
+    "category": "Lending, saving and investing",
+    "services": [
+     "accounts",
+     "consensus",
+     "schedule",
+     "mirror"
+    ],
+    "parser": null,
+    "changed_after_card": false
+   }
+  ]
+ },
+ "grades": [
+  {
+   "page": "https://ethglobal.com/showcase/truelens-40d1x",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/truelens-40d1x",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/truelens-40d1x",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/truelens-40d1x",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/truelens-40d1x",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/truelens-40d1x",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/truelens-40d1x",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "partly",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/credence-ea4oo",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/credence-ea4oo",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/credence-ea4oo",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/credence-ea4oo",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/credence-ea4oo",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/credence-ea4oo",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/credence-ea4oo",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/assay-26egq",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/assay-26egq",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/assay-26egq",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/assay-26egq",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/assay-26egq",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/assay-26egq",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/assay-26egq",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "partly",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "partly",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/allowance-x9syo",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/allowance-x9syo",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/allowance-x9syo",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/allowance-x9syo",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/allowance-x9syo",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/allowance-x9syo",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/allowance-x9syo",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/adralis-v042p",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/adralis-v042p",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/adralis-v042p",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/adralis-v042p",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/adralis-v042p",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/adralis-v042p",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/adralis-v042p",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/accrue-racfy",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/accrue-racfy",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/accrue-racfy",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/accrue-racfy",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/accrue-racfy",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/accrue-racfy",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/accrue-racfy",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "wrong",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "partly",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/noforma-3efoh",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/noforma-3efoh",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/noforma-3efoh",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/noforma-3efoh",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/noforma-3efoh",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/noforma-3efoh",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/noforma-3efoh",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tenor-8wx00",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tenor-8wx00",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tenor-8wx00",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tenor-8wx00",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tenor-8wx00",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tenor-8wx00",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tenor-8wx00",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/azimuth-7w256",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/azimuth-7w256",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/azimuth-7w256",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/azimuth-7w256",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/azimuth-7w256",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/azimuth-7w256",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/azimuth-7w256",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mars-ua1qc",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mars-ua1qc",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mars-ua1qc",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mars-ua1qc",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mars-ua1qc",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mars-ua1qc",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mars-ua1qc",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/chemical-01b4r",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/chemical-01b4r",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/chemical-01b4r",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/chemical-01b4r",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/chemical-01b4r",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "wrong",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/chemical-01b4r",
+   "field": "problem",
+   "state": "not_found",
+   "label": "not_found",
+   "maintainer": {},
+   "second": {
+    "has_it": "no"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/chemical-01b4r",
+   "field": "solution",
+   "state": "not_found",
+   "label": "not_found",
+   "maintainer": {},
+   "second": {
+    "has_it": "no"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "field": "hedera_services",
+   "state": "not_found",
+   "label": "not_found",
+   "maintainer": {},
+   "second": {
+    "has_it": "no"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "wrong",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/paybound-kcezf",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/paybound-kcezf",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/paybound-kcezf",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/paybound-kcezf",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/paybound-kcezf",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/paybound-kcezf",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/paybound-kcezf",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "wrong",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/corpus-j7an5",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/corpus-j7an5",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/corpus-j7an5",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "wrong",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/corpus-j7an5",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/corpus-j7an5",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/corpus-j7an5",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/corpus-j7an5",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "field": "solution",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/humanos-mk20p",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "wrong",
+    "label": "wrong"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/humanos-mk20p",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/humanos-mk20p",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/humanos-mk20p",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/humanos-mk20p",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/humanos-mk20p",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/humanos-mk20p",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedron-msiu8",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedron-msiu8",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedron-msiu8",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedron-msiu8",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedron-msiu8",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedron-msiu8",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hedron-msiu8",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+   "field": "hedera_services",
+   "state": "not_found",
+   "label": "not_found",
+   "maintainer": {},
+   "second": {
+    "has_it": "no"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "partly",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+   "field": "problem",
+   "state": "not_found",
+   "label": "not_found",
+   "maintainer": {},
+   "second": {
+    "has_it": "no"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+   "field": "solution",
+   "state": "not_found",
+   "label": "not_found",
+   "maintainer": {},
+   "second": {
+    "has_it": "no"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/play-network-sps8r",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/play-network-sps8r",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/play-network-sps8r",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/play-network-sps8r",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/play-network-sps8r",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/play-network-sps8r",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/play-network-sps8r",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/eth-various-swusm",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/eth-various-swusm",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/eth-various-swusm",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/eth-various-swusm",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/eth-various-swusm",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/eth-various-swusm",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/eth-various-swusm",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stage-6540h",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stage-6540h",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stage-6540h",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stage-6540h",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stage-6540h",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stage-6540h",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stage-6540h",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+   "field": "category",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sonos-txqdm",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sonos-txqdm",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sonos-txqdm",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sonos-txqdm",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sonos-txqdm",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sonos-txqdm",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/sonos-txqdm",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+   "field": "hedera_services",
+   "state": "not_found",
+   "label": "not_found",
+   "maintainer": {},
+   "second": {
+    "has_it": "no"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/namegate-63d0m",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/namegate-63d0m",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/namegate-63d0m",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/namegate-63d0m",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/namegate-63d0m",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/namegate-63d0m",
+   "field": "problem",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/namegate-63d0m",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/scree-rprid",
+   "field": "what_it_does",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/scree-rprid",
+   "field": "how_it_works",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/scree-rprid",
+   "field": "for_whom",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/scree-rprid",
+   "field": "hedera_services",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/scree-rprid",
+   "field": "category",
+   "state": "kept",
+   "label": "inferred",
+   "maintainer": {},
+   "second": {
+    "grade": "partly",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/scree-rprid",
+   "field": "problem",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  },
+  {
+   "page": "https://ethglobal.com/showcase/scree-rprid",
+   "field": "solution",
+   "state": "kept",
+   "label": "stated",
+   "maintainer": {},
+   "second": {
+    "grade": "right",
+    "label": "right"
+   }
+  }
+ ]
+}

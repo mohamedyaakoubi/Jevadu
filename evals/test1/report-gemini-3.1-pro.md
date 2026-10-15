@@ -71,3 +71,38 @@ From the maintainer, on 10 projects:
 - That every card of every page is right. It is a sample of 60 pages from one source, ETHGlobal's showcase, whose pages have a clean, fixed shape.
 - That a person would grade all 60 the same way. A model graded all 60; a person graded 10, and the two agree on about 9 fields in 10.
 - Anything about another model. These are the cards of Gemini 3.1 Pro. Cards made by another model need their own run of this test.
+
+## The second run, with 17 categories
+
+After the first run, the list of categories was split once, as design 4.5 says: "Tools for AI agents" came out of "AI agents and automation". Gemini 3.1 Pro then wrote the cards of the same 60 pages again, with the new instructions `card-form-2` and the same thinking level. These cards cost 3.13 dollars. The numbers of this run come from `evals/results/20261015T011908Z-test1-card-form-2.json`.
+
+What changed in the method:
+
+- **One grader.** Only the second grader graded this run, all 60 projects. So the pass marks use its numbers (guideline.md, "When a grading does not cover every project"), and there is no comparison of two graders.
+- **The answers before the card were carried over.** They depend only on the page, and the pages are the same, in the same order. The second grader gave them in the first run, before it saw any card. Under the 17 categories, it looked again at the category of every project about agents, tools or data, from the page only, before it saw the new card. One category was changed after the new card was seen, and the sheet records that change.
+- **Planted categories that clearly do not fit.** A planted category now comes from a group of categories far from the right one (guideline.md, "Planted fields").
+
+Both columns are the numbers of the second grader, so the two runs are compared by the same grader. The planted fields are left out, as before.
+
+| Number | First run | Second run | Range of the second run | Pass mark (design 13.6) | Met |
+|---|---|---|---|---|---|
+| Faithful: filled fields graded right or partly | 408 of 408 | 407 of 407 (100%) | 100% to 100% | at most 5% wrong, low end of the range 90% or more | yes |
+| Fields graded wrong | 0 of 408 | 0 of 407 | | | |
+| Fields graded fully right | 396 of 408 (97.1%) | 401 of 407 (98.5%) | 97.3% to 99.5% | none | |
+| Kept: the card has what the page gives | 408 of 408 | 407 of 407 (100%) | 100% to 100% | at least 85% | yes |
+| Honest labels | 408 of 414 (98.6%) | 412 of 414 (99.5%) | 98.8% to 100% | at least 90% | yes |
+| Inferred fields graded right or partly | 95 of 95 | 110 of 110 | | none | |
+| Quote check: fields that kept a quote found in the page | 414 of 414 | 413 of 413 | | none | |
+| Planted fields caught | see the first run | 6 of 6 | | each grader catches every planted field in its projects | yes |
+
+**The planted fields.** The grader caught all 6 and graded each one wrong: four categories that do not fit the project, for example a category of farming for a security layer for AI agents, and two fields taken from the cards of other projects, one "what it does" and one "for whom".
+
+**The categories.** The model's category matched the grader's own pick on 41 of 56 projects (73%), against 45 of 58 in the first run. Of the 15 differences, the grader graded 10 right, because both choices fit. It graded 5 partly. Four times the model chose a category of agents for a project whose users have another need, such as borrowers or players. Once it chose "Other" where a category fits. The model used "Tools for AI agents" 19 times, the grader 16 times. The check of the list in design 4.5 needs the picks of two graders, so this run does not test the list again. The rule splits the list only once.
+
+**What else was graded partly or wrong.** One "for whom" read the page too widely: it called the traders whom users copy very successful, which the page does not say. It was graded partly. Two labels were wrong: one field was labelled "inferred" although the short line says it plainly, and one category was labelled "stated" although the page names the public sector only as a setting.
+
+**What this run does not show.**
+
+- That a person would grade the cards the same way. No person graded this run.
+- Whether the list of 17 categories passes its check. That needs two graders.
+- Anything new about the parser. It was not checked again in this run.

@@ -1,0 +1,82 @@
+{
+  "set": "tuning",
+  "model": "gemini-3.1-pro-preview",
+  "thinking_level": "HIGH",
+  "instructions_version": "card-form-2",
+  "made_on": "2026-10-15",
+  "counts_of": "a run of the cards, for writing the instructions; not a test result",
+  "pages_of_the_set": 15,
+  "cards": 15,
+  "quotes_given": 196,
+  "quotes_found": 193,
+  "fields": {
+    "kept": 103,
+    "not_found": 2
+  },
+  "labels": {
+    "category": {
+      "inferred": 15
+    },
+    "for_whom": {
+      "stated": 11,
+      "inferred": 4
+    },
+    "hedera_services": {
+      "stated": 14,
+      "not_found": 1
+    },
+    "how_it_works": {
+      "stated": 14,
+      "inferred": 1
+    },
+    "problem": {
+      "stated": 12,
+      "inferred": 2,
+      "not_found": 1
+    },
+    "solution": {
+      "stated": 15
+    },
+    "what_it_does": {
+      "stated": 15
+    }
+  },
+  "words": {
+    "for_whom": {
+      "middle": 15,
+      "longest": 17
+    },
+    "hedera_services": {
+      "middle": 15.5,
+      "longest": 19
+    },
+    "problem": {
+      "middle": 16.0,
+      "longest": 25
+    },
+    "solution": {
+      "middle": 17,
+      "longest": 26
+    },
+    "what_it_does": {
+      "middle": 15,
+      "longest": 28
+    }
+  },
+  "steps": {
+    "4": 2,
+    "5": 8,
+    "6": 5
+  },
+  "categories": {
+    "Tools for AI agents": 4,
+    "Developer tools": 4,
+    "Payments and remittance": 2,
+    "AI agents and automation": 2,
+    "Real-world assets and tokens": 1,
+    "Social and community": 1,
+    "Sustainability, energy and climate": 1
+  },
+  "cost_usd": 0.7737,
+  "cost_usd_a_card": 0.0516
+}
