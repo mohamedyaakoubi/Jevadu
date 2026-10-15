@@ -76,3 +76,6 @@ details summary { cursor: pointer; color: var(--accent); }
   body { font-size: 16px; }
   h1 { font-size: 24px; }
 }
+.compare { margin: 6px 0 0; padding: 6px 10px; border-left: 3px solid var(--line); font-size: 15px; }
+.compare p { margin: 2px 0; }
+.compare.waiting { color: var(--soft); font-style: italic; }

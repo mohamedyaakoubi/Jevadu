@@ -21,6 +21,7 @@ from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
+from hackathon_memory.search import compare as comparing
 from hackathon_memory.search import engine, listing
 from hackathon_memory.settings import Settings, SettingsError
 from hackathon_memory.web import data
@@ -39,14 +40,14 @@ DATABASE_DOWN = (
 )
 
 
-def create_app(settings: Settings | None = None, google: Any = None) -> FastAPI:
-    """The website. `google` is the client for the embeddings; by default it is made, counted by
-    the meter, on the first search."""
+def create_app(settings: Settings | None = None, google: Any = None, llm: Any = None) -> FastAPI:
+    """The website. `google` is the client for the embeddings and `llm` the one for the
+    comparison; by default each is made, counted by the meter, when it is first needed."""
     settings = settings or Settings()
     app = FastAPI(title="Hackathon Memory", docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
-    clients: dict[str, Any] = {"google": google}
+    clients: dict[str, Any] = {"google": google, "llm": llm}
 
     def database() -> str:
         return make_conninfo(settings.database_conninfo(), connect_timeout=CONNECT_SECONDS)
@@ -57,6 +58,13 @@ def create_app(settings: Settings | None = None, google: Any = None) -> FastAPI:
 
             clients["google"] = metered_client(settings, "embed_query")
         return clients["google"]
+
+    def llm_client() -> Any:
+        if clients["llm"] is None:
+            from hackathon_memory.finops.meter import metered_client
+
+            clients["llm"] = metered_client(settings, "compare")
+        return clients["llm"]
 
     def page(request: Request, name: str, status: int = 200, **values: Any) -> HTMLResponse:
         return templates.TemplateResponse(request, name, values, status_code=status)
@@ -113,11 +121,43 @@ def create_app(settings: Settings | None = None, google: Any = None) -> FastAPI:
                         problem=NO_SUCH_PROJECT)  # fmt: skip
         return page(request, "project.html", card=card, idea=idea)
 
+    @app.get("/compare", response_class=HTMLResponse)
+    def comparison(request: Request, idea: str = "", ids: str = "") -> HTMLResponse:
+        """What is the same and what differs, for the first results of an idea (design 8.3):
+        a part of a page, asked for after the results are shown."""
+        idea = " ".join(idea.split())[:LONGEST_IDEA]
+        try:
+            project_ids = [int(part) for part in ids.split(",") if part.strip()][:FIRST]
+        except ValueError:
+            project_ids = []
+        if not idea or not project_ids:
+            return page(request, "_compare.html", 400, found={}, failed=True)
+        failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
+                    BudgetExceeded, *FAILED_CALLS)  # fmt: skip
+        try:
+            items = comparing.items_for(
+                database(), project_ids, model=settings.gemini_rewrite_model,
+                version=INSTRUCTIONS_VERSION,
+            )  # fmt: skip
+            found = comparing.compare(
+                llm_client(), idea, items, model=settings.gemini_search_model,
+                thinking_level=settings.gemini_search_thinking_level,
+            )  # fmt: skip
+        except failures:
+            return page(request, "_compare.html", 503, found={}, failed=True)
+        return page(request, "_compare.html", found=found, failed=False)
+
     templates.env.globals |= {
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,
         "CODE_WORDS": listing.CODE_WORDS,
         "WINNER_ENTRY": "winner_entry",
         "hashscan": data.hashscan,
+        "TEXT_WORDS": {
+            "name": "the name",
+            "short_line": "the short line",
+            "page_text": "the project's text",
+            **data.FIELD_TITLES,
+        },
     }
     return app

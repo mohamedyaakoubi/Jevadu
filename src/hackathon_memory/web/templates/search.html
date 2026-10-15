@@ -26,7 +26,7 @@
 {% elif results %}
 <h2 class="count">The {{ results | length }} closest projects</h2>
 <p class="hint">The first project is the closest in meaning and words. The order says nothing about quality.</p>
-<ol class="results">
+<ol class="results" data-compare-url="/compare?idea={{ idea | urlencode }}&amp;ids={% for card, summary in results %}{{ card.hit.project_id }}{% if not loop.last %},{% endif %}{% endfor %}">
 {% for card, summary in results %}
   <li class="result">
     <h3><a href="/project/{{ card.hit.project_id }}?idea={{ idea | urlencode }}">{{ card.name }}</a></h3>
@@ -39,13 +39,19 @@
     <p class="marks">{{ marks.proof(card.proof_status) }} {{ marks.life(card.life) }}
       {% if card.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
     </p>
+    <div class="compare waiting" data-project="{{ card.hit.project_id }}">Comparing with your idea&hellip;</div>
   </li>
 {% endfor %}
 </ol>
+<script src="/static/compare.js" defer></script>
 <section class="legends">
   <h2>What the marks mean</h2>
   {{ marks.proof_legend() }}
   {{ marks.life_legend() }}
+  <dl class="legend">
+    <dt>The same, differs</dt>
+    <dd>A fast model reads your idea and the texts of each project, and writes what they share and the main difference. It names the texts it used, and it does not judge the projects.</dd>
+  </dl>
 </section>
 {% endif %}
 {% endblock %}

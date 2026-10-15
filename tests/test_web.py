@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import psycopg
 import pytest
@@ -66,7 +67,7 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
             (ids["Pebble Pay"], settings.gemini_rewrite_model, INSTRUCTIONS_VERSION, "a" * 64,
              json.dumps(fields)),
         )  # fmt: skip
-    return TestClient(create_app(settings, google=client)), fake, ids, database
+    return TestClient(create_app(settings, google=client, llm=client)), fake, ids, database
 
 
 def test_the_start_page_asks_for_an_idea_and_calls_no_model(site) -> None:  # noqa: ANN001
@@ -150,3 +151,111 @@ def test_the_text_of_a_page_is_shown_as_text_never_as_code(site) -> None:  # noq
     page = client.get(f"/project/{ids['Fern Vote']}")
     assert "<script>alert(1)</script>" not in page.text
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page.text
+
+
+# ----------------------------------------------------------------- the comparison (design 8.3)
+
+
+def compare_answer(*parts: tuple[int, list[str]]) -> str:
+    return json.dumps({"projects": [
+        {"number": number, "same": f"Same {number}.", "differs": f"Differs {number}.",
+         "fields_used": used}
+        for number, used in parts
+    ]})  # fmt: skip
+
+
+def test_the_search_page_waits_for_the_comparison_without_blocking(site) -> None:  # noqa: ANN001
+    client, fake, ids, _ = site
+    before = len(fake.requests)
+    page = client.get("/", params={"idea": "help a street vendor get paid with a coin"})
+    assert 'data-compare-url="/compare?idea=help%20a%20street%20vendor' in page.text
+    assert page.text.count('class="compare waiting"') == 3
+    assert '<script src="/static/compare.js" defer></script>' in page.text
+    assert not [path for path, _ in fake.requests[before:] if "generateContent" in path]
+
+
+def test_the_comparison_names_the_texts_it_used(site) -> None:  # noqa: ANN001
+    client, fake, ids, _ = site
+    pebble, cedar = ids["Pebble Pay"], ids["Cedar Post"]
+    fake.answer_text = compare_answer((1, ["what_it_does", "made_up"]), (2, ["short_line"]),
+                                      (9, ["name"]))  # fmt: skip
+    part = client.get("/compare", params={"idea": "a coin for a vendor",
+                                          "ids": f"{pebble},{cedar}"})  # fmt: skip
+    assert part.status_code == 200
+    assert f'data-project="{pebble}"' in part.text and f'data-project="{cedar}"' in part.text
+    assert "Same 1." in part.text and "Differs 2." in part.text
+    assert "Same 9." not in part.text  # a number that is not in the list
+    assert "Written by a model from what it does." in part.text  # "made_up" was dropped
+    assert "Written by a model from the short line." in part.text
+    sent = [body for path, body in fake.requests if "generateContent" in path][-1]
+    assert "A vendor takes coins." in json.dumps(sent)  # Pebble's card field went to the model
+
+
+def test_a_comparison_that_fails_says_so(site) -> None:  # noqa: ANN001
+    client, fake, ids, _ = site
+    assert client.get("/compare", params={"idea": "x"}).status_code == 400
+    fake.fail_with = (503, "unavailable")
+    part = client.get("/compare", params={"idea": "a coin", "ids": str(ids["Pebble Pay"])})
+    assert part.status_code == 503 and "could not be written just now" in part.text
+
+
+# ------------------------------------------------- the page's one script, in a real browser
+
+
+@pytest.fixture(scope="module")
+def chromium():  # noqa: ANN201
+    """Only a browser runs the script that puts the comparison in its places. Skipped where
+    Playwright or its Chromium is not installed: python -m playwright install chromium."""
+    sync_api = pytest.importorskip("playwright.sync_api")
+    with sync_api.sync_playwright() as driver:
+        try:
+            browser = driver.chromium.launch()
+        except sync_api.Error as error:
+            pytest.skip(f"no Chromium for Playwright here: {error.message.splitlines()[0]}")
+        yield browser
+        browser.close()
+
+
+SEARCH = "http://site.test/?idea=help+a+street+vendor+get+paid+with+a+coin"
+
+
+def served(chromium, client, before_compare=lambda: None):  # noqa: ANN001, ANN201
+    """A page whose every request is answered by the website's test client: no server runs."""
+    page = chromium.new_page()
+
+    def answer(route) -> None:  # noqa: ANN001
+        parts = urlsplit(route.request.url)
+        if parts.path == "/compare":
+            before_compare()
+        got = client.get(parts.path + (f"?{parts.query}" if parts.query else ""))
+        route.fulfill(status=got.status_code, body=got.content,
+                      headers={"content-type": got.headers["content-type"]})  # fmt: skip
+
+    page.route(lambda url: url.startswith("http://site.test/"), answer)
+    return page
+
+
+@pytest.mark.browser
+def test_the_script_puts_each_comparison_in_its_place(site, chromium) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]))
+    page = served(chromium, client)
+    page.goto(SEARCH)
+    page.wait_for_function("!document.querySelector('.compare.waiting')")
+    results = page.locator("li.result")
+    assert "Same 1." in results.nth(0).inner_text() and "Differs 1." in results.nth(0).inner_text()
+    assert "Same 2." in results.nth(1).inner_text()
+    assert "No comparison was written for this project." in results.nth(2).inner_text()
+    page.close()
+
+
+@pytest.mark.browser
+def test_the_script_says_when_the_comparison_failed(site, chromium) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    page = served(chromium, client, lambda: setattr(fake, "fail_with", (503, "unavailable")))
+    page.goto(SEARCH)
+    page.wait_for_function("!document.querySelector('.compare.waiting')")
+    texts = page.locator(".compare").all_inner_texts()
+    assert len(texts) == 3 and all("could not be written just now" in text for text in texts)
+    assert page.locator("li.result h3 a").count() == 3  # the results stay
+    page.close()
