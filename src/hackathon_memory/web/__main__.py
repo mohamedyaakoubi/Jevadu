@@ -1,0 +1,29 @@
+"""Serve the website on this computer only.
+
+python -m hackathon_memory.web            http://127.0.0.1:8000
+python -m hackathon_memory.web --port 8080
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from collections.abc import Sequence
+
+
+def main(argv: Sequence[str]) -> int:
+    import uvicorn
+
+    from hackathon_memory.web.app import create_app
+
+    parser = argparse.ArgumentParser(prog="python -m hackathon_memory.web")
+    parser.add_argument("--port", type=int, default=8000)
+    arguments = parser.parse_args(argv)
+    print(f"Open http://127.0.0.1:{arguments.port} in your browser. Stop with Ctrl+C.")
+    # 127.0.0.1 only: the website is not reachable from other computers (nothing is put online).
+    uvicorn.run(create_app(), host="127.0.0.1", port=arguments.port, log_level="warning")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

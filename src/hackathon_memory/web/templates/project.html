@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% import "_marks.html" as marks %}
+{% block title %}{{ card.facts.name if card else "No such project" }}: Hackathon Memory{% endblock %}
+{% block main %}
+<p class="back"><a href="/{% if idea %}?idea={{ idea | urlencode }}{% endif %}">&larr; Back to the search</a></p>
+
+{% if problem %}
+<p class="problem" role="alert">{{ problem }}</p>
+{% else %}
+{% set facts = card.facts %}
+<h1>{{ facts.name }}</h1>
+{% if card.short_line %}<p class="short-line">{{ card.short_line }}</p>{% endif %}
+<p class="event">{{ facts.event }} · {{ PRIZE_WORDS.get(facts.prize_state, facts.prize_state) }}</p>
+<p class="marks">{{ marks.proof(facts.proof_status) }} {{ marks.life(facts.life) }}
+  {% if facts.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
+</p>
+
+<section class="source page-source">
+  <h2>From the project's page <span class="who">copied word for word, no AI</span></h2>
+  <p class="where">From <a href="{{ facts.page_url }}" rel="noopener">{{ facts.page_url }}</a>{% if card.parsed_at %}, read on {{ card.parsed_at.strftime("%d %B %Y") }}{% endif %}.</p>
+  {% for prize in card.prizes %}
+  <p class="prize">Prize: {{ prize.sponsor }}{% if prize.track %}, {{ prize.track }}{% endif %}{% if prize.award %}, {{ prize.award }}{% endif %}</p>
+  {% endfor %}
+  {% for section in card.sections %}
+  <h3>{{ section.title or "Text" }}</h3>
+  <div class="text">{{ section.body }}</div>
+  {% else %}
+  <p class="empty">The page gives no text beyond its name.</p>
+  {% endfor %}
+  {% if card.links %}
+  <h3>Links on the page</h3>
+  <ul class="links">
+  {% for link in card.links %}
+    <li><a href="{{ link.url }}" rel="noopener">{{ link.label or link.url }}</a> <span class="kind">{{ link.kind }}</span></li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section class="source ledger-source">
+  <h2>From the code and the ledger <span class="who">read by a program, no AI</span></h2>
+  <h3>Hedera IDs</h3>
+  {% set checked = facts.ledger | selectattr("network") | list %}
+  {% if checked %}
+  <table>
+    <thead><tr><th>ID</th><th>Network</th><th>What the ledger says</th><th>Result</th><th>Asked on</th></tr></thead>
+    <tbody>
+    {% for line in checked %}
+      {% set link = hashscan(line.network, line.kind, line.entity_id) %}
+      <tr>
+        <td>{% if link %}<a href="{{ link }}" rel="noopener">{{ line.entity_id }}</a>{% else %}{{ line.entity_id }}{% endif %}
+          <span class="kind">{{ "from the README" if line.found_in == "readme" else "from the page" }}</span></td>
+        <td>{{ line.network }}</td>
+        <td>{{ line.kind or "nothing" }}{% if line.created_at %}, made {{ line.created_at.strftime("%Y-%m-%d") }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at.strftime("%Y-%m-%d") }}{% endif %}</td>
+        <td>{{ STATUS_WORDS.get(line.status, line.status) }}</td>
+        <td>{{ line.asked_at.strftime("%Y-%m-%d") if line.asked_at else "not asked yet" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="hint">Each linked ID opens on HashScan, where anybody can see the same record.</p>
+  {% else %}
+  <p>Neither the page nor the code names a Hedera ID that could be asked about. This says nothing bad about the project.</p>
+  {% endif %}
+
+  <h3>Code</h3>
+  {% if facts.repository %}
+  <p><a href="{{ facts.repository }}" rel="noopener">{{ facts.repository }}</a>{% if card.language %} · {{ card.language }}{% endif %}</p>
+  {% if facts.code_status == "found" %}
+  <p>{% if facts.made_at %}Made {{ facts.made_at.strftime("%Y-%m-%d") }}{% endif %}{% if facts.last_push_at %}, last change {{ facts.last_push_at.strftime("%Y-%m-%d") }}{% endif %}.</p>
+  {% elif facts.code_status in CODE_WORDS %}
+  <p>{{ CODE_WORDS[facts.code_status] | capitalize }}.</p>
+  {% endif %}
+  {% else %}
+  <p>The page links to no code repository.</p>
+  {% endif %}
+
+  {% if facts.life %}
+  <h3>Life</h3>
+  <p>{{ facts.life.status | capitalize }}: {{ facts.life.why }}{% if facts.life.last_sign %}. Last sign: {{ facts.life.last_sign.strftime("%Y-%m-%d") }}{% endif %}.</p>
+  {% endif %}
+</section>
+
+<section class="source model-source">
+  <h2>Written by a model <span class="who">checked against the page</span></h2>
+  {% if card.card %}
+  <p class="where">Gemini ({{ card.card.model }}), instructions {{ card.card.instructions_version }}, written on {{ card.card.made_at.strftime("%d %B %Y") }}. Every quote below was found in the page by a program.</p>
+  {% for field in card.card.fields %}
+  <div class="field">
+    <h3>{{ field.title }} {{ marks.label(field) }}</h3>
+    {% if field.state == "kept" %}
+      {% if field.value is string %}<p>{{ field.value }}</p>{% else %}<ol>{% for step in field.value %}<li>{{ step }}</li>{% endfor %}</ol>{% endif %}
+      {% if field.quotes %}
+      <details><summary>The sentences of the page it rests on ({{ field.quotes | length }})</summary>
+        <ul class="quotes">{% for quote in field.quotes %}<li>&ldquo;{{ quote }}&rdquo;</li>{% endfor %}</ul>
+      </details>
+      {% endif %}
+    {% elif field.state == "dropped" %}
+      <p class="empty">Not shown: none of the sentences that the model gave was found in the page.</p>
+    {% else %}
+      <p class="empty">The page says nothing about it.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="empty">No card has been written by a model for this project yet. The texts above are the page's own words.</p>
+  {% endif %}
+</section>
+
+<section class="legends">
+  <h2>What the marks mean</h2>
+  {{ marks.proof_legend() }}
+  {{ marks.life_legend() }}
+  {{ marks.label_legend() }}
+</section>
+{% endif %}
+{% endblock %}

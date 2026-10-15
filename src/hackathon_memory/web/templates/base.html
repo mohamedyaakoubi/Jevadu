@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Hackathon Memory{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">Hackathon Memory</a>
+  <span class="tagline">Projects sent to Hedera hackathons, checked against the public ledger</span>
+</header>
+<main>
+{% block main %}{% endblock %}
+</main>
+<footer>
+  <p>The texts of each card come from the project's own page, and each card links to it. The facts about Hedera come from the public mirror node. Fields written by a model always show their label and the sentences of the page they rest on. Nothing here scores or ranks a project: the order of a list only says how close a project is to an idea.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "_marks.html" as marks %}
+{% block title %}{% if idea %}{{ idea[:60] }}: {% endif %}Hackathon Memory{% endblock %}
+{% block main %}
+<h1>Is my idea new on Hedera?</h1>
+<form class="ask" method="get" action="/">
+  <label for="idea">Describe your idea in one or two sentences, as you would tell a friend.</label>
+  <textarea id="idea" name="idea" rows="3" maxlength="1000" required placeholder="An app that lets a street vendor take payments without a bank account">{{ idea }}</textarea>
+  <button type="submit">Search past projects</button>
+</form>
+
+{% if problem %}
+<p class="problem" role="alert">{{ problem }}</p>
+{% endif %}
+{% for note in notes or [] %}
+<p class="note">{{ note }}</p>
+{% endfor %}
+
+{% if not asked %}
+<section class="start">
+  <p>The search looks through the projects sent to Hedera hackathons: every project of ETHGlobal's showcase that is tied to Hedera, and the published winners of Hedera's own hackathons. It finds projects close to your idea by meaning and by words.</p>
+  <p>For each project you see what it does, its event, and what the public Hedera ledger says about it. Open a project to read its own page, its code and the checks behind each fact.</p>
+</section>
+{% elif not results and not problem %}
+<p class="empty">No project came close to this idea. Try other words, or describe what the users of your idea do.</p>
+{% elif results %}
+<h2 class="count">The {{ results | length }} closest projects</h2>
+<p class="hint">The first project is the closest in meaning and words. The order says nothing about quality.</p>
+<ol class="results">
+{% for card, summary in results %}
+  <li class="result">
+    <h3><a href="/project/{{ card.hit.project_id }}?idea={{ idea | urlencode }}">{{ card.name }}</a></h3>
+    <p class="event">{{ card.event }}{% if card.prize_state %} · {{ PRIZE_WORDS.get(card.prize_state, card.prize_state) }}{% endif %}</p>
+    {% if summary and summary.text %}
+    <p class="summary">{{ summary.text }}
+      {% if summary.source == "model" %}<span class="source">written by a model, {{ "stated" if summary.label == "stated" else "inferred: less sure" }}</span>{% else %}<span class="source">from the project's page</span>{% endif %}
+    </p>
+    {% endif %}
+    <p class="marks">{{ marks.proof(card.proof_status) }} {{ marks.life(card.life) }}
+      {% if card.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
+    </p>
+  </li>
+{% endfor %}
+</ol>
+<section class="legends">
+  <h2>What the marks mean</h2>
+  {{ marks.proof_legend() }}
+  {{ marks.life_legend() }}
+</section>
+{% endif %}
+{% endblock %}
