@@ -24,6 +24,10 @@ dependencies = [
     "hiero-sdk-python==0.2.10",
     "google-genai>=2.29,<3",
     "httpx>=0.28.1,<1",  # the network errors of google-genai's requests are named in the code
+    # The website (design 11.5): FastAPI with pages made on the server. Read on 15 October 2026.
+    "fastapi>=0.143,<1",
+    "uvicorn>=0.54,<1",
+    "jinja2>=3.1,<4",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +45,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "hackathon_memory.db" = ["migrations/*.sql"]
+"hackathon_memory.web" = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
