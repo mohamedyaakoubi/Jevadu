@@ -17,7 +17,7 @@
 
 <section class="source page-source">
   <h2>From the project's page <span class="who">copied word for word, no AI</span></h2>
-  <p class="where">From <a href="{{ facts.page_url }}" rel="noopener">{{ facts.page_url }}</a>{% if card.collected_at %}, as the page stood on {{ card.collected_at.strftime("%d %B %Y") }}{% endif %}.{% if card.parsed_at %} Copied by the parser on {{ card.parsed_at.strftime("%d %B %Y") }}.{% endif %}</p>
+  <p class="where">From <a href="{{ facts.page_url }}" rel="noopener">{{ facts.page_url }}</a>{% if card.collected_at %}, as the page stood on {{ card.collected_at | day }}{% endif %}.{% if card.parsed_at %} Copied by the parser on {{ card.parsed_at | day }}.{% endif %}</p>
   {% for prize in card.prizes %}
   <p class="prize">Prize: {{ prize.sponsor }}{% if prize.track %}, {{ prize.track }}{% endif %}{% if prize.award %}, {{ prize.award }}{% endif %}</p>
   {% endfor %}
@@ -51,9 +51,9 @@
         <td>{% if link %}<a href="{{ link }}" rel="noopener">{{ line.entity_id }}</a>{% else %}{{ line.entity_id }}{% endif %}
           <span class="kind">{{ "from the README" if line.found_in == "readme" else "from the page" }}</span></td>
         <td>{{ line.network }}</td>
-        <td>{{ line.kind or "nothing" }}{% if line.created_at %}, made {{ line.created_at.strftime("%Y-%m-%d") }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at.strftime("%Y-%m-%d") }}{% endif %}</td>
+        <td>{{ line.kind or "nothing" }}{% if line.created_at %}, made {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}</td>
         <td>{{ STATUS_WORDS.get(line.status, line.status) }}</td>
-        <td>{{ line.asked_at.strftime("%Y-%m-%d") if line.asked_at else "not asked yet" }}</td>
+        <td>{{ line.asked_at | day if line.asked_at else "not asked yet" }}</td>
       </tr>
     {% endfor %}
     </tbody>
@@ -67,7 +67,7 @@
   {% if facts.repository %}
   <p><a href="{{ facts.repository }}" rel="noopener">{{ facts.repository }}</a>{% if card.language %} · {{ card.language }}{% endif %}</p>
   {% if facts.code_status == "found" %}
-  <p>{% if facts.made_at %}Made {{ facts.made_at.strftime("%Y-%m-%d") }}{% endif %}{% if facts.last_push_at %}, last change {{ facts.last_push_at.strftime("%Y-%m-%d") }}{% endif %}.</p>
+  <p>{% if facts.made_at %}Made {{ facts.made_at | day }}{% endif %}{% if facts.last_push_at %}, last change {{ facts.last_push_at | day }}{% endif %}.</p>
   {% elif facts.code_status in CODE_WORDS %}
   <p>{{ CODE_WORDS[facts.code_status] | capitalize }}.</p>
   {% endif %}
@@ -77,14 +77,14 @@
 
   {% if facts.life %}
   <h3>Life</h3>
-  <p>{{ facts.life.status | capitalize }}: {{ facts.life.why }}{% if facts.life.last_sign %}. Last sign: {{ facts.life.last_sign.strftime("%Y-%m-%d") }}{% endif %}.</p>
+  <p>{{ facts.life.status | capitalize }}: {{ facts.life.why }}{% if facts.life.last_sign %}. Last sign: {{ facts.life.last_sign | day }}{% endif %}.</p>
   {% endif %}
 </section>
 
 <section class="source model-source">
   <h2>Written by a model <span class="who">checked against the page</span></h2>
   {% if card.card %}
-  <p class="where">Gemini ({{ card.card.model }}), instructions {{ card.card.instructions_version }}, written on {{ card.card.made_at.strftime("%d %B %Y") }}. Every quote below was found in the page by a program.</p>
+  <p class="where">Gemini ({{ card.card.model }}), instructions {{ card.card.instructions_version }}, written on {{ card.card.made_at | day }}. Every quote below was found in the page by a program.</p>
   {% for field in card.card.fields %}
   <div class="field">
     <h3>{{ field.title }} {{ marks.label(field) }}</h3>

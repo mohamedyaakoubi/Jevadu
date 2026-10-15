@@ -12,7 +12,7 @@
 {% endmacro %}
 {% block main %}
 <h1>Is my idea new on Hedera?</h1>
-<form class="ask" method="get" action="/">
+<form class="ask" method="get" action="/#results">
   <label for="idea">Describe your idea in one or two sentences, as you would tell a friend.</label>
   <textarea id="idea" name="idea" rows="3" maxlength="1000" required placeholder="An app that lets a street vendor take payments without a bank account">{{ idea }}</textarea>
   {% if offer %}
@@ -32,6 +32,7 @@
   <button type="submit">Search past projects</button>
 </form>
 
+<div id="results">
 {% if problem %}
 <p class="problem" role="alert">{{ problem }}</p>
 {% endif %}
@@ -67,7 +68,7 @@
     <p class="marks">{{ marks.proof(card.proof_status) }} {{ marks.life(card.life) }}
       {% if card.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
     </p>
-    <div class="compare waiting" data-project="{{ card.hit.project_id }}">Comparing with your idea&hellip;</div>
+    <div class="compare waiting" data-project="{{ card.hit.project_id }}">Comparing with your idea&hellip; This can take up to a minute.</div>
   </li>
 {% endfor %}
 </ol>
@@ -82,4 +83,5 @@
   </dl>
 </section>
 {% endif %}
+</div>
 {% endblock %}

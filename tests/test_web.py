@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, date, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -251,6 +252,33 @@ def test_a_filter_value_that_no_project_has_is_left_out_and_said(site) -> None: 
     assert page.text.count('class="result"') >= 1  # searched without that filter
 
 
+# ------------------------------------------------- the findings of review layer 1 (design 12.3)
+
+
+def test_a_date_is_written_as_the_pages_write_it() -> None:
+    from hackathon_memory.web.app import day
+
+    assert day(date(2025, 7, 6)) == "6 July 2025"
+    assert day(datetime(2026, 10, 10, 19, 0, tzinfo=UTC)) == "10 October 2026"
+
+
+def test_an_idea_with_no_known_word_says_that_only_the_meaning_was_compared(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/", params={"idea": "zzqx wvvq qqzx"})
+    assert "No word of your idea was found in the projects searched" in page.text
+    words = client.get("/", params={"idea": "help a street vendor get paid with a coin"})
+    assert "No word of your idea was found" not in words.text
+
+
+def test_every_page_has_a_tab_icon_and_the_wait_is_announced(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/", params={"idea": "a coin for a vendor"})
+    assert '<link rel="icon" href="/static/icon.svg"' in page.text
+    assert client.get("/static/icon.svg").status_code == 200
+    assert "This can take up to a minute." in page.text
+    assert 'action="/#results"' in page.text and 'id="results"' in page.text
+
+
 # ------------------------------------------------- the page's one script, in a real browser
 
 
@@ -311,3 +339,25 @@ def test_the_script_says_when_the_comparison_failed(site, chromium) -> None:  # 
     assert len(texts) == 3 and all("could not be written just now" in text for text in texts)
     assert page.locator("li.result h3 a").count() == 3  # the results stay
     page.close()
+
+
+@pytest.mark.browser
+def test_a_search_on_a_phone_jumps_to_its_results(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    phone = chromium.new_context(viewport={"width": 390, "height": 844}, is_mobile=True)
+    page = phone.new_page()
+
+    def answer(route) -> None:  # noqa: ANN001
+        parts = urlsplit(route.request.url)
+        got = client.get(parts.path + (f"?{parts.query}" if parts.query else ""))
+        route.fulfill(status=got.status_code, body=got.content,
+                      headers={"content-type": got.headers["content-type"]})  # fmt: skip
+
+    page.route(lambda url: url.startswith("http://site.test/"), answer)
+    page.goto("http://site.test/")
+    page.locator("#idea").fill("help a street vendor get paid with a coin")
+    page.get_by_role("button", name="Search past projects").click()
+    page.wait_for_load_state("load")
+    assert page.url.endswith("#results")
+    assert page.evaluate("window.scrollY") > 0  # the results, not the box, are on the screen
+    phone.close()

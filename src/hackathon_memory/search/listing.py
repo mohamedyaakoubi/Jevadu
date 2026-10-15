@@ -33,7 +33,7 @@ STATUS_WORDS = {
     "another_kind": "found, but as another kind of thing",
     "cannot_be_checked": "cannot be checked",
     "not_found": "not found",
-    "no_id_given": "no Hedera id given on the page or in the README",
+    "no_id_given": "no Hedera ID given",
     None: "not checked yet",
 }
 

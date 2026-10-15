@@ -8,6 +8,7 @@ runs on the words of the idea and says so.
 from __future__ import annotations
 
 import time
+from datetime import date
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
@@ -40,11 +41,20 @@ FACTS_SECONDS = 60  # the facts of the filters are read again after a minute
 SEARCH_PARAMS = ("idea", "event", "year", "category", "proof", "life")
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
                 "proof": "the Hedera proof", "life": "the life"}  # fmt: skip
+NO_WORD_FOUND = (
+    "No word of your idea was found in the projects searched, so these are only the closest "
+    "in meaning. Check the spelling, or describe the idea in other words."
+)
 NO_SUCH_PROJECT = "There is no project with this number. Go back to the search."
 DATABASE_DOWN = (
     "The database is not running, so nothing can be searched. Start Docker Desktop, then run "
     '"docker compose up -d --wait db" in the folder of the project, and load this page again.'
 )
+
+
+def day(value: date) -> str:
+    """A date as the pages write it: 6 July 2025."""
+    return f"{value.day} {value:%B %Y}"
 
 
 def search_query(values: dict[str, str]) -> str:
@@ -137,6 +147,8 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
                     "Google could not be asked about the meaning of the idea just now, so "
                     "only its words were searched. Try again later for the full search."
                 )
+            if hits and all(hit.words_rank is None for hit in hits):
+                notes.append(NO_WORD_FOUND)
             found = listing.cards(conninfo, hits)
             summaries = data.summaries(
                 conninfo,
@@ -197,6 +209,7 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
             return page(request, "_compare.html", 503, found={}, failed=True)
         return page(request, "_compare.html", found=found, failed=False)
 
+    templates.env.filters["day"] = day
     templates.env.globals |= {
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,
