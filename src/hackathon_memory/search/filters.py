@@ -1,0 +1,143 @@
+"""The filters of the search (design 8.2): event, year, category, Hedera proof and life.
+
+Each project gets its five facts from the tables: its event, the year of that event, the
+category of its card when the model wrote one, the result of the proof rule, and its life by the
+rule of design 7.4. A filter keeps the projects whose fact matches it, and the search then ranks
+only those (search/engine.py). With no filter set, every project is searched.
+
+The choices that the page offers are the values that the projects really have, each with its
+number of projects. A value that a request names but no project has is left out, and the page
+says so.
+"""
+
+from __future__ import annotations
+
+from collections import Counter
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, fields
+from datetime import UTC, datetime
+
+import psycopg
+
+from hackathon_memory.check.life import ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN, life_of
+from hackathon_memory.read.quotes import KEPT
+from hackathon_memory.search import listing
+
+NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
+LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
+PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
+PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
+               NOT_CHECKED: listing.STATUS_WORDS[None]}  # fmt: skip
+
+
+@dataclass(frozen=True)
+class Filters:
+    """The values chosen on the page; an empty text is "all"."""
+
+    event: str = ""  # the number of an event
+    year: str = ""
+    category: str = ""
+    proof: str = ""
+    life: str = ""
+
+    def chosen(self) -> dict[str, str]:
+        return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name)}
+
+
+@dataclass(frozen=True)
+class Facts:
+    """The five facts of one project that the filters look at."""
+
+    project_id: int
+    event: str
+    event_name: str
+    year: str
+    category: str
+    proof: str
+    life: str
+
+
+@dataclass(frozen=True)
+class Choice:
+    value: str
+    words: str
+    count: int
+
+
+@dataclass(frozen=True)
+class Choices:
+    """What each filter offers, and how many projects have a category at all."""
+
+    event: list[Choice]
+    year: list[Choice]
+    category: list[Choice]
+    proof: list[Choice]
+    life: list[Choice]
+    projects: int
+    with_category: int
+
+    def knows(self, name: str, value: str) -> bool:
+        return any(choice.value == value for choice in getattr(self, name))
+
+
+def facts(conninfo: str, *, model: str, version: str, now: datetime | None = None) -> list[Facts]:
+    """The five facts of every project. The category is the one kept on the project's card of
+    this model and these instructions; a project without such a card has none."""
+    now = now or datetime.now(UTC)
+    with psycopg.connect(conninfo) as conn:
+        rows = conn.execute(
+            "SELECT p.id, e.id, e.name, "
+            "coalesce(extract(year FROM e.ends_on), extract(year FROM e.starts_at))::int, "
+            "p.proof_status, c.fields -> 'category' "
+            "FROM projects p JOIN events e ON e.id = p.event_id "
+            "LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
+            "AND c.instructions_version = %s ORDER BY p.id",
+            (model, version),
+        ).fetchall()
+        signs = listing.signs_of_life(conn, [row[0] for row in rows])
+    found = []
+    for project_id, event_id, event_name, year, proof, category in rows:
+        end, _, _, last_push, last_activity = signs[project_id]
+        life = life_of(event_end=end, last_push=last_push, last_ledger_activity=last_activity,
+                       now=now)  # fmt: skip
+        kept = category and category.get("state") == KEPT and category.get("value")
+        found.append(Facts(project_id, str(event_id), event_name, str(year) if year else "",
+                           kept or "", proof or NOT_CHECKED, life.status))  # fmt: skip
+    return found
+
+
+def allowed(rows: Sequence[Facts], chosen: Filters) -> list[int] | None:
+    """The projects that match every chosen filter, or None when no filter is chosen."""
+    wanted = chosen.chosen()
+    if not wanted:
+        return None
+    return [row.project_id for row in rows if all(getattr(row, k) == v for k, v in wanted.items())]
+
+
+def _counted(values: Iterable[str], order: Sequence[str] | None = None) -> list[tuple[str, int]]:
+    counts = Counter(value for value in values if value)
+    if order is None:
+        return sorted(counts.items())
+    return [(value, counts[value]) for value in order if counts[value]]
+
+
+def choices(rows: Sequence[Facts]) -> Choices:
+    """The values of each filter that the projects really have, with their numbers."""
+    events: dict[str, tuple[str, str]] = {}
+    for row in rows:
+        events.setdefault(row.event, (row.event_name, row.year))
+    by_event = Counter(row.event for row in rows)
+    # The newest events first; the events with no known date after them, by name.
+    order = sorted(events, key=lambda e: (-(int(events[e][1]) if events[e][1] else 0),
+                                          events[e][0]))  # fmt: skip
+    return Choices(
+        event=[Choice(e, events[e][0], by_event[e]) for e in order],
+        year=[Choice(v, v, n) for v, n in reversed(_counted(row.year for row in rows))],
+        category=[Choice(v, v, n) for v, n in _counted(row.category for row in rows)],
+        proof=[
+            Choice(v, PROOF_WORDS[v], n) for v, n in _counted((r.proof for r in rows), PROOF_ORDER)
+        ],
+        life=[Choice(v, v, n) for v, n in _counted((row.life for row in rows), LIFE_ORDER)],
+        projects=len(rows),
+        with_category=sum(bool(row.category) for row in rows),
+    )

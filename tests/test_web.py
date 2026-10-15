@@ -141,6 +141,9 @@ def test_without_the_database_the_page_says_how_to_start_it() -> None:
     client = TestClient(create_app(settings, google=object()))
     page = client.get("/", params={"idea": "anything"})
     assert page.status_code == 503 and "docker compose up -d --wait db" in page.text
+    start = client.get("/")  # the start page still opens, without the filters, and says why
+    assert start.status_code == 200 and "docker compose up -d --wait db" in start.text
+    assert '<select name="event">' not in start.text
 
 
 def test_the_text_of_a_page_is_shown_as_text_never_as_code(site) -> None:  # noqa: ANN001
@@ -197,6 +200,55 @@ def test_a_comparison_that_fails_says_so(site) -> None:  # noqa: ANN001
     fake.fail_with = (503, "unavailable")
     part = client.get("/compare", params={"idea": "a coin", "ids": str(ids["Pebble Pay"])})
     assert part.status_code == 503 and "could not be written just now" in part.text
+
+
+# ----------------------------------------------------------------- the filters (design 8.2)
+
+PAYMENTS = "Payments and remittance"
+
+
+def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/")
+    assert '<select name="event">' in page.text and '<select name="life">' in page.text
+    assert "ETHGlobal Sample Event (3)" in page.text
+    assert f"{PAYMENTS} (1)" in page.text  # the one card of the fixture
+    assert "Only 1 of the 3 projects have a category" in page.text
+
+
+def test_a_filtered_search_shows_only_the_matching_projects(site) -> None:  # noqa: ANN001
+    client, _, ids, _ = site
+    page = client.get("/", params={"idea": "help a street vendor get paid with a coin",
+                                   "category": PAYMENTS})  # fmt: skip
+    assert page.text.count('class="result"') == 1
+    assert f'href="/project/{ids["Pebble Pay"]}?idea=' in page.text
+    assert "category=Payments+and+remittance" in page.text  # the link keeps the filter
+    assert "Only the projects that match the filters were searched." in page.text
+    card = client.get(f"/project/{ids['Pebble Pay']}", params={"idea": "a coin",
+                                                               "category": PAYMENTS})  # fmt: skip
+    assert 'href="/?idea=a+coin&amp;category=Payments+and+remittance"' in card.text
+
+
+def test_filters_that_leave_no_project_say_so_and_ask_nothing(site) -> None:  # noqa: ANN001
+    client, fake, ids, database = site
+    with psycopg.connect(database) as conn:
+        other = conn.execute(
+            "INSERT INTO events (site, slug, name, ends_on) "
+            "VALUES ('ethglobal.com', 'other', 'Other Event', '2025-05-05') RETURNING id"
+        ).fetchone()[0]
+        conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (other, ids["Fern Vote"]))
+    before = len(fake.requests)
+    page = client.get("/", params={"idea": "a coin", "event": str(other), "category": PAYMENTS})
+    assert "No project matches these filters." in page.text
+    assert 'class="result"' not in page.text
+    assert len(fake.requests) == before  # the idea was not even embedded
+
+
+def test_a_filter_value_that_no_project_has_is_left_out_and_said(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/", params={"idea": "a coin", "proof": "proof_found"})
+    assert "No project has the value given for the Hedera proof" in page.text
+    assert page.text.count('class="result"') >= 1  # searched without that filter
 
 
 # ------------------------------------------------- the page's one script, in a real browser

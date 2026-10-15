@@ -2,7 +2,7 @@
 {% import "_marks.html" as marks %}
 {% block title %}{{ card.facts.name if card else "No such project" }}: Hackathon Memory{% endblock %}
 {% block main %}
-<p class="back"><a href="/{% if idea %}?idea={{ idea | urlencode }}{% endif %}">&larr; Back to the search</a></p>
+<p class="back"><a href="/{% if back_query %}?{{ back_query }}{% endif %}">&larr; Back to the search</a></p>
 
 {% if problem %}
 <p class="problem" role="alert">{{ problem }}</p>

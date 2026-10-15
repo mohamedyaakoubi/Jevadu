@@ -296,3 +296,39 @@ def test_with_no_end_of_the_event_no_sign_can_be_judged(database: str) -> None:
     )
     end_the_event(database, "2026-03-08")
     assert life_line(database, pebble).startswith("   life: active (")
+
+
+# --------------------------------------------------------------------- the filters (design 8.2)
+
+
+def test_the_filters_limit_both_lists_to_their_projects(database: str) -> None:
+    client, _, _ = google()
+    embed_all(database, client)
+    ids = ids_of(database)
+    cedar = ids["Cedar Post"]
+    hits = engine.search(database, client, "a vendor and a parcel", model=SEARCH_MODEL,
+                         only=[cedar])  # fmt: skip
+    assert [hit.project_id for hit in hits] == [cedar]
+    assert engine.by_words(database, "a parcel tracker", only=[ids["Pebble Pay"]]) == []
+
+
+def test_no_project_left_by_the_filters_finds_nothing_and_costs_nothing(database: str) -> None:
+    client, fake, _ = google()
+    embed_all(database, client)
+    before = len(fake.requests)
+    assert engine.search(database, client, "a vendor", model=SEARCH_MODEL, only=[]) == []
+    assert len(fake.requests) == before  # the idea was not embedded
+
+
+def test_a_filter_keeps_the_order_of_the_projects_it_keeps(database: str) -> None:
+    # How rare a word is, is counted over every project, also when a filter keeps only a few.
+    echo = project_page(name="Echo Echo", slug="echo-echo", short_line="Invented, invented.",
+                        description="<p>" + "Invented parcel words. " * 30 + "</p>")  # fmt: skip
+    page = "https://ethglobal.com/showcase/echo-echo-x1y2z"
+    ProjectStore(database).save(read_project_page(echo, page), "b" * 64)
+    ids = ids_of(database)
+    kept = {ids["Echo Echo"], ids["Fern Vote"]}
+    everything = engine.by_words(database, "invented parcel")
+    assert engine.by_words(database, "invented parcel", only=sorted(kept)) == [
+        project for project in everything if project in kept
+    ]

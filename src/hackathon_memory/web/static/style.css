@@ -76,6 +76,15 @@ details summary { cursor: pointer; color: var(--accent); }
   body { font-size: 16px; }
   h1 { font-size: 24px; }
 }
+.filters { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; background: var(--panel); }
+.filters summary { font-weight: 600; }
+.filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px 12px; margin: 8px 0; }
+.filter { display: grid; gap: 2px; font-size: 15px; font-weight: 600; }
+select {
+  width: 100%; font: inherit; font-weight: 400; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px;
+}
+select:focus-visible, summary:focus-visible { outline: 3px solid var(--warn); }
 .compare { margin: 6px 0 0; padding: 6px 10px; border-left: 3px solid var(--line); font-size: 15px; }
 .compare p { margin: 2px 0; }
 .compare.waiting { color: var(--soft); font-style: italic; }

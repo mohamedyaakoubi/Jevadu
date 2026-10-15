@@ -7,6 +7,7 @@ of a typed idea is kept by the fingerprint of the idea for one day, and the idea
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -101,15 +102,25 @@ class EmbeddingStore:
             )
 
     def nearest(
-        self, values: list[float], model: str, *, limit: int, kind: str = PAGE
+        self,
+        values: list[float],
+        model: str,
+        *,
+        limit: int,
+        kind: str = PAGE,
+        only: Sequence[int] | None = None,
     ) -> list[tuple[int, float]]:
-        """The projects closest in meaning, with their cosine distance, closest first. An exact
-        search: every row is compared (design 11.6)."""
+        """The projects closest in meaning, with their cosine distance, closest first, from the
+        projects of `only` when it is given. An exact search: every row is compared (design
+        11.6)."""
+        ids = None if only is None else list(only)
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT project_id, embedding <=> %s AS distance FROM project_embeddings "
-                "WHERE model = %s AND text_kind = %s ORDER BY distance, project_id LIMIT %s",
-                (Vector(values), model, kind, limit),
+                "WHERE model = %s AND text_kind = %s "
+                "AND (%s::bigint[] IS NULL OR project_id = ANY(%s)) "
+                "ORDER BY distance, project_id LIMIT %s",
+                (Vector(values), model, kind, ids, ids, limit),
             ).fetchall()
         return [(project_id, float(distance)) for project_id, distance in rows]
 

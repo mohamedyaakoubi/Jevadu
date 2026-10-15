@@ -80,9 +80,9 @@ The two tests of quality, with their short reports:
 - **Test 1, the fields of the model** (design 13.2): 60 pages, each card graded field by field against its page. In the second run, with the list of 17 categories, no field was graded wrong, 98.5% were fully right, 99.5% of the labels were right, and all four pass marks were met. See `evals/test1/report-gemini-3.1-pro.md`.
 - **Test 2, the search** (design 13.3): of the known similar projects, 34 of 57 (59.7%) were in the first 10 results, under the pass mark of 80%. Most misses are tools for AI agents, a theme with many projects close to each other. See `evals/test2/report-2026-10.md`.
 
-The website, on one laptop: `python -m hackathon_memory.web` serves the search (S1) and the project card (S2) at http://127.0.0.1:8000, for this computer only (design 12.1). For the first results it also shows what each project shares with the idea and how it differs, written by a fast model that names the texts it used (design 8.3). It is not online, and its screens have not passed their two reviews yet.
+The website, on one laptop: `python -m hackathon_memory.web` serves the search (S1) and the project card (S2) at http://127.0.0.1:8000, for this computer only (design 12.1). The search can be limited by event, year, category, Hedera proof and life (design 8.2). For the first results it also shows what each project shares with the idea and how it differs, written by a fast model that names the texts it used (design 8.3). It is not online, and its screens have not passed their two reviews yet.
 
-What does not exist yet: the register on Hedera, the overview of an event, filters on the search, the cards of all pages, and the other facts of the code (the number of changes, the contributors, a Hedera library in the package files).
+What does not exist yet: the register on Hedera, the overview of an event, the cards of all pages (so most projects have no category yet), and the other facts of the code (the number of changes, the contributors, a Hedera library in the package files).
 
 ## Run it
 
