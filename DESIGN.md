@@ -520,9 +520,17 @@ The user can filter by event, year, category, proof status and life status.
 | The 30 first of both lists, put in order by the model | 41 of 57 | 2.6 s | about 0.2 cent |
 | The model picks from the short line of every project | 41 of 57 | 2.4 s | about 1.6 cents |
 
-The order by the model was better than the old default in 10 cases and worse in 3, so it is the default since 16 October 2026. The first four ways are choices on the search page, each with its numbers read from the result file. The model reads one line for each project and answers numbers only; it does not score or judge a project. Its service was sometimes much slower than usual (95 of 100 searches under 72 seconds, against 2 in the middle), so its call is made once and given up after 8 seconds; then the page keeps the order by meaning and says so. Picking from every project is not offered: it found no more and costs about seven times as much.
+The order by the model was better than the old default in 10 cases and worse in 3, so it is the default since 16 October 2026. Meaning, words and the order by the model are offered on the search page (below), each with its numbers read from the result file. The model reads one line for each project and answers numbers only; it does not score or judge a project. Its service was sometimes much slower than usual (95 of 100 searches under 72 seconds, against 2 in the middle), so its call is made once and given up after 8 seconds; then the page keeps the order by meaning and says so. Picking from every project is not offered: it found no more and costs about seven times as much.
 
 **Typing errors.** The same cases ran with two typing errors in each idea (`evals/results/20261016T030409Z-search-modes-typos.json`). Every way moved by at most 3 of 57, and the search by meaning found as many as without errors, because the embedding reads through them. So no layer that corrects spelling is added.
+
+**Quick results, and the model only when asked (16 October 2026, later).** A person must always know when the model works. So:
+
+- While the idea is typed, the page shows quick results after a pause of half a second, by meaning, or by words when the person chooses words. By meaning they use only the embedding model, which turns the text into numbers and writes nothing (about 0.0005 cent a search in the cost ledger). The page calls them quick results.
+- One button says what the search model will do: read the 30 projects closest in meaning, put the ten most similar first, and write for each of them what is the same and what differs, in about 3 to 10 seconds, for about 0.6 cent. Only this button calls the search model. The measure above is the reason it exists: 42 of 57 known projects in the first ten, against 36 by meaning only.
+- The order of the model and its comparisons are kept for one day under the fingerprint of the idea, the filters and the model. A reload, the back button, or the same search again shows them without a new call.
+- A filter works on the quick results at once, with no model. The model's order for the new filters is asked only with the button again, and kept for one day for those filters.
+- Ten projects a page, with numbered pages; a search shows its 50 closest projects. The way "meaning and words" stays in the measure, and the page offers meaning, words and the order by the model.
 
 **What a result shows.** Its short line, with the words of the idea marked by PostgreSQL's ts_headline after the text is escaped, and in the way by words also the part of the page where the words stand.
 
@@ -745,20 +753,30 @@ No page is built before its row here is agreed. For each screen: who uses it, wh
 
 | # | Screen | Who | What they decide | What must be on the screen |
 |---|---|---|---|---|
-| S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. The closest projects, each with its one-sentence description, event, proof status and life status. What is the same and what differs. Filters. |
-| S2 | Project card | Everybody | What is this project really? | The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan. The date of each check. |
-| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box for a project link or a repository link. Progress while the check runs. Then the proof status with the facts behind it, the closest past projects, and "seen before". |
-| S4 | Register | Builder | Do I want my submission on the public register? | What will be written, in plain words, before the button. Existing registrations with the same fingerprint. After the button: the receipt with number, time and link. |
-| S5 | Event overview | Organiser | What did this event produce? | Counts by category, by proof status and by life status. |
-| S6 | Method and limits | Everybody | How far can I trust this tool? | The test results with their ranges, what the tool cannot do, and what exists elsewhere. |
+| S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. Quick results by meaning while the idea is typed, said to be quick. A button that says what the model will do, in how long and for how much, and then orders the closest and compares them. The closest projects as a grid of ten cards, each with its one-sentence description, event, proof status and life status, and after the button what is the same and what differs. Filters in one row under the box. Numbered pages. |
+| S2 | Project card | Everybody | What is this project really? | Opens over the results, on most of the screen, with the results still seen behind it; on a phone, on the whole screen. The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan. The date of each check. The previous and the next card of the list. |
+| S3 | Check a submission | Judge | Can I trust this submission's claims? | The same box, switched to "A submission": a repository link, or the link of a project in the collection, and its event. Progress while the check runs. Then the proof status with the facts behind it, the life of the code, "seen before", and the closest past projects. |
+| S4 | Register | Builder | Do I want my submission on the public register? | Reached from the result of S3. What will be written, in plain words, before the button. Existing registrations with the same fingerprint. After the button: the receipt with number, time and link. |
+| S5 | Event overview | Organiser | What did this event produce? | A view of the search page beside the grid of projects, with the same event and year filters: counts by theme, by Hedera service, by proof status and by life status, for the winners and for the others, and the projects that came back. A share only with 20 projects or more behind it. The date of the counts. |
+| S6 | Method and limits | Everybody | How far can I trust this tool? | A window opened from the bottom of every page: the steps of the search, the test results with their ranges, what the tool cannot do, and what exists elsewhere. |
 
 Every screen also needs three more states: while loading, when there is nothing to show, and when something failed. Each one says in plain words what happened and what to do.
 
-**S1 and S2 on one page (16 October 2026).** After the maintainer's own test of the first version, the card of a project opens beside the list of results, or over it on a phone with a way back, and the address keeps the search and the open card. With no idea, the page lists every project, newest events first, and the filters narrow it. S6 has a first version, "How it works": the steps of the search, the ways to search with their numbers, the tests, the marks and the limits.
+**The third version of the page (16 October 2026).** After a second test of the website:
+
+- **One page.** Every screen opens on the search page. The card of a project, "How it works", the common questions and the list of sources open as windows over it, and opening them never loses the search.
+- **No bar of links at the top.** The bottom of the page holds the name of the tool, "How it works", the common questions, the sources, and where the data comes from.
+- **Each term and mark explains itself.** A small (i) stands next to it. On a computer, its text opens when the pointer rests on it or when it gets the keyboard focus; on a phone, with a tap. It closes with Escape, with a tap outside it, or when the pointer leaves both the (i) and its text, so it can be read with the pointer on it (WCAG 2.2, criterion 1.4.13).
+- **References, as in an encyclopedia.** A term that a newcomer may not know (Hedera, a Hedera ID, a topic, a token, a smart contract, the mirror node, HashScan, the test network, an embedding) carries a number that opens an outside source, Hedera's own documentation first. The window of sources lists them all.
+- **A short first screen.** The first visit of a browser opens with the name of the tool for about one second. Any key or tap skips it, and it is left out when the system asks for less motion.
+- **Shapes while loading.** While a list or a card loads, its shape is drawn in grey.
+- **A search is kept until the person clears it.** The address holds it, so a reload or the back button shows it again. The order and the comparisons of the model are kept for one day (section 8.2), so they are not asked for again. The browser keeps the last search, so a later visit finds it, until the person clears the box.
+
+What the look avoids, after the same test: the common look of generated websites, such as harsh gradients, stock icon sets, a pure white background, a shadow on every element, three feature cards in a row, emoji, glass effects, the fonts Inter, Geist and Space Grotesk, a coloured stripe on the side of a box, large soft corners, purple with black, neon or pastel colours, and an animation on every hover.
 
 ### 12.2 Marks and their legend
 
-The statuses and the labels are shown as small marks. Each mark has one meaning, defined once, and a legend on every screen that uses it. A mark is never only a colour: it always has words.
+The statuses and the labels are shown as small marks. Each mark has one meaning, defined once, and a small (i) next to it that explains it, wherever it is shown. A mark is never only a colour: it always has words.
 
 ### 12.3 Two review layers
 
