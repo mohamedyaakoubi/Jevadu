@@ -1,5 +1,5 @@
-"""The website: the search (S1), the card of a project over it (S2), the overview (S5) and the
-method (S6), on one page (design 12.1, third version).
+"""The website: the search (S1), the card of a project over it (S2), the charts of a list (S5)
+and the method (S6), on one page (design 12.1, fourth version, on Tabler).
 
 While an idea is typed, the page shows quick results, by meaning or by words, with no model that
 writes. Only the button "Order and compare with Gemini" calls the search model: it orders the 30
@@ -36,10 +36,11 @@ from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import compare as comparing
+from hackathon_memory.search import counts as counting
 from hackathon_memory.search import engine, listing, rerank, seen
 from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
-from hackathon_memory.web import data, evidence, overview, references
+from hackathon_memory.web import charts, data, evidence, references
 
 HERE = Path(__file__).parent
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
@@ -66,6 +67,7 @@ MEANING, WORDS = engine.MEANING, engine.WORDS
 MODES = (MEANING, WORDS)
 FILTERS = ("event", "year", "category", "proof", "life")
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
+CHARTS = "charts"
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
                 "proof": "the Hedera proof", "life": "the life"}  # fmt: skip
 EXAMPLES = ("limits on what an AI agent may spend", "tracking coffee from the farm to the cup",
@@ -98,6 +100,7 @@ NO_PAGE_EMBEDDINGS = (
     "The projects have no embeddings yet, so only the words of the idea were searched."
 )
 UNKNOWN_SHEET = "There is no such page. Close this window."
+IDEA_CUT = f"The idea was longer than {LONGEST_IDEA:,} characters, so it was cut."
 SHEETS = {"how": ("How it works", "_about_how.html"),
           "questions": ("Common questions", "_about_questions.html"),
           "sources": ("Sources and references", "_about_sources.html")}  # fmt: skip
@@ -124,7 +127,7 @@ def search_query(values: dict[str, str], *, drop: tuple[str, ...] = ()) -> str:
         del kept["mode"]
     if kept.get("ai") != "1":
         kept.pop("ai", None)
-    if kept.get("view") != "overview":
+    if kept.get("view") != CHARTS:
         kept.pop("view", None)
     return urlencode(kept)
 
@@ -192,22 +195,23 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
     def render(request: Request, name: str, status: int = 200, **values: Any) -> HTMLResponse:
         return templates.TemplateResponse(request, name, values, status_code=status)
 
-    def overview_of(conninfo: str, chosen: filtering.Filters) -> tuple[Any, list]:
-        """The overview of the events that the event and year filters choose (S5), and the
-        groups of projects that came back, by name. None when no count was made yet."""
-        found = overview.newest()
-        if not found:
-            return None, []
-        known = data.events(conninfo)
-        names = {(site, slug): name for site, slug, name in known.values()}
-        chosen_events = None
-        if chosen.event or chosen.year:
-            facts = project_facts(conninfo)
-            keep = set(filtering.allowed(facts, filtering.Filters(chosen.event, chosen.year)) or [])
-            events = {row.event for row in facts if row.project_id in keep}
-            chosen_events = {known[event][:2] for event in events if event in known}
-        groups = data.members(conninfo, seen.came_back(conninfo)[:20])
-        return overview.build(found, chosen_events, names), groups
+    def facts_of(conninfo: str, ids: list[int] | None) -> list[filtering.Facts]:
+        """The facts of the projects of `ids`, in the order of the tables, or of every project."""
+        rows = project_facts(conninfo)
+        if ids is None:
+            return rows
+        wanted = set(ids)
+        return [row for row in rows if row.project_id in wanted]
+
+    def charts_of(conninfo: str, ids: list[int] | None) -> tuple[charts.Charts, list]:
+        """The charts of the projects of `ids` (every project when None), and those of them that
+        are linked across events, by name (design 12.1, S5)."""
+        built = charts.build(counting.tally(facts_of(conninfo, ids)), data.event_pages(conninfo))
+        groups = seen.came_back(conninfo)
+        if ids is not None:
+            wanted = set(ids)
+            groups = [group for group in groups if wanted.intersection(group)]
+        return built, data.members(conninfo, groups[:20])
 
     def results_of(conninfo: str, ids: list[int], idea: str, words: bool) -> list[tuple]:
         """The card facts, the sentence, the marked sentence and the words found, of each id."""
@@ -219,6 +223,57 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
         snippets = data.matched_words(conninfo, ids, idea) if idea and words else {}
         return [(card, summaries.get(card.hit.project_id), marked.get(card.hit.project_id),
                  snippets.get(card.hit.project_id)) for card in found]  # fmt: skip
+
+    def ranking_of(
+        conninfo: str,
+        idea: str,
+        mode: str,
+        only: list[int] | None,
+        with_ai: bool,
+        chosen: filtering.Filters,
+        notes: list[str],
+    ) -> tuple[list[int], str | None]:
+        """The projects closest to the idea, closest first, at most SHOWN, and where Gemini's
+        order came from when it was asked for. When Google cannot be reached, the words."""
+        try:
+            if only == []:
+                return [], None
+            if mode == WORDS:
+                return engine.by_words(conninfo, idea, limit=SHOWN, only=only), None
+            if not EmbeddingStore(conninfo).counts(settings.gemini_embedding_model)["embeddings"]:
+                notes.append(NO_PAGE_EMBEDDINGS)
+                return engine.by_words(conninfo, idea, limit=SHOWN, only=only), None
+            ranking = engine.by_meaning(
+                EmbeddingStore(conninfo), client("google", "embed_query"), idea,
+                model=settings.gemini_embedding_model, limit=SHOWN, only=only,
+            )  # fmt: skip
+            if not (with_ai and ranking):
+                return ranking, None
+            order, how = rerank.order_pool(
+                conninfo, client("rerank", "rerank"), idea, ranking[: rerank.POOL],
+                model=settings.gemini_search_model, level=settings.gemini_search_thinking_level,
+                scope=scope_of(chosen.chosen(), FILTERS), timeout_seconds=RERANK_SECONDS,
+            )  # fmt: skip
+            if how == rerank.LATE:
+                notes.append(AI_LATE)
+            return order + ranking[rerank.POOL :], how
+        except (*FAILED_CALLS, BudgetExceeded):
+            notes.append(GOOGLE_AWAY)
+            return engine.by_words(conninfo, idea, limit=SHOWN, only=only), None
+
+    def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
+                     only: list[int] | None, every: filtering.Choices,
+                     chosen: filtering.Filters) -> filtering.Choices:  # fmt: skip
+        """What the filters offer for a search: the counts of its closest projects without the
+        filters, so that each value says how many of them it would keep. The embedding of the
+        idea is kept for a day, so this costs nothing more. A chosen value stays offered."""
+        if only == []:  # no project matches the filters: nothing is searched, Google is not asked
+            return every
+        if only is None:
+            ids = ranking
+        else:
+            ids, _ = ranking_of(conninfo, idea, mode, None, False, filtering.Filters(), [])
+        return filtering.keep_chosen(filtering.choices(facts_of(conninfo, ids)), every, chosen)
 
     @app.get("/", response_class=HTMLResponse)
     def search(
@@ -242,7 +297,7 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
             mode, ai = MEANING, "1"
         mode = mode if mode in MODES else MEANING
         with_ai = ai == "1" and mode == MEANING and bool(idea)
-        view = "overview" if view == "overview" and not idea else ""
+        view = CHARTS if view in (CHARTS, "overview") else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
         asked = filtering.Filters(event, year, category, proof, life)
@@ -252,13 +307,13 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
                 "panel_card": None, "search_query": ""}  # fmt: skip
         try:
             conninfo = database()
-            offer = filtering.choices(project_facts(conninfo))
+            every = filtering.choices(project_facts(conninfo))
         except (SettingsError, psycopg.OperationalError):
             if not idea:  # the start page needs no database; the list waits for it
                 return render(request, "search.html", asked=False, **down)
             return render(request, "search.html", 503, asked=True, **down)
         notes = []
-        unknown = [name for name, value in asked.chosen().items() if not offer.knows(name, value)]
+        unknown = [name for name, value in asked.chosen().items() if not every.knows(name, value)]
         if unknown:
             notes.append("No project has the value given for "
                          + " or ".join(FILTER_WORDS[name] for name in unknown)
@@ -266,84 +321,60 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
         chosen = filtering.Filters(**{k: v for k, v in asked.chosen().items() if k not in unknown})
         values = {"idea": idea, "mode": mode, "ai": "1" if with_ai else "", "view": view,
                   **chosen.chosen()}  # fmt: skip
-        query = search_query(values)
         only = filtering.allowed(project_facts(conninfo), chosen)
-        shown = {**base, "chosen": chosen, "offer": offer, "search_query": query,
+        shown = {**base, "chosen": chosen, "search_query": search_query(values),
                  "quick_query": search_query(values, drop=("ai",)),
+                 "ai_query": search_query({**values, "ai": "1", "mode": MEANING}),
                  "unfiltered_query": search_query(values, drop=FILTERS),
-                 "projects_query": search_query(values, drop=("view",)),
-                 "overview_query": search_query({**values, "view": "overview"})}  # fmt: skip
+                 "cards_query": search_query(values, drop=("view",)),
+                 "charts_query": search_query({**values, "view": CHARTS}),
+                 "check_events": every.event, "all_projects": every.projects,
+                 "with_category": every.with_category, "notes": notes}  # fmt: skip
         try:
             panel_card = card_of(conninfo, open_id) if open_id else None
             if not idea:
-                if view == "overview":
-                    built, groups = overview_of(conninfo, chosen)
-                    return render(request, "search.html", asked=False, results=[],
-                                  total=len(only) if only is not None else offer.projects,
-                                  overview=built, came_back=groups, panel_card=panel_card,
-                                  overview_ignores=bool(chosen.category or chosen.proof
-                                                        or chosen.life),
-                                  **{**shown, "notes": notes})  # fmt: skip
+                total = len(only) if only is not None else every.projects
+                if view == CHARTS:
+                    built, groups = charts_of(conninfo, only)
+                    return render(request, "search.html", asked=False, results=[], total=total,
+                                  charts=built, came_back=groups, offer=every,
+                                  panel_card=panel_card, **shown)  # fmt: skip
                 ids, total = data.browse(conninfo, only, offset=(page_number - 1) * PAGE_SIZE,
                                          limit=PAGE_SIZE)  # fmt: skip
                 results = results_of(conninfo, ids, "", False)
                 first = (page_number - 1) * PAGE_SIZE + 1
-                return render(request, "search.html", asked=False, results=results,
+                return render(request, "search.html", asked=False, results=results, offer=every,
                               panel_card=panel_card, total=total, page=page_number,
                               pages=math.ceil(total / PAGE_SIZE), first_shown=first,
-                              last_shown=first + len(results) - 1,
-                              **{**shown, "notes": notes})  # fmt: skip
+                              last_shown=first + len(results) - 1, **shown)  # fmt: skip
             began = time.perf_counter()
-            how = None  # where Gemini's order came from, when it was asked for
-            try:
-                if only == []:
-                    ranking = []
-                elif mode == WORDS:
-                    ranking = engine.by_words(conninfo, idea, limit=SHOWN, only=only)
-                elif not EmbeddingStore(conninfo).counts(settings.gemini_embedding_model)[
-                    "embeddings"
-                ]:
-                    ranking = engine.by_words(conninfo, idea, limit=SHOWN, only=only)
-                    notes.append(NO_PAGE_EMBEDDINGS)
-                else:
-                    ranking = engine.by_meaning(
-                        EmbeddingStore(conninfo), client("google", "embed_query"), idea,
-                        model=settings.gemini_embedding_model, limit=SHOWN, only=only,
-                    )  # fmt: skip
-                    if with_ai and ranking:
-                        order, how = rerank.order_pool(
-                            conninfo, client("rerank", "rerank"), idea, ranking[: rerank.POOL],
-                            model=settings.gemini_search_model,
-                            level=settings.gemini_search_thinking_level,
-                            scope=scope_of(chosen.chosen(), FILTERS),
-                            timeout_seconds=RERANK_SECONDS,
-                        )  # fmt: skip
-                        ranking = order + ranking[rerank.POOL :]
-                        if how == rerank.LATE:
-                            notes.append(AI_LATE)
-            except (*FAILED_CALLS, BudgetExceeded):
-                ranking = engine.by_words(conninfo, idea, limit=SHOWN, only=only)
-                notes.append(GOOGLE_AWAY)
+            ranking, how = ranking_of(conninfo, idea, mode, only, with_ai, chosen, notes)
             elapsed = time.perf_counter() - began
+            offer = search_offer(conninfo, idea, mode, ranking, only, every, chosen)
+            if cut:
+                notes.append(IDEA_CUT)
+            ordered = how in (rerank.KEPT, rerank.ASKED)
+            if view == CHARTS:
+                built, groups = charts_of(conninfo, ranking)
+                return render(request, "search.html", asked=True, results=[], total=len(ranking),
+                              charts=built, came_back=groups, offer=offer,
+                              nothing_matches=only == [], panel_card=panel_card,
+                              **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
             total = len(ranking)
             pages = max(1, math.ceil(total / PAGE_SIZE))
             page_number = min(page_number, pages)
             first = (page_number - 1) * PAGE_SIZE
-            ids = ranking[first : first + PAGE_SIZE]
-            results = results_of(conninfo, ids, idea, mode == WORDS)
+            results = results_of(conninfo, ranking[first : first + PAGE_SIZE], idea, mode == WORDS)
         except (SettingsError, psycopg.OperationalError):
             return render(request, "search.html", 503, asked=True, **down)
-        if cut:
-            notes.append(f"The idea was longer than {LONGEST_IDEA:,} characters, so it was cut.")
-        ordered = how in (rerank.KEPT, rerank.ASKED)
         # Gemini compares the ten that it put first, on the first page only.
         compare_ids = [card.hit.project_id for card, *_ in results] if ordered else []
         compare_ids = compare_ids if page_number == 1 else []
         return render(request, "search.html", asked=True, results=results, total=total,
                       pages=pages, page=page_number, first_shown=first + 1,
                       last_shown=first + len(results), nothing_matches=only == [],
-                      panel_card=panel_card,
-                      **{**shown, "notes": notes, "elapsed": elapsed, "with_ai": ordered,
+                      panel_card=panel_card, offer=offer,
+                      **{**shown, "elapsed": elapsed, "with_ai": ordered,
                          "compare_ids": compare_ids})  # fmt: skip
 
     @app.get("/project/{project_id}", response_class=HTMLResponse)

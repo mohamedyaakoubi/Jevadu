@@ -1,25 +1,34 @@
 {# Each mark has words, never only a colour, and an (i) where it is explained (design 12.2). #}
 
 {% macro proof(status) -%}
-<span class="mark proof-{{ (status or 'not_checked') | replace('_', '-') }}"><span class="mark-key">Proof:</span> {{ PROOF_SHORT.get(status or "not_checked", status) }}</span>
+{% set colour = {"proof_found": "green", "dates_do_not_fit": "orange", "found_but_empty": "orange",
+                 "another_kind": "orange", "window_not_known": "orange", "not_found": "red"} %}
+<span class="status status-{{ colour.get(status, 'secondary') }} hm-status"><span class="status-dot"></span>Proof: {{ PROOF_SHORT.get(status or "not_checked", status) }}</span>
 {%- endmacro %}
 
 {% macro life(value) -%}
-{% if value %}<span class="mark life-{{ value.status | replace(' ', '-') }}"><span class="mark-key">Life:</span> {{ value.status }}</span>{% endif %}
+{% set colour = {"active": "green", "quiet": "orange", "stopped": "red"} %}
+{% if value %}<span class="status status-{{ colour.get(value.status, 'secondary') }} hm-status"><span class="status-dot"></span>Life: {{ value.status }}</span>{% endif %}
 {%- endmacro %}
 
-{% macro winner() -%}
-<span class="mark winner">Winner entry</span>
+{# What a project won, and whether its own page is gone (design 4.6): two facts, two tags. #}
+{% macro tags(card) -%}
+{% if card.prize_state in ("hedera_prize", "other_prize") or card.entry_kind == WINNER_ENTRY %}
+<p class="hm-tags">
+  {% if card.prize_state == "hedera_prize" %}<span class="badge bg-yellow-lt">Won a Hedera prize</span>{% elif card.prize_state == "other_prize" %}<span class="badge bg-secondary-lt">Won another sponsor's prize</span>{% endif %}
+  {% if card.entry_kind == WINNER_ENTRY %}<span class="badge bg-azure-lt">Only in the winners' list</span>{% endif %}
+</p>
+{% endif %}
 {%- endmacro %}
 
 {% macro label(field) -%}
 {% if field.state == "dropped" -%}
-<span class="mark label-removed">Removed by the quote check</span>
+<span class="badge bg-red-lt">Removed by the quote check</span>
 {%- elif field.label == "stated" -%}
-<span class="mark label-stated">Stated</span>
+<span class="badge bg-green-lt">Stated</span>
 {%- elif field.label == "inferred" -%}
-<span class="mark label-inferred">Inferred: less sure</span>
+<span class="badge bg-orange-lt">Inferred: less sure</span>
 {%- else -%}
-<span class="mark label-not-found">Not found</span>
+<span class="badge bg-secondary-lt">Not found</span>
 {%- endif %}
 {%- endmacro %}

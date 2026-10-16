@@ -104,7 +104,7 @@ def test_the_start_page_lists_the_projects_and_calls_no_model(site) -> None:  # 
     before = len(fake.requests)  # the embeddings of the three projects were made already
     page = client.get("/")
     assert page.status_code == 200
-    assert '<textarea id="idea"' in page.text and "Order and compare with Gemini" in page.text
+    assert 'id="idea" name="idea"' in page.text and "Order and compare with Gemini" in page.text
     assert "All 3 projects" in page.text and page.text.count('class="result"') == 3
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel"' in page.text
     assert "The card of a project opens here" not in page.text  # it opens when it is chosen
@@ -178,10 +178,10 @@ def test_the_ways_to_search(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     for mode in ("meaning", "words"):
         page = client.get("/", params={"idea": VENDOR, "mode": mode})
-        assert f'value="{mode}" checked' in page.text
+        assert f'id="mode-{mode}" checked' in page.text
     for old in ("both", "magic"):  # a way of an older page, or none: the default
         page = client.get("/", params={"idea": VENDOR, "mode": old})
-        assert 'value="meaning" checked' in page.text
+        assert 'id="mode-meaning" checked' in page.text
     before = len(fake.requests)
     words = client.get("/", params={"idea": "parcel", "mode": "words"})
     assert len(fake.requests) == before  # by words only, the idea is not embedded
@@ -197,7 +197,8 @@ def test_the_button_orders_with_gemini_and_the_same_search_asks_nothing_again(si
     page = client.get("/", params={"idea": VENDOR, "ai": "1"})
     assert model_calls(fake, before) == 1
     assert order_of(page.text) == [by_meaning[1], by_meaning[0], *by_meaning[2:]]
-    assert "Ordered by Gemini" in page.text and "Show the quick order" in page.text
+    assert "Ordered by Gemini" in page.text and "Quick order</a>" in page.text
+    assert 'aria-current="true">Gemini\'s order</a>' in page.text  # the order on the screen
     loader = re.search(r'id="compare-loader" hx-get="/compare\?idea=[^&]+&amp;ids=([\d,]+)"',
                        page.text)  # fmt: skip
     assert loader and loader.group(1).split(",") == order_of(page.text)
@@ -283,7 +284,7 @@ def test_without_the_database_the_page_says_how_to_start_it() -> None:
     assert page.status_code == 503 and "docker compose up -d --wait db" in page.text
     start = client.get("/")  # the start page still opens, without the filters, and says why
     assert start.status_code == 200 and "docker compose up -d --wait db" in start.text
-    assert 'name="event"' not in start.text
+    assert 'id="filter-event"' not in start.text
 
 
 def test_the_text_of_a_page_is_shown_as_text_never_as_code(site) -> None:  # noqa: ANN001
@@ -349,8 +350,8 @@ def test_the_comparison_names_the_texts_it_used(site) -> None:  # noqa: ANN001
     assert f'id="compare-{pebble}" hx-swap-oob="true"' in part.text
     assert "Same 1." in part.text and "Differs 2." in part.text
     assert "Same 9." not in part.text  # a number that is not in the list
-    assert "Written by Gemini from what it does." in part.text  # "made_up" was dropped
-    assert "Written by Gemini from the short line." in part.text
+    assert "By Gemini, from what it does." in part.text  # "made_up" was dropped
+    assert "By Gemini, from the short line." in part.text
     assert part.text.count("No comparison was written for this project.") == 1  # the third
     sent = [body for path, body in fake.requests if "generateContent" in path][-1]
     assert "A vendor takes coins." in json.dumps(sent)  # Pebble's card field went to the model
@@ -400,7 +401,7 @@ def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
     assert 'name="event"' in page.text and 'name="life"' in page.text
     assert "ETHGlobal Sample Event (3)" in page.text
     assert f"{PAYMENTS} (1)" in page.text  # the one card of the fixture
-    assert "So far only 1 of 3 projects have one" in page.text
+    assert "1 of 3 projects have one so far" in page.text
 
 
 def test_a_filtered_search_shows_only_the_matching_projects(site) -> None:  # noqa: ANN001
@@ -443,58 +444,54 @@ def test_a_filter_value_that_no_project_has_is_left_out_and_said(site) -> None: 
     assert page.text.count('class="result"') >= 1  # searched without that filter
 
 
-# ----------------------------------------------------------------- the overview (design 12.1, S5)
+# ----------------------------------------------------------------- the charts (design 12.1, S5)
 
 
-def counts(**changes: object) -> dict:
-    event = {"site": "ethglobal.com", "slug": "sample-event", "year": 2026, "projects": 3,
-             "winner_entries": 0, "with_theme": 1,
-             "prize": {"hedera_prize": 1, "no_prize": 2},
-             "proof": {"all": {"no_id_given": 3}, "hedera_prize": {"no_id_given": 1}},
-             "life": {"all": {"unknown": 3}, "hedera_prize": {"unknown": 1}},
-             "services": {"all": {"topic": 2}, "hedera_prize": {"topic": 1}},
-             "themes": {"all": {PAYMENTS: 1}, "hedera_prize": {}}}  # fmt: skip
-    return {"test": "overview", "made_on": "2026-10-16", "share_needs": 20, "projects": 3,
-            "events": [event], "came_back": {"groups": 0, "projects": 0}, **changes}  # fmt: skip
-
-
-def test_the_overview_shows_the_counts_of_the_newest_result_file(site, monkeypatch) -> None:  # noqa: ANN001
-    from hackathon_memory.web import overview
-
+def test_the_charts_count_the_list_on_the_screen(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
-    monkeypatch.setattr(overview, "newest", lambda folder=None: counts())
     before = len(fake.requests)
-    page = client.get("/", params={"view": "overview"})
-    assert page.status_code == 200 and 'aria-current="page">Overview</a>' in page.text
-    assert "3 projects in 1 event, counted on 16 October 2026." in page.text
-    assert "Topics of the Consensus Service" in page.text and "Linked across events" in page.text
-    assert "(100%)" not in page.text  # fewer than 20 projects: counts, and no share
+    page = client.get("/", params={"view": "charts"})
+    assert page.status_code == 200 and 'aria-current="true">Charts</a>' in page.text
+    assert "Counted now from the tables, for 3 projects." in page.text
+    assert page.text.count("<canvas data-chart=") >= 3 and "Linked across events" in page.text
+    assert 'href="https://ethglobal.com/events/sample-event"' in page.text  # the event's page
     assert 'class="result"' not in page.text and len(fake.requests) == before
-    monkeypatch.setattr(overview, "newest", lambda folder=None: None)
-    assert "The counts are not made yet" in client.get("/", params={"view": "overview"}).text
+    search = client.get("/", params={"idea": VENDOR, "view": "charts"})
+    assert "for 3 projects: the closest to your idea" in search.text
+    assert model_calls(fake, before) == 0  # charts call no model that writes
 
 
-def test_the_overview_adds_up_the_events_chosen() -> None:
-    from hackathon_memory.web.overview import build
+def test_a_share_is_shown_only_with_twenty_projects_behind_it() -> None:
+    from hackathon_memory.search.counts import Tally
+    from hackathon_memory.web.charts import build
 
-    none = {"all": {}, "hedera_prize": {}}
-    second = {**counts()["events"][0], "slug": "second", "projects": 30,
-              "prize": {"no_prize": 30}, "proof": {"all": {"proof_found": 30}, "hedera_prize": {}},
-              "life": {"all": {"active": 30}, "hedera_prize": {}},
-              "services": none, "themes": none}  # fmt: skip
-    data = counts(events=[counts()["events"][0], second])
-    names = {("ethglobal.com", "sample-event"): "Sample", ("ethglobal.com", "second"): "Second"}
-    every = build(data, None, names)
-    assert every.projects == 33 and [row.name for row in every.events] == ["Sample", "Second"]
-    proof = next(block for block in every.blocks if block.key == "proof")
-    assert [(bar.words, bar.count, bar.share) for bar in proof.bars] == [
-        ("proof found", 30, 91), ("no Hedera ID given", 3, 9)]  # fmt: skip
-    one = build(data, {("ethglobal.com", "sample-event")}, names)
-    assert one.projects == 3
-    assert all(bar.share is None for block in one.blocks for bar in block.bars)
+    few = Tally(
+        projects=3, proof=__import__("collections").Counter({"proof_found": 2, "no_id_given": 1})
+    )
+    chart = next(one for one in build(few, {}).charts if one.key == "proof")
+    assert [(bar.words, bar.count, bar.share) for bar in chart.bars] == [
+        ("Proof found", 2, None), ("No Hedera ID given", 1, None)]  # fmt: skip
+    many = Tally(
+        projects=40, proof=__import__("collections").Counter({"proof_found": 10, "no_id_given": 30})
+    )
+    chart = next(one for one in build(many, {}).charts if one.key == "proof")
+    assert [bar.share for bar in chart.bars] == [25, 75]
+    assert '"labels": ["Proof found", "No Hedera ID given"]' in chart.data()
 
 
 # ------------------------------------------------- smaller parts
+
+
+def test_the_page_of_an_event_is_the_page_its_projects_link_to() -> None:
+    from hackathon_memory.web.data import event_page
+
+    assert (
+        event_page("ethglobal.com", "newyork2026", None)
+        == "https://ethglobal.com/events/newyork2026"
+    )
+    winners = "https://hedera-hackathon.hashgraph.swiss/#winners"
+    assert event_page("hedera-hackathon.hashgraph.swiss", "x", winners) == winners.split("#")[0]
+    assert event_page("devpost.com", "hedera21", None) is None  # no page known: no link
 
 
 def test_a_date_is_written_as_the_pages_write_it() -> None:
@@ -635,7 +632,7 @@ def test_an_info_mark_explains_its_term(site, chromium) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1440, "height": 900})
     page.goto("http://site.test/")
-    page.locator(".filter .info[data-tip='tip-proof']").hover()
+    page.locator(".hm-filter .info[data-tip='tip-proof']").hover()
     page.wait_for_selector("#tip-proof:popover-open")
     assert "Hedera IDs" in page.locator("#tip-proof").inner_text()
     page.keyboard.press("Escape")
@@ -643,7 +640,7 @@ def test_an_info_mark_explains_its_term(site, chromium) -> None:  # noqa: ANN001
     phone = served(chromium, client, viewport={"width": 390, "height": 844}, is_mobile=True,
                    has_touch=True)  # fmt: skip
     phone.goto("http://site.test/")
-    phone.locator(".filter .info[data-tip='tip-life']").tap()
+    phone.locator(".hm-filter .info[data-tip='tip-life']").tap()
     phone.wait_for_selector("#tip-life:popover-open")
     box = phone.locator("#tip-life").bounding_box()
     assert box and box["y"] + box["height"] > 700  # a card at the bottom, where the thumb is
@@ -659,7 +656,7 @@ def test_the_last_search_comes_back_until_it_is_cleared(site, chromium) -> None:
     page.goto("http://site.test/")
     page.wait_for_function("new URL(location.href).searchParams.get('idea')")
     assert page.locator("#idea").input_value() == VENDOR
-    page.locator("[data-clear-idea]").click()
+    page.locator("[data-clear-search]").click()
     page.wait_for_function("!new URL(location.href).searchParams.get('idea')")
     page.goto("http://site.test/")
     assert "idea=" not in page.url
@@ -688,10 +685,8 @@ def problems(page) -> list[str]:  # noqa: ANN001
 def test_axe_finds_no_problem(site, chromium, monkeypatch, width, scheme) -> None:  # noqa: ANN001
     """axe-core finds about half of the problems of access, so a person still checks the rest
     (design 12.3); what it finds must never come back."""
-    from hackathon_memory.web import overview
-
+    del monkeypatch
     client, fake, _, _ = site
-    monkeypatch.setattr(overview, "newest", lambda folder=None: counts())
     fake.answer_queue = [json.dumps({"closest": [1, 2, 3]})]
     fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]), (3, ["name"]))
     page = served(chromium, client, viewport={"width": width, "height": 900},
@@ -711,6 +706,6 @@ def test_axe_finds_no_problem(site, chromium, monkeypatch, width, scheme) -> Non
     page.locator("[data-sheet='how']").click()
     page.wait_for_selector("#sheet[open] #sheet-title")
     assert problems(page) == []
-    page.goto("http://site.test/?view=overview")
+    page.goto("http://site.test/?view=charts")
     assert problems(page) == []
     page.context.close()

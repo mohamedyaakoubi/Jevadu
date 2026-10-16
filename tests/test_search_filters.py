@@ -7,7 +7,15 @@ import json
 import psycopg
 import pytest
 
-from hackathon_memory.search.filters import NOT_CHECKED, Facts, Filters, allowed, choices, facts
+from hackathon_memory.search.filters import (
+    NOT_CHECKED,
+    Facts,
+    Filters,
+    allowed,
+    choices,
+    facts,
+    keep_chosen,
+)
 from searchfakes import ids_of, three_projects
 
 ROWS = [
@@ -49,6 +57,17 @@ def test_the_choices_are_the_values_that_the_projects_have() -> None:
     assert [c.value for c in offer.life] == ["active", "stopped", "unknown"]  # the rule's order
     assert (offer.projects, offer.with_category) == (4, 2)
     assert offer.knows("year", "2025") and not offer.knows("year", "2019")
+
+
+def test_a_chosen_value_stays_offered_when_the_closest_projects_lack_it() -> None:
+    every = choices(ROWS)
+    offer = choices(ROWS[:2])  # the closest to an idea: only Event A, with no project of 2025
+    kept = keep_chosen(offer, every, Filters(event="8", year="2025"))
+    assert [(c.value, c.count) for c in kept.event] == [("7", 2), ("8", 0)]
+    assert [(c.value, c.count) for c in kept.year] == [("2026", 2), ("2025", 0)]
+    assert kept.proof == offer.proof  # a filter not chosen is left as it was
+    unknown = keep_chosen(offer, every, Filters(year="2019"))  # a value that no project has
+    assert [c.value for c in unknown.year] == ["2026"]
 
 
 def test_the_facts_come_from_the_tables(empty_database: str) -> None:

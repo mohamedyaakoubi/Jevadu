@@ -6,16 +6,16 @@
 {% set one = found.get(pid) if pid is not none else none %}
 <div class="compare-place" id="one-compare-{{ pid }}">
 {% if one %}{% include "_compare_one.html" %}
-{% elif failed %}<p class="empty">The comparison could not be written just now. Everything else in this window is complete; try again in a moment.</p>
-{% else %}<p class="empty">No comparison was written for this project.</p>{% endif %}
+{% elif failed %}<p class="text-secondary">The comparison could not be written just now. Everything else in this window is complete; try again in a moment.</p>
+{% else %}<p class="text-secondary">No comparison was written for this project.</p>{% endif %}
 </div>
 {% else %}
 {% for project_id in asked_ids %}
 {% set one = found.get(project_id) %}
-<div class="compare" id="compare-{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
+<div class="hm-compare compare" id="compare-{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
 {% if one %}{% include "_compare_one.html" %}
-{% elif failed %}<p class="empty">The comparison with your idea could not be written just now. Everything else on this page is complete.</p>
-{% else %}<p class="empty">No comparison was written for this project.</p>{% endif %}
+{% elif failed %}<p class="text-secondary">The comparison with your idea could not be written just now. Everything else on this page is complete.</p>
+{% else %}<p class="text-secondary">No comparison was written for this project.</p>{% endif %}
 </div>
 {% endfor %}
 {% endif %}

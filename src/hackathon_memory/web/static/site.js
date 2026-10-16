@@ -52,8 +52,6 @@
     var empty = !idea.value.trim();
     var ai = $("ai-button");
     if (ai) ai.disabled = empty;
-    var clear = document.querySelector("[data-clear-idea]");
-    if (clear) clear.hidden = empty;
     var examples = document.querySelector(".try");
     if (examples) examples.hidden = !empty;
   }
@@ -68,16 +66,55 @@
       if (idea.form && idea.form.requestSubmit) idea.form.requestSubmit();
     }
   });
+  // "Clear the search": htmx loads the empty page; the browser forgets the last search first.
   document.addEventListener("click", function (event) {
-    if (!event.target.closest("[data-clear-idea]")) return;
-    var idea = box();
-    if (!idea) return;
+    if (!event.target.closest("[data-clear-search]")) return;
     var local = store("localStorage");
     if (local) local.removeItem("hm-last");
-    idea.value = "";
-    idea.dispatchEvent(new Event("input", { bubbles: true }));
-    idea.focus();
+  }, true);
+
+  // ---------------------------------------------------------------- the check of a submission
+  document.addEventListener("change", function (event) {
+    if (event.target.id !== "check-event") return;
+    var other = event.target.value === "other";
+    var days = document.querySelector("[data-check-days]");
+    if (!days) return;
+    days.hidden = !other;
+    days.querySelectorAll("input").forEach(function (input) { input.required = other; });
   });
+
+  // ---------------------------------------------------------------- the charts
+  // Each canvas carries its numbers; Chart.js draws them as horizontal bars, all the projects
+  // and those with a Hedera prize. The same numbers stand in a list for screen readers.
+  function drawCharts(root) {
+    if (!window.Chart) return;
+    var style = window.getComputedStyle(document.body);
+    var theme = window.getComputedStyle(document.documentElement);
+    var all = theme.getPropertyValue("--hm-chart-all").trim() || "#007654";
+    var won = theme.getPropertyValue("--hm-chart-won").trim() || "#a15c00";
+    window.Chart.defaults.color = style.color;
+    window.Chart.defaults.font.family = style.fontFamily;
+    (root || document).querySelectorAll("canvas[data-chart]").forEach(function (canvas) {
+      if (canvas.dataset.drawn) return;
+      canvas.dataset.drawn = "1";
+      var numbers = JSON.parse(canvas.getAttribute("data-chart"));
+      new window.Chart(canvas, {
+        type: "bar",
+        data: {
+          labels: numbers.labels,
+          datasets: [
+            { label: "Projects", data: numbers.all, backgroundColor: all, borderRadius: 3, barPercentage: 0.9 },
+            { label: "With a Hedera prize", data: numbers.won, backgroundColor: won, borderRadius: 3, barPercentage: 0.9 }
+          ]
+        },
+        options: {
+          indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } },
+          scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { autoSkip: false } } }
+        }
+      });
+    });
+  }
 
   // ---------------------------------------------------------------- the (i) and its text
   var home = null; // where the texts live when no window is open
@@ -199,7 +236,7 @@
       }
     }
     var elt = event.detail.elt;
-    if (elt && elt.id === "ai-button") {
+    if (elt && (elt.id === "ai-button" || elt.hasAttribute("data-asks-gemini"))) {
       var space = $("workspace");
       if (space) space.classList.add("asking-ai");
     }
@@ -316,7 +353,9 @@
   });
   document.addEventListener("htmx:afterSettle", function (event) {
     var target = event.detail.target;
-    if (!target || target.id !== "workspace") return;
+    if (!target) return;
+    drawCharts(document); // an outerHTML swap leaves the old element in the event
+    if (target.id !== "workspace" && target.id !== "main") return;
     showCount();
     if (bringResults && NARROW.matches) {
       var results = $("results");
@@ -324,9 +363,10 @@
     }
     bringResults = false;
   });
+  document.addEventListener("htmx:historyRestore", function () { drawCharts(document); showCount(); });
   document.addEventListener("htmx:afterRequest", function (event) {
     var elt = event.detail.elt;
-    if (elt && elt.id === "ai-button" && !event.detail.successful) {
+    if (elt && (elt.id === "ai-button" || elt.hasAttribute("data-asks-gemini")) && !event.detail.successful) {
       var space = $("workspace");
       if (space) space.classList.remove("asking-ai"); // nothing came back: the list stays
     }
@@ -334,6 +374,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     showCount();
+    drawCharts(document);
     remember(window.location.href);
     var dialog = viewer();
     if (dialog && document.querySelector("#viewer-body .project")) {

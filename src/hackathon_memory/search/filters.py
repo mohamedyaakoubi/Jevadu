@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from datetime import UTC, datetime
 
 import psycopg
@@ -131,6 +131,20 @@ def _counted(values: Iterable[str], order: Sequence[str] | None = None) -> list[
     if order is None:
         return sorted(counts.items())
     return [(value, counts[value]) for value in order if counts[value]]
+
+
+def keep_chosen(offer: Choices, every: Choices, chosen: Filters) -> Choices:
+    """`offer`, with each chosen value that it lacks added with no project, so that a filter of
+    a search keeps its value on the page even when none of the closest projects has it."""
+    lists = {}
+    for name, value in chosen.chosen().items():
+        options = list(getattr(offer, name))
+        if not any(choice.value == value for choice in options):
+            known = next((c for c in getattr(every, name) if c.value == value), None)
+            if known is not None:
+                options.append(Choice(known.value, known.words, 0))
+        lists[name] = options
+    return replace(offer, **lists)
 
 
 def choices(rows: Sequence[Facts]) -> Choices:

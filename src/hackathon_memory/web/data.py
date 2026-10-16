@@ -107,6 +107,7 @@ class ProjectCard:
     collected_at: datetime | None  # when the page was saved from its site
     language: str | None
     card: ModelCard | None
+    event_link: str | None = None  # the page of the event (event_page)
 
 
 def first_sentence(text: str) -> str:
@@ -151,8 +152,9 @@ def project_card(
     if not found:
         return None
     with psycopg.connect(conninfo) as conn:
-        short_line, parsed_at, language = conn.execute(
-            "SELECT coalesce(p.short_line, ''), p.parsed_at, r.language FROM projects p "
+        short_line, parsed_at, language, site, slug = conn.execute(
+            "SELECT coalesce(p.short_line, ''), p.parsed_at, r.language, e.site, e.slug "
+            "FROM projects p JOIN events e ON e.id = p.event_id "
             "LEFT JOIN repositories r ON r.id = p.repository_id WHERE p.id = %s",
             (project_id,),
         ).fetchone()
@@ -192,7 +194,8 @@ def project_card(
             for name in FIELDS
         ))  # fmt: skip
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
-                       collected_at(raw_dir, found[0].page_url), language, card)  # fmt: skip
+                       collected_at(raw_dir, found[0].page_url), language, card,
+                       event_page(site, slug, found[0].page_url))  # fmt: skip
 
 
 def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:
@@ -266,18 +269,32 @@ def browse(
 
 @dataclass(frozen=True)
 class Member:
-    """One project of a group that came back (search/seen.py), as the overview names it."""
+    """One project of a group linked across events (search/seen.py), as the charts name it."""
 
     project_id: int
     name: str
     event: str
 
 
-def events(conninfo: str) -> dict[str, tuple[str, str, str]]:
-    """Each event by its number: its site, its short name in the address, and its name."""
+def event_page(site: str, slug: str, project_page: str | None) -> str | None:
+    """The page of an event: on ETHGlobal, the page that its project pages link to
+    (/events/<short name>, seen in the saved pages on 16 October 2026); for an event known from
+    an organiser's list of winners, that list, which its projects link to."""
+    if site == "ethglobal.com":
+        return f"https://ethglobal.com/events/{slug}"
+    return project_page.split("#", 1)[0] if project_page else None
+
+
+def event_pages(conninfo: str) -> dict[str, tuple[str, str, str | None]]:
+    """Each event by its number: its name, its year, and its page."""
     with psycopg.connect(conninfo) as conn:
-        rows = conn.execute("SELECT id, site, slug, name FROM events").fetchall()
-    return {str(event_id): (site, slug, name) for event_id, site, slug, name in rows}
+        rows = conn.execute(
+            "SELECT e.id, e.name, coalesce(extract(year FROM e.ends_on), "
+            "extract(year FROM e.starts_at), e.year)::int, e.site, e.slug, min(p.page_url) "
+            "FROM events e LEFT JOIN projects p ON p.event_id = e.id GROUP BY e.id"
+        ).fetchall()
+    return {str(event_id): (name, str(year) if year else "", event_page(site, slug, page))
+            for event_id, name, year, site, slug, page in rows}  # fmt: skip
 
 
 def members(conninfo: str, groups: Sequence[Sequence[int]]) -> list[list[Member]]:
