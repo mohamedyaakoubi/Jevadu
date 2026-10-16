@@ -86,7 +86,11 @@
           {% set n = results | length %}<h2 id="results-title">{{ n }} project{{ "s" if n != 1 }} closest to your idea</h2>
           {% if elapsed is not none %}<span class="meta">found in {{ "%.1f" | format(elapsed) }} s</span>{% endif %}
         </div>
-        <p class="results-explain">The first is the closest in meaning and words. The order says nothing about quality.</p>
+        {% set first_words = {"ai": "A fast model put the closest first, among the 30 closest in meaning.",
+                              "meaning": "The first is the closest in meaning.",
+                              "both": "The first is the closest in meaning and words.",
+                              "words": "The first uses the rarest of your words the most."} %}
+        <p class="results-explain">{{ first_words.get(mode, first_words["both"]) }} The order says nothing about quality.</p>
         {% if chosen and chosen.chosen() %}<p class="results-explain">Only the projects that match the filters were searched. <a href="/?idea={{ idea | urlencode }}#results">Search all projects</a></p>{% endif %}
         <ol class="result-list" id="result-list">
         {% for card, summary, line, snippet in results %}

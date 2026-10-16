@@ -111,6 +111,9 @@ def test_a_search_shows_the_closest_projects_with_their_marks(site) -> None:  # 
     assert "from the project's page" in page.text  # the others have no card yet
     assert "Hedera proof:" in page.text and "What the marks mean" in page.text
     assert "projects closest to your idea" in page.text and "found in" in page.text
+    assert "A fast model put the closest first" in page.text  # the words follow the way
+    words = client.get("/", params={"idea": VENDOR, "mode": "words"})
+    assert "The first uses the rarest of your words the most." in words.text
 
 
 def test_the_words_of_the_idea_are_marked_and_a_page_never_runs_as_code(site) -> None:  # noqa: ANN001
