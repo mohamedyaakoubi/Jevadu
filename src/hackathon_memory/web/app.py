@@ -30,7 +30,7 @@ from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import compare as comparing
-from hackathon_memory.search import engine, listing
+from hackathon_memory.search import engine, listing, rerank
 from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
 from hackathon_memory.web import data, evidence
@@ -53,6 +53,13 @@ FACTS_SECONDS = 60  # the facts of the filters are read again after a minute
 # The comparison is given up after this time. At the level LOW it took 7.5 s in the middle,
 # but the service is sometimes much slower (35 to 200 s, measured on 16 October 2026).
 COMPARE_SECONDS = 30
+# The default way to search: the 30 closest by meaning, put in order by the search model
+# (search/rerank.py). It found the most known projects in the measure of the modes, and took
+# 2 s in the middle; the service is sometimes much slower, so the order by meaning is kept
+# after this time.
+AI = "ai"
+MODES = (AI, *engine.MODES)
+RERANK_SECONDS = 8
 SEARCH_PARAMS = ("idea", "mode", "event", "year", "category", "proof", "life")
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
                 "proof": "the Hedera proof", "life": "the life"}  # fmt: skip
@@ -64,6 +71,10 @@ NO_SUCH_PROJECT = "There is no project with this number. Go back to the search."
 DATABASE_DOWN = (
     "The database is not running, so nothing can be searched. Start Docker Desktop, then run "
     '"docker compose up -d --wait db" in the folder of the project, and load this page again.'
+)
+AI_LATE = (
+    "The model that puts the projects in order did not answer in time, so they are in the order "
+    "of meaning only. Search again in a moment for the full order."
 )
 GOOGLE_AWAY = (
     "Google could not be asked about the meaning of the idea just now, so only its words were "
@@ -87,7 +98,7 @@ def iso_day(value: str) -> str:
 def search_query(values: dict[str, str]) -> str:
     """The part of an address that repeats a search: the idea, the mode and the filters."""
     kept = {k: v for k, v in values.items() if k in SEARCH_PARAMS and v}
-    if kept.get("mode") == engine.BOTH:
+    if kept.get("mode") == AI:
         del kept["mode"]  # the default needs no word in the address
     return urlencode(kept)
 
@@ -99,7 +110,8 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
     app = FastAPI(title="Hackathon Memory", docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
-    clients: dict[str, Any] = {"google": google, "llm": llm}
+    rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
+    clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given}
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
 
     def database() -> str:
@@ -118,6 +130,13 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
 
             clients["llm"] = metered_client(settings, "compare")
         return clients["llm"]
+
+    def rerank_client() -> Any:
+        if clients["rerank"] is None:
+            from hackathon_memory.finops.meter import metered_client
+
+            clients["rerank"] = metered_client(settings, "rerank")
+        return clients["rerank"]
 
     def project_facts(conninfo: str) -> list[filtering.Facts]:
         """The facts of every project for the filters, read at most once a minute."""
@@ -140,7 +159,7 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
     def search(
         request: Request,
         idea: str = "",
-        mode: str = engine.BOTH,
+        mode: str = AI,
         event: str = "",
         year: str = "",
         category: str = "",
@@ -152,7 +171,7 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
         idea = " ".join(idea.split())
         cut = len(idea) > LONGEST_IDEA
         idea = idea[:LONGEST_IDEA]
-        mode = mode if mode in engine.MODES else engine.BOTH
+        mode = mode if mode in MODES else AI
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
         asked = filtering.Filters(event, year, category, proof, life)
@@ -194,13 +213,29 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
                             last_shown=first + len(results) - 1, **shown)  # fmt: skip
             began = time.perf_counter()
             try:
-                hits = engine.search(conninfo, google_client(), idea, mode=mode, limit=FIRST,
-                                     model=settings.gemini_embedding_model, only=only)  # fmt: skip
+                if mode == AI:
+                    hits, ordered = rerank.closest_by_ai(
+                        conninfo, google_client(), rerank_client(), idea,
+                        embedding_model=settings.gemini_embedding_model,
+                        model=settings.gemini_search_model,
+                        level=settings.gemini_search_thinking_level,
+                        limit=FIRST, only=only, timeout_seconds=RERANK_SECONDS,
+                    )  # fmt: skip
+                    if hits and not ordered:
+                        notes.append(AI_LATE)
+                else:
+                    hits = engine.search(conninfo, google_client(), idea, mode=mode,
+                                         limit=FIRST, model=settings.gemini_embedding_model,
+                                         only=only)  # fmt: skip
             except (*FAILED_CALLS, BudgetExceeded):
                 hits = engine.merge([], engine.by_words(conninfo, idea, limit=FIRST, only=only))
                 notes.append(GOOGLE_AWAY)
             elapsed = time.perf_counter() - began
-            if hits and mode != engine.MEANING and all(hit.words_rank is None for hit in hits):
+            if (
+                hits
+                and mode in (engine.BOTH, engine.WORDS)
+                and all(hit.words_rank is None for hit in hits)
+            ):
                 notes.append(NO_WORD_FOUND)
             found = listing.cards(conninfo, hits)
             ids = [card.hit.project_id for card in found]
@@ -277,7 +312,7 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
     @app.get("/method", response_class=HTMLResponse)
     def method(request: Request) -> HTMLResponse:
         """How the search works, and what the tests measured (design 12.1, S6)."""
-        return render(request, "method.html", nav="method", modes=evidence.search_modes(),
+        return render(request, "method.html", nav="method", modes=evidence.measured_modes(),
                     test1=evidence.newest("test1-card-form-2"), test2=evidence.newest("test2"),
                     measured=evidence.newest("search-modes"))  # fmt: skip
 
@@ -288,6 +323,7 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
         "STATUS_WORDS": listing.STATUS_WORDS,
         "CODE_WORDS": listing.CODE_WORDS,
         "WINNER_ENTRY": "winner_entry",
+        "RERANK_SECONDS": RERANK_SECONDS,
         "hashscan": data.hashscan,
         "TEXT_WORDS": {
             "name": "the name",

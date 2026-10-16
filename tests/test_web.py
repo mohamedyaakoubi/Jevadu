@@ -126,7 +126,7 @@ def test_the_words_of_the_idea_are_marked_and_a_page_never_runs_as_code(site) ->
 
 def test_each_mode_of_search_can_be_chosen(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
-    for mode in ("both", "meaning", "words"):
+    for mode in ("ai", "both", "meaning", "words"):
         page = client.get("/", params={"idea": VENDOR, "mode": mode})
         assert f'value="{mode}" checked' in page.text
     before = len(fake.requests)
@@ -134,7 +134,34 @@ def test_each_mode_of_search_can_be_chosen(site) -> None:  # noqa: ANN001
     assert len(fake.requests) == before  # by words only, the idea is not embedded
     assert "Where your words stand in its page:" in words.text
     odd = client.get("/", params={"idea": VENDOR, "mode": "magic"})
-    assert 'value="both" checked' in odd.text  # an unknown mode is the default
+    assert 'value="ai" checked' in odd.text  # an unknown mode is the default
+
+
+def order_of(page_text: str) -> list[str]:
+    """The ids of the results of a page, in their order."""
+    import re
+
+    return re.findall(r'<li class="result" id="result-(\d+)"', page_text)
+
+
+def test_the_default_way_shows_the_order_of_the_model(site) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    by_meaning = order_of(client.get("/", params={"idea": VENDOR, "mode": "meaning"}).text)
+    fake.answer_queue = [json.dumps({"closest": [2, 99]})]  # 99 is not in the list
+    page = client.get("/", params={"idea": VENDOR})
+    assert order_of(page.text) == [by_meaning[1], by_meaning[0], *by_meaning[2:]]
+    assert "did not answer in time" not in page.text
+    sent = [body for path, body in fake.requests if "generateContent" in path][-1]
+    assert "Pebble Pay" in json.dumps(sent)  # the model read the lines of the projects
+
+
+def test_a_wrong_answer_of_the_model_keeps_the_order_of_meaning_and_says_so(site) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    by_meaning = order_of(client.get("/", params={"idea": VENDOR, "mode": "meaning"}).text)
+    fake.answer_text = "{}"  # not a list of numbers
+    page = client.get("/", params={"idea": VENDOR})
+    assert order_of(page.text) == by_meaning
+    assert "did not answer in time, so they are in the order of meaning only" in page.text
 
 
 def test_a_card_opens_beside_the_list_and_has_its_own_address(site) -> None:  # noqa: ANN001
@@ -244,11 +271,14 @@ def compare_answer(*parts: tuple[int, list[str]]) -> str:
 def test_the_search_page_waits_for_the_comparison_without_blocking(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     before = len(fake.requests)
-    page = client.get("/", params={"idea": VENDOR})
+    page = client.get("/", params={"idea": VENDOR, "mode": "both"})
     assert 'hx-get="/compare?idea=help%20a%20street%20vendor' in page.text
     assert page.text.count('class="compare waiting"') == 3
     assert "This usually takes less than 10 seconds." in page.text
     assert not [path for path, _ in fake.requests[before:] if "generateContent" in path]
+    page = client.get("/", params={"idea": VENDOR})  # the default way: the model orders the list
+    calls = [path for path, _ in fake.requests[before:] if "generateContent" in path]
+    assert len(calls) == 1 and page.text.count('class="compare waiting"') == 3
 
 
 def test_the_comparison_names_the_texts_it_used(site) -> None:  # noqa: ANN001
@@ -344,9 +374,9 @@ def test_a_date_is_written_as_the_pages_write_it() -> None:
 
 def test_an_idea_with_no_known_word_says_that_only_the_meaning_was_compared(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
-    page = client.get("/", params={"idea": "zzqx wvvq qqzx"})
+    page = client.get("/", params={"idea": "zzqx wvvq qqzx", "mode": "both"})
     assert "No word of your idea was found in the projects searched" in page.text
-    words = client.get("/", params={"idea": VENDOR})
+    words = client.get("/", params={"idea": VENDOR, "mode": "both"})
     assert "No word of your idea was found" not in words.text
 
 

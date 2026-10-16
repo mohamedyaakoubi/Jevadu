@@ -16,24 +16,36 @@ RESULTS = Path(__file__).resolve().parents[3] / "evals" / "results"
 
 @dataclass(frozen=True)
 class Mode:
-    """One way to search that the page offers, with what its test measured."""
+    """One way to search, with what the measure of the modes found for it."""
 
-    key: str
+    key: str  # the value in the address of the page; "" for a way that is not offered
     label: str
-    found: int | None  # known similar projects in the first 10, in Test 2
-    known: int | None
-    seconds: float | None  # the middle time of a search, from the measure of the modes
     words: str  # what it does, in plain words
+    found: int | None = None  # known similar projects in the first 10, on the cases of Test 2
+    known: int | None = None
+    low: float | None = None  # the range of the share found
+    high: float | None = None
+    seconds: float | None = None  # the middle time of a search
+    slow_seconds: float | None = None  # 95 of 100 searches were faster than this
+    cost_usd: float | None = None  # the cost of a search
+    why_not: str = ""  # why a measured way is not offered
+
+    @property
+    def share(self) -> int | None:
+        return (
+            round(100 * self.found / self.known) if self.found is not None and self.known else None
+        )
 
     @property
     def facts(self) -> str:
         parts = [self.words]
-        if self.found is not None and self.known:
-            share = round(100 * self.found / self.known)
-            parts.append(f"In Test 2 it put {self.found} of {self.known} known similar projects "
-                         f"in its first 10 ({share}%).")  # fmt: skip
+        if self.share is not None:
+            parts.append(f"On the cases of Test 2 it put {self.found} of {self.known} known "
+                         f"similar projects in its first 10 ({self.share}%).")  # fmt: skip
         if self.seconds is not None:
-            parts.append(f"A search takes about {self.seconds:.1f} s.")
+            cost = (f", and costs about {100 * self.cost_usd:.1f} cent"
+                    if self.cost_usd else "")  # fmt: skip
+            parts.append(f"A search takes about {max(self.seconds, 0.1):.1f} s{cost}.")
         return " ".join(parts)
 
 
@@ -49,30 +61,41 @@ def newest(name: str, folder: Path | None = None) -> dict | None:
         return None
 
 
-WORDS = {
-    "both": ("Meaning and words",
-             "Finds projects close in meaning, and projects that use your words."),
-    "meaning": ("Meaning only",
-                "Finds projects with the same idea, also when they use other words."),
-    "words": ("Your words only",
-              "Finds the projects that use your words. Best for a name or an exact term."),
-}  # fmt: skip
+# The ways to search: the key in the address, the name in the result file, the label, the words.
+WAYS = (
+    ("ai", "meaning, then AI", "Meaning, then AI",
+     "The 30 projects closest in meaning, put in order by a fast model that reads them."),
+    ("meaning", "meaning", "Meaning only",
+     "Finds projects with the same idea, also when they use other words."),
+    ("both", "both", "Meaning and words",
+     "Finds projects close in meaning, and projects that use your words."),
+    ("words", "words", "Your words only",
+     "Finds the projects that use your words. Best for a name or an exact term."),
+    ("", "both, then AI", "Meaning and words, then AI",
+     "The 30 first of the two lists together, put in order by the same model."),
+    ("", "AI over every project", "AI over every project",
+     "The model reads the short line of every project and picks the 10 closest."),
+)  # fmt: skip
+WHY_NOT = {
+    "both, then AI": "Not offered: it found no more than Meaning, then AI, and was slower.",
+    "AI over every project": "Not offered: it found no more, and costs about seven times as "
+    "much, because the model reads every project for every search.",
+}
+
+
+def measured_modes(folder: Path | None = None) -> list[Mode]:
+    """Every way to search that the newest measure of the modes ran, offered or not."""
+    numbers = (newest("search-modes", folder) or {}).get("modes", {})
+    modes = []
+    for key, name, label, words in WAYS:
+        one = numbers.get(name) or {}
+        low, high = (one.get("range") or [None, None])[:2]
+        modes.append(Mode(key, label, words, one.get("found"), one.get("known"), low, high,
+                          one.get("seconds_middle"), one.get("seconds_95_of_100"),
+                          one.get("cost_usd_per_search"), WHY_NOT.get(name, "")))  # fmt: skip
+    return modes
 
 
 def search_modes(folder: Path | None = None) -> list[Mode]:
-    """The modes of the search, each with its numbers from Test 2 and from the measure of the
-    modes, when those files exist."""
-    test2 = newest("test2", folder) or {}
-    measured = (newest("search-modes", folder) or {}).get("modes", {})
-    other = test2.get("other_setups", {})
-    counts = {
-        "both": test2.get("numbers", {}).get("all", {}),
-        "meaning": other.get("meaning only", {}),
-        "words": other.get("words only", {}),
-    }
-    modes = []
-    for key, (label, words) in WORDS.items():
-        number = counts.get(key) or {}
-        seconds = (measured.get(key) or {}).get("seconds_middle")
-        modes.append(Mode(key, label, number.get("found"), number.get("known"), seconds, words))
-    return modes
+    """The ways to search that the search page offers, the default first."""
+    return [mode for mode in measured_modes(folder) if mode.key]

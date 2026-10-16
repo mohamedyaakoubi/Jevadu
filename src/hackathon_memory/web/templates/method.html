@@ -20,18 +20,21 @@
 
   <section aria-labelledby="modes">
     <h2 id="modes">The ways to search</h2>
-    <p>The search page lets you choose. The numbers come from Test 2: pairs of past projects with the same idea, where the search must find one from the idea of the other, and ideas written by a person for a known project.</p>
+    <p>The search page lets you choose how to search. Each way was measured on the cases of Test 2: pairs of past projects with the same idea, where the search must find one from the idea of the other, and ideas written by a person for a known project. A good way puts the known project in its first 10.</p>
     <div class="table-wrap"><table>
-      <thead><tr><th scope="col">Way</th><th scope="col">What it does</th><th scope="col">Known similar projects in the first 10</th><th scope="col">Time of a search</th></tr></thead>
+      <thead><tr><th scope="col">Way</th><th scope="col">What it does</th><th scope="col">Known projects in the first 10</th><th scope="col">Time of a search</th><th scope="col">Cost of a search</th></tr></thead>
       <tbody>
       {% for mode in modes %}
-        <tr><td><b>{{ mode.label }}</b></td><td>{{ mode.words }}</td>
-          <td>{% if mode.known %}{{ mode.found }} of {{ mode.known }} ({{ pct(mode.found, mode.known) }}){% else %}not measured yet{% endif %}</td>
-          <td>{% if mode.seconds is not none %}about {{ "%.1f" | format(mode.seconds) }} s{% else %}not measured yet{% endif %}</td></tr>
+        <tr><td><b>{{ mode.label }}</b>{% if loop.first %}<br><span class="where">the default</span>{% endif %}{% if mode.why_not %}<br><span class="where">{{ mode.why_not }}</span>{% endif %}</td>
+          <td>{{ mode.words }}</td>
+          <td>{% if mode.known %}{{ mode.found }} of {{ mode.known }} ({{ mode.share }}%){% if mode.low is not none %}<br><span class="where">range {{ "%.0f" | format(100 * mode.low) }}% to {{ "%.0f" | format(100 * mode.high) }}%</span>{% endif %}{% else %}not measured yet{% endif %}</td>
+          <td>{% if mode.seconds is not none %}about {{ "%.1f" | format([mode.seconds, 0.1] | max) }} s<br><span class="where">95 of 100 under {{ "%.1f" | format([mode.slow_seconds, 0.1] | max) }} s</span>{% else %}not measured yet{% endif %}</td>
+          <td>{% if mode.cost_usd %}about {{ "%.1f" | format(100 * mode.cost_usd) }} cent{% elif mode.seconds is not none %}nothing{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table></div>
-    {% if test2 %}<p class="where">Test 2 of {{ test2.made_on | iso_day }}. The pass mark is at least 80% for the way the search page uses by default; it was not met, so the search is still being improved.</p>{% endif %}
+    {% if measured %}<p class="where">Measured on {{ measured.made_on | iso_day }}, on {{ measured.projects_searched }} projects. The times leave out the reading of a new idea, which is done once. The model's service was sometimes much slower than usual, so the search page gives the model {{ RERANK_SECONDS }} seconds, and then shows the order by meaning and says so.</p>{% endif %}
+    {% if modes and modes[0].share is not none %}<p class="where">The pass mark of Test 2 is 80% for the default way. The default way finds {{ modes[0].share }}%{% if modes[0].share < 80 %}, so the search is still being improved{% endif %}.</p>{% endif %}
   </section>
 
   <section aria-labelledby="sources">
