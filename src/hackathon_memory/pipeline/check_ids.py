@@ -18,8 +18,8 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 
-from hackathon_memory.check.ledger import LedgerFacts, read_facts, was_used_inside
-from hackathon_memory.check.proof import Window, best, judge, needs_a_look_inside, window_of
+from hackathon_memory.check import asking
+from hackathon_memory.check.proof import best, judge, window_of
 from hackathon_memory.db.ledger import IdToCheck, LedgerStore
 from hackathon_memory.db.runs import Run
 from hackathon_memory.hedera.mirror import MirrorError, MirrorNode
@@ -64,8 +64,13 @@ def check_ids(
                     finished = False
                     continue
                 try:
-                    facts = _facts(ledger, mirror, item, max_age, now, run)
-                    used = _used_inside(ledger, mirror, facts, window, now, run)
+                    facts = asking.facts_of(
+                        ledger, mirror, item.entity_id, item.said_kind,
+                        max_age=max_age, now=now, counts=run.counts,
+                    )  # fmt: skip
+                    used = asking.used_inside(
+                        ledger, mirror, facts, window, now=now, counts=run.counts
+                    )
                 except MirrorError as error:
                     run.counts["errors_of_the_node"] += 1
                     run.problem(f"{item.entity_id} on {network}", str(error))
@@ -88,41 +93,3 @@ def check_ids(
             run.counts["projects_not_finished"] += 1
     run.counts["projects_with_no_id"] = ledger.mark_projects_with_no_id()
     run.counts["requests"] = sum(mirror.requests_made for mirror in mirrors.values())
-
-
-def _facts(
-    ledger: LedgerStore,
-    mirror: MirrorNode,
-    item: IdToCheck,
-    max_age: timedelta,
-    now: Callable[[], datetime],
-    run: Run,
-) -> LedgerFacts:
-    """The facts of an id on the network of `mirror`: from the table when young enough."""
-    kept = ledger.facts(item.entity_id, mirror.network)
-    if kept is not None and now() - kept.asked_at <= max_age:
-        run.counts["answers_from_the_table"] += 1
-        return kept
-    facts = read_facts(mirror, item.entity_id, item.said_kind, now=now)
-    ledger.save_facts(facts)
-    run.counts["answers_from_the_node"] += 1
-    return facts
-
-
-def _used_inside(
-    ledger: LedgerStore,
-    mirror: MirrorNode,
-    facts: LedgerFacts,
-    window: Window | None,
-    now: Callable[[], datetime],
-    run: Run,
-) -> bool | None:
-    """The answer to the one more question of the proof rule, when the rule needs it."""
-    if window is None or not needs_a_look_inside(facts, window):
-        return None
-    used = ledger.use(facts.entity_id, facts.network, window.start, window.end)
-    if used is None:
-        used = was_used_inside(mirror, facts, window.start, window.end)
-        ledger.save_use(facts.entity_id, facts.network, window.start, window.end, used, now())
-        run.counts["looks_inside_a_window"] += 1
-    return used
