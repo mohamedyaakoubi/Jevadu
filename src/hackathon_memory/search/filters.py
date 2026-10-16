@@ -87,7 +87,7 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
             "SELECT p.id, e.id, e.name, "
-            "coalesce(extract(year FROM e.ends_on), extract(year FROM e.starts_at))::int, "
+            "coalesce(extract(year FROM e.ends_on), extract(year FROM e.starts_at), e.year)::int, "
             "p.proof_status, c.fields -> 'category' "
             "FROM projects p JOIN events e ON e.id = p.event_id "
             "LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "

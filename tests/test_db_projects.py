@@ -371,6 +371,26 @@ def test_an_event_that_no_project_names_is_not_made_up(database: str) -> None:
     assert other_site.unknown == ["sample-event"]  # the same name on another site
 
 
+def test_the_typed_year_of_an_event_is_written_and_used_when_no_date_is_known(
+    database: str,
+) -> None:
+    from hackathon_memory.search import filters
+
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)  # the event starts on 6 March 2026
+    with psycopg.connect(database) as conn:  # an event of a list of winners: no date at all
+        conn.execute("UPDATE events SET starts_at = NULL, ends_on = NULL")
+    years = {("ethglobal.com", "sample-event"): 2025, ("ethglobal.com", "none"): 2024}
+    written, unknown = store.set_event_years(years)
+    assert (written, unknown) == (1, ["ethglobal.com none"])  # no event is made up
+    assert store.set_event_years(years)[0] == 0  # the same year again writes nothing
+    found = filters.facts(database, model="m", version="v")
+    assert {row.year for row in found} == {"2025"}
+    with psycopg.connect(database) as conn:  # a known date wins over the typed year
+        conn.execute("UPDATE events SET ends_on = '2026-03-08'")
+    assert {row.year for row in filters.facts(database, model="m", version="v")} == {"2026"}
+
+
 def test_an_end_before_the_start_is_refused(database: str) -> None:
     store = ProjectStore(database)
     store.save(parsed(), SHA_A)  # the event starts on 6 March 2026

@@ -64,7 +64,7 @@ from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.finops.meter import metered_client
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
 from hackathon_memory.llm.client import GoogleSetupError
-from hackathon_memory.parse import event_ends
+from hackathon_memory.parse import event_ends, event_years
 from hackathon_memory.pipeline import check_ids, code, embed, parse_pages, readmes
 from hackathon_memory.read import cards as card_step
 from hackathon_memory.read.sets import SetError, pages_of
@@ -163,6 +163,8 @@ def parse_lines(run: Run) -> list[str]:
             f"{counts['event_ends_same']} the same as before. "
             f"Events with no end yet: {counts['events_without_an_end']}."
         )
+    if counts["event_years_written"]:
+        lines.append(f"Years of events typed by hand: {counts['event_years_written']} written.")
     return lines + _problem_lines(run, "Not used, and why:")
 
 
@@ -255,6 +257,8 @@ def _run_step(
             )
             ends = paths.page_list.with_name(event_ends.FILE_NAME)  # typed by hand
             parse_pages.apply_event_ends(projects, ends, SITE, run)
+            years = paths.page_list.parent.parent / event_years.FILE_NAME  # typed by hand
+            parse_pages.apply_event_years(projects, years, run)
         elif step == readmes.STEP:
             fetch, note = _github_fetch(settings, arguments, run, fetch_readmes)
             readmes.read_readmes(

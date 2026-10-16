@@ -76,6 +76,29 @@ class ProjectStore:
             ).fetchone()[0]
         return done
 
+    def set_event_years(self, years: Mapping[tuple[str, str], int]) -> tuple[int, list[str]]:
+        """Write the typed year of each event that `years` names, by site and short name, in one
+        transaction (migration 0012). Returns how many were written and the events that no saved
+        project names, which are not made up."""
+        written, unknown = 0, []
+        with psycopg.connect(self._conninfo) as conn:
+            for (site, slug), year in sorted(years.items()):
+                changed = conn.execute(
+                    "UPDATE events SET year = %s WHERE site = %s AND slug = %s "
+                    "AND year IS DISTINCT FROM %s",
+                    (year, site, slug, year),
+                ).rowcount
+                exists = (
+                    changed
+                    or conn.execute(
+                        "SELECT 1 FROM events WHERE site = %s AND slug = %s", (site, slug)
+                    ).fetchone()
+                )
+                if not exists:
+                    unknown.append(f"{site} {slug}")
+                written += changed
+        return written, unknown
+
     def already_parsed(self) -> dict[str, tuple[str, str]]:
         """For each page address: the fingerprint of the page and the parser that read it."""
         with psycopg.connect(self._conninfo) as conn:
