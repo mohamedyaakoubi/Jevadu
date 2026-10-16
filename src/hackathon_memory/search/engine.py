@@ -51,6 +51,8 @@ from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.llm.embeddings import embed_query
 
 RRF_K = 60
+BOTH, MEANING, WORDS = "both", "meaning", "words"
+MODES = (BOTH, MEANING, WORDS)  # which lists a search makes
 CANDIDATES = 10  # from each of the two lists, when no other number is asked for
 LANGUAGE = "english"  # the texts of the showcase are in English
 
@@ -159,16 +161,21 @@ def search(
     limit: int = 10,
     now: datetime | None = None,
     only: Sequence[int] | None = None,
+    mode: str = BOTH,
 ) -> list[Hit]:
     """The projects closest to the idea, best first, from the projects of `only` when it is given
-    (the filters). With no project embedding of the model, only the words are searched, and the
-    idea is not embedded: nothing is paid for. No idea, or no project left, finds nothing."""
+    (the filters). The mode says which lists are made: both (the default), meaning or words.
+    With no project embedding of the model, only the words are searched, and the idea is not
+    embedded: nothing is paid for. No idea, or no project left, finds nothing."""
+    if mode not in MODES:
+        raise ValueError(f"unknown mode of search: {mode}")
     if not idea.strip() or (only is not None and not only):
         return []
     store = EmbeddingStore(conninfo)
     meaning = (
         by_meaning(store, client, idea, model=model, limit=limit, now=now, only=only)
-        if store.counts(model)["embeddings"]
+        if mode != WORDS and store.counts(model)["embeddings"]
         else []
     )
-    return merge(meaning, by_words(conninfo, idea, limit=limit, only=only))[:limit]
+    words = by_words(conninfo, idea, limit=limit, only=only) if mode != MEANING else []
+    return merge(meaning, words)[:limit]

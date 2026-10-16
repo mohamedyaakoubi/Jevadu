@@ -332,3 +332,20 @@ def test_a_filter_keeps_the_order_of_the_projects_it_keeps(database: str) -> Non
     assert engine.by_words(database, "invented parcel", only=sorted(kept)) == [
         project for project in everything if project in kept
     ]
+
+
+def test_a_mode_makes_only_its_own_list(database: str) -> None:
+    client, fake, _ = google()
+    embed_all(database, client)
+    ids = ids_of(database)
+    before = len(fake.requests)
+    words = engine.search(database, client, "a parcel tracker", model=SEARCH_MODEL,
+                          mode=engine.WORDS)  # fmt: skip
+    assert [hit.project_id for hit in words] == [ids["Cedar Post"]]
+    assert len(fake.requests) == before  # by words only, the idea is not embedded
+    meaning = engine.search(database, client, "help a vendor get paid", model=SEARCH_MODEL,
+                            mode=engine.MEANING)  # fmt: skip
+    assert meaning[0].project_id == ids["Pebble Pay"]
+    assert all(hit.words_rank is None for hit in meaning)
+    with pytest.raises(ValueError, match="unknown mode"):
+        engine.search(database, client, "a vendor", model=SEARCH_MODEL, mode="magic")
