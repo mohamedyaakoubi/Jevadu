@@ -264,6 +264,34 @@ def browse(
     return [row[0] for row in rows], total
 
 
+@dataclass(frozen=True)
+class Member:
+    """One project of a group that came back (search/seen.py), as the overview names it."""
+
+    project_id: int
+    name: str
+    event: str
+
+
+def events(conninfo: str) -> dict[str, tuple[str, str, str]]:
+    """Each event by its number: its site, its short name in the address, and its name."""
+    with psycopg.connect(conninfo) as conn:
+        rows = conn.execute("SELECT id, site, slug, name FROM events").fetchall()
+    return {str(event_id): (site, slug, name) for event_id, site, slug, name in rows}
+
+
+def members(conninfo: str, groups: Sequence[Sequence[int]]) -> list[list[Member]]:
+    """The name and the event of each project of the groups, in the order given."""
+    ids = [pid for group in groups for pid in group]
+    if not ids:
+        return []
+    with psycopg.connect(conninfo) as conn:
+        names = {pid: (name, event) for pid, name, event in conn.execute(
+            "SELECT p.id, p.name, e.name FROM projects p JOIN events e ON e.id = p.event_id "
+            "WHERE p.id = ANY(%s)", (ids,)).fetchall()}  # fmt: skip
+    return [[Member(pid, *names[pid]) for pid in group if pid in names] for group in groups]
+
+
 def marked_lines(conninfo: str, lines: dict[int, str], idea: str) -> dict[int, Markup]:
     """Each line (the sentence that a result shows) with the words of the idea marked, for the
     lines that have one. The words count by their stem, as in the search by words."""

@@ -1,0 +1,43 @@
+{# Common questions: what "How it works" and the (i) marks do not already answer. #}
+{% import "_parts.html" as parts %}
+<article class="about" aria-labelledby="sheet-title">
+  <h2 id="sheet-title" class="about-title" tabindex="-1">Common questions</h2>
+
+  <details class="question" open>
+    <summary>Why does the AI not judge, score or rank the projects?</summary>
+    <p>Because a verdict needs a basis that can be checked, and here there is none. To trust a model as a judge, people who know the field must first label many examples against written rules, and the model's answers must be measured against theirs. Nobody has such a set for hackathon projects.</p>
+    <p>Studies of models used as judges also found habits that have nothing to do with quality: preferring the longer answer, or the one shown first{{ parts.ref("mtbench") }}, and, when screening CVs, preferring some names over others{{ parts.ref("cvstudy") }}.</p>
+    <p>So a model here only does work that can be checked. It reads a page against written rules, quotes the sentences it used, and a program checks every quote. The facts come from programs. People judge.</p>
+  </details>
+
+  <details class="question">
+    <summary>Where does the data come from?</summary>
+    <p>ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The winners of other events come from the organisers' own public lists.</p>
+    <p>The facts about Hedera IDs come from the public mirror node{{ parts.ref("mirror") }}, and the facts about the code from GitHub. Every card links to the page it comes from.</p>
+  </details>
+
+  <details class="question">
+    <summary>Is my idea kept?</summary>
+    <p>Your browser keeps your last search, so it is still there when you come back, until you clear the box. The server keeps no copy of your idea. Your idea is sent to Google's models to be read, and what they answered is kept for one day under a fingerprint of the idea (a short code computed from it), so the same search is not paid for twice.</p>
+  </details>
+
+  <details class="question">
+    <summary>Does "no Hedera ID given" mean that the project did not use Hedera?</summary>
+    <p>No. It means that neither the project's page nor the README of its code names an ID that a program could check. Many teams never wrote their IDs down.</p>
+  </details>
+
+  <details class="question">
+    <summary>Why do only some projects have fields written by a model?</summary>
+    <p>The model wrote cards for the projects of the two test sets first, so that their quality could be graded field by field (see "How it works"). The other projects show the team's own words.</p>
+  </details>
+
+  <details class="question">
+    <summary>Why are the results quick at first, and ordered by Gemini only after a click?</summary>
+    <p>So that you always know when a model works. The quick results use only numbers that stand for meaning, or your words. The button calls Gemini, says what it will do, and takes a few seconds.</p>
+  </details>
+
+  <details class="question">
+    <summary>Why are some events shown only with their winners?</summary>
+    <p>For those events, the organisers' list of winners is the only part that is still public.</p>
+  </details>
+</article>

@@ -1,16 +1,21 @@
-{# The comparison of each project with the idea (design 8.3). Each part replaces the waiting text
-   of its result, by its id (an out-of-band swap of htmx). #}
+{# The comparison of each project with the idea (design 8.3). In the list, each part replaces the
+   waiting shape of its card, by its id (an out-of-band swap of htmx); in the window of one project,
+   one part replaces the button that asked for it. #}
+{% if one_place %}
+{% set pid = asked_ids[0] if asked_ids else none %}
+{% set one = found.get(pid) if pid is not none else none %}
+<div class="compare-place" id="one-compare-{{ pid }}">
+{% if one %}{% include "_compare_one.html" %}
+{% elif failed %}<p class="empty">The comparison could not be written just now. Everything else in this window is complete; try again in a moment.</p>
+{% else %}<p class="empty">No comparison was written for this project.</p>{% endif %}
+</div>
+{% else %}
 {% for project_id in asked_ids %}
 {% set one = found.get(project_id) %}
 <div class="compare" id="compare-{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
-{% if one %}
-  <p><b>The same:</b> {{ one.same }}</p>
-  <p><b>Differs:</b> {{ one.differs }}</p>
-  <p class="source-note">Written by a model from {% for name in one.fields_used %}{{ TEXT_WORDS.get(name, name) | lower }}{% if not loop.last %}, {% endif %}{% else %}the texts of the project{% endfor %}. It does not judge the project.</p>
-{% elif failed %}
-  <p>The comparison with your idea could not be written just now. Everything else on this page is complete.</p>
-{% else %}
-  <p>No comparison was written for this project.</p>
-{% endif %}
+{% if one %}{% include "_compare_one.html" %}
+{% elif failed %}<p class="empty">The comparison with your idea could not be written just now. Everything else on this page is complete.</p>
+{% else %}<p class="empty">No comparison was written for this project.</p>{% endif %}
 </div>
 {% endfor %}
+{% endif %}

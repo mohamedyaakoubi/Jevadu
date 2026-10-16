@@ -1,0 +1,104 @@
+{# The texts behind the (i) marks, once for every page (design 12.1). A number in a text comes
+   from a dated result file (design rule 6); a term carries the number of its source. #}
+{% import "_parts.html" as parts %}
+{% set meaning = measured_mode("meaning") %}
+{% set words = measured_mode("words") %}
+{% set by_ai = measured_mode("ai") %}
+{% set compare_cost = compare_numbers() %}
+
+{% macro tip(key, title) -%}
+<div class="tip" id="tip-{{ key }}" popover>
+  <p class="tip-title">{{ title }}</p>
+  {{ caller() }}
+</div>
+{%- endmacro %}
+
+<div class="tips">
+{% call tip("hedera", "Hedera") %}
+<p>Hedera{{ parts.ref("hedera") }} is a public network that keeps records nobody can change afterwards: a distributed ledger{{ parts.ref("ledger") }} with its own way of agreeing on the order of events{{ parts.ref("hashgraph") }}. Many hackathons asked teams to build on it. This tool keeps what is still public about their projects.</p>
+{% endcall %}
+
+{% call tip("idea", "Your idea") %}
+<p>Write what your project does, and for whom. One sentence is enough, and a whole description works too, up to {{ "{:,}".format(LONGEST_IDEA) }} characters.</p>
+<p>Quick results appear when you stop typing for half a second. Your browser keeps your last search until you clear the box. The server keeps no copy of the idea: what Google's models answered about it is kept for one day, under a fingerprint.</p>
+{% endcall %}
+
+{% call tip("meaning", "By meaning") %}
+<p>Google's embedding model{{ parts.ref("embedding") }} turns your idea and each project into a long list of numbers. Close numbers mean close ideas, also when the words differ. It writes no text.</p>
+{% if meaning and meaning.known %}<p>In our test it put {{ meaning.found }} of {{ meaning.known }} known similar projects in its first ten, in about {{ "%.1f" | format([meaning.seconds, 0.1] | max) }} s.</p>{% endif %}
+{% endcall %}
+
+{% call tip("words", "By words") %}
+<p>A classic word search (BM25{{ parts.ref("bm25") }}): the projects that use your words, a rare word counting more than a common one such as "Hedera". No AI. Best for a name or an exact term.</p>
+{% if words and words.known %}<p>In our test it put {{ words.found }} of {{ words.known }} known similar projects in its first ten.</p>{% endif %}
+{% endcall %}
+
+{% call tip("ai", "Order and compare with Gemini") %}
+<p>Gemini 3.8 Flash{{ parts.ref("gemini") }} reads the 30 projects closest in meaning, puts the ten most similar first, and writes for each of them what is the same as your idea and what differs. It orders and compares. It never scores or judges a project.</p>
+{% if by_ai and by_ai.known %}<p>In our test its order put {{ by_ai.found }} of {{ by_ai.known }} known similar projects in the first ten{% if meaning and meaning.known %}, against {{ meaning.found }} by meaning alone{% endif %}. The order takes about {{ "%.0f" | format(by_ai.seconds) }} s{% if compare_cost %}, the comparisons about {{ "%.0f" | format(compare_cost.seconds) }} s more, and the whole costs about {{ "%.1f" | format(100 * (by_ai.cost_usd + compare_cost.cost_usd)) }} cent{% endif %}.</p>{% endif %}
+<p>Its answers are kept for one day, so the same search does not ask it again.</p>
+{% endcall %}
+
+{% call tip("quick", "Quick results") %}
+<p>Shown while you type, by meaning or by words. Gemini has not read them yet: the button "Order and compare with Gemini" asks it.</p>
+{% endcall %}
+
+{% call tip("order", "The order") %}
+<p>The first is the closest to your idea. The order never says that a project is good, bad, or a copy: the tool shows facts, and people judge.</p>
+{% endcall %}
+
+{% call tip("event", "Event") %}
+<p>The hackathon that the project was sent to. For some events only the winners are public, so only the winners are here.</p>
+<p>A <b>winner entry</b> comes from the organiser's list of winners, because the project's own page is no longer public: it has fewer facts than a full card.</p>
+{% endcall %}
+
+{% call tip("category", "Category") %}
+<p>One of 17 themes, chosen by a model (Gemini 3.1 Pro) from the project's page, with the sentences of the page it rests on.{% if offer %} So far only {{ offer.with_category }} of {{ "{:,}".format(offer.projects) }} projects have one, because only they have a card written by the model.{% endif %}</p>
+{% endcall %}
+
+{% call tip("proof", "Hedera proof") %}
+<p>Does the project show that it really used Hedera? A program looks for Hedera IDs on the page and in the code: an account{{ parts.ref("account") }}, a topic{{ parts.ref("topic") }}, a token{{ parts.ref("token") }} or a smart contract{{ parts.ref("contract") }}. It asks the public mirror node{{ parts.ref("mirror") }} what each one is.</p>
+<ul>
+  <li><b>Found:</b> the ledger knows the ID as that kind of thing, made or used at the time of the event.</li>
+  <li><b>Dates do not fit:</b> it exists, but from another time.</li>
+  <li><b>Another kind of ID, ID empty, ID not found:</b> the ledger knows it as something else, nothing ever happened with it, or it does not know it.</li>
+  <li><b>No ID given:</b> neither the page nor the code names one. This says nothing bad about the project.</li>
+</ul>
+<p>Each ID opens on HashScan{{ parts.ref("explorer") }}, where anybody can see the same record.</p>
+{% endcall %}
+
+{% call tip("life", "Life") %}
+<p>Was the project still worked on after the event? A sign of life is a change to its code, or activity of its own Hedera IDs, more than 30 days after the event.</p>
+<ul>
+  <li><b>Active:</b> a sign in the last 90 days. <b>Quiet:</b> signs, but none in the last 90 days.</li>
+  <li><b>Stopped:</b> nothing more than 30 days after the event.</li>
+  <li><b>Too early to tell:</b> the event ended less than 90 days ago. <b>Unknown:</b> no date of the code, and no activity of its IDs.</li>
+</ul>
+{% endcall %}
+
+{% call tip("ledger", "On the ledger") %}
+<p>What the public Hedera ledger{{ parts.ref("ledger") }} says about each ID that the page or the code names, read by a program from a mirror node{{ parts.ref("mirror") }}, with no AI.</p>
+<p>The test network{{ parts.ref("testnet") }} and the main network{{ parts.ref("mainnet") }} are separate: the same number is a different thing on each. Each ID opens on HashScan{{ parts.ref("explorer") }}.</p>
+{% endcall %}
+
+{% call tip("code", "The code") %}
+<p>The repository{{ parts.ref("repository") }} that the page links to: when it was made and when it last changed, read from GitHub by a program.</p>
+{% endcall %}
+
+{% call tip("page", "From the project's page") %}
+<p>The team's own words, copied by a program from the project's page as it stood on the day it was saved. No AI changed them.</p>
+{% endcall %}
+
+{% call tip("model", "Written by a model") %}
+<p>Gemini 3.1 Pro read the page and filled these fields. Each field shows a label: <b>stated</b> (one sentence of the page says it), <b>inferred</b> (put together from several sentences: read it with more care), or <b>not found</b>.</p>
+<p>Under each field are the sentences of the page it rests on. A program checked that each one is really in the page, and a field whose sentences were not found is not shown.</p>
+{% endcall %}
+
+{% call tip("compare", "Compared with your idea") %}
+<p>Written by Gemini 3.8 Flash{{ parts.ref("gemini") }} from the texts named under it: what is the same as your idea, and what differs. It does not judge the project.</p>
+{% endcall %}
+
+{% call tip("overview", "Overview") %}
+<p>Counts of facts read by programs, never by a model, for the events chosen. A share is shown only when 20 projects or more stand behind it. The date under the counts says when they were made.</p>
+{% endcall %}
+</div>

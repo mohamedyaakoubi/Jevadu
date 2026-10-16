@@ -1,0 +1,7 @@
+{# One comparison of a project with the idea (design 8.3): what is the same, what differs, and the
+   texts that the model read. #}
+<div class="compare-text">
+  <p><span class="compare-key">Same</span> {{ one.same }}</p>
+  <p><span class="compare-key">Differs</span> {{ one.differs }}</p>
+  <p class="source-note">Written by Gemini from {% for name in one.fields_used %}{{ TEXT_WORDS.get(name, name) | lower }}{% if not loop.last %}, {% endif %}{% else %}the texts of the project{% endfor %}. It does not judge the project.</p>
+</div>

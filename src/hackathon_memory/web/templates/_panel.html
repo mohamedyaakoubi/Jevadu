@@ -1,127 +1,121 @@
-{# The card of one project (design 12.1, S2): the facts first, then the three sources apart. #}
+{# The card of one project (design 12.1, S2), in the window over the results or as its own page:
+   the facts first, then the page and the model, the three sources apart. #}
+{% import "_parts.html" as parts %}
 {% import "_marks.html" as marks %}
 {% set facts = card.facts %}
-<div class="panel-bar">
-  <button type="button" class="button quiet" data-close-panel>&larr; Back to the results</button>
-</div>
-<article class="card" aria-labelledby="card-title-{{ facts.hit.project_id }}">
-  <header class="card-head">
-    <p class="eyebrow">{{ facts.event }}{% if facts.prize_state %} · {{ PRIZE_WORDS.get(facts.prize_state, facts.prize_state) }}{% endif %}</p>
+{% set pid = facts.hit.project_id %}
+<article class="project" data-project="{{ pid }}">
+  <header class="project-head">
+    <p class="project-meta">{{ facts.event }}{% if facts.prize_state %} &middot; {{ PRIZE_WORDS.get(facts.prize_state, facts.prize_state) }}{% endif %}</p>
     {% set level = "h1" if as_page else "h2" %}
-    <{{ level }} id="card-title-{{ facts.hit.project_id }}" class="card-title" tabindex="-1">{{ facts.name }}</{{ level }}>
+    <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ facts.name }}</{{ level }}>
     {% set what = card.card.fields | selectattr("name", "equalto", "what_it_does") | selectattr("state", "equalto", "kept") | first if card.card else none %}
     {% if what %}
-    <p class="lede">{{ what.value }} <span class="source-note">What it does, written by a model: {{ "stated" if what.label == "stated" else "inferred, less sure" }}</span></p>
+    <p class="project-lede">{{ what.value }} <span class="source-note">What it does, in the words of a model: {{ "stated by the page" if what.label == "stated" else "inferred, less sure" }}</span></p>
     {% elif card.short_line %}
-    <p class="lede">{{ card.short_line }} <span class="source-note">The project's own short line</span></p>
+    <p class="project-lede">{{ card.short_line }} <span class="source-note">The team's own short line</span></p>
     {% endif %}
-    <p class="marks">{{ marks.proof(facts.proof_status) }} {{ marks.life(facts.life) }}
-      {% if facts.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
+    <p class="project-marks">{{ marks.proof(facts.proof_status) }}{{ parts.info("proof", "Hedera proof") }}
+      {% if facts.life %}{{ marks.life(facts.life) }}{{ parts.info("life", "life") }}{% endif %}
+      {% if facts.entry_kind == WINNER_ENTRY %}{{ marks.winner() }}{{ parts.info("event", "a winner entry") }}{% endif %}
     </p>
-    <p class="actions">
-      <a href="{{ facts.page_url }}" rel="noopener" target="_blank">The project's page<span class="visually-hidden"> (opens in a new tab)</span></a>
-      {% if facts.repository %}<a href="{{ facts.repository }}" rel="noopener" target="_blank">Its code<span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
-      <a href="/project/{{ facts.hit.project_id }}">Open as its own page</a>
+    <p class="project-links">
+      <a href="{{ facts.page_url }}" rel="noopener" target="_blank">The project's page<span aria-hidden="true"> &#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+      {% if facts.repository %}<a href="{{ facts.repository }}" rel="noopener" target="_blank">Its code<span aria-hidden="true"> &#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
+      {% if not as_page %}<a href="/project/{{ pid }}">Open as its own page</a>{% endif %}
     </p>
   </header>
 
-  <section class="source ledger-source" aria-labelledby="ledger-{{ facts.hit.project_id }}">
-    <h3 id="ledger-{{ facts.hit.project_id }}" class="source-title">From the code and the ledger <span class="who">read by a program, no AI</span></h3>
-    <dl class="facts-grid">
-      <dt>Hedera IDs</dt>
-      <dd>
+  <div class="project-body">
+    {% if idea %}
+    <section class="project-section compare-section" aria-labelledby="compare-{{ pid }}-title">
+      <h3 id="compare-{{ pid }}-title">Compared with your idea{{ parts.info("compare", "the comparison with your idea") }}</h3>
+      {% if kept_comparison %}
+        {% with one = kept_comparison %}{% include "_compare_one.html" %}{% endwith %}
+      {% else %}
+      <div id="one-compare-{{ pid }}" class="compare-ask">
+        <p>Gemini can write what this project shares with your idea, and the main difference.</p>
+        <button type="button" class="ai-button small" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ pid }}&amp;one=1"
+                hx-target="#one-compare-{{ pid }}" hx-swap="outerHTML" hx-indicator="#one-compare-{{ pid }}">Compare with my idea</button>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="project-section ledger-section" aria-labelledby="ledger-{{ pid }}-title">
+      <h3 id="ledger-{{ pid }}-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>
       {% set checked = facts.ledger | selectattr("network") | list %}
       {% if checked %}
-        <div class="table-wrap"><table>
-          <thead><tr><th scope="col">ID</th><th scope="col">Network</th><th scope="col">The ledger says</th><th scope="col">Result</th></tr></thead>
-          <tbody>
-          {% for line in checked %}
-            {% set link = hashscan(line.network, line.kind, line.entity_id) %}
-            <tr>
-              <td class="id">{% if link %}<a href="{{ link }}" rel="noopener" target="_blank">{{ line.entity_id }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>{% else %}{{ line.entity_id }}{% endif %}
-                <br><span class="where">{{ "from the README" if line.found_in == "readme" else "from the page" }}</span></td>
-              <td>{{ line.network }}</td>
-              <td>{{ line.kind or "nothing" }}{% if line.created_at %}, made {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}</td>
-              <td>{{ STATUS_WORDS.get(line.status, line.status) }}<br><span class="where">asked {{ line.asked_at | day if line.asked_at else "not yet" }}</span></td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table></div>
-        <p class="where">Each linked ID opens on HashScan, where anybody can see the same record.</p>
+      <ul class="id-list">
+      {% for line in checked %}
+        {% set link = hashscan(line.network, line.kind, line.entity_id) %}
+        <li class="id-row">
+          <p class="id-name">{% if link %}<a class="id" href="{{ link }}" rel="noopener" target="_blank">{{ line.entity_id }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>{% else %}<span class="id">{{ line.entity_id }}</span>{% endif %} <span class="id-network">{{ line.network }}</span></p>
+          <p>{{ (line.kind or "nothing") | capitalize }}{% if line.created_at %}, made {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}.</p>
+          <p class="where">{{ STATUS_WORDS.get(line.status, line.status) | capitalize }} &middot; named {{ "in the code's README" if line.found_in == "readme" else "on the page" }} &middot; asked {{ line.asked_at | day if line.asked_at else "not yet" }}</p>
+        </li>
+      {% endfor %}
+      </ul>
       {% else %}
-        Neither the page nor the code names a Hedera ID that could be asked about. This says nothing bad about the project.
+      <p class="empty">Neither the page nor the code names a Hedera ID that could be asked about. This says nothing bad about the project.</p>
       {% endif %}
-      </dd>
-      <dt>Code</dt>
-      <dd>
+    </section>
+
+    <section class="project-section code-section" aria-labelledby="code-{{ pid }}-title">
+      <h3 id="code-{{ pid }}-title">The code{{ parts.info("code", "the facts of the code") }}</h3>
       {% if facts.repository %}
-        <a href="{{ facts.repository }}" rel="noopener" target="_blank">{{ facts.repository | replace("https://github.com/", "github.com/") }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% if card.language %} · {{ card.language }}{% endif %}
-        {% if facts.code_status == "found" %}<br>{% if facts.made_at %}Made {{ facts.made_at | day }}{% endif %}{% if facts.last_push_at %}, last change {{ facts.last_push_at | day }}{% endif %}.
-        {% elif facts.code_status in CODE_WORDS %}<br>{{ CODE_WORDS[facts.code_status] | capitalize }}.{% endif %}
+      <p><a href="{{ facts.repository }}" rel="noopener" target="_blank">{{ facts.repository | replace("https://github.com/", "github.com/") }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% if card.language %} &middot; {{ card.language }}{% endif %}</p>
+      {% if facts.code_status == "found" %}<p>{% if facts.made_at %}Made {{ facts.made_at | day }}{% endif %}{% if facts.last_push_at %}, last change {{ facts.last_push_at | day }}{% endif %}.</p>
+      {% elif facts.code_status in CODE_WORDS %}<p>{{ CODE_WORDS[facts.code_status] | capitalize }}.</p>{% endif %}
       {% else %}
-        The page links to no code repository.
+      <p class="empty">The page links to no code repository.</p>
       {% endif %}
-      </dd>
-      {% if facts.life %}
-      <dt>Life</dt>
-      <dd>{{ facts.life.status | capitalize }}: {{ facts.life.why }}{% if facts.life.last_sign %}. Last sign: {{ facts.life.last_sign | day }}{% endif %}.</dd>
+      {% if facts.life %}<p class="where">Life: {{ facts.life.status }}, {{ facts.life.why }}{% if facts.life.last_sign %}; last sign {{ facts.life.last_sign | day }}{% endif %}.</p>{% endif %}
+    </section>
+
+    <section class="project-section page-section" aria-labelledby="page-{{ pid }}-title">
+      <h3 id="page-{{ pid }}-title">From the project's page{{ parts.info("page", "the texts of the page") }}</h3>
+      <p class="where">Copied word for word from <a href="{{ facts.page_url }}" rel="noopener" target="_blank">its page<span class="visually-hidden"> (opens in a new tab)</span></a>{% if card.collected_at %}, as the page stood on {{ card.collected_at | day }}{% endif %}. No AI.</p>
+      {% if card.short_line %}<h4>Short line</h4><p>{{ card.short_line }}</p>{% endif %}
+      {% for prize in card.prizes %}<p class="where">Prize: {{ prize.sponsor }}{% if prize.track %}, {{ prize.track }}{% endif %}{% if prize.award %}, {{ prize.award }}{% endif %}</p>{% endfor %}
+      {% for section in card.sections %}
+      <h4>{{ section.title or "Text" }}</h4>
+      <div class="text">{{ section.body }}</div>
+      {% else %}
+      <p class="empty">The page gives no text beyond its name.</p>
+      {% endfor %}
+      {% if card.links %}
+      <h4>Links on the page</h4>
+      <ul class="link-list">
+      {% for link in card.links %}<li><a href="{{ link.url }}" rel="noopener" target="_blank">{{ link.label or link.url }}</a> <span class="where">{{ link.kind }}</span></li>{% endfor %}
+      </ul>
       {% endif %}
-    </dl>
-  </section>
+    </section>
 
-  <details class="source page-source">
-    <summary>From the project's page <span class="who">copied word for word, no AI{% if card.sections %}: {{ card.sections | length }} text{{ "s" if card.sections | length != 1 }}{% endif %}</span></summary>
-    <p class="where">From <a href="{{ facts.page_url }}" rel="noopener" target="_blank">{{ facts.page_url }}</a>{% if card.collected_at %}, as the page stood on {{ card.collected_at | day }}{% endif %}.{% if card.parsed_at %} Copied by the parser on {{ card.parsed_at | day }}.{% endif %}</p>
-    {% if card.short_line %}<h3>Short line</h3><p>{{ card.short_line }}</p>{% endif %}
-    {% for prize in card.prizes %}
-    <p class="where">Prize: {{ prize.sponsor }}{% if prize.track %}, {{ prize.track }}{% endif %}{% if prize.award %}, {{ prize.award }}{% endif %}</p>
-    {% endfor %}
-    {% for section in card.sections %}
-    <h3>{{ section.title or "Text" }}</h3>
-    <div class="text">{{ section.body }}</div>
-    {% else %}
-    <p class="empty">The page gives no text beyond its name.</p>
-    {% endfor %}
-    {% if card.links %}
-    <h3>Links on the page</h3>
-    <ul>
-    {% for link in card.links %}
-      <li><a href="{{ link.url }}" rel="noopener" target="_blank">{{ link.label or link.url }}</a> <span class="where">{{ link.kind }}</span></li>
-    {% endfor %}
-    </ul>
-    {% endif %}
-  </details>
-
-  <details class="source model-source"{% if card.card %} open{% endif %}>
-    <summary>Written by a model <span class="who">checked against the page</span></summary>
-    {% if card.card %}
-    <p class="where">Gemini ({{ card.card.model }}), instructions {{ card.card.instructions_version }}, written on {{ card.card.made_at | day }}. Every quote below was found in the page by a program.</p>
-    {% for field in card.card.fields %}
-    <div class="field">
-      <h3>{{ field.title }} {{ marks.label(field) }}</h3>
-      {% if field.state == "kept" %}
-        {% if field.value is string %}<p>{{ field.value }}</p>{% else %}<ol>{% for step in field.value %}<li>{{ step }}</li>{% endfor %}</ol>{% endif %}
-        {% if field.quotes %}
-        <details><summary>The sentences of the page it rests on ({{ field.quotes | length }})</summary>
-          <ul class="quotes">{% for quote in field.quotes %}<li>&ldquo;{{ quote }}&rdquo;</li>{% endfor %}</ul>
-        </details>
+    <section class="project-section model-section" aria-labelledby="model-{{ pid }}-title">
+      <h3 id="model-{{ pid }}-title">Written by a model{{ parts.info("model", "the fields written by a model") }}</h3>
+      {% if card.card %}
+      <p class="where">Gemini ({{ card.card.model }}), instructions {{ card.card.instructions_version }}, {{ card.card.made_at | day }}. Every quote below was found in the page by a program.</p>
+      {% for field in card.card.fields %}
+      <div class="field">
+        <h4>{{ field.title }} {{ marks.label(field) }}</h4>
+        {% if field.state == "kept" %}
+          {% if field.value is string %}<p>{{ field.value }}</p>{% else %}<ol>{% for step in field.value %}<li>{{ step }}</li>{% endfor %}</ol>{% endif %}
+          {% if field.quotes %}
+          <details class="quotes"><summary>The sentences of the page it rests on ({{ field.quotes | length }})</summary>
+            <ul>{% for quote in field.quotes %}<li>&ldquo;{{ quote }}&rdquo;</li>{% endfor %}</ul>
+          </details>
+          {% endif %}
+        {% elif field.state == "dropped" %}
+          <p class="empty">Not shown: none of the sentences that the model gave was found in the page.</p>
+        {% else %}
+          <p class="empty">The page says nothing about it.</p>
         {% endif %}
-      {% elif field.state == "dropped" %}
-        <p class="empty">Not shown: none of the sentences that the model gave was found in the page.</p>
+      </div>
+      {% endfor %}
       {% else %}
-        <p class="empty">The page says nothing about it.</p>
+      <p class="empty">No card has been written by a model for this project yet. The texts of the page are its own words.</p>
       {% endif %}
-    </div>
-    {% endfor %}
-    {% else %}
-    <p class="empty">No card has been written by a model for this project yet. The texts of the page are its own words.</p>
-    {% endif %}
-  </details>
-
-  <details class="legends">
-    <summary>What the marks mean</summary>
-    {{ marks.proof_legend() }}
-    {{ marks.life_legend() }}
-    {{ marks.label_legend() }}
-  </details>
+    </section>
+  </div>
 </article>

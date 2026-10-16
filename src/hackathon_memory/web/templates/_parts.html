@@ -1,40 +1,77 @@
-{# The parts that the search page and its fragments share. #}
+{# The parts that the pages and their fragments share. #}
 {% import "_marks.html" as marks %}
 
-{% macro result(card, summary, line, snippet, rank, query, open_id, compared) -%}
-{% set link = "/?" ~ (query ~ "&" if query else "") ~ "open=" ~ card.hit.project_id %}
-<li class="result" id="result-{{ card.hit.project_id }}"{% if open_id == card.hit.project_id %} aria-current="true"{% endif %}>
-  <h3 class="result-title">
-    {% if rank %}<span class="rank" aria-hidden="true">{{ rank }}</span>{% endif %}
-    <a class="result-link" href="{{ link }}"
-       hx-get="/project/{{ card.hit.project_id }}/panel{% if query %}?{{ query }}{% endif %}"
-       hx-target="#panel" hx-swap="innerHTML" hx-push-url="{{ link }}">{{ card.name }}</a>
-  </h3>
-  <p class="meta">{{ card.event }}{% if card.prize_state %} · {{ PRIZE_WORDS.get(card.prize_state, card.prize_state) }}{% endif %}</p>
-  {% if summary and summary.text %}
-  <p class="snippet">{{ line or summary.text }}
-    {% if summary.source == "model" %}<span class="source-note">written by a model, {{ "stated" if summary.label == "stated" else "inferred: less sure" }}</span>{% else %}<span class="source-note">from the project's page</span>{% endif %}
-  </p>
-  {% endif %}
-  {% if snippet %}
-  <p class="matched"><span class="source-note">Where your words stand in its page:</span> &hellip;{{ snippet }}&hellip;</p>
-  {% endif %}
-  <p class="marks">{{ marks.proof(card.proof_status) }} {{ marks.life(card.life) }}
-    {% if card.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
-  </p>
-  {% if compared %}
-  <div class="compare waiting" id="compare-{{ card.hit.project_id }}">Comparing with your idea&hellip; This usually takes less than 10 seconds.</div>
-  {% endif %}
+{% macro brand_mark(class="mark-svg") -%}
+<svg class="{{ class }}" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+  <rect x="12" y="4" width="23" height="16" rx="2" class="mk-back"/>
+  <rect x="8.5" y="9" width="23" height="16" rx="2" class="mk-middle"/>
+  <rect x="5" y="14.5" width="24" height="20" rx="2" class="mk-front"/>
+  <path d="M9.5 21.5h11M9.5 26h8" class="mk-lines"/>
+  <circle cx="24" cy="29.5" r="3.4" class="mk-seal"/>
+</svg>
+{%- endmacro %}
+
+{# A numbered source, as in an encyclopedia: the number opens the source (references.py). #}
+{% macro ref(key) -%}
+<sup class="ref"><a href="{{ REFS[key].url }}" target="_blank" rel="noopener">[{{ REF_NUMBER[key] }}]<span class="visually-hidden">: {{ REFS[key].title }}, {{ REFS[key].publisher }}, opens in a new tab</span></a></sup>
+{%- endmacro %}
+
+{# The (i) next to a term: its text is in _tips.html, once for the whole page. #}
+{% macro info(key, label) -%}
+<button type="button" class="info" popovertarget="tip-{{ key }}" data-tip="tip-{{ key }}" aria-label="What {{ label }} means"><span aria-hidden="true">i</span></button>
+{%- endmacro %}
+
+{% macro result(card, summary, line, snippet, rank, query, compared) -%}
+{% set pid = card.hit.project_id %}
+{% set link = "/?" ~ (query ~ "&" if query else "") ~ "open=" ~ pid %}
+<li class="result" id="result-{{ pid }}" data-project="{{ pid }}">
+  <article class="result-card">
+    <p class="result-meta">{% if rank %}<span class="rank">{{ "%02d" | format(rank) }}</span>{% endif %}<span class="result-event">{{ card.event }}</span>{% if card.prize_state in ("hedera_prize", "other_prize") %}<span class="result-prize">{{ PRIZE_WORDS[card.prize_state] }}</span>{% endif %}</p>
+    <h3 class="result-title"><a class="result-link" href="{{ link }}" data-open-viewer="{{ pid }}"
+      hx-get="/project/{{ pid }}/panel{% if query %}?{{ query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ card.name }}</a></h3>
+    {% if summary and summary.text %}<p class="result-line">{{ line or summary.text }}</p>{% endif %}
+    {% if snippet %}<p class="result-matched"><span class="visually-hidden">Where your words stand in its page: </span>&hellip;{{ snippet }}&hellip;</p>{% endif %}
+    <p class="result-marks">{{ marks.proof(card.proof_status) }} {{ marks.life(card.life) }}{% if card.entry_kind == WINNER_ENTRY %} {{ marks.winner() }}{% endif %}</p>
+    {% if compared %}
+    <div class="compare waiting" id="compare-{{ pid }}" aria-busy="true">
+      <span class="visually-hidden">Gemini is comparing this project with your idea.</span>
+      <span class="bone"></span><span class="bone short"></span>
+    </div>
+    {% endif %}
+  </article>
 </li>
 {%- endmacro %}
 
-{% macro filter_select(name, label, all_words, options, current) -%}
-<div class="filter-group">
-  <label class="filter-label" for="filter-{{ name }}">{{ label }}</label>
+{% macro pager(page, pages, query, label="Pages of the list") -%}
+{% if pages > 1 %}
+{% set base = "/?" ~ (query ~ "&" if query else "") %}
+<nav class="pager" aria-label="{{ label }}">
+  {% if page > 1 %}<a class="pager-step" href="{{ base }}page={{ page - 1 }}" hx-get="{{ base }}page={{ page - 1 }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML show:#results:top" hx-push-url="true">&lsaquo; Previous</a>{% else %}<span class="pager-step" aria-hidden="true">&lsaquo; Previous</span>{% endif %}
+  <ol class="pager-numbers">
+  {% for number in page_numbers(page, pages) %}
+    {% if number is none %}<li class="pager-gap" aria-hidden="true">&hellip;</li>
+    {% else %}<li><a href="{{ base }}page={{ number }}" hx-get="{{ base }}page={{ number }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML show:#results:top" hx-push-url="true"{% if number == page %} aria-current="page"{% endif %}><span class="visually-hidden">Page </span>{{ number }}</a></li>{% endif %}
+  {% endfor %}
+  </ol>
+  {% if page < pages %}<a class="pager-step" href="{{ base }}page={{ page + 1 }}" hx-get="{{ base }}page={{ page + 1 }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML show:#results:top" hx-push-url="true">Next &rsaquo;</a>{% else %}<span class="pager-step" aria-hidden="true">Next &rsaquo;</span>{% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro filter_select(name, label, all_words, options, current, tip=none) -%}
+<div class="filter{% if current %} chosen{% endif %}">
+  <span class="filter-head"><label for="filter-{{ name }}">{{ label }}</label>{% if tip %}{{ info(tip, label) }}{% endif %}</span>
   <select id="filter-{{ name }}" name="{{ name }}">
     <option value="">{{ all_words }}</option>
-    {% for choice in options %}<option value="{{ choice.value }}"{% if choice.value == current %} selected{% endif %}>{{ choice.words }} ({{ choice.count }})</option>
+    {% for choice in options %}<option value="{{ choice.value }}"{% if choice.value == current %} selected{% endif %}>{{ choice.words }} ({{ "{:,}".format(choice.count) }})</option>
     {% endfor %}
   </select>
 </div>
+{%- endmacro %}
+
+{# The shape of a card, drawn while the list loads. #}
+{% macro skeleton_cards(count=10) -%}
+<ol class="card-grid skeletons" aria-hidden="true">
+{% for _ in range(count) %}<li><div class="result-card"><span class="bone short"></span><span class="bone title"></span><span class="bone"></span><span class="bone"></span><span class="bone short"></span></div></li>{% endfor %}
+</ol>
 {%- endmacro %}

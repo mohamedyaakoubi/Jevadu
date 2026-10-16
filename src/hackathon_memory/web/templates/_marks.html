@@ -1,11 +1,15 @@
-{# Each mark has words, never only a colour, and a legend on every page that uses it (design 12.2). #}
+{# Each mark has words, never only a colour, and an (i) where it is explained (design 12.2). #}
 
 {% macro proof(status) -%}
-<span class="mark proof-{{ (status or 'not_checked') | replace('_', '-') }}">Hedera proof: {{ STATUS_WORDS.get(status, status) }}</span>
+<span class="mark proof-{{ (status or 'not_checked') | replace('_', '-') }}"><span class="mark-key">Proof:</span> {{ PROOF_SHORT.get(status or "not_checked", status) }}</span>
 {%- endmacro %}
 
 {% macro life(value) -%}
-{% if value %}<span class="mark life-{{ value.status | replace(' ', '-') }}">Life: {{ value.status }}</span>{% endif %}
+{% if value %}<span class="mark life-{{ value.status | replace(' ', '-') }}"><span class="mark-key">Life:</span> {{ value.status }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro winner() -%}
+<span class="mark winner">Winner entry</span>
 {%- endmacro %}
 
 {% macro label(field) -%}
@@ -19,33 +23,3 @@
 <span class="mark label-not-found">Not found</span>
 {%- endif %}
 {%- endmacro %}
-
-{% macro proof_legend() %}
-<dl class="legend">
-  <dt>Hedera proof</dt>
-  <dd><b>proof found</b>: the page or its code names a Hedera ID, the ledger knows it as that kind of thing, and it was made or used at the time of the event.</dd>
-  <dd><b>found, but the dates do not fit</b>: the ledger knows the ID, but it was not made or used at the time of the event.</dd>
-  <dd><b>found, the end of the event is not typed in yet</b>: the ledger knows the ID, but the dates cannot be compared yet.</dd>
-  <dd><b>found, but empty</b>: the ledger knows the ID, but nothing ever happened with it.</dd>
-  <dd><b>found, but as another kind of thing</b>: the ledger knows the number, but as another kind than the page says.</dd>
-  <dd><b>not found</b>: the ledger does not know this ID. <b>cannot be checked</b>: the ID cannot be asked about.</dd>
-  <dd><b>no Hedera ID given</b>: neither the page nor the code names one. This says nothing bad about the project.</dd>
-</dl>
-{% endmacro %}
-
-{% macro life_legend() %}
-<dl class="legend">
-  <dt>Life</dt>
-  <dd>A sign of life is a change to the code, or activity of the project's own Hedera IDs, later than 30 days after the event.</dd>
-  <dd><b>active</b>: a sign of life in the last 90 days. <b>quiet</b>: a sign of life, but none in the last 90 days. <b>stopped</b>: nothing later than 30 days after the event.</dd>
-  <dd><b>too early to tell</b>: the event ended less than 90 days ago. <b>unknown</b>: no date of the code and no activity of its own IDs.</dd>
-</dl>
-{% endmacro %}
-
-{% macro label_legend() %}
-<dl class="legend">
-  <dt>Fields written by a model</dt>
-  <dd><b>Stated</b>: one sentence of the page says it. <b>Inferred: less sure</b>: put together from several sentences, or the page only suggests it. Read it with more care.</dd>
-  <dd><b>Not found</b>: the page says nothing about it. <b>Removed by the quote check</b>: none of the sentences that the model gave was found in the page, so the field is not shown.</dd>
-</dl>
-{% endmacro %}

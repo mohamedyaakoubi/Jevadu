@@ -61,23 +61,25 @@ def newest(name: str, folder: Path | None = None) -> dict | None:
         return None
 
 
-# The ways to search: the key in the address, the name in the result file, the label, the words.
+# The ways to search: the key on the page, the name in the result file, the label, the words.
 WAYS = (
-    ("ai", "meaning, then AI", "Meaning, then AI",
-     "The 30 projects closest in meaning, put in order by a fast model that reads them."),
-    ("meaning", "meaning", "Meaning only",
+    ("ai", "meaning, then AI", "Order and compare with Gemini",
+     "The 30 projects closest in meaning, put in order by Gemini 3.8 Flash, on a click."),
+    ("meaning", "meaning", "Quick, by meaning",
      "Finds projects with the same idea, also when they use other words."),
-    ("both", "both", "Meaning and words",
-     "Finds projects close in meaning, and projects that use your words."),
-    ("words", "words", "Your words only",
+    ("words", "words", "Quick, by words",
      "Finds the projects that use your words. Best for a name or an exact term."),
-    ("", "both, then AI", "Meaning and words, then AI",
+    ("", "both", "Meaning and words together",
+     "The two quick lists merged by the place of each project in each list."),
+    ("", "both, then AI", "Meaning and words, then Gemini",
      "The 30 first of the two lists together, put in order by the same model."),
-    ("", "AI over every project", "AI over every project",
+    ("", "AI over every project", "Gemini over every project",
      "The model reads the short line of every project and picks the 10 closest."),
 )  # fmt: skip
 WHY_NOT = {
-    "both, then AI": "Not offered: it found no more than Meaning, then AI, and was slower.",
+    "both": "Not offered since 16 October 2026: it found fewer than meaning alone.",
+    "both, then AI": "Not offered: it found no more than the order of the 30 closest in "
+    "meaning, and was slower.",
     "AI over every project": "Not offered: it found no more, and costs about seven times as "
     "much, because the model reads every project for every search.",
 }
@@ -97,5 +99,27 @@ def measured_modes(folder: Path | None = None) -> list[Mode]:
 
 
 def search_modes(folder: Path | None = None) -> list[Mode]:
-    """The ways to search that the search page offers, the default first."""
+    """The ways to search that the search page offers: Gemini's order, then the two quick ones."""
     return [mode for mode in measured_modes(folder) if mode.key]
+
+
+def mode_named(key: str, folder: Path | None = None) -> Mode | None:
+    """The measured way to search of this key on the page, or None."""
+    return next((mode for mode in measured_modes(folder) if mode.key == key), None)
+
+
+@dataclass(frozen=True)
+class Comparing:
+    """What one comparison of ten projects took, at the thinking level in use."""
+
+    level: str
+    seconds: float  # the middle time of a call
+    cost_usd: float  # the cost of one call
+
+
+def compare_numbers(level: str = "LOW", folder: Path | None = None) -> Comparing | None:
+    """The middle time and the cost of one comparison, from the newest measure of the levels."""
+    one = ((newest("compare-levels", folder) or {}).get("levels") or {}).get(level) or {}
+    if not one.get("calls"):
+        return None
+    return Comparing(level, float(one["seconds_middle"]), float(one["cost_usd"]) / one["calls"])

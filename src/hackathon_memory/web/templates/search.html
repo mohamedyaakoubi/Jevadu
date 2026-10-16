@@ -1,156 +1,123 @@
 {% extends "base.html" %}
-{% import "_marks.html" as marks %}
 {% import "_parts.html" as parts %}
 {% block title %}{% if idea %}{{ idea[:60] }}: {% endif %}Hackathon Memory{% endblock %}
-{% block skip_target %}results{% endblock %}
-{% block skip_words %}Skip to the results{% endblock %}
 {% block main %}
-<form id="ask" class="app" method="get" action="/#results" role="search"
+<form id="ask" class="ask-form" method="get" action="/" role="search" aria-label="Search past projects"
       hx-get="/" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
-      hx-push-url="true" hx-indicator="#busy" hx-disinherit="*"
-      hx-trigger="submit, change[target.matches('#workspace select, #workspace input[name=mode]')]">
-<div class="search-band">
-  <div class="search-inner">
-    <h1 class="page-title">Is your idea new on Hedera?</h1>
+      hx-push-url="true" hx-sync="this:replace" hx-indicator="#workspace" hx-disinherit="*"
+      hx-trigger="submit, change[target.matches('.filter-bar select, .way input')]">
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-inner">
+    <p class="wordmark">{{ parts.brand_mark("wordmark-mark") }}<span>Hackathon Memory</span></p>
+    <h1 class="hero-title" id="hero-title">Is your idea new on Hedera?</h1>
+    <p class="hero-line">The past Hedera{{ parts.info("hedera", "Hedera") }} hackathon projects closest to your idea, and what the public ledger says about each one.</p>
     <div class="ask">
-      <div class="ask-label">
-        <label for="idea">Your idea</label>
-        <span class="hint" id="idea-hint">Say it in your own words. One sentence is enough, and a whole project description works too.</span>
+      <div class="ask-label"><label for="idea">Your idea</label>{{ parts.info("idea", "your idea") }}</div>
+      <div class="ask-box">
+        <textarea id="idea" name="idea" rows="2" maxlength="{{ LONGEST_IDEA }}" aria-describedby="idea-count"
+          placeholder="What does it do, and for whom? For example: an app that lets a street vendor take card payments without a bank account"
+          hx-get="/" hx-include="#ask" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
+          hx-trigger="input[this.value.trim().length !== 1 &amp;&amp; this.value.trim().length !== 2] changed delay:500ms"
+          hx-replace-url="true" hx-sync="#ask:replace" hx-indicator="#workspace">{{ idea }}</textarea>
+        <button type="button" class="clear-button" data-clear-idea aria-label="Clear the search"{% if not idea %} hidden{% endif %}>&times;</button>
       </div>
-      <textarea id="idea" name="idea" rows="2" maxlength="{{ LONGEST_IDEA }}" aria-describedby="idea-hint idea-count"
-        placeholder="For example: an app that lets a street vendor take card payments without a bank account">{{ idea }}</textarea>
-      <button class="button" type="submit">Search past projects</button>
-      <div class="ask-under">
-        <p class="try">Try:
-          <a href="/?idea=limits+on+what+an+AI+agent+may+spend#results">limits on what an AI agent may spend</a>
-          <a href="/?idea=tracking+coffee+from+the+farm+to+the+cup#results">tracking coffee from the farm to the cup</a>
-          <a href="/?idea=a+ticket+market+without+scalpers#results">a ticket market without scalpers</a>
+      <div class="ask-row">
+        <fieldset class="way">
+          <legend>Quick results by</legend>
+          <span class="way-choice"><label><input type="radio" name="mode" value="meaning"{% if mode == "meaning" %} checked{% endif %}>meaning</label>{{ parts.info("meaning", "a search by meaning") }}</span>
+          <span class="way-choice"><label><input type="radio" name="mode" value="words"{% if mode == "words" %} checked{% endif %}>words</label>{{ parts.info("words", "a search by words") }}</span>
+        </fieldset>
+        <span class="ai-group">
+          <button type="submit" class="ai-button" name="ai" value="1" id="ai-button"
+            hx-get="/" hx-include="#ask" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
+            hx-push-url="true" hx-sync="#ask:replace" hx-indicator="#workspace"{% if not idea %} disabled{% endif %}>Order and compare with Gemini</button>{{ parts.info("ai", "ordering and comparing with Gemini") }}
+        </span>
+      </div>
+      <div class="ask-foot">
+        <p class="try"{% if idea %} hidden{% endif %}><span>Try:</span>
+          {% for example in EXAMPLES %}<a href="/?idea={{ example | urlencode }}" hx-get="/?idea={{ example | urlencode }}" hx-target="#ask" hx-select="#ask" hx-swap="outerHTML" hx-push-url="true">{{ example }}</a>{% endfor %}
         </p>
-        <span class="busy" id="busy" role="status">Searching&hellip;</span>
-        <p class="counter" id="idea-count" data-limit="{{ LONGEST_IDEA }}">Up to {{ "{:,}".format(LONGEST_IDEA) }} characters.</p>
+        <p class="counter" id="idea-count" data-limit="{{ LONGEST_IDEA }}">{{ "{:,}".format(idea | length) }} of {{ "{:,}".format(LONGEST_IDEA) }} characters</p>
       </div>
     </div>
+    {% if offer %}
+    {% set picked = chosen.chosen() %}
+    <div class="filter-bar" role="group" aria-label="Filters">
+      {{ parts.filter_select("event", "Event", "All events", offer.event, chosen.event, "event") }}
+      {{ parts.filter_select("year", "Year", "All years", offer.year, chosen.year) }}
+      {{ parts.filter_select("category", "Category", "All categories", offer.category, chosen.category, "category") }}
+      {{ parts.filter_select("proof", "Hedera proof", "Any result", offer.proof, chosen.proof, "proof") }}
+      {{ parts.filter_select("life", "Life", "Any life", offer.life, chosen.life, "life") }}
+      <noscript><button class="plain-button" type="submit">Apply the filters</button></noscript>
+      {% if picked %}<a class="clear-filters" href="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-get="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-target="#ask" hx-select="#ask" hx-swap="outerHTML" hx-push-url="true">Clear the filters</a>{% endif %}
+    </div>
+    {% endif %}
   </div>
-</div>
+</section>
 
 <div id="workspace" class="workspace">
-  {% if open_id %}<input type="hidden" name="open" value="{{ open_id }}">{% endif %}
   {% if problem or notes %}
-  <div class="notice">
-    {% if problem %}<p class="problem" role="alert">{{ problem }}</p>{% endif %}
-    {% for note in notes or [] %}<p class="note">{{ note }}</p>{% endfor %}
+  <div class="notices">
+    {% if problem %}<p class="notice problem" role="alert">{{ problem }}</p>{% endif %}
+    {% for note in notes or [] %}<p class="notice">{{ note }}</p>{% endfor %}
   </div>
-  {% endif %}
-
-  {% if offer %}
-  {% set picked = chosen.chosen() %}
-  <details class="filters" id="filters" open>
-    <summary>Filters {% if picked %}<span class="chosen-count">{{ picked | length }} chosen</span>{% endif %}</summary>
-    <div class="filter-body">
-      {{ parts.filter_select("event", "Event", "All events", offer.event, chosen.event) }}
-      {{ parts.filter_select("year", "Year", "All years", offer.year, chosen.year) }}
-      {{ parts.filter_select("category", "Category", "All categories", offer.category, chosen.category) }}
-      {{ parts.filter_select("proof", "Hedera proof", "Any result", offer.proof, chosen.proof) }}
-      {{ parts.filter_select("life", "Life", "Any life", offer.life, chosen.life) }}
-      <p class="filter-note">The number after each choice is how many projects have it. Only {{ offer.with_category }} of the {{ offer.projects }} projects have a category so far, because only they have a card written by a model.</p>
-      <div class="filter-actions">
-        <noscript><button class="button quiet" type="submit">Apply the filters</button></noscript>
-        {% if picked %}<a href="/{% if idea %}?idea={{ idea | urlencode }}{% endif %}#results">Clear the filters</a>{% endif %}
-      </div>
-    </div>
-  </details>
   {% endif %}
 
   <section class="results" id="results" aria-labelledby="results-title" tabindex="-1">
-    {% if asked %}
-      {% if modes %}
-      <fieldset class="modes">
-        <legend>How to search</legend>
-        <div class="mode-options">
-        {% for option in modes %}
-          <label><input type="radio" name="mode" value="{{ option.key }}"{% if option.key == mode %} checked{% endif %}> {{ option.label }}</label>
-        {% endfor %}
-        </div>
-        {% for option in modes if option.key == mode %}<p class="mode-facts">{{ option.facts }} <a href="/method#modes">How we measured</a></p>{% endfor %}
-        <noscript><button class="button quiet" type="submit">Search again</button></noscript>
-      </fieldset>
-      {% endif %}
-      {% if nothing_matches %}
-        <div class="empty-state"><h2 id="results-title">No project matches these filters</h2>
-          <p>Remove a filter, or <a href="/?idea={{ idea | urlencode }}#results">search all projects</a>.</p></div>
-      {% elif not results and not problem %}
-        <div class="empty-state"><h2 id="results-title">No project came close to this idea</h2>
-          <p>Try other words, or describe what the people who use your idea would do with it.</p></div>
-      {% elif results %}
-        <div class="results-head">
-          {% set n = results | length %}<h2 id="results-title">{{ n }} project{{ "s" if n != 1 }} closest to your idea</h2>
-          {% if elapsed is not none %}<span class="meta">found in {{ "%.1f" | format(elapsed) }} s</span>{% endif %}
-        </div>
-        {% set first_words = {"ai": "A fast model put the closest first, among the 30 closest in meaning.",
-                              "meaning": "The first is the closest in meaning.",
-                              "both": "The first is the closest in meaning and words.",
-                              "words": "The first uses the rarest of your words the most."} %}
-        <p class="results-explain">{{ first_words.get(mode, first_words["both"]) }} The order says nothing about quality.</p>
-        {% if chosen and chosen.chosen() %}<p class="results-explain">Only the projects that match the filters were searched. <a href="/?idea={{ idea | urlencode }}#results">Search all projects</a></p>{% endif %}
-        <ol class="result-list" id="result-list">
-        {% for card, summary, line, snippet in results %}
-          {{ parts.result(card, summary, line, snippet, loop.index, search_query, open_id, compared=True) }}
-        {% endfor %}
-        </ol>
-        <div id="compare-loader" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={% for card, summary, line, snippet in results %}{{ card.hit.project_id }}{% if not loop.last %},{% endif %}{% endfor %}"
-             hx-trigger="load" hx-swap="none" hx-target="this" hx-push-url="false"></div>
-        <details class="legends legends-box">
-          <summary>What the marks mean</summary>
-          {{ marks.proof_legend() }}
-          {{ marks.life_legend() }}
-          <dl class="legend"><dt>The same, differs</dt><dd>A fast model reads your idea and the texts of each project, and writes what they share and the main difference. It names the texts it used, and it does not judge the projects.</dd></dl>
-        </details>
-      {% endif %}
-    {% elif not problem %}
-      <div class="collection" aria-label="The collection">
-        <div><b>{{ "{:,}".format(offer.projects) if offer else "" }}</b><span>projects</span></div>
-        <div><b>{{ offer.event | length if offer else "" }}</b><span>events</span></div>
-        {% if offer %}{% for choice in offer.proof if choice.value == "proof_found" %}<div><b>{{ choice.count }}</b><span>with a Hedera proof found</span></div>{% endfor %}{% endif %}
+  {% if asked %}
+    <div class="results-head">
+      <div class="results-titles">
+        <h2 id="results-title">{% if with_ai %}Ordered by Gemini{% else %}Quick results{% endif %}</h2>{{ parts.info("quick" if not with_ai else "order", "these results") }}
+        {% if results %}<p class="results-sub">{{ first_shown }} to {{ last_shown }} of the {{ total }} closest{% if mode == "words" %} that use your words{% elif with_ai %}: Gemini put its ten first among the 30 closest in meaning{% else %} in meaning: Gemini has not read them{% endif %}{% if elapsed is not none %} &middot; {{ "%.1f" | format(elapsed) }} s{% endif %}</p>{% endif %}
       </div>
-      <div class="results-head">
-        <h2 id="results-title">{% if chosen and chosen.chosen() %}{{ "{:,}".format(total) }} project{{ "s" if total != 1 }} match{{ "es" if total == 1 }} the filters{% else %}All {{ "{:,}".format(total) }} projects{% endif %}</h2>
-        <span class="meta">newest events first{% if total > page_size %}, {{ first_shown }} to {{ last_shown }}{% endif %}</span>
-      </div>
-      <p class="results-explain">Describe an idea above to find the projects closest to it, or narrow this list with the filters.</p>
-      {% if results %}
-      <ol class="result-list" id="result-list" start="{{ first_shown }}">
+      {% if with_ai %}<a class="quiet-link" href="/?{{ quick_query }}" hx-get="/?{{ quick_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true">Show the quick order</a>{% endif %}
+    </div>
+    {% if nothing_matches %}
+      <div class="empty-state"><h3>No project matches these filters</h3><p>Remove a filter to search more projects.</p></div>
+    {% elif not results and not problem %}
+      <div class="empty-state"><h3>{% if mode == "words" %}No project uses these words{% else %}No project came close to this idea{% endif %}</h3>
+        <p>{% if mode == "words" %}Check the spelling, or search by meaning to find the same idea in other words.{% else %}Try other words, or say what the people who use your idea would do with it.{% endif %}</p></div>
+    {% elif results %}
+      <ol class="card-grid" id="result-list">
       {% for card, summary, line, snippet in results %}
-        {{ parts.result(card, summary, line, snippet, none, search_query, open_id, compared=False) }}
+        {{ parts.result(card, summary, line, snippet, first_shown + loop.index0, search_query, card.hit.project_id in compare_ids) }}
       {% endfor %}
       </ol>
-      <details class="legends legends-box">
-        <summary>What the marks mean</summary>
-        {{ marks.proof_legend() }}
-        {{ marks.life_legend() }}
-      </details>
-      <nav class="more" aria-label="Pages of the list">
-        {% if page > 1 %}<a class="button quiet" href="/?{{ search_query ~ '&' if search_query }}page={{ page - 1 }}#results">Previous {{ page_size }}</a>{% endif %}
-        {% if last_shown < total %}<a class="button quiet" href="/?{{ search_query ~ '&' if search_query }}page={{ page + 1 }}#results">Next {{ page_size }}</a>{% endif %}
-      </nav>
-      {% elif page > 1 %}
-      <div class="empty-state"><p>There are no more projects in this list. <a href="/{{ '?' ~ search_query if search_query }}#results">Go back to its first page</a></p></div>
-      {% else %}
-      <div class="empty-state"><p>No project matches these filters. Remove a filter to see more.</p></div>
+      {{ parts.pager(page, pages, search_query, "Pages of the results") }}
+      {% if compare_ids %}
+      <div id="compare-loader" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ compare_ids | join(',') }}"
+           hx-trigger="load" hx-swap="none" hx-target="this"></div>
       {% endif %}
     {% endif %}
-  </section>
-
-  <section class="panel{% if panel_card %} open{% endif %}" id="panel" aria-label="The card of the chosen project" tabindex="-1">
-    {% if panel_card %}
-      {% with card = panel_card, back_query = search_query %}{% include "_panel.html" %}{% endwith %}
-    {% else %}
-      <div class="panel-empty">
-        <h2>The card of a project opens here</h2>
-        <p>Choose a project in the list. Its card shows three sources, kept apart: the project's own page, word for word; the facts from its code and the Hedera ledger; and the fields written by a model, each checked against the page.</p>
-        <p><a href="/method#marks">What the marks mean</a></p>
+  {% elif not problem %}
+    <div class="results-head">
+      <div class="results-titles">
+        <h2 id="results-title">{% if chosen and chosen.chosen() %}{{ "{:,}".format(total) }} project{{ "s" if total != 1 }} match{{ "es" if total == 1 }} the filters{% else %}All {{ "{:,}".format(total) }} projects{% endif %}</h2>
+        {% if view != "overview" and results %}<p class="results-sub">Newest events first &middot; {{ first_shown }} to {{ last_shown }}</p>{% endif %}
       </div>
+      <nav class="view-switch" aria-label="How to show the projects">
+        <a href="/{{ '?' ~ projects_query if projects_query }}" hx-get="/{{ '?' ~ projects_query if projects_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view != "overview" %} aria-current="page"{% endif %}>Projects</a>
+        <a href="/?{{ overview_query }}" hx-get="/?{{ overview_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == "overview" %} aria-current="page"{% endif %}>Overview</a>
+      </nav>
+    </div>
+    {% if view == "overview" %}
+      {% include "_overview.html" %}
+    {% elif results %}
+      <ol class="card-grid" id="result-list">
+      {% for card, summary, line, snippet in results %}
+        {{ parts.result(card, summary, line, snippet, none, search_query, false) }}
+      {% endfor %}
+      </ol>
+      {{ parts.pager(page, pages, search_query) }}
+    {% elif page > 1 %}
+      <div class="empty-state"><h3>There are no more projects in this list.</h3><p><a href="/{{ '?' ~ search_query if search_query }}">Go back to its first page</a></p></div>
+    {% else %}
+      <div class="empty-state"><h3>No project matches these filters.</h3><p>Remove a filter to see more.</p></div>
     {% endif %}
+  {% endif %}
   </section>
+  {{ parts.skeleton_cards() }}
 </div>
 </form>
 {% endblock %}
+{% block viewer %}{% if panel_card %}{% with card = panel_card, back_query = search_query %}{% include "_panel.html" %}{% endwith %}{% endif %}{% endblock %}
