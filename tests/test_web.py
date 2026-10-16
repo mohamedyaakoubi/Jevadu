@@ -1,5 +1,6 @@
-"""The website (design 12.1, third version): the search, the window of a project, the windows of
-the bottom of the page and the overview, on invented projects, with Google faked."""
+"""The website (design 12.1, fourth version): the search, the window of a project, the check of
+a submission, the windows of the bottom of the page and the charts, on invented projects, with
+Google, GitHub and the mirror node faked."""
 
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ from urllib.parse import urlsplit
 import psycopg
 import pytest
 
+from checkfakes import REPO, TOPIC, found_code, nodes
 from fakes import project_page
 from hackathon_memory.collect.polite import FetchResult
 from hackathon_memory.collect.rawstore import RawStore
@@ -75,7 +77,11 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
             (ids["Pebble Pay"], settings.gemini_rewrite_model, INSTRUCTIONS_VERSION, "a" * 64,
              json.dumps(fields)),
         )  # fmt: skip
-    return TestClient(create_app(settings, google=client, llm=client)), fake, ids, database
+    asker, github_site = found_code(tmp_path)
+    app = create_app(settings, google=client, llm=client, github_client=asker, mirrors=nodes())
+    served = TestClient(app)
+    served.github_site = github_site  # what the stand-in GitHub was asked
+    return served, fake, ids, database
 
 
 def model_calls(fake, since: int = 0) -> int:  # noqa: ANN001
@@ -444,6 +450,56 @@ def test_a_filter_value_that_no_project_has_is_left_out_and_said(site) -> None: 
     assert page.text.count('class="result"') >= 1  # searched without that filter
 
 
+# ----------------------------------------------------------------- the check of a submission (S3)
+
+
+def checkable(database: str) -> str:
+    """Pebble Pay keeps the code of the submission, and the event's end is typed in. Returns the
+    number of the event, as the form sends it."""
+    from hackathon_memory.db.repositories import RepositoryStore
+
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE events SET ends_on = '2026-03-08'")
+        (pebble,) = conn.execute("SELECT id FROM projects WHERE name = 'Pebble Pay'").fetchone()
+        (event,) = conn.execute("SELECT id FROM events").fetchone()
+    RepositoryStore(database).link({pebble: REPO})
+    return str(event)
+
+
+def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> None:  # noqa: ANN001
+    client, fake, _, database = site
+    event = checkable(database)
+    before = len(fake.requests)
+    asked = {"repo": "github.com/sample-org/pebble-pay/tree/main", "event": event}
+    part = client.get("/check", params=asked, headers=HX)
+    assert part.status_code == 200 and '<h2 id="viewer-title"' in part.text
+    assert "github.com/sample-org/pebble-pay</h2>" in part.text
+    assert "Proof: found" in part.text and "No model wrote anything here." in part.text
+    assert f'href="https://hashscan.io/testnet/topic/{TOPIC}"' in part.text
+    assert "Seen before" in part.text and "The same repository." in part.text
+    assert "The closest past projects" in part.text and "Cedar Post" in part.text
+    assert model_calls(fake, before) == 0  # the closest projects need an embedding only
+    assert len(client.github_site.seen) == 2  # the facts and the README, once
+    page = client.get("/check", params=asked)  # without JavaScript: a page of its own
+    assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
+    assert len(client.github_site.seen) == 2  # GitHub was not asked again
+
+
+def test_a_check_without_a_repository_or_an_event_says_what_to_do(site) -> None:  # noqa: ANN001
+    client, _, _, database = site
+    event = checkable(database)
+    wrong = client.get("/check", params={"repo": "my project", "event": event}, headers=HX)
+    assert wrong.status_code == 400 and "This is not the link of a repository" in wrong.text
+    none = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
+    assert none.status_code == 400 and "Choose the event" in none.text
+    backwards = {"repo": REPO, "event": "other", "starts": "2026-03-08", "ends": "2026-03-06"}
+    assert client.get("/check", params=backwards, headers=HX).status_code == 400
+    assert client.github_site.seen == []  # nothing was asked of GitHub
+    typed = {"repo": REPO, "event": "other", "starts": "2026-03-06", "ends": "2026-03-08"}
+    days = client.get("/check", params=typed, headers=HX)
+    assert days.status_code == 200 and "6 March 2026 to 8 March 2026" in days.text
+
+
 # ----------------------------------------------------------------- the charts (design 12.1, S5)
 
 
@@ -686,7 +742,8 @@ def test_axe_finds_no_problem(site, chromium, monkeypatch, width, scheme) -> Non
     """axe-core finds about half of the problems of access, so a person still checks the rest
     (design 12.3); what it finds must never come back."""
     del monkeypatch
-    client, fake, _, _ = site
+    client, fake, _, database = site
+    event = checkable(database)
     fake.answer_queue = [json.dumps({"closest": [1, 2, 3]})]
     fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]), (3, ["name"]))
     page = served(chromium, client, viewport={"width": width, "height": 900},
@@ -707,5 +764,11 @@ def test_axe_finds_no_problem(site, chromium, monkeypatch, width, scheme) -> Non
     page.wait_for_selector("#sheet[open] #sheet-title")
     assert problems(page) == []
     page.goto("http://site.test/?view=charts")
+    assert problems(page) == []
+    page.goto("http://site.test/")  # the check of a submission, in its window
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] .check-result #viewer-title")
     assert problems(page) == []
     page.context.close()

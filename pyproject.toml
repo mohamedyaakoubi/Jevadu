@@ -68,6 +68,7 @@ select = ["E", "F", "I", "B", "UP", "S"]
 [tool.ruff.lint.isort]
 known-first-party = [
     "hackathon_memory", "proofs", "evals", "fakes", "googlefake", "searchfakes", "sheetfakes",
+    "checkfakes",
 ]
 
 [tool.ruff.lint.per-file-ignores]

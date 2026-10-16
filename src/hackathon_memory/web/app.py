@@ -1,5 +1,6 @@
-"""The website: the search (S1), the card of a project over it (S2), the charts of a list (S5)
-and the method (S6), on one page (design 12.1, fourth version, on Tabler).
+"""The website: the search (S1), the card of a project over it (S2), the check of a submission
+(S3), the charts of a list (S5) and the method (S6), on one page (design 12.1, fourth version, on
+Tabler).
 
 While an idea is typed, the page shows quick results, by meaning or by words, with no model that
 writes. Only the button "Order and compare with Gemini" calls the search model: it orders the 30
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -29,10 +31,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.conninfo import make_conninfo
 
+from hackathon_memory import __version__
+from hackathon_memory.check import submission
+from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
+from hackathon_memory.collect.polite import CollectorRefused
+from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
 from hackathon_memory.finops.budget import BudgetExceeded
+from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import compare as comparing
@@ -82,6 +90,7 @@ PROOF_SHORT = {
     "not_found": "ID not found",
     "no_id_given": "no ID given",
     filtering.NOT_CHECKED: "not checked yet",
+    submission.NOT_ASKED: "the ledger did not answer",
 }
 NO_SUCH_PROJECT = "There is no project with this number. Close this window and search again."
 DATABASE_DOWN = (
@@ -96,10 +105,30 @@ GOOGLE_AWAY = (
     "Google could not be asked about the meaning of the idea just now, so only its words were "
     "searched. Try again later for the search by meaning."
 )
+GOOGLE_AWAY_CHECK = (
+    "Google could not be asked about the meaning of the README just now, so the closest past "
+    "projects are not shown. Try again later."
+)
 NO_PAGE_EMBEDDINGS = (
     "The projects have no embeddings yet, so only the words of the idea were searched."
 )
 UNKNOWN_SHEET = "There is no such page. Close this window."
+NOT_A_REPOSITORY = (
+    "This is not the link of a repository on GitHub. Paste a link such as "
+    "github.com/owner/project, then press the button again."
+)
+NO_EVENT = (
+    "Choose the event that the project was sent to. For another event, type its first and its "
+    "last day; the last day may not come before the first."
+)
+CLOSEST = 5  # the closest past projects that the check of a submission shows
+NO_README_TO_SEARCH = (
+    "The repository has no README to read, so no past project can be found by its meaning. "
+    "Type its idea in the search box instead."
+)
+# The mirror node for a page: one more try after 2 seconds, not three over a minute.
+MIRROR_SECONDS = 10.0
+MIRROR_PAUSES = (2.0,)
 IDEA_CUT = f"The idea was longer than {LONGEST_IDEA:,} characters, so it was cut."
 SHEETS = {"how": ("How it works", "_about_how.html"),
           "questions": ("Common questions", "_about_questions.html"),
@@ -144,15 +173,25 @@ def page_numbers(page: int, pages: int) -> list[int | None]:
     return numbers
 
 
-def create_app(settings: Settings | None = None, google: Any = None, llm: Any = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    google: Any = None,
+    llm: Any = None,
+    *,
+    github_client: Any = None,
+    mirrors: Mapping[str, Any] | None = None,
+) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
-    model; by default each is made, counted by the meter, when it is first needed."""
+    model; by default each is made, counted by the meter, when it is first needed. The check of
+    a submission asks GitHub with `github_client` and the ledger with `mirrors`; by default they
+    are made when first needed, with the promises of collect/github.py."""
     settings = settings or Settings()
     app = FastAPI(title="Hackathon Memory", docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
-    clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given}
+    clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
+                               "github": github_client, "mirrors": mirrors}  # fmt: skip
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
 
     def database() -> str:
@@ -377,6 +416,83 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
                       **{**shown, "elapsed": elapsed, "with_ai": ordered,
                          "compare_ids": compare_ids})  # fmt: skip
 
+    def github_or_why() -> tuple[Any, str | None]:
+        """The client that asks GitHub, or None with the reason in plain words."""
+        if clients["github"] is None:
+            if not settings.collect_github:
+                return None, "GitHub may not be asked now: the switch COLLECT_GITHUB is off."
+            try:
+                clients["github"] = github.github_client(settings)
+            except CollectorRefused as refused:
+                return None, f"GitHub may not be asked now. {refused}"
+        return clients["github"], None
+
+    def mirror_nodes() -> Mapping[str, Any]:
+        if clients["mirrors"] is None:
+            clients["mirrors"] = {
+                name: MirrorNode(name, timeout=MIRROR_SECONDS, pauses=MIRROR_PAUSES)
+                for name in MIRROR_URLS
+            }
+        return clients["mirrors"]
+
+    def event_days(conninfo: str, event: str, starts: str, ends: str) -> Any:
+        """The event that a submission was sent to, or None when none was given."""
+        if event == "other":
+            days = submission.typed_days(starts, ends)
+            return submission.event_of_days(*days) if days else None
+        if not event.isdigit():
+            return None
+        with psycopg.connect(conninfo) as conn:
+            row = conn.execute("SELECT name, starts_at, ends_on FROM events WHERE id = %s",
+                               (int(event),)).fetchone()  # fmt: skip
+        return submission.EventDays(*row) if row else None
+
+    def closest_to(conninfo: str, check: submission.SubmissionCheck) -> tuple[list, str | None]:
+        """The past projects closest in meaning to the README, without those seen before."""
+        words = submission.readme_words(check.readme_text)
+        if not words:
+            return [], NO_README_TO_SEARCH
+        try:
+            ranking = engine.by_meaning(
+                EmbeddingStore(conninfo), client("google", "embed_query"), words,
+                model=settings.gemini_embedding_model, limit=CLOSEST + len(check.seen),
+            )  # fmt: skip
+        except (BudgetExceeded, *FAILED_CALLS):
+            return [], GOOGLE_AWAY_CHECK
+        known = {one.project_id for one in check.seen}
+        ids = [pid for pid in ranking if pid not in known][:CLOSEST]
+        return results_of(conninfo, ids, "", False), None
+
+    @app.get("/check", response_class=HTMLResponse)
+    def check(
+        request: Request, repo: str = "", event: str = "", starts: str = "", ends: str = ""
+    ) -> HTMLResponse:
+        """S3: the check of one submission (design 12.1), in the window over the page, or as a
+        page of its own without JavaScript. Programs read every fact; no model writes."""
+        name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
+        repository = submission.repository_link(repo[:300])
+        if repository is None:
+            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+        try:
+            conninfo = database()
+            days = event_days(conninfo, event, starts, ends)
+            if days is None:
+                return render(request, name, 400, problem=NO_EVENT)
+            asker, why = github_or_why()
+            result = submission.check_submission(
+                conninfo, repository, days, client=asker,
+                store=RawStore(github.raw_dir(settings)),
+                collector=f"{settings.collector_name.strip()}/{__version__}",
+                mirrors=mirror_nodes(), problems=[why] if why else [],
+            )  # fmt: skip
+            closest, note = closest_to(conninfo, result)
+            groups = [[one.project_id] for one in result.seen]
+            members = [group[0] for group in data.members(conninfo, groups)]
+        except (SettingsError, psycopg.OperationalError):
+            return render(request, name, 503, problem=DATABASE_DOWN)
+        return render(request, name, result=result, closest=closest, closest_note=note,
+                      seen_before=list(zip(result.seen, members, strict=True)))  # fmt: skip
+
     @app.get("/project/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:
         back = search_query(dict(request.query_params))
@@ -467,6 +583,9 @@ def create_app(settings: Settings | None = None, google: Any = None, llm: Any = 
         "PROOF_SHORT": PROOF_SHORT,
         "CODE_WORDS": listing.CODE_WORDS,
         "WINNER_ENTRY": "winner_entry",
+        "NOT_ASKED": submission.NOT_ASKED,
+        "CONFIRMED": seen.CONFIRMED,
+        "MAX_IDS": submission.MAX_IDS,
         "RERANK_SECONDS": RERANK_SECONDS,
         "LONGEST_IDEA": LONGEST_IDEA,
         "EXAMPLES": EXAMPLES,

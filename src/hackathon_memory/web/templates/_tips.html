@@ -124,4 +124,16 @@
 </ul>
 <p>No model writes anything. You can then register the submission on Hedera{{ parts.ref("topic") }}.</p>
 {% endcall %}
+
+{% call tip("seen", "Seen before") %}
+<p>Two entries are the same project when they share the same code repository{{ parts.ref("repository") }}, or the same Hedera ID on the same network that the ledger found for both. A program compares them exactly, with no AI.</p>
+<ul>
+  <li>An ID that more than three projects with other code name is a shared service, such as a common test account. It links nothing.</li>
+  <li>A name alone links nothing: two teams can pick the same name.</li>
+</ul>
+{% endcall %}
+
+{% call tip("closest", "The closest past projects") %}
+<p>The past projects whose pages are closest in meaning to the README, found as the search finds an idea: Google's embedding model{{ parts.ref("embedding") }} turns the texts into numbers, and close numbers mean close ideas. It writes nothing. Close in meaning is not a copy: the tool shows facts, and people judge.</p>
+{% endcall %}
 </div>

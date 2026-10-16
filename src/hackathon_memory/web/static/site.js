@@ -191,6 +191,14 @@
       '<span class="bone title"></span><span class="bone"></span><span class="bone"></span>' +
       '<span class="bone short"></span></div>';
   }
+  // While a submission is checked: what the programs do, in order (design 12.1, S3).
+  function checking() {
+    return '<div class="project check-progress" role="status"><h2 class="project-title">Checking the submission</h2>' +
+      '<ol><li>GitHub: the dates of the code and its README.</li>' +
+      '<li>The Hedera ledger: each ID that the README names.</li>' +
+      '<li>The collection: the same code or IDs, and the closest past projects.</li></ol>' +
+      '<p class="hm-small">This takes up to about half a minute. No model writes anything.</p></div>';
+  }
   function showViewer() {
     var dialog = viewer();
     if (!dialog) return;
@@ -207,6 +215,7 @@
     document.querySelectorAll("[data-viewer-step]").forEach(function (button) {
       var forward = button.getAttribute("data-viewer-step") === "1";
       button.disabled = !(forward ? after : before);
+      button.hidden = !article; // a check of a submission has no list to step through
     });
   }
   function closeViewer() {
@@ -227,7 +236,7 @@
     var target = event.detail.target;
     if (target && target.id === "viewer-body") {
       var link = event.detail.elt.closest("[data-open-viewer]");
-      target.innerHTML = skeleton();
+      target.innerHTML = event.detail.elt.id === "check" ? checking() : skeleton();
       showViewer();
       if (link) {
         var id = link.getAttribute("data-open-viewer");
@@ -327,7 +336,8 @@
   document.addEventListener("htmx:beforeSwap", function (event) {
     var elt = event.detail.elt;
     var status = event.detail.xhr.status;
-    if (elt && (elt.id === "compare-loader" || elt.closest(".compare-ask")) && (status === 503 || status === 400)) {
+    var shown = elt && (elt.id === "compare-loader" || elt.id === "check" || elt.closest(".compare-ask"));
+    if (shown && (status === 503 || status === 400)) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;
     }

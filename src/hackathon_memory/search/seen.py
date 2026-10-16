@@ -9,7 +9,7 @@ Exact matching, with no AI.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 import psycopg
@@ -98,6 +98,48 @@ def came_back(conninfo: str) -> list[list[int]]:
         # Every project that names the ID counts for a shared service.
         named = [(pid, key) for pid, key, _ in conn.execute(_NAMED).fetchall()]
     return groups(members, ids, named)
+
+
+@dataclass(frozen=True)
+class Matches:
+    """What the collection says about the repository and the Hedera IDs of one submission."""
+
+    same_repository: list[int]  # the projects with the same repository
+    same_id: dict[str, list[int]]  # network:ID -> the projects whose ID the ledger found too
+    shared: set[str]  # the network:IDs that are shared services, which join nothing
+    named_by_other_code: set[str]  # the IDs, on any network, that a project with other code names
+
+
+def submission_matches(conninfo: str, repository: str, keys: Sequence[str]) -> Matches:
+    """The projects that one submission shares its repository or an ID with, by the rule of
+    `groups`. `keys` are the network:IDs of the submission that the ledger found as the kind
+    its README gives. The submission counts as one more user of each of them."""
+    entity_ids = sorted({key.split(":", 1)[1] for key in keys})
+    with psycopg.connect(conninfo) as conn:
+        row = conn.execute("SELECT id FROM repositories WHERE url = %s", (repository,)).fetchone()
+        own_code = row[0] if row else None
+        same_repository = [pid for (pid,) in conn.execute(
+            "SELECT id FROM projects WHERE repository_id = %s ORDER BY id", (own_code,)
+        ).fetchall()] if own_code is not None else []  # fmt: skip
+        found = conn.execute(_FOUND + " WHERE h.entity_id = ANY(%s)",
+                             (list(CONFIRMED), entity_ids)).fetchall()  # fmt: skip
+        named = conn.execute(_NAMED + " WHERE h.entity_id = ANY(%s)", (entity_ids,)).fetchall()
+    users: dict[str, set[int]] = defaultdict(set)
+    other_code: set[str] = set()
+    for pid, key, repository_id in named:
+        users[key].add(repository_id or -pid)
+        if own_code is None or repository_id != own_code:
+            other_code.add(key.split(":", 1)[1])
+    shared = set()
+    for key in keys:
+        users[key].add(own_code or 0)  # the submission itself; 0 is no project's number
+        if len(users[key]) > SHARED_AFTER:
+            shared.add(key)
+    same_id: dict[str, list[int]] = defaultdict(list)
+    for pid, key in sorted(found):
+        if key in keys and key not in shared and pid not in same_id[key]:
+            same_id[key].append(pid)
+    return Matches(same_repository, dict(same_id), shared, other_code)
 
 
 def counted(found: list[list[int]]) -> dict[str, int]:
