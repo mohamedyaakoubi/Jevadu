@@ -21,9 +21,10 @@ import psycopg
 
 from hackathon_memory.check.life import ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN, life_of
 from hackathon_memory.read.quotes import KEPT
-from hackathon_memory.search import listing
+from hackathon_memory.search import listing, seen
 
 NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
+KINDS = ("account", "topic", "token", "contract")  # the kinds of Hedera ID that the charts count
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
 PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
 PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
@@ -46,7 +47,9 @@ class Filters:
 
 @dataclass(frozen=True)
 class Facts:
-    """The five facts of one project that the filters look at."""
+    """The five facts of one project that the filters look at, and three more that the charts
+    count: its prize, its kind of entry, and the kinds of its Hedera IDs that the ledger
+    confirms."""
 
     project_id: int
     event: str
@@ -55,6 +58,9 @@ class Facts:
     category: str
     proof: str
     life: str
+    prize: str = "no_prize"
+    entry_kind: str = "full_card"
+    kinds: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -81,28 +87,34 @@ class Choices:
 
 
 def facts(conninfo: str, *, model: str, version: str, now: datetime | None = None) -> list[Facts]:
-    """The five facts of every project. The category is the one kept on the project's card of
-    this model and these instructions; a project without such a card has none."""
+    """The facts of every project. The category is the one kept on the project's card of
+    this model and these instructions; a project without such a card has none. The kinds are
+    those of its IDs that the ledger found as the kind the project gave (search/seen.py)."""
     now = now or datetime.now(UTC)
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
             "SELECT p.id, e.id, e.name, "
             "coalesce(extract(year FROM e.ends_on), extract(year FROM e.starts_at), e.year)::int, "
-            "p.proof_status, c.fields -> 'category' "
+            "p.proof_status, c.fields -> 'category', p.prize_state, p.entry_kind, "
+            "(SELECT coalesce(array_agg(DISTINCT f.kind ORDER BY f.kind), '{}') "
+            " FROM hedera_ids h JOIN id_checks ic ON ic.hedera_id = h.id AND ic.status = ANY(%s) "
+            " JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = ic.network "
+            " WHERE h.project_id = p.id AND f.kind = ANY(%s)) "
             "FROM projects p JOIN events e ON e.id = p.event_id "
             "LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
             "AND c.instructions_version = %s ORDER BY p.id",
-            (model, version),
+            (list(seen.CONFIRMED), list(KINDS), model, version),
         ).fetchall()
         signs = listing.signs_of_life(conn, [row[0] for row in rows])
     found = []
-    for project_id, event_id, event_name, year, proof, category in rows:
+    for project_id, event_id, event_name, year, proof, category, prize, entry, kinds in rows:
         end, _, _, last_push, last_activity = signs[project_id]
         life = life_of(event_end=end, last_push=last_push, last_ledger_activity=last_activity,
                        now=now)  # fmt: skip
         kept = category and category.get("state") == KEPT and category.get("value")
         found.append(Facts(project_id, str(event_id), event_name, str(year) if year else "",
-                           kept or "", proof or NOT_CHECKED, life.status))  # fmt: skip
+                           kept or "", proof or NOT_CHECKED, life.status, prize, entry,
+                           tuple(kinds)))  # fmt: skip
     return found
 
 
