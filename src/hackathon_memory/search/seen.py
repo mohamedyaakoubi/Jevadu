@@ -18,6 +18,21 @@ import psycopg
 CONFIRMED = ("proof_found", "window_not_known", "dates_do_not_fit", "found_but_empty")
 SHARED_AFTER = 3  # projects with other code that may name one ID before it is a shared service
 
+# The (project, network:ID) pairs that the ledger found as the kind the project gave.
+_FOUND = (
+    "SELECT DISTINCT h.project_id, c.network || ':' || h.entity_id FROM hedera_ids h "
+    "JOIN id_checks c ON c.hedera_id = h.id AND c.status = ANY(%s)"
+)
+# Every (project, network:ID) pair that a page or a README names, found or not, on each network
+# it was asked on; an ID never asked counts on both networks. With the repository of the project.
+_NAMED = (
+    "SELECT DISTINCT h.project_id, n.network || ':' || h.entity_id, p.repository_id "
+    "FROM hedera_ids h JOIN projects p ON p.id = h.project_id "
+    "LEFT JOIN id_checks c ON c.hedera_id = h.id "
+    "CROSS JOIN LATERAL (SELECT unnest(CASE WHEN c.network IS NULL "
+    "THEN ARRAY['mainnet', 'testnet'] ELSE ARRAY[c.network] END) AS network) n"
+)
+
 
 @dataclass(frozen=True)
 class Member:
@@ -79,19 +94,9 @@ def came_back(conninfo: str) -> list[list[int]]:
         members = [Member(pid, (site, slug), repository) for pid, site, slug, repository in
                    conn.execute("SELECT p.id, e.site, e.slug, p.repository_id FROM projects p "
                                 "JOIN events e ON e.id = p.event_id").fetchall()]  # fmt: skip
-        ids = conn.execute(
-            "SELECT DISTINCT h.project_id, c.network || ':' || h.entity_id FROM hedera_ids h "
-            "JOIN id_checks c ON c.hedera_id = h.id AND c.status = ANY(%s)",
-            (list(CONFIRMED),),
-        ).fetchall()
-        # Every project that names the ID counts for a shared service, on each network it was
-        # asked on, found there or not; one never asked counts on both networks.
-        named = conn.execute(
-            "SELECT DISTINCT h.project_id, n.network || ':' || h.entity_id FROM hedera_ids h "
-            "LEFT JOIN id_checks c ON c.hedera_id = h.id "
-            "CROSS JOIN LATERAL (SELECT unnest(CASE WHEN c.network IS NULL "
-            "THEN ARRAY['mainnet', 'testnet'] ELSE ARRAY[c.network] END) AS network) n"
-        ).fetchall()
+        ids = conn.execute(_FOUND, (list(CONFIRMED),)).fetchall()
+        # Every project that names the ID counts for a shared service.
+        named = [(pid, key) for pid, key, _ in conn.execute(_NAMED).fetchall()]
     return groups(members, ids, named)
 
 
