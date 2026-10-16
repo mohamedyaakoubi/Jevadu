@@ -1,6 +1,6 @@
 """The website: the search (S1), the card of a project over it (S2), the check of a submission
-(S3), the charts of a list (S5) and the method (S6), on one page (design 12.1, fourth version, on
-Tabler).
+(S3) and its registration on Hedera (S4), the charts of a list (S5) and the method (S6), on one
+page (design 12.1, fourth version, on Tabler).
 
 While an idea is typed, the page shows quick results, by meaning or by words, with no model that
 writes. Only the button "Order and compare with Gemini" calls the search model: it orders the 30
@@ -19,10 +19,11 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Mapping
-from datetime import date
+from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode
 
 import psycopg
 from fastapi import FastAPI, Request
@@ -30,17 +31,22 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.conninfo import make_conninfo
+from starlette.concurrency import run_in_threadpool
 
 from hackathon_memory import __version__
 from hackathon_memory.check import submission
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
+from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
+from hackathon_memory.collect.github_facts import saved_facts
 from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
 from hackathon_memory.finops.budget import BudgetExceeded
-from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
+from hackathon_memory.hedera import registry
+from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode, hashscan_topic
+from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import compare as comparing
@@ -126,6 +132,21 @@ NO_README_TO_SEARCH = (
     "The repository has no README to read, so no past project can be found by its meaning. "
     "Type its idea in the search box instead."
 )
+NOT_AN_ACCOUNT = (
+    "A Hedera account looks like 0.0.12345. Leave the box empty to register without one."
+)
+CHECK_FIRST = "Check the repository first: only code that GitHub shows can be registered."
+REGISTER_CLOSED = (
+    "The public register is not open yet: its topic on Hedera's test network has not been created."
+)
+REGISTER_UNREAD = (
+    "The register could not be read from the mirror node just now, so nothing can be written. "
+    "Try again in a moment."
+)
+NOT_YET_VISIBLE = (
+    "The record was sent to Hedera, but the mirror node does not show it yet. Check the "
+    "repository again in a minute: the record will be listed among its registrations."
+)
 # The mirror node for a page: one more try after 2 seconds, not three over a minute.
 MIRROR_SECONDS = 10.0
 MIRROR_PAUSES = (2.0,)
@@ -138,6 +159,25 @@ SHEETS = {"how": ("How it works", "_about_how.html"),
 def day(value: date) -> str:
     """A date as the pages write it: 6 July 2025."""
     return f"{value.day} {value:%B %Y}"
+
+
+def moment(value: datetime) -> str:
+    """A moment with its time, in UTC: 16 October 2026, 18:42:07 UTC."""
+    return f"{day(value)}, {value:%H:%M:%S} UTC"
+
+
+@dataclass
+class RegisterView:
+    """What the box of the register shows before its button (design 12.1, S4)."""
+
+    open: bool
+    network: str = "testnet"
+    topic_id: str = ""
+    code: str = ""  # the fingerprint of the repository
+    event: str = ""  # the event, as the register names it
+    earlier: list = field(default_factory=list)  # the registrations of this code, oldest first
+    same_event: Any = None  # the registration of this code for this event, if there is one
+    problem: str | None = None
 
 
 def iso_day(value: str) -> str:
@@ -180,18 +220,21 @@ def create_app(
     *,
     github_client: Any = None,
     mirrors: Mapping[str, Any] | None = None,
+    register_writer: Any = None,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
     a submission asks GitHub with `github_client` and the ledger with `mirrors`; by default they
-    are made when first needed, with the promises of collect/github.py."""
+    are made when first needed, with the promises of collect/github.py. `register_writer` writes
+    one record to the register (hedera/registry.py); by default it is made when first needed."""
     settings = settings or Settings()
     app = FastAPI(title="Hackathon Memory", docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
-                               "github": github_client, "mirrors": mirrors}  # fmt: skip
+                               "github": github_client, "mirrors": mirrors,
+                               "writer": register_writer}  # fmt: skip
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
 
     def database() -> str:
@@ -443,9 +486,39 @@ def create_app(
         if not event.isdigit():
             return None
         with psycopg.connect(conninfo) as conn:
-            row = conn.execute("SELECT name, starts_at, ends_on FROM events WHERE id = %s",
-                               (int(event),)).fetchone()  # fmt: skip
-        return submission.EventDays(*row) if row else None
+            row = conn.execute("SELECT name, starts_at, ends_on, site, slug FROM events "
+                               "WHERE id = %s", (int(event),)).fetchone()  # fmt: skip
+        if row is None:
+            return None
+        name, starts_at, ends_on, site, slug = row
+        return submission.EventDays(name, starts_at, ends_on,
+                                    key=registry.event_key(site, slug))  # fmt: skip
+
+    def register_view(repository: str, days: submission.EventDays) -> RegisterView:
+        """The register's records of this code, read from the mirror node (design 9.2)."""
+        topic = settings.hedera_topic_id.strip()
+        if not topic or settings.hedera_network != "testnet":
+            return RegisterView(open=False)
+        view = RegisterView(True, settings.hedera_network, topic,
+                            registry.code_fingerprint(repository), days.key)  # fmt: skip
+        try:
+            found = registry.registrations(mirror_nodes()[view.network], topic)
+        except MirrorError:
+            view.problem = REGISTER_UNREAD
+            return view
+        view.earlier = [one for one in found if one.code == view.code]
+        view.same_event = next((one for one in view.earlier if one.event == view.event), None)
+        return view
+
+    def writer_or_why() -> tuple[Any, str | None]:
+        """What writes to the register, or None with the reason in plain words."""
+        if clients["writer"] is None:
+            try:
+                node = mirror_nodes()[settings.hedera_network]
+                clients["writer"] = registry.writer(settings, node)
+            except (RegisterError, MirrorError) as error:
+                return None, f"The register cannot be written now. {error}"
+        return clients["writer"], None
 
     def closest_to(conninfo: str, check: submission.SubmissionCheck) -> tuple[list, str | None]:
         """The past projects closest in meaning to the README, without those seen before."""
@@ -490,8 +563,58 @@ def create_app(
             members = [group[0] for group in data.members(conninfo, groups)]
         except (SettingsError, psycopg.OperationalError):
             return render(request, name, 503, problem=DATABASE_DOWN)
+        found = result.code is not None and result.code.status == CODE_FOUND
+        view = register_view(repository, days) if found else None
         return render(request, name, result=result, closest=closest, closest_note=note,
-                      seen_before=list(zip(result.seen, members, strict=True)))  # fmt: skip
+                      seen_before=list(zip(result.seen, members, strict=True)), register=view,
+                      asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
+
+    @app.post("/register", response_class=HTMLResponse)
+    async def register_page(request: Request) -> HTMLResponse:
+        """S4: write the record of a checked submission to the register on Hedera (design 9.2),
+        read it back from the mirror node, and show the receipt."""
+        body = (await request.body()).decode("utf-8", "replace")
+        form = {key: values[0] for key, values in parse_qs(body).items()}
+        return await run_in_threadpool(registered, request, form)
+
+    def registered(request: Request, form: dict[str, str]) -> HTMLResponse:
+        name = "_register.html" if request.headers.get("HX-Request") == "true" else "register.html"
+        repository = submission.repository_link(form.get("repo", "")[:300])
+        if repository is None:
+            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+        typed = form.get("account", "").strip()
+        account = registry.account_of(typed) if typed else None
+        if typed and account is None:
+            return render(request, name, 400, problem=NOT_AN_ACCOUNT)
+        try:
+            days = event_days(database(), form.get("event", ""), form.get("starts", ""),
+                              form.get("ends", ""))  # fmt: skip
+        except (SettingsError, psycopg.OperationalError):
+            return render(request, name, 503, problem=DATABASE_DOWN)
+        if days is None:
+            return render(request, name, 400, problem=NO_EVENT)
+        code = saved_facts(RawStore(github.raw_dir(settings)), repository)
+        if code is None or code.status != CODE_FOUND:
+            return render(request, name, 400, problem=CHECK_FIRST)
+        view = register_view(repository, days)
+        if not view.open or view.problem:
+            return render(request, name, 503, problem=view.problem or REGISTER_CLOSED)
+        values = {"view": view, "network": view.network, "topic_id": view.topic_id}
+        if view.same_event is not None:  # never written twice: the first record stands
+            return render(request, name, done=view.same_event, already=True, **values)
+        write, why = writer_or_why()
+        if write is None:
+            return render(request, name, 503, problem=why)
+        account_print = registry.account_fingerprint(account) if account else None
+        payload = registry.record(view.event, view.code, account_print)
+        try:
+            done = registry.register_submission(write, mirror_nodes()[view.network],
+                                                view.topic_id, payload)  # fmt: skip
+        except RegisterError as error:
+            return render(request, name, 503, problem=f"Nothing was registered. {error}")
+        except MirrorError:
+            return render(request, name, 202, problem=NOT_YET_VISIBLE)
+        return render(request, name, done=done, already=False, **values)
 
     @app.get("/project/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:
@@ -576,6 +699,7 @@ def create_app(
         return about(request, "how")
 
     templates.env.filters["day"] = day
+    templates.env.filters["moment"] = moment
     templates.env.filters["iso_day"] = iso_day
     templates.env.globals |= {
         "PRIZE_WORDS": listing.PRIZE_WORDS,
@@ -593,6 +717,7 @@ def create_app(
         "REF_NUMBER": references.NUMBER,
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
+        "hashscan_topic": hashscan_topic,
         "page_numbers": page_numbers,
         "measured_mode": evidence.mode_named,
         "compare_numbers": lambda: evidence.compare_numbers(settings.gemini_search_thinking_level),

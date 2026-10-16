@@ -87,6 +87,8 @@
         </div>
       </section>
 
+      {% if register %}{% include "_register_box.html" %}{% endif %}
+
       <section class="card project-section check-close-section" aria-labelledby="check-close-title">
         <div class="card-body">
           <h3 id="check-close-title">The closest past projects{{ parts.info("closest", "the closest past projects") }}</h3>

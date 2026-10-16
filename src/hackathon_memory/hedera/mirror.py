@@ -197,6 +197,18 @@ class MirrorNode:
     def topic_message(self, topic_id: str, sequence_number: int) -> dict | None:
         return self._get(f"/topics/{self._entity(topic_id)}/messages/{int(sequence_number)}")
 
+    def topic_messages_from(self, topic_id: str, first: int, *, limit: int = 100) -> list[dict]:
+        """The messages of a topic from the number `first` on, oldest first, at most `limit`.
+
+        The filter is "gte": on 16 October 2026 the test network's node answered
+        "sequencenumber=gt:0" with no message, and "sequencenumber=gte:1" with the first one.
+        """
+        path = (
+            f"/topics/{self._entity(topic_id)}/messages?sequencenumber=gte:{int(first)}"
+            f"&limit={int(limit)}&order=asc"
+        )
+        return (self._get(path) or {}).get("messages") or []
+
     # ----------------------------------------------------------------- what happened on it
 
     @staticmethod

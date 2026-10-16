@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 import psycopg
 import pytest
 
-from checkfakes import REPO, TOPIC, found_code, nodes
+from checkfakes import REGISTER, REPO, TOPIC, RegisterWrites, found_code, nodes
 from fakes import project_page
 from hackathon_memory.collect.polite import FetchResult
 from hackathon_memory.collect.rawstore import RawStore
@@ -49,7 +49,8 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
     database = three_projects(empty_database)
     client, fake, _ = google()
     embed_all(database, client)
-    settings = Settings(_env_file=None, database_url=database, data_dir=str(tmp_path / "data"))
+    settings = Settings(_env_file=None, database_url=database, data_dir=str(tmp_path / "data"),
+                        hedera_topic_id=REGISTER)  # fmt: skip
     # The saved copy of one page, with the day it was taken from its site.
     url = "https://ethglobal.com/showcase/pebble-pay-x1y2z"
     body = project_page(name="Pebble Pay", slug="pebble-pay")
@@ -78,9 +79,20 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
              json.dumps(fields)),
         )  # fmt: skip
     asker, github_site = found_code(tmp_path)
-    app = create_app(settings, google=client, llm=client, github_client=asker, mirrors=nodes())
-    served = TestClient(app)
+    mirrors = nodes()
+    writes = RegisterWrites(mirrors["testnet"])
+
+    def make(**changes: object) -> TestClient:
+        changed = settings.model_copy(update=changes)
+        return TestClient(
+            create_app(changed, google=client, llm=client, github_client=asker, mirrors=mirrors,
+                       register_writer=writes)
+        )  # fmt: skip
+
+    served = make()
     served.github_site = github_site  # what the stand-in GitHub was asked
+    served.writes = writes  # what was written to the stand-in register
+    served.make = make  # the same site with other settings
     return served, fake, ids, database
 
 
@@ -500,6 +512,60 @@ def test_a_check_without_a_repository_or_an_event_says_what_to_do(site) -> None:
     assert days.status_code == 200 and "6 March 2026 to 8 March 2026" in days.text
 
 
+# ----------------------------------------------------------------- the register (S4)
+
+
+def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  # noqa: ANN001
+    import hashlib
+
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": "github.com/sample-org/pebble-pay", "event": event}
+    check = client.get("/check", params=asked, headers=HX)
+    assert "The register does not hold this code yet." in check.text
+    assert "ethglobal.com/sample-event" in check.text and "Write it on Hedera" in check.text
+    form = {**asked, "starts": "", "ends": "", "account": "0.0.4567890"}
+    done = client.post("/register", data=form, headers=HX)
+    assert done.status_code == 200 and "Registered on Hedera" in done.text
+    assert "<dt>Number</dt><dd>1, on the topic" in done.text
+    assert "https://hashscan.io/testnet/transaction/1791585601.000000001" in done.text
+    (payload,) = client.writes.written
+    assert json.loads(payload) == {
+        "v": 1, "event": "ethglobal.com/sample-event",
+        "code": hashlib.sha256(REPO.encode()).hexdigest(),
+        "account": hashlib.sha256(b"0.0.4567890").hexdigest(),
+    }  # fmt: skip
+    assert b"github" not in payload and b"pebble" not in payload  # no link in clear text
+    again = client.post("/register", data=form, headers=HX)
+    assert "Registered already" in again.text and len(client.writes.written) == 1
+    later = client.get("/check", params=asked, headers=HX)
+    assert "Registered before." in later.text and "number 1" in later.text
+    assert "Write it on Hedera" not in later.text  # it is registered for this event already
+
+
+def test_a_registration_needs_a_checked_repository_and_a_real_account(site) -> None:  # noqa: ANN001
+    client, _, _, database = site
+    event = checkable(database)
+    form = {"repo": REPO, "event": event, "starts": "", "ends": "", "account": ""}
+    first = client.post("/register", data=form, headers=HX)
+    assert first.status_code == 400 and "Check the repository first" in first.text
+    client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    wrong = client.post("/register", data={**form, "account": "my wallet"}, headers=HX)
+    assert wrong.status_code == 400 and "A Hedera account looks like 0.0.12345" in wrong.text
+    assert client.writes.written == []
+    page = client.post("/register", data=form)  # without JavaScript: a page of its own
+    assert page.status_code == 200 and "<h1" in page.text and len(client.writes.written) == 1
+
+
+def test_a_closed_register_is_said_and_offers_no_button(site) -> None:  # noqa: ANN001
+    client, _, _, database = site
+    event = checkable(database)
+    closed = client.make(hedera_topic_id="")
+    check = closed.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    assert "The public register is not open yet" in check.text
+    assert "Write it on Hedera" not in check.text
+
+
 # ----------------------------------------------------------------- the charts (design 12.1, S5)
 
 
@@ -596,7 +662,12 @@ def served(chromium, client, before_compare=lambda: None, **context):  # noqa: A
         if parts.path == "/compare":
             before_compare()
         headers = {k: v for k, v in route.request.headers.items() if k.lower().startswith("hx-")}
-        got = client.get(parts.path + (f"?{parts.query}" if parts.query else ""), headers=headers)
+        address = parts.path + (f"?{parts.query}" if parts.query else "")
+        if route.request.method == "POST":  # the register's form
+            headers["content-type"] = route.request.headers.get("content-type", "")
+            got = client.post(address, content=route.request.post_data_buffer, headers=headers)
+        else:
+            got = client.get(address, headers=headers)
         route.fulfill(status=got.status_code, body=got.content,
                       headers={"content-type": got.headers["content-type"]})  # fmt: skip
 
@@ -770,5 +841,8 @@ def test_axe_finds_no_problem(site, chromium, monkeypatch, width, scheme) -> Non
     page.select_option("#check-event", event)
     page.locator("#check button[type=submit]").click()
     page.wait_for_selector("#viewer[open] .check-result #viewer-title")
+    assert problems(page) == []
+    page.locator("#register-form button[type=submit]").click()  # the register, with its receipt
+    page.wait_for_selector("#register-box .hm-receipt")
     assert problems(page) == []
     page.context.close()

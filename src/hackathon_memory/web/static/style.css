@@ -286,7 +286,7 @@ body:has(dialog[open]) { overflow: hidden; }
   .project-col { display: contents; }
   .compare-section { order: 1; } .ledger-section { order: 2; } .code-section { order: 3; }
   .page-section { order: 4; } .model-section { order: 5; }
-  .check-seen-section { order: 1; } .check-close-section { order: 4; }
+  .check-seen-section { order: 1; } .check-register-section { order: 4; } .check-close-section { order: 5; }
 }
 .project-section { margin: 0; }
 .project-section h3 { display: flex; align-items: center; font-size: 1rem; font-weight: 700; margin: 0 0 0.5rem; }
@@ -317,6 +317,11 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-close-name .text-secondary { font-weight: 400; font-size: 0.875rem; }
 .hm-close-line { margin: 0 0 0.25rem; }
 .hm-close-marks { display: flex; flex-wrap: wrap; gap: 0.25rem 0.375rem; margin: 0; }
+.hm-written { padding-left: 1.2rem; margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+.hm-receipt { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 1rem; margin: 0.5rem 0 0.75rem; }
+.hm-receipt dt { font-weight: 600; }
+.hm-receipt dd { margin: 0; overflow-wrap: anywhere; }
+#register-title:focus { outline: none; }
 
 .about { max-width: 72ch; }
 .about-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }

@@ -43,6 +43,7 @@ from hackathon_memory.collect.github_readmes import Readme, fetch_readmes, saved
 from hackathon_memory.collect.polite import PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.ledger import LedgerStore
+from hackathon_memory.hedera import registry
 from hackathon_memory.hedera.mirror import MirrorError, MirrorNode
 from hackathon_memory.parse.hedera_ids import FoundId, find_ids
 from hackathon_memory.search import seen
@@ -75,6 +76,7 @@ class EventDays:
     starts_at: datetime | None
     ends_on: date | None
     typed: bool = False
+    key: str = ""  # how the register names it: "site/short-name", or "days/first/last"
 
     @property
     def window(self) -> Window | None:
@@ -140,7 +142,7 @@ def typed_days(starts: str, ends: str) -> tuple[date, date] | None:
 
 def event_of_days(first: date, last: date) -> EventDays:
     return EventDays("the days typed in", datetime.combine(first, time.min, tzinfo=UTC), last,
-                     typed=True)  # fmt: skip
+                     typed=True, key=registry.days_key(first, last))  # fmt: skip
 
 
 def read_code(

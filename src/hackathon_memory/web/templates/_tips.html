@@ -136,4 +136,13 @@
 {% call tip("closest", "The closest past projects") %}
 <p>The past projects whose pages are closest in meaning to the README, found as the search finds an idea: Google's embedding model{{ parts.ref("embedding") }} turns the texts into numbers, and close numbers mean close ideas. It writes nothing. Close in meaning is not a copy: the tool shows facts, and people judge.</p>
 {% endcall %}
+
+{% call tip("register", "The public register") %}
+<p>A list of records on Hedera's test network{{ parts.ref("testnet") }}, kept in one topic{{ parts.ref("topic") }}. Each record says: this code was registered for this event. Hedera gives it a number and a time that nobody can change.</p>
+<ul>
+  <li>The topic has no admin key, so nobody can delete the register or change its rules, also not this tool. Only the tool's own account can write to it.</li>
+  <li>A record holds fingerprints only: codes of 64 letters computed from the link and the account. The same link always gives the same code, and the code does not show the link.</li>
+  <li>It shows when a code was registered, not who registered it. When the same code comes back for another event, the check shows the first date.</li>
+</ul>
+{% endcall %}
 </div>

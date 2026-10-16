@@ -1,0 +1,41 @@
+{# S4, the register (design 12.1 and 9.2), reached from the check of a submission: the earlier
+   registrations of the same code, and what will be written, in plain words, before the button. #}
+{% import "_parts.html" as parts %}
+{% set view = register %}
+<section class="card project-section check-register-section" id="register-box" aria-labelledby="register-title">
+  <div class="card-body">
+    <h3 id="register-title" tabindex="-1">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
+    {% if not view.open %}
+    <p class="text-secondary">The public register is not open yet: its topic on Hedera's test network has not been created.</p>
+    {% elif view.problem %}
+    <div class="alert alert-warning mb-0" role="status">{{ view.problem }}</div>
+    {% else %}
+      {% if view.earlier %}
+      <p><b>Registered before.</b> The register holds this code {{ view.earlier | length }} time{{ "s" if view.earlier | length != 1 }}:</p>
+      <ul class="hm-link-list">{% for one in view.earlier %}<li><a href="{{ one.link(view.network) }}" target="_blank" rel="noopener">{{ one.registered_at | day }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>, for <span class="id">{{ one.event }}</span>, number {{ one.sequence_number }}</li>{% endfor %}</ul>
+      {% else %}
+      <p class="text-secondary">The register does not hold this code yet.</p>
+      {% endif %}
+      {% if view.same_event %}
+      <p class="mt-2">It is registered for this event already, so nothing more is written.</p>
+      {% else %}
+      <p class="mt-2 mb-1">The button writes one record to the tool's public register on Hedera's test network{{ parts.ref("topic") }}. It holds:</p>
+      <ul class="hm-written">
+        <li>the event: <span class="id">{{ view.event }}</span></li>
+        <li>the fingerprint of the repository's link: <span class="id">{{ view.code[:16] }}&hellip;</span></li>
+        <li>the fingerprint of your Hedera account, if you give one below</li>
+      </ul>
+      <p class="hm-small">Nothing else: no link, no name, no text. Hedera adds a number and the time. A record can never be changed or deleted.</p>
+      <form id="register-form" method="post" action="/register" hx-post="/register" hx-target="#register-box" hx-swap="outerHTML" hx-disabled-elt="find button">
+        <input type="hidden" name="repo" value="{{ result.repository }}">
+        <input type="hidden" name="event" value="{{ asked.event }}">
+        <input type="hidden" name="starts" value="{{ asked.starts }}">
+        <input type="hidden" name="ends" value="{{ asked.ends }}">
+        <label class="form-label" for="register-account">Your Hedera account, if you want (it may stay empty)</label>
+        <input class="form-control" id="register-account" name="account" placeholder="0.0.12345" autocomplete="off" spellcheck="false" pattern="0\.0\.[1-9][0-9]{0,11}">
+        <button class="btn btn-primary mt-3" type="submit">Write it on Hedera's test network</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>

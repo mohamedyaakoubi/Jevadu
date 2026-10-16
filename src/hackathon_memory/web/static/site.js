@@ -266,6 +266,10 @@
       target.scrollTop = 0;
       steps();
     }
+    if (target && target.id === "register-box") {
+      var heading = $("register-title");
+      if (heading) heading.focus({ preventScroll: false });
+    }
     if (target && target.id === "sheet-body") {
       var heading = $("sheet-title");
       if (heading) heading.focus({ preventScroll: true });
@@ -336,7 +340,8 @@
   document.addEventListener("htmx:beforeSwap", function (event) {
     var elt = event.detail.elt;
     var status = event.detail.xhr.status;
-    var shown = elt && (elt.id === "compare-loader" || elt.id === "check" || elt.closest(".compare-ask"));
+    var shown = elt && (elt.id === "compare-loader" || elt.id === "check" || elt.id === "register-form" ||
+      elt.closest(".compare-ask"));
     if (shown && (status === 503 || status === 400)) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;

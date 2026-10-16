@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 import json
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,8 +15,10 @@ from fakes import FakeSite, FakeTime, Reply, StandInMirror, session_for
 from hackathon_memory.collect.github import GitHubClient, allowed, readme_address
 from hackathon_memory.collect.github_facts import facts_address
 from hackathon_memory.collect.polite import CollectorIdentity, RequestCount
+from hackathon_memory.hedera.register import MessageSubmitted
 
 REPO = "https://github.com/sample-org/pebble-pay"
+REGISTER = "0.0.7654321"  # the invented topic of the register
 NOW = datetime(2026, 10, 11, 2, 0, tzinfo=UTC)
 DURING = "1772884800.000000001"  # 7 March 2026, inside the window of the invented event
 TOPIC = "0.0.3456789"
@@ -81,3 +84,26 @@ def nodes() -> dict[str, StandInMirror]:
         {"sequence_number": 7, "consensus_timestamp": DURING},
     ]
     return {"testnet": test, "mainnet": StandInMirror("mainnet")}
+
+
+@dataclass
+class RegisterWrites:
+    """Stands in for the writes to the register: each record lands on the stand-in test network,
+    where the mirror node returns it, with a number and a time."""
+
+    mirror: StandInMirror
+    written: list[bytes] = field(default_factory=list)
+
+    def __call__(self, payload: bytes) -> MessageSubmitted:
+        messages = self.mirror.lists.setdefault(("register", REGISTER), [])
+        number = len(messages) + 1
+        messages.append(
+            {
+                "sequence_number": number,
+                "consensus_timestamp": f"179158560{number}.000000001",
+                "message": base64.b64encode(payload).decode(),
+                "payer_account_id": "0.0.1001",
+            }
+        )
+        self.written.append(payload)
+        return MessageSubmitted(REGISTER, number, f"0.0.1001@179158560{number}.0", "ab")

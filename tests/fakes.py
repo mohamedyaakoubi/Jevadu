@@ -439,6 +439,15 @@ class StandInMirror:
     ) -> list[dict]:
         return self._end("transactions", entity, newest_first, since, until)
 
+    # The messages of the register's topic, in self.lists[("register", topic)].
+    def topic_messages_from(self, topic_id: str, first: int, *, limit: int = 100) -> list[dict]:
+        self.asked.append(("register", topic_id, first))
+        messages = self.lists.get(("register", topic_id), [])
+        return [one for one in messages if one["sequence_number"] >= first][:limit]
+
+    def wait_for_message(self, topic_id: str, sequence_number: int, **_: object) -> dict:
+        return self.lists[("register", topic_id)][sequence_number - 1]
+
 
 def _inside(item: dict, since: datetime | None, until: datetime | None) -> bool:
     """True if the time of a message, a call or a transaction lies in the time asked for."""
