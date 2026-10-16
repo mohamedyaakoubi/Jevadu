@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 15 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the two tests of quality have run. A first website runs on one laptop and is being built. See "What works today" below. The register on Hedera is still the plan.
+> **State on 16 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the two tests of quality have run. A website runs on one laptop: the search, the card of each project, charts of every list, the check of a submission and the register on Hedera. The register is built and tested, and its topic on the test network is not created yet. See "What works today" below.
 >
 > **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The pages stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
@@ -62,7 +62,7 @@ Two more things work, and both were run on the real services:
 - **The cost of the models is counted.** Every call to a model leaves one line in a ledger: the model, the tokens, the time, the cost. A budget stops a call before it is made when it could go over the cap. `python -m hackathon_memory.finops report` shows where the money went. The ledger holds numbers only, never the text of a call.
 - **The history is searched for secrets.** `python -m hackathon_memory.secret_scan` looks for each secret of `.env` in every commit.
 
-The tests (1,441 of them on 15 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+The tests (1,551 of them on 16 October 2026) run on every push, and pass on a clean Linux machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
 
 What runs on the real data today:
 
@@ -80,9 +80,13 @@ The two tests of quality, with their short reports:
 - **Test 1, the fields of the model** (design 13.2): 60 pages, each card graded field by field against its page. In the second run, with the list of 17 categories, no field was graded wrong, 98.5% were fully right, 99.5% of the labels were right, and all four pass marks were met. See `evals/test1/report-gemini-3.1-pro.md`.
 - **Test 2, the search** (design 13.3): of the known similar projects, 34 of 57 (59.7%) were in the first 10 results, under the pass mark of 80%. Most misses are tools for AI agents, a theme with many projects close to each other. See `evals/test2/report-2026-10.md`.
 
-The website, on one laptop: `python -m hackathon_memory.web` serves it at http://127.0.0.1:8000, for this computer only (design 12.1). Everything happens on one page. While an idea is typed, quick results by meaning (or by words) appear as a grid of ten projects with numbered pages; no model writes anything for them. One button asks Gemini 3.8 Flash to put the 30 closest in order and to say, for each of the first ten, what it shares with the idea and how it differs (design 8.2 and 8.3); its answers are kept for one day, so a reload or the back button never asks again. The card of a project opens in a window over the list. Filters in one row narrow the list by event, year, category, Hedera proof and life, and an overview counts the facts of the chosen events from a dated result file. Each term has an (i) that explains it, with numbered sources, Hedera's documentation first. The windows "How it works", "Common questions" and "Sources and references" open from the bottom of the page. It is not online, and its screens have not passed their two reviews yet.
+The website, on one laptop: `python -m hackathon_memory.web` serves it at http://127.0.0.1:8000, for this computer only (design 12.1). Everything happens on one page. While an idea is typed, quick results by meaning (or by words) appear as a grid of ten projects with numbered pages; no model writes anything for them. One button asks Gemini 3.8 Flash to put the 30 closest in order and to say, for each of the first ten, what it shares with the idea and how it differs (design 8.2 and 8.3); its answers are kept for one day, so a reload or the back button never asks again. The card of a project opens in a window over the list. Filters in one row narrow the list by event, year, category, Hedera proof and life, and a switch shows the same list as charts, counted from the tables. Each term has an (i) that explains it, with numbered sources, Hedera's documentation first. The windows "How it works", "Common questions" and "Sources and references" open from the bottom of the page. The page is built on Tabler, a design system on Bootstrap 5, with htmx and Chart.js.
 
-What does not exist yet: the register on Hedera, the overview of an event, the cards of all pages (so most projects have no category yet), and the other facts of the code (the number of changes, the contributors, a Hedera library in the package files).
+A box beside the idea checks one submission from its GitHub link and its event (design 12.1, S3). GitHub is asked for the dates of the code and the README, the Hedera IDs of the README are checked on the mirror node against the dates of the event, and the page shows the proof, the life of the code, the projects of the collection with the same code or the same ID, and the closest past projects by meaning. No model writes anything for it. The result can then be written to the public register on Hedera's test network (design 9.2): one record of fingerprints only, read back from the mirror node, with its number, its time and a link to HashScan.
+
+It is not online, and its screens have not passed their two reviews yet.
+
+What does not exist yet: the topic of the register on the test network (the code is built and tested; one command creates the topic, see below), the cards of all pages (a run over all 658 pages is under way, so many projects have no category yet), and the other facts of the code (the number of changes, the contributors, a Hedera library in the package files).
 
 ## Run it
 
@@ -142,7 +146,8 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m evals.test2.run` | Test 2, the search test, into a dated file of `evals/results`. |
 | `python -m evals.search_modes` | Six ways to search on the cases of Test 2: the known projects found, the time and the cost of each, in numbers only. `--typos` puts two typing errors in each idea. |
 | `python -m evals.compare_levels data/evals/test2/ideas.txt` | How long the comparison under the results takes at each thinking level, and what it costs, in numbers only. `--show` prints the sentences on the screen. |
-| `python -m evals.overview` | The counts of the overview of the website, for each event: projects by prize, by Hedera proof, by life, by the kinds of Hedera ID the ledger confirms, and by theme, and the projects linked across events. In numbers only. |
+| `python -m evals.overview` | The counts of the charts of the website, for each event, into a dated file: projects by prize, by Hedera proof, by life, by the kinds of Hedera ID the ledger confirms, and by theme, and the projects linked across events. In numbers only. |
+| `python -m hackathon_memory.hedera.registry open` | Creates, once, the topic of the public register on the test network, with no admin key and the tool's key as its submit key, and checks both keys on the mirror node. Then put the topic's ID in `.env` as `HEDERA_TOPIC_ID`. |
 | `python -m hackathon_memory.web` | The website, at http://127.0.0.1:8000, on this computer only. `--port` picks another port. |
 | `python -m hackathon_memory.search "an idea"` | The closest projects to an idea, as a plain listing with the facts of each one. `--numbers-only` shows no name or link. |
 | `python -m proofs.gate_b` | Gate B, part 1: a new empty database, the whole path with one command, and the first 10 results of each idea of `data/by-hand/gate-b-questions.txt`, written to `data/by-hand/gate-b-results.txt` to be marked. |
