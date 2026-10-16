@@ -462,6 +462,8 @@ For each repository: does it exist, when was it created, when was the first and 
 
 **The facts of a repository, as built.** One request for each repository asks for its facts (`python -m hackathon_memory.pipeline code`). The answer also holds the account that owns the repository: its photo, and for some accounts a name and an email address. None of it is kept. Before saving, only a fixed list of fields stays: the link, the dates (made, last push), the state (archived, a fork), the language, the size, the short name of the license, and the description with the words about people hidden. The number of changes, the contributors and the libraries are not read yet.
 
+**The check of one submission (16 October 2026).** The check of screen S3 asks GitHub for one repository, with the same client and the same rules: two requests, the facts and the README, one after the other. Both answers are saved, so a repository is never asked for twice, also when it already belongs to the collection.
+
 ### 7.4 The life rule
 
 A **sign** is one of two dates: the last push of code to the repository, or the last activity on the ledger of the project's own IDs. A **sign of life** is a sign later than 30 days after the last day of the event. Before that line, the work is most likely still the work of the event, with its late fixes.
@@ -580,6 +582,19 @@ If the same fingerprint appears again later, at any event, the tool says "seen b
 - No free text, no names, no links in clear text. A message can never be deleted, so nothing personal may go in.
 - Far below 1 KB, because a longer message is cut into pieces. The record of the Gate A proof has 102 bytes.
 - Only the tool's own account can write to the topic. This keeps strangers from filling it.
+
+**Built on 16 October 2026: version 1 of the record.** In compact JSON:
+
+```json
+{"v":1,"event":"ethglobal.com/prague","code":"<64 hex>","account":"<64 hex>"}
+```
+
+- `code` is the SHA-256 of the repository's link, written in one spelling. The link itself is never written: it holds the name of its owner. Anybody can compute the fingerprint of a link again and find its records.
+- `account` is the SHA-256 of the team's Hedera account, and only when the team gives one.
+- `event` names the event by its site and the short name in its address, or by its first and its last day when the collection does not hold it (`days/2026-10-01/2026-10-20`).
+- About 150 bytes. A record above 256 bytes, or one that is not this form, is refused before anything is sent. A code is written once for one event.
+- The topic is created once with `python -m hackathon_memory.hedera.registry open`, which then checks on the mirror node that it has no admin key and the tool's key as its submit key. Until it exists, the page says that the register is not open.
+- The records are read back from the mirror node page by page, with the filter `sequencenumber=gte:`. On 16 October 2026 the test network's node answered `gt:0` with no message and `gte:1` with the first one.
 
 ### 9.4 What the register proves, and what it does not
 
@@ -755,9 +770,9 @@ No page is built before its row here is agreed. For each screen: who uses it, wh
 |---|---|---|---|---|
 | S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. Quick results by meaning while the idea is typed, said to be quick. A button that says what the model will do, in how long and for how much, and then orders the closest and compares them. The closest projects as a grid of ten cards, each with its one-sentence description, event, proof status and life status, and after the button what is the same and what differs. Filters in one row under the box. Numbered pages. |
 | S2 | Project card | Everybody | What is this project really? | Opens over the results, on most of the screen, with the results still seen behind it; on a phone, on the whole screen. The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan. The date of each check. The previous and the next card of the list. |
-| S3 | Check a submission | Judge | Can I trust this submission's claims? | The same box, switched to "A submission": a repository link, or the link of a project in the collection, and its event. Progress while the check runs. Then the proof status with the facts behind it, the life of the code, "seen before", and the closest past projects. |
+| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box beside the box of the idea: the GitHub link of a repository, and its event, from the collection or with its first and last day typed in. The steps while the check runs, in the window over the page. Then the proof status with the facts of each Hedera ID of the README, the life of the code, "seen before", and the five closest past projects by the meaning of the README. No model writes. |
 | S4 | Register | Builder | Do I want my submission on the public register? | Reached from the result of S3. What will be written, in plain words, before the button. Existing registrations with the same fingerprint. After the button: the receipt with number, time and link. |
-| S5 | Event overview | Organiser | What did this event produce? | A view of the search page beside the grid of projects, with the same event and year filters: counts by theme, by Hedera service, by proof status and by life status, for the winners and for the others, and the projects that came back. A share only with 20 projects or more behind it. The date of the counts. |
+| S5 | Charts of a list | Organiser | What did this event produce? | A switch beside the grid shows the same list as charts: the whole collection, a search, or the filters of an event and a year. Counts by theme, by Hedera service, by proof status and by life status, for all the projects and for those with a Hedera prize; the projects of each event, with a link to its page; and the projects linked across events. A share only with 20 projects or more behind it. Counted from the tables when the page is made, with the same tally as the dated overview job (evals/overview.py). |
 | S6 | Method and limits | Everybody | How far can I trust this tool? | A window opened from the bottom of every page: the steps of the search, the test results with their ranges, what the tool cannot do, and what exists elsewhere. |
 
 Every screen also needs three more states: while loading, when there is nothing to show, and when something failed. Each one says in plain words what happened and what to do.
@@ -771,6 +786,15 @@ Every screen also needs three more states: while loading, when there is nothing 
 - **A short first screen.** The first visit of a browser opens with the name of the tool for about one second. Any key or tap skips it, and it is left out when the system asks for less motion.
 - **Shapes while loading.** While a list or a card loads, its shape is drawn in grey.
 - **A search is kept until the person clears it.** The address holds it, so a reload or the back button shows it again. The order and the comparisons of the model are kept for one day (section 8.2), so they are not asked for again. The browser keeps the last search, so a later visit finds it, until the person clears the box.
+
+**The fourth version of the page (16 October 2026, later).** After a third test, the page still looked dated. It now uses Tabler 1.6.1, a design system built on Bootstrap 5, with Chart.js 4.5.1 for the charts and IBM Plex Sans as its type. All three are MIT or SIL Open Font licensed and were checked against the npm registry. htmx still loads the parts of the page, and the windows are still the browser's own dialog and popover.
+
+- **The idea takes the width.** The box of the idea is wide, and the check of a submission (S3) stands beside it.
+- **Charts for every list** (S5), with a switch between cards and charts.
+- **Filters that follow the search.** The numbers of a filter count the 50 projects closest to the idea. A chosen value stays offered, with 0, even when none of them has it.
+- **Clear words for the two orders.** "Quick order" and "Gemini's order" are two switches with an (i), and a button clears the search.
+- **Each event links to its own page**, on ETHGlobal or on the organiser's list of winners.
+- **Contrast.** Tabler's teal gives white text a contrast of 3 to 1, and WCAG AA asks 4.5 to 1. The light theme uses a deeper teal, and the dark theme a lighter one with dark text; the coloured pills and labels get darker text. axe-core finds no problem on the real collection in seven views, in both themes and at both widths.
 
 What the look avoids, after the same test: the common look of generated websites, such as harsh gradients, stock icon sets, a pure white background, a shadow on every element, three feature cards in a row, emoji, glass effects, the fonts Inter, Geist and Space Grotesk, a coloured stripe on the side of a box, large soft corners, purple with black, neon or pastel colours, and an animation on every hover.
 
