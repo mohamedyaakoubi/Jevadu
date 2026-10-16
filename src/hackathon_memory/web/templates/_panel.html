@@ -99,7 +99,7 @@
           {% if card.links %}
           <h4>Links on the page</h4>
           <ul class="hm-link-list">
-          {% for link in card.links %}<li><a href="{{ link.url }}" rel="noopener" target="_blank">{{ link.label or link.url }}</a> <span class="text-secondary">{{ link.kind }}</span></li>{% endfor %}
+          {% for link in card.links %}<li><a href="{{ link.url }}" rel="noopener" target="_blank">{{ link.label or link.url }}</a>{% if link.kind and link.kind != "other" %} <span class="text-secondary">{{ link.kind }}</span>{% endif %}</li>{% endfor %}
           </ul>
           {% endif %}
         </div>
