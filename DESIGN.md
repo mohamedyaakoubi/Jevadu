@@ -646,7 +646,7 @@ There are two layers of LLM. The models and their thinking levels are settings, 
 
 **The search compares the closest projects with the idea of the user. It uses Gemini 3.8 Flash.** It is generally available. It costs 0.75 dollars for a million tokens in and 3.75 out until 31 December 2026, then double.
 
-**Both run at the thinking level HIGH.** One call of each layer on a short text took about 15 to 45 seconds and cost 1 to 3 cents (the result files of the Google proof have each number). A search that makes a person wait that long is slow, so the level of the search is the first setting to test again.
+**The pages are read at the thinking level HIGH, the search runs at LOW.** One call of each layer on a short text took about 15 to 45 seconds at HIGH and cost 1 to 3 cents (the result files of the Google proof have each number). A search that makes a person wait that long is slow, so the level of the search was measured again on 15 October 2026, on 9 ideas written by the maintainer (`evals/results/20261015T013838Z-compare-levels.json`). The comparison of the 10 closest projects took 26.0 seconds in the middle at HIGH and 7.5 seconds at LOW, and cost about three times more at HIGH. Every project got its two sentences at both levels. Since 16 October 2026 the search runs at LOW.
 
 **A model sometimes gives a bad answer.** On the first live runs, one model once returned text that was not valid JSON, and the other once answered with a server error. So a bad answer is asked for again, up to three calls in all, and an error of the server is retried up to four calls with growing waits. Every call is counted in the cost, also a failed one.
 
@@ -661,7 +661,7 @@ None of these choices is trusted blindly. Test 1 measures the LLM fields, and Te
 | Thing | Cost |
 |---|---|
 | The first layer, once for each project | Not measured on a full page yet. One call on a short text cost about 3 cents. |
-| The search, for each search | About 1 to 3 cents for one call as measured, less at a lower thinking level. |
+| The search, for each search | About 0.5 cent for the comparison at LOW, and 1.6 cents at HIGH, as measured on 9 ideas. The embedding of the idea costs about 0.0005 cent. |
 | The Hedera test network | Free test money |
 | Reference: the main network | About 1 cent to create a topic, 0.08 cent for a message |
 
