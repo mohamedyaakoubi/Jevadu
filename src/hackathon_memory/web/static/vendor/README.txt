@@ -6,6 +6,9 @@ atkinson-next-*.woff2       @fontsource/atkinson-hyperlegible-next 5.3.0, latin 
                             SIL Open Font License 1.1 (atkinson-next-LICENSE.txt)
 atkinson-mono-400.woff2     @fontsource/atkinson-hyperlegible-mono 5.3.0, latin subset,
                             SIL Open Font License 1.1 (atkinson-mono-LICENSE.txt)
+newsreader-latin-wght.woff2 @fontsource-variable/newsreader 5.3.0, latin subset, weights 200 to
+                            800, SIL Open Font License 1.1 (newsreader-LICENSE.txt)
 
 Atkinson Hyperlegible Next and Mono were made by the Braille Institute (February 2025) to be read
-easily, also by people with low vision.
+easily, also by people with low vision. Newsreader (Production Type) is a serif made for reading on
+screens; the pages use it for titles and the names of projects.
