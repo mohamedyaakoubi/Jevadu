@@ -479,9 +479,47 @@ def test_on_a_phone_the_results_come_first_and_the_card_covers_the_list(site, ch
     assert "idea=" in page.url
     assert page.evaluate("window.scrollY") > 0  # the results, not the box, are on the screen
     page.locator(".result-link").first.click()
-    page.wait_for_selector("#panel.open .card-head h2")
+    page.wait_for_selector("#panel.open .card-title")
     assert page.evaluate("document.querySelector('#results').inert") is True
     page.get_by_role("button", name="Back to the results").click()
     page.wait_for_function("!document.querySelector('#panel.open')")
     assert "open=" not in page.url and page.locator("li.result").count() == 3
+    page.context.close()
+
+
+AXE = Path(__file__).parent / "assets" / "axe.min.js"
+WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]
+
+
+def problems(page) -> list[str]:  # noqa: ANN001
+    """What axe-core finds against WCAG 2.2 A and AA, and the rule of one main heading."""
+    page.add_script_tag(path=str(AXE))
+    found = page.evaluate(
+        "async (tags) => (await axe.run(document, {runOnly: {type: 'tag', values: tags}}))"
+        ".violations.map(v => v.id)",
+        [*WCAG, "best-practice"],
+    )
+    return sorted(found)
+
+
+@pytest.mark.browser
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+@pytest.mark.parametrize("width", [1440, 390])
+def test_the_pages_have_no_problem_that_axe_finds(site, chromium, width, scheme) -> None:  # noqa: ANN001
+    """axe-core finds about half of the problems of access, so a person still checks the rest
+    (design 12.3); what it finds must never come back."""
+    client, fake, _, _ = site
+    fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]), (3, ["name"]))
+    page = served(chromium, client, viewport={"width": width, "height": 900},
+                  color_scheme=scheme, is_mobile=width < 900)  # fmt: skip
+    page.goto("http://site.test/")
+    assert problems(page) == []
+    page.goto(SEARCH + "&mode=meaning")
+    page.wait_for_function("!document.querySelector('.compare.waiting')")
+    assert problems(page) == []
+    page.locator(".result-link").first.click()
+    page.wait_for_selector("#panel .card-title")
+    assert problems(page) == []
+    page.goto("http://site.test/method")
+    assert problems(page) == []
     page.context.close()

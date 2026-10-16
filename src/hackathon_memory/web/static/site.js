@@ -51,7 +51,7 @@
   function showPanel() {
     var panel = document.getElementById("panel");
     if (!panel) return;
-    var heading = panel.querySelector(".card-head h2");
+    var heading = panel.querySelector(".card-head .card-title");
     var id = heading ? heading.id.replace("card-title-", "") : null;
     if (id) chosen(id);
     panel.classList.add("open");

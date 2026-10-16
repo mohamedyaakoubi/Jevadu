@@ -7,7 +7,8 @@
 <article class="card" aria-labelledby="card-title-{{ facts.hit.project_id }}">
   <header class="card-head">
     <p class="eyebrow">{{ facts.event }}{% if facts.prize_state %} · {{ PRIZE_WORDS.get(facts.prize_state, facts.prize_state) }}{% endif %}</p>
-    <h2 id="card-title-{{ facts.hit.project_id }}" tabindex="-1">{{ facts.name }}</h2>
+    {% set level = "h1" if as_page else "h2" %}
+    <{{ level }} id="card-title-{{ facts.hit.project_id }}" class="card-title" tabindex="-1">{{ facts.name }}</{{ level }}>
     {% set what = card.card.fields | selectattr("name", "equalto", "what_it_does") | selectattr("state", "equalto", "kept") | first if card.card else none %}
     {% if what %}
     <p class="lede">{{ what.value }} <span class="source-note">What it does, written by a model: {{ "stated" if what.label == "stated" else "inferred, less sure" }}</span></p>

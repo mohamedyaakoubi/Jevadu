@@ -4,9 +4,10 @@
 <div class="page">
   <p class="back"><a href="/{% if back_query %}?{{ back_query }}{% endif %}#results">&larr; Back to the search</a></p>
   {% if problem %}
+  <h1 class="page-title">This project cannot be shown</h1>
   <p class="problem notice-box" role="alert">{{ problem }}</p>
   {% else %}
-  <div class="panel-page">{% include "_panel.html" %}</div>
+  <div class="panel-page">{% with as_page = true %}{% include "_panel.html" %}{% endwith %}</div>
   {% endif %}
 </div>
 {% endblock %}
