@@ -114,10 +114,20 @@ def prompt(idea: str, items: Sequence[Item]) -> str:
 
 
 def compare(
-    client: Any, idea: str, items: Sequence[Item], *, model: str, thinking_level: str
+    client: Any,
+    idea: str,
+    items: Sequence[Item],
+    *,
+    model: str,
+    thinking_level: str,
+    timeout_seconds: float | None = None,
 ) -> dict[int, ProjectComparison]:
     """The comparison of each project, by project id. A project that the model leaves out, or
-    answers with a number that is not in the list, has none."""
+    answers with a number that is not in the list, has none.
+
+    With `timeout_seconds`, the call is made once and given up after that time: a person waits
+    for it (google-genai 2.29.0 lets the config of one call override the options of the client).
+    """
     if not items:
         return {}
     config = types.GenerateContentConfig(
@@ -126,6 +136,12 @@ def compare(
         response_schema=Comparison,
         thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel[thinking_level]),
         max_output_tokens=MAX_OUTPUT_TOKENS,
+        http_options=None
+        if timeout_seconds is None
+        else types.HttpOptions(
+            timeout=int(timeout_seconds * 1000),
+            retry_options=types.HttpRetryOptions(attempts=1),
+        ),
     )
     text = prompt(idea, items)
     response = again_if_dropped(
