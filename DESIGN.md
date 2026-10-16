@@ -505,13 +505,32 @@ Each method finds what the other misses. The original text is always searched, s
 - **By words.** BM25 over the name, the short line and the two texts, on PostgreSQL's own English stems, with the usual numbers k1 = 1.2 and b = 0.75. PostgreSQL's own ranking was tried first and dropped: its documentation says that its ranking functions "do not use any global information". They count how often a word stands in a project, not how rare the word is, and every project here says "Hedera" and "token".
 - **The merge.** Reciprocal rank fusion with the constant 60 (Cormack, Clarke and Buettcher, 2009). Each list gives as many projects as the listing shows, the default of Elasticsearch's own fusion. A first try with 50 projects from each list put the closest project in meaning out of the first ten. Test 2 compares these numbers.
 - **The listing.** For each project: the event, the prize, the result of the proof rule, the links, and for each Hedera ID what the mirror node answered and on which day. Nothing in it is written by a model, and the place in the list says only how close a project is to the idea.
-- **The idea.** It is kept nowhere. Its embedding is kept for one day under the fingerprint of the idea, so the same idea is not paid for twice.
+- **The idea.** It is kept nowhere. Its embedding is kept for one day under the fingerprint of the idea, so the same idea is not paid for twice. An idea holds at most 4,000 characters, from its cost: each 1,000 characters add about 0.024 cent to a search (the embedding, and the comparison that reads the idea again), so 4,000 keep a search within about 0.1 cent of a one-line idea.
 
 The user can filter by event, year, category, proof status and life status.
 
+**The ways to search (16 October 2026).** The maintainer asked whether the ways of searching should be separate choices, each with its speed and accuracy. Six ways ran on the counted cases of Test 2 (`evals/search_modes.py`, `evals/results/20261016T023934Z-search-modes.json`):
+
+| Way | Known projects in the first 10 | Middle time | Cost of a search |
+|---|---|---|---|
+| Words only | 23 of 57 | 0.5 s | nothing |
+| Meaning only | 36 of 57 | 0.1 s | nothing |
+| Meaning and words, the default until then | 34 of 57 | 0.6 s | nothing |
+| The 30 closest by meaning, put in order by the search model | 42 of 57 | 2.0 s | about 0.2 cent |
+| The 30 first of both lists, put in order by the model | 41 of 57 | 2.6 s | about 0.2 cent |
+| The model picks from the short line of every project | 41 of 57 | 2.4 s | about 1.6 cents |
+
+The order by the model was better than the old default in 10 cases and worse in 3, so it is the default since 16 October 2026. The first four ways are choices on the search page, each with its numbers read from the result file. The model reads one line for each project and answers numbers only; it does not score or judge a project. Its service was sometimes much slower than usual (95 of 100 searches under 72 seconds, against 2 in the middle), so its call is made once and given up after 8 seconds; then the page keeps the order by meaning and says so. Picking from every project is not offered: it found no more and costs about seven times as much.
+
+**Typing errors.** The same cases ran with two typing errors in each idea (`evals/results/20261016T030409Z-search-modes-typos.json`). Every way moved by at most 3 of 57, and the search by meaning found as many as without errors, because the embedding reads through them. So no layer that corrects spelling is added.
+
+**What a result shows.** Its short line, with the words of the idea marked by PostgreSQL's ts_headline after the text is escaped, and in the way by words also the part of the page where the words stand.
+
+**Why no separate search engine.** The collection holds 826 projects. PostgreSQL already gives the search by meaning (pgvector), by words (BM25 in SQL), marked words (ts_headline), search operators (websearch_to_tsquery) and near spellings (pg_trgm), with no copy of the data to keep in step. Meilisearch's own comparison says that PostgreSQL is enough for thousands of documents, and Elasticsearch runs as a server of its own. A separate engine is considered again if the collection grows by tens of times, or if typing errors start to matter.
+
 ### 8.3 The comparison
 
-For the first results, the LLM reads the cards and the user's idea. For each project it writes what is the same and what differs, and it names the card fields it used. If this call fails, the page still shows the cards.
+For the first results, the LLM reads the cards and the user's idea. For each project it writes what is the same and what differs, and it names the card fields it used. If this call fails, the page still shows the cards. It runs after the results are shown, at the thinking level LOW, and is given up after 30 seconds; the page says when it is slower than usual.
 
 ### 8.4 "Seen before"
 
@@ -644,7 +663,7 @@ There are two layers of LLM. The models and their thinking levels are settings, 
 - It thinks at the level LOW, MEDIUM or HIGH. The thinking tokens are billed as output.
 - It costs 2 dollars for a million tokens in and 12 out, for prompts up to 200,000 tokens.
 
-**The search compares the closest projects with the idea of the user. It uses Gemini 3.8 Flash.** It is generally available. It costs 0.75 dollars for a million tokens in and 3.75 out until 31 December 2026, then double.
+**The search puts the closest projects in order and compares them with the idea of the user. It uses Gemini 3.8 Flash.** It is generally available. It costs 0.75 dollars for a million tokens in and 3.75 out until 31 December 2026, then double.
 
 **The pages are read at the thinking level HIGH, the search runs at LOW.** One call of each layer on a short text took about 15 to 45 seconds at HIGH and cost 1 to 3 cents (the result files of the Google proof have each number). A search that makes a person wait that long is slow, so the level of the search was measured again on 15 October 2026, on 9 ideas written by the maintainer (`evals/results/20261015T013838Z-compare-levels.json`). The comparison of the 10 closest projects took 26.0 seconds in the middle at HIGH and 7.5 seconds at LOW, and cost about three times more at HIGH. Every project got its two sentences at both levels. Since 16 October 2026 the search runs at LOW.
 
@@ -734,6 +753,8 @@ No page is built before its row here is agreed. For each screen: who uses it, wh
 | S6 | Method and limits | Everybody | How far can I trust this tool? | The test results with their ranges, what the tool cannot do, and what exists elsewhere. |
 
 Every screen also needs three more states: while loading, when there is nothing to show, and when something failed. Each one says in plain words what happened and what to do.
+
+**S1 and S2 on one page (16 October 2026).** After the maintainer's own test of the first version, the card of a project opens beside the list of results, or over it on a phone with a way back, and the address keeps the search and the open card. With no idea, the page lists every project, newest events first, and the filters narrow it. S6 has a first version, "How it works": the steps of the search, the ways to search with their numbers, the tests, the marks and the limits.
 
 ### 12.2 Marks and their legend
 
