@@ -10,6 +10,7 @@ and the lines that the measure of the modes used (evals/search_modes.py).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -18,7 +19,8 @@ from google.genai import errors as google_errors
 from google.genai import types
 from pydantic import BaseModel, ValidationError
 
-from hackathon_memory.db.embeddings import EmbeddingStore
+from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
+from hackathon_memory.db.idea_answers import AnswerStore, KeptOrder
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.llm.client import again_if_dropped
 from hackathon_memory.search import engine
@@ -26,8 +28,12 @@ from hackathon_memory.search import engine
 MAX_OUTPUT_TOKENS = 2048
 POOL = 30  # the closest by meaning that the model puts in order
 TEXT_LETTERS = 300  # of the short line and of the first text, in each line the model reads
+# Part of the key of a kept order: it changes when the instructions or the lines change.
+INSTRUCTIONS_VERSION = "rerank-1"
 # The model's answer is not used when it fails, is not valid, is late, or the budget is spent.
 NOT_ORDERED = (google_errors.APIError, httpx.TransportError, ValidationError, BudgetExceeded)
+# Where an order came from: kept from the last day, asked now, or not given (the order of meaning).
+KEPT, ASKED, LATE = "kept", "asked", "late"
 INSTRUCTIONS = """\
 You help a builder find past hackathon projects that are close to their idea.
 
@@ -106,6 +112,45 @@ def by_ai(client: Any, model: str, level: str, idea: str, pool: list[int],
     return [pool[n - 1] for n in numbers]
 
 
+def order_pool(
+    conninfo: str,
+    llm: Any,
+    idea: str,
+    pool: Sequence[int],
+    *,
+    model: str,
+    level: str,
+    scope: str = "",
+    timeout_seconds: float | None = None,
+    now: datetime | None = None,
+) -> tuple[list[int], str]:
+    """The closest projects by meaning, put in order by the search model: its answer of the last
+    day for the same idea, filters (`scope`), model and pool when there is one, otherwise asked
+    now and kept for a day (db/idea_answers.py). Returns the whole pool, the model's order first,
+    and where the order came from: KEPT, ASKED, or LATE when the model failed or was late; then
+    the order is the order of meaning, and nothing is kept."""
+    pool = list(pool)
+    if not pool:
+        return [], LATE
+    store = AnswerStore(conninfo)
+    store.forget_old(now)
+    fingerprint = idea_fingerprint(idea)
+    kept = store.order(fingerprint, scope, model, level, INSTRUCTIONS_VERSION, now)
+    if kept is not None and kept.pool == pool:
+        ordered, how = kept.ordered, KEPT
+    else:
+        try:
+            ordered = by_ai(llm, model, level, idea, pool, texts_of(conninfo, pool),
+                            letters=TEXT_LETTERS, with_text=True,
+                            timeout_seconds=timeout_seconds)  # fmt: skip
+        except NOT_ORDERED:
+            return pool, LATE
+        store.save_order(fingerprint, scope, model, level, INSTRUCTIONS_VERSION,
+                         KeptOrder(pool, ordered), now)  # fmt: skip
+        how = ASKED
+    return [*ordered, *(pid for pid in pool if pid not in ordered)], how
+
+
 def closest_by_ai(
     conninfo: str,
     google: Any,
@@ -131,11 +176,7 @@ def closest_by_ai(
                               only=only, mode=engine.WORDS)  # fmt: skip
         return words, False
     pool = engine.by_meaning(store, google, idea, model=embedding_model, limit=POOL, only=only)
-    try:
-        ordered = by_ai(llm, model, level, idea, pool, texts_of(conninfo, pool),
-                        letters=TEXT_LETTERS, with_text=True,
-                        timeout_seconds=timeout_seconds)  # fmt: skip
-    except NOT_ORDERED:
-        return engine.merge(pool[:limit], []), False
-    ordered += [pid for pid in pool if pid not in ordered]
-    return engine.merge(ordered[:limit], []), True
+    scope = "only=" + ",".join(map(str, sorted(only))) if only is not None else ""
+    ordered, how = order_pool(conninfo, llm, idea, pool, model=model, level=level, scope=scope,
+                              timeout_seconds=timeout_seconds)  # fmt: skip
+    return engine.merge(ordered[:limit], []), how != LATE

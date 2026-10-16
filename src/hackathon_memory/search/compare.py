@@ -12,15 +12,19 @@ asks for it after the results are shown, and the cards stay complete when it fai
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 import psycopg
 from google.genai import types
 from pydantic import BaseModel, ValidationError
 
+from hackathon_memory.db.embeddings import idea_fingerprint
+from hackathon_memory.db.idea_answers import AnswerStore, KeptComparison
 from hackathon_memory.llm.client import again_if_dropped
 from hackathon_memory.read.quotes import KEPT
 
@@ -160,3 +164,51 @@ def compare(
         used = [name for name in one.fields_used if name in item.texts]
         found[item.project_id] = one.model_copy(update={"fields_used": used})
     return found
+
+
+def input_fingerprint(item: Item) -> str:
+    """The fingerprint of the texts of a project that the model reads, for the key of a kept
+    comparison: when a card or a page changes, the old comparison is not used."""
+    texts = json.dumps(item.texts, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(f"{INSTRUCTIONS_VERSION}\n{texts}".encode()).hexdigest()
+
+
+def kept_or_compared(
+    conninfo: str,
+    client: Any,
+    idea: str,
+    items: Sequence[Item],
+    *,
+    model: str,
+    thinking_level: str,
+    timeout_seconds: float | None = None,
+    now: datetime | None = None,
+) -> tuple[dict[int, ProjectComparison], int]:
+    """The comparison of each project: the one of the last day for the same idea and exactly the
+    same texts when there is one, otherwise asked now, for those projects only, and kept for a
+    day. Returns the comparisons by project id and how many projects the model was asked about.
+    A failure of the model is raised, as by compare()."""
+    store = AnswerStore(conninfo)
+    store.forget_old(now)
+    fingerprint = idea_fingerprint(idea)
+    inputs = {item.project_id: input_fingerprint(item) for item in items}
+    kept = store.comparisons(fingerprint, inputs, model, thinking_level, INSTRUCTIONS_VERSION, now)
+    found = {
+        item.project_id: ProjectComparison(number=item.number, same=kept[item.project_id].same,
+                                           differs=kept[item.project_id].differs,
+                                           fields_used=kept[item.project_id].fields_used)
+        for item in items
+        if item.project_id in kept
+    }  # fmt: skip
+    missing = [item for item in items if item.project_id not in kept]
+    if missing:
+        asked = compare(client, idea, missing, model=model, thinking_level=thinking_level,
+                        timeout_seconds=timeout_seconds)  # fmt: skip
+        store.save_comparisons(
+            fingerprint,
+            {pid: (inputs[pid], KeptComparison(one.same, one.differs, list(one.fields_used)))
+             for pid, one in asked.items()},
+            model, thinking_level, INSTRUCTIONS_VERSION, now,
+        )  # fmt: skip
+        found.update(asked)
+    return found, len(missing)

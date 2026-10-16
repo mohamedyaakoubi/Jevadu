@@ -82,3 +82,35 @@ def test_with_no_embedding_only_the_words_are_searched(database: str) -> None:
                                          level="LOW")  # fmt: skip
     assert ordered is False and [hit.project_id for hit in hits] == [ids["Cedar Post"]]
     assert stub.asked == [] and fake.requests == []  # nothing was asked of anybody
+
+
+def test_an_order_is_kept_for_a_day_and_asked_again_after(database: str) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    client, _, _ = google()
+    embed_all(database, client)
+    ids = sorted(ids_of(database).values())
+    stub = Stub(json.dumps({"closest": [2]}))
+    now = datetime(2026, 10, 16, 8, 0, tzinfo=UTC)
+    first, how = rerank.order_pool(database, stub, "help a vendor", ids, model="m", level="LOW",
+                                   now=now)  # fmt: skip
+    assert how == rerank.ASKED and first == [ids[1], ids[0], ids[2]] and len(stub.asked) == 1
+    kept, how = rerank.order_pool(database, stub, "Help  a VENDOR", ids, model="m", level="LOW",
+                                  now=now + timedelta(hours=23))  # fmt: skip
+    assert how == rerank.KEPT and kept == first and len(stub.asked) == 1
+    other, how = rerank.order_pool(database, stub, "help a vendor", ids, model="m", level="LOW",
+                                   scope="event=7", now=now)  # fmt: skip
+    assert how == rerank.ASKED and len(stub.asked) == 2  # other filters: another key
+    _, how = rerank.order_pool(database, stub, "help a vendor", ids, model="m", level="LOW",
+                               now=now + timedelta(hours=25))  # fmt: skip
+    assert how == rerank.ASKED and len(stub.asked) == 3  # a day later: asked again
+
+
+def test_a_failed_order_is_not_kept(database: str) -> None:
+    ids = sorted(ids_of(database).values())
+    late = Stub(error=httpx.ReadTimeout("late"))
+    order, how = rerank.order_pool(database, late, "an idea", ids, model="m", level="LOW")
+    assert how == rerank.LATE and order == ids
+    stub = Stub(json.dumps({"closest": [3]}))
+    _, how = rerank.order_pool(database, stub, "an idea", ids, model="m", level="LOW")
+    assert how == rerank.ASKED  # nothing was kept from the failure
