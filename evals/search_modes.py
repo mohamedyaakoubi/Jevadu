@@ -40,8 +40,7 @@ from pathlib import Path
 from typing import Any
 
 import psycopg
-from google.genai import types
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from evals.test2.cases import PAIRS
 from evals.test2.ideas import FILE as IDEAS_FILE
@@ -51,9 +50,9 @@ from hackathon_memory.db.embeddings import EmbeddingStore
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.finops.calls import PostgresStore
 from hackathon_memory.finops.meter import metered_client
-from hackathon_memory.llm.client import again_if_dropped
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import engine
+from hackathon_memory.search.rerank import by_ai, texts_of
 from hackathon_memory.settings import Settings
 
 RESULTS = Path(__file__).parent / "results"
@@ -62,20 +61,7 @@ TEXT_LETTERS = 300  # of the first text of a page, for a candidate that the AI o
 CATALOG_LETTERS = 120  # of the short line, or of the first text, for "AI over every project"
 TYPO_SEED = 20261016
 TYPOS = 2  # typing errors in each idea, with --typos
-MAX_OUTPUT_TOKENS = 2048
 MODES = ("words", "meaning", "both", "meaning, then AI", "both, then AI", "AI over every project")
-INSTRUCTIONS = """\
-You help a builder find past hackathon projects that are close to their idea.
-
-You get the idea and a numbered list of projects. Give the numbers of the 10 projects whose idea \
-is closest to the builder's idea, the closest first. Close means the same problem, or the same \
-kind of solution for the same people. Use only the texts given.
-
-Do not judge how good a project is. Give only numbers from the list."""
-
-
-class Closest(BaseModel):
-    closest: list[int]
 
 
 def with_typos(idea: str, seed: int, count: int = TYPOS) -> str:
@@ -91,52 +77,6 @@ def with_typos(idea: str, seed: int, count: int = TYPOS) -> str:
         # Two equal letters swapped change nothing: then one letter is left out instead.
         words[i] = swapped if rng.random() < 0.5 and swapped != word else word[:at] + word[at + 1 :]
     return "".join(words)
-
-
-def texts_of(conninfo: str) -> dict[int, tuple[str, str, str]]:
-    """The name, the short line and the first text of every project."""
-    with psycopg.connect(conninfo) as conn:
-        rows = conn.execute(
-            "SELECT p.id, p.name, coalesce(p.short_line, ''), coalesce((SELECT s.body FROM "
-            "sections s WHERE s.project_id = p.id ORDER BY s.position LIMIT 1), '') "
-            "FROM projects p ORDER BY p.id"
-        ).fetchall()
-    return {row[0]: (row[1], row[2].strip(), row[3].strip()) for row in rows}
-
-
-def _line(number: int, texts: tuple[str, str, str], letters: int, with_text: bool) -> str:
-    """One numbered line: the name, then the short line (or the start of the first text), and
-    with `with_text` also the start of the first text."""
-    name, short_line, first_text = texts
-    words = " ".join((short_line or first_text).split())[:letters].rstrip()
-    if with_text and short_line and first_text:
-        words += " " + " ".join(first_text.split())[:letters].rstrip()
-    return f"{number}. {name}: {words}"
-
-
-def ask_closest(client: Any, model: str, level: str, idea: str, lines: list[str]) -> list[int]:
-    """The numbers the model gives, in its order, kept only when they are in the list."""
-    config = types.GenerateContentConfig(
-        system_instruction=INSTRUCTIONS,
-        response_mime_type="application/json",
-        response_schema=Closest,
-        thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel[level]),
-        max_output_tokens=MAX_OUTPUT_TOKENS,
-    )
-    contents = f"Idea: {idea}\n\nProjects:\n" + "\n".join(lines)
-    response = again_if_dropped(
-        lambda: client.models.generate_content(model=model, contents=contents, config=config)
-    )
-    numbers = Closest.model_validate_json(response.text or "").closest
-    allowed = range(1, len(lines) + 1)
-    return list(dict.fromkeys(n for n in numbers if n in allowed))
-
-
-def by_ai(client: Any, model: str, level: str, idea: str, pool: list[int],
-          texts: dict[int, tuple[str, str, str]], *, letters: int,
-          with_text: bool) -> list[int]:  # fmt: skip
-    lines = [_line(i, texts[pid], letters, with_text) for i, pid in enumerate(pool, start=1)]
-    return [pool[n - 1] for n in ask_closest(client, model, level, idea, lines)]
 
 
 def measure(settings: Settings, cases: Sequence[Case], projects: dict, page_of: dict[int, str],

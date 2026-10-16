@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from evals.search_modes import _line, summary, with_typos
+from evals.search_modes import summary, with_typos
+from hackathon_memory.search.rerank import line as _line
 
 IDEA = "a wallet that lets street vendors accept payments without banks"
 
