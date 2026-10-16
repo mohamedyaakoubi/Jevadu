@@ -1,0 +1,98 @@
+{
+  "set": "tuning",
+  "drawn_on": "2026-10-12",
+  "seed": 20261013,
+  "groups": "the length of the text the model reads (short, medium, long; cut at 2526 and 4472 letters) and whether a Hedera id is given (design 13.2)",
+  "cases": [
+    {
+      "page": "https://ethglobal.com/showcase/hederatube-g5tdn",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:04:43Z",
+      "sha256": "f3d5129c07bf9b01eb62f6bc1fc46f77111e6741e57b0d47811b23b71b101e0c"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/countersign-6svcb",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:05:04Z",
+      "sha256": "df81a3e2fbd63dc95b5df427776ff3982de5192955fe6eda476805e4f63eb5b2"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/leash-dash-bfj4e",
+      "group": "long, an id given",
+      "read_at": "2026-10-10T23:59:11Z",
+      "sha256": "8fcdb315aa6a199776579cb7f20144e7f813d94315162512fea3894c92429204"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/openwave-a8rs5",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T02:05:25Z",
+      "sha256": "9e62fb0c5d1b56099a1f21ecbba89544c286a6defb902b9aae2ab1cc9229ce6d"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/agentindex-cuxs7",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T01:29:12Z",
+      "sha256": "dad3b50885d97844134f7e61688824f60db0953100eef9b9deca3049022ebdd1"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/hedera-offset-qwrnx",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T02:22:37Z",
+      "sha256": "0ebf05c34db4b5e14940b7cc9cd20816ece328c53971c24ab1de91b3657d980c"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/grape-ai-sbz0x",
+      "group": "medium, an id given",
+      "read_at": "2026-10-10T23:59:49Z",
+      "sha256": "1c6cc322087ac9f7a939a80db40a5f516a173fd5d275af2c76eaf6012e6779ee"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/splitpay-ebju5",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T02:13:50Z",
+      "sha256": "cf459ebbd337f51da486709efb8f194af073e0e47f64d278d1938945cbc2d19e"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/doomtax-1dxh4",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T01:36:10Z",
+      "sha256": "a0cc61d789a3279f74059b364682713d2cf7129ebc748170e50a765cbe9159cc"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/hashlens-aka2t",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T02:06:49Z",
+      "sha256": "d0b1d98b03c5df30c137edcfe736f695bfc6526abc850c52540f37a964b2c077"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/reception-8bvay",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T02:04:43Z",
+      "sha256": "eac19ef9cb8b9f2e9b2905dd6fa05be52fa18d0b162972db04627ceadd1a2c5f"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/deadman-re195",
+      "group": "short, an id given",
+      "read_at": "2026-10-11T01:12:46Z",
+      "sha256": "7fe643248b8521e01aad7c674ddaf5d5022f4c6e6cbd2fc078aa78cd18f30408"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/sowee-wux84",
+      "group": "short, an id given",
+      "read_at": "2026-10-11T01:23:26Z",
+      "sha256": "1a6c241cb29b96b9f1c96e0d421c2e6e3d824528d88f4d311ed1ccd2c05a5c0f"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/soulbloomers-bhw0c",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T02:01:45Z",
+      "sha256": "6ecf3b63f1c3b186c12821b68df2ca3711836a960e0c51758f35fcbff3a090b4"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/nilcode-aqct1",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T01:58:12Z",
+      "sha256": "4e2563cc23bdc5286e34a635d2163ec171d6cde95eeb8268930eda50ca0490c7"
+    }
+  ]
+}

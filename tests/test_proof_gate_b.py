@@ -157,6 +157,25 @@ def test_the_path_passes_and_finds_the_known_projects(
     assert gate_databases(server_conninfo) <= before
 
 
+def test_every_call_of_the_proof_is_counted_in_the_main_database(
+    tmp_path: Path, empty_database: str, results_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = Settings(_env_file=None, database_url=empty_database, data_dir=str(data(tmp_path)))
+    client, _, calls = google()
+    ledgers: list[str] = []
+
+    def counted_on(given: Settings, purpose: str, **_: object) -> object:
+        ledgers.append(given.database_conninfo())
+        return client.tagged(purpose=purpose)
+
+    monkeypatch.setattr(gate_b, "metered_client", counted_on)
+    code = gate_b.run(settings, mirrors=stand_ins(), minimum_projects=3)
+    assert code == 0, failed(the_result(results_dir))
+    # The new database of the run is deleted at its end: a count kept there would be lost.
+    assert ledgers == [settings.database_conninfo()]
+    assert {call.purpose for call in calls.calls()} == {"embed_document", "embed_query"}
+
+
 def test_a_known_project_that_is_not_found_fails_the_path(
     tmp_path: Path, empty_database: str, results_dir: Path
 ) -> None:

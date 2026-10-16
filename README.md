@@ -124,6 +124,10 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m hackathon_memory.pipeline check` | Asks the Hedera mirror node about every ID and applies the proof rule. An answer is used again for seven days. |
 | `python -m hackathon_memory.pipeline embed` | Makes the embedding of every project whose text changed. It costs money, through the meter and its budget. |
 | `python -m hackathon_memory.pipeline all` | The five steps above, in order. |
+| `python -m evals.sets draw` | Draws, once, the 15 pages for writing the instructions of the LLM and the 60 pages of Test 1, from six fixed groups (design 13.2). A set is never drawn again. |
+| `python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json` | Makes the card of every page of a set with Gemini, and checks every quote against the page (design 6.3). It costs money, through the meter and its budget; a card whose text did not change costs nothing. `--limit N` makes at most N cards. |
+| `python -m evals.cards_report evals/sets/test1.json` | Counts the cards of a set in numbers only (quotes found, labels, lengths, categories, cost) into a dated file of `evals/results`. |
+| `python -m evals.test1.sheet` | Writes, once, the review sheet of Test 1 into `data/evals/test1`: each page next to its card, to be graded as `evals/test1/guideline.md` says. Open `sheet.html` there in a browser. |
 | `python -m hackathon_memory.search "an idea"` | The closest projects to an idea, as a plain listing with the facts of each one. `--numbers-only` shows no name or link. |
 | `python -m proofs.gate_b` | Gate B, part 1: a new empty database, the whole path with one command, and the first 10 results of each idea of `data/by-hand/gate-b-questions.txt`, written to `data/by-hand/gate-b-results.txt` to be marked. |
 | `python -m proofs.gate_b --questions Q --results R` | Gate B, part 1, for the ideas of another file of `data/by-hand`. |

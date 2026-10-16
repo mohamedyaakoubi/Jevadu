@@ -1,0 +1,1300 @@
+{
+ "test": "test2",
+ "made_on": "2026-10-14",
+ "search": {
+  "embedding_model": "gemini-embedding-2",
+  "merge_constant": 60,
+  "asked": 11,
+  "kept": 10,
+  "the_asking_project": "left out"
+ },
+ "projects_searched": 826,
+ "numbers": {
+  "all": {
+   "share": 0.5965,
+   "range": [
+    0.4444,
+    0.7414
+   ],
+   "found": 34,
+   "known": 57
+  },
+  "pairs": {
+   "share": 0.6042,
+   "range": [
+    0.4375,
+    0.7708
+   ],
+   "found": 29,
+   "known": 48
+  },
+  "ideas": {
+   "share": 0.5556,
+   "range": [
+    0.2222,
+    0.875
+   ],
+   "found": 5,
+   "known": 9
+  }
+ },
+ "pass_mark": "at least 80% of the known projects in the first 10",
+ "passes": false,
+ "look_alike_shown": {
+  "shown": 2,
+  "of": 30
+ },
+ "ideas_counted_apart": {
+  "found": 1,
+  "known": 1
+ },
+ "other_setups": {
+  "meaning only": {
+   "found": 36,
+   "known": 57,
+   "share": 0.6316
+  },
+  "words only": {
+   "found": 23,
+   "known": 57,
+   "share": 0.4035
+  },
+  "merged, window 20": {
+   "found": 35,
+   "known": 57,
+   "share": 0.614
+  },
+  "merged, window 30": {
+   "found": 37,
+   "known": 57,
+   "share": 0.6491
+  },
+  "merged, window 50": {
+   "found": 34,
+   "known": 57,
+   "share": 0.5965
+  }
+ },
+ "cases": [
+  {
+   "kind": "same idea",
+   "source": "same repository",
+   "group": "pair 1",
+   "asked_by": "https://ethglobal.com/showcase/yourturn-2-0-od7iw",
+   "known": [
+    "https://ethglobal.com/showcase/yourturn-concierge-6pm36"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "833a694c433f21ea6ffd502a7c1c91871784af6c8d0e2404fe55ca0147b24f3a"
+  },
+  {
+   "kind": "same idea",
+   "source": "same repository",
+   "group": "pair 1",
+   "asked_by": "https://ethglobal.com/showcase/yourturn-concierge-6pm36",
+   "known": [
+    "https://ethglobal.com/showcase/yourturn-2-0-od7iw"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "cd0203f624ab9c99e288a5d881617fde6c549e4e5c41d0dd916ad60f5cfaa353"
+  },
+  {
+   "kind": "same idea",
+   "source": "same repository",
+   "group": "pair 2",
+   "asked_by": "https://ethglobal.com/showcase/yourturn-2-0-od7iw",
+   "known": [
+    "https://ethglobal.com/showcase/yourturn-zb56r"
+   ],
+   "places": [
+    4
+   ],
+   "counted": true,
+   "idea_sha256": "833a694c433f21ea6ffd502a7c1c91871784af6c8d0e2404fe55ca0147b24f3a"
+  },
+  {
+   "kind": "same idea",
+   "source": "same repository",
+   "group": "pair 2",
+   "asked_by": "https://ethglobal.com/showcase/yourturn-zb56r",
+   "known": [
+    "https://ethglobal.com/showcase/yourturn-2-0-od7iw"
+   ],
+   "places": [
+    2
+   ],
+   "counted": true,
+   "idea_sha256": "f2b66486074d7994ca5ea1269da828224a5feb8f8271b023d59d97db238c58ae"
+  },
+  {
+   "kind": "same idea",
+   "source": "same repository",
+   "group": "pair 3",
+   "asked_by": "https://ethglobal.com/showcase/yourturn-concierge-6pm36",
+   "known": [
+    "https://ethglobal.com/showcase/yourturn-zb56r"
+   ],
+   "places": [
+    3
+   ],
+   "counted": true,
+   "idea_sha256": "cd0203f624ab9c99e288a5d881617fde6c549e4e5c41d0dd916ad60f5cfaa353"
+  },
+  {
+   "kind": "same idea",
+   "source": "same repository",
+   "group": "pair 3",
+   "asked_by": "https://ethglobal.com/showcase/yourturn-zb56r",
+   "known": [
+    "https://ethglobal.com/showcase/yourturn-concierge-6pm36"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "f2b66486074d7994ca5ea1269da828224a5feb8f8271b023d59d97db238c58ae"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 4",
+   "asked_by": "https://ethglobal.com/showcase/assay-qiz12",
+   "known": [
+    "https://ethglobal.com/showcase/assay-26egq"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "5d01df1e08cbbba3bd662c6949d7b6d46e2e3141d2eb215fa661a10256412b7b"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 4",
+   "asked_by": "https://ethglobal.com/showcase/assay-26egq",
+   "known": [
+    "https://ethglobal.com/showcase/assay-qiz12"
+   ],
+   "places": [
+    3
+   ],
+   "counted": true,
+   "idea_sha256": "df77a6173dbb7208e11f69a173e64de15a14ec3b86822ab25a3abc67f17b37d1"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 5",
+   "asked_by": "https://ethglobal.com/showcase/pullquestai-fzdys",
+   "known": [
+    "https://ethglobal.com/showcase/pullquestai-6pncc"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "abba75ee666f053861bec0e98ae9a2fca5f3a5c8b91757580d39e4e09d78e849"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 5",
+   "asked_by": "https://ethglobal.com/showcase/pullquestai-6pncc",
+   "known": [
+    "https://ethglobal.com/showcase/pullquestai-fzdys"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "abba75ee666f053861bec0e98ae9a2fca5f3a5c8b91757580d39e4e09d78e849"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 6",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#chargefrog",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#chargefrog"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "34679ed2927cf15c28ba956996d02e4a2b9fce06157b378e13ed7ffa253ea9ae"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 6",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#chargefrog",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#chargefrog"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "57c3489fbd2faf6dd4c6b6754a0475343a0030d9d079fcf95ac5743a378e85d9"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 7",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#golden-needle",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#golden-needle"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "2aad4767fa0b7f83d3cf2bee7c209642dee687863dbda906eb628a230f391f65"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 7",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#golden-needle",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#golden-needle"
+   ],
+   "places": [
+    2
+   ],
+   "counted": true,
+   "idea_sha256": "4ac22845a51d5d8ffe66563da00bc50d51fdac73d08f3668cb27dbc93c8bc6fc"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 8",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#hashpress-pioneers",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#hashpress-pioneers"
+   ],
+   "places": [
+    4
+   ],
+   "counted": true,
+   "idea_sha256": "a616b04fc18ae14eaac7713383e66ee0225c5417f1eb544f764cdef8b434747d"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 8",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#hashpress-pioneers",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#hashpress-pioneers"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "c49dabb4cd073e960239575b9295632ea8f41a6ed9d6d130c56bb1f3b40e2aee"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 9",
+   "asked_by": "https://ethglobal.com/showcase/hedron-msiu8",
+   "known": [
+    "https://hedera-hackathon.hashgraph.swiss/#hedron"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "6802f4b805f5f0dc6e12d5a6e2d11fb9f35df2f2e9db2cdf1b0fd3a1e71da55e"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 9",
+   "asked_by": "https://hedera-hackathon.hashgraph.swiss/#hedron",
+   "known": [
+    "https://ethglobal.com/showcase/hedron-msiu8"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "31205c84d1112e3eeb4671a4f203127c6af37f17d255f954d70a0528325bbe05"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 10",
+   "asked_by": "https://ethglobal.com/showcase/merxet-9yn1q",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#merxet"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "b6b10f0163a7ed52f0f16babce5e9d7a2203c2056a719353784e92da6059b089"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 10",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#merxet",
+   "known": [
+    "https://ethglobal.com/showcase/merxet-9yn1q"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "3e66efb55b33372c0fb69f05ec5c0b0ca37939dfa0570c9f54a89346a4563984"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 11",
+   "asked_by": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#parkpulse"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "4ae943cf3b7f2437da954c4db5cb070368dc34f1756bc912af3d0fab04bd9785"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 11",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#parkpulse",
+   "known": [
+    "https://ethglobal.com/showcase/parkpulse-w84tg"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "f97d7a66624413920c60c480109ecb3ddd8d391f99c35a4d60514344671cf2a3"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 12",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#savera",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#savera"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "54b4cadf6450830d0a464c071cc7557be0dc2d39ba7070eb77458d88af05ebdb"
+  },
+  {
+   "kind": "same idea",
+   "source": "same name",
+   "group": "pair 12",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#savera",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#savera"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "3ad8712fae294a4e449c25819f71f49dcd5286747f2e381e78dbd0cd5ba53482"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 13",
+   "asked_by": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+   "known": [
+    "https://ethglobal.com/showcase/sealsign-o3b90"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "93442cccd357cfcc7ea9052fac2b173dd99c5df7fffbfd74ce52a80f9a21078a"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 13",
+   "asked_by": "https://ethglobal.com/showcase/sealsign-o3b90",
+   "known": [
+    "https://ethglobal.com/showcase/provenance-chain-8g8a1"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "d03320a8fcb97d0e930ee254f884cdf704af0754cd79349e017847d5f9c57e93"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 14",
+   "asked_by": "https://ethglobal.com/showcase/veiledswap-9esbt",
+   "known": [
+    "https://ethglobal.com/showcase/ztomic-swap-ufv2r"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "55755b0c44ce513a90c668fbaa2a3cc5b6a42b9696da2737ec5ae412d84bdc8c"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 14",
+   "asked_by": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+   "known": [
+    "https://ethglobal.com/showcase/veiledswap-9esbt"
+   ],
+   "places": [
+    10
+   ],
+   "counted": true,
+   "idea_sha256": "a9ae533ef2eca4888d706c947e3d8933f4ad1bd41d683dce4ccf333ccf7861fd"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 15",
+   "asked_by": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "known": [
+    "https://ethglobal.com/showcase/mind-your-data-5pyj3"
+   ],
+   "places": [
+    3
+   ],
+   "counted": true,
+   "idea_sha256": "244a232d4849a90907153883d77577bd368d8cce8249d1469bfb9f4a01957000"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 15",
+   "asked_by": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+   "known": [
+    "https://ethglobal.com/showcase/fitcentive-mptde"
+   ],
+   "places": [
+    7
+   ],
+   "counted": true,
+   "idea_sha256": "072bcd7643572e59fa423c170bdebdae464e26334dfaec3b6ea9b7b625c47f35"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 16",
+   "asked_by": "https://ethglobal.com/showcase/assay-26egq",
+   "known": [
+    "https://ethglobal.com/showcase/ctrlz-p8tn8"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "df77a6173dbb7208e11f69a173e64de15a14ec3b86822ab25a3abc67f17b37d1"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 16",
+   "asked_by": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+   "known": [
+    "https://ethglobal.com/showcase/assay-26egq"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "b3d8381dfdcb5ae82fdd6f5112159d7f8fccd6d105c731536fe88f1dcac92890"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 17",
+   "asked_by": "https://ethglobal.com/showcase/allowance-x9syo",
+   "known": [
+    "https://ethglobal.com/showcase/vaultbreaker-xw79k"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "1d236caf4e26e36cab3c3d6bf26711d2147a394365c582f4d895cb3097f476ca"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 17",
+   "asked_by": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "known": [
+    "https://ethglobal.com/showcase/allowance-x9syo"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "467ea860d230c52a2b992873bc9b7712c27515852435f4cf1d74505558ae5546"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 18",
+   "asked_by": "https://ethglobal.com/showcase/allowance-x9syo",
+   "known": [
+    "https://ethglobal.com/showcase/paybound-kcezf"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "1d236caf4e26e36cab3c3d6bf26711d2147a394365c582f4d895cb3097f476ca"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 18",
+   "asked_by": "https://ethglobal.com/showcase/paybound-kcezf",
+   "known": [
+    "https://ethglobal.com/showcase/allowance-x9syo"
+   ],
+   "places": [
+    10
+   ],
+   "counted": true,
+   "idea_sha256": "7a7135c9263d0eb7abb255416c933e49f88580af525b4c7c13a0a970d5eebff5"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 19",
+   "asked_by": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "known": [
+    "https://ethglobal.com/showcase/paybound-kcezf"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "467ea860d230c52a2b992873bc9b7712c27515852435f4cf1d74505558ae5546"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 19",
+   "asked_by": "https://ethglobal.com/showcase/paybound-kcezf",
+   "known": [
+    "https://ethglobal.com/showcase/vaultbreaker-xw79k"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "7a7135c9263d0eb7abb255416c933e49f88580af525b4c7c13a0a970d5eebff5"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 20",
+   "asked_by": "https://ethglobal.com/showcase/notyet-hy3kh",
+   "known": [
+    "https://ethglobal.com/showcase/vaultbreaker-xw79k"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "86c085aa32fd83ee8c9e5698a5e82436b624699f3937f00b14f58df8dd5a6de0"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 20",
+   "asked_by": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+   "known": [
+    "https://ethglobal.com/showcase/notyet-hy3kh"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "467ea860d230c52a2b992873bc9b7712c27515852435f4cf1d74505558ae5546"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 21",
+   "asked_by": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "known": [
+    "https://ethglobal.com/showcase/faregate-w3jpz"
+   ],
+   "places": [
+    9
+   ],
+   "counted": true,
+   "idea_sha256": "02707d9140b86448a8d12fc73b60f1cb3b2674d2f669f75b3ac025accb30dc5d"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 21",
+   "asked_by": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "known": [
+    "https://ethglobal.com/showcase/cubic-g1kwb"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "bcf07ad59ab09a2a7cd6e22efe2b31be10c4216a6e92afd7f3440fe78712748a"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 22",
+   "asked_by": "https://ethglobal.com/showcase/ognef-dqsm0",
+   "known": [
+    "https://ethglobal.com/showcase/cubic-g1kwb"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "3756832e72db69288b915c4764a98721a8a9a70084ca2124a4cbe4e45664cc47"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 22",
+   "asked_by": "https://ethglobal.com/showcase/cubic-g1kwb",
+   "known": [
+    "https://ethglobal.com/showcase/ognef-dqsm0"
+   ],
+   "places": [
+    5
+   ],
+   "counted": true,
+   "idea_sha256": "02707d9140b86448a8d12fc73b60f1cb3b2674d2f669f75b3ac025accb30dc5d"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 23",
+   "asked_by": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "known": [
+    "https://ethglobal.com/showcase/mars-ua1qc"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "95f0020100ee36772f1839d6a244a95e96172d02bf7f37c43243c62b297cd591"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 23",
+   "asked_by": "https://ethglobal.com/showcase/mars-ua1qc",
+   "known": [
+    "https://ethglobal.com/showcase/agentmarket-9cn1t"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "0d9b2228b97d757b219b6d3824f498f3ad7e9f7642c04fcefcf27063c9e3007f"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 24",
+   "asked_by": "https://ethglobal.com/showcase/tenor-8wx00",
+   "known": [
+    "https://ethglobal.com/showcase/galvanic-5g3wr"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "5f26c3a78fbe8e68b92a36692e74371f9d351427d139bf30dbcddbc2a9dada22"
+  },
+  {
+   "kind": "same idea",
+   "source": "read in Test 1",
+   "group": "pair 24",
+   "asked_by": "https://ethglobal.com/showcase/galvanic-5g3wr",
+   "known": [
+    "https://ethglobal.com/showcase/tenor-8wx00"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "6b5273963fa60036ad4b535601c70397a054b0458dee571776dc79f37e20577b"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 25",
+   "asked_by": "https://ethglobal.com/showcase/aegis-93ox5",
+   "known": [
+    "https://ethglobal.com/showcase/aegis-w6727"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "6256e8be1ad6a6d6984934121b89ae4494e49cc2bb7b0205e585615f87815aec"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 25",
+   "asked_by": "https://ethglobal.com/showcase/aegis-w6727",
+   "known": [
+    "https://ethglobal.com/showcase/aegis-93ox5"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "63fa3f9c155ee6e7681826f719accf6d6748afb0212d1b6619208333972a86c9"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 26",
+   "asked_by": "https://ethglobal.com/showcase/agentrail-5dppt",
+   "known": [
+    "https://ethglobal.com/showcase/agentrail-1ekv0"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "84e952f6d3ddc6286012e7a70334340275e6fd28194e246666211e0132d7bb0f"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 26",
+   "asked_by": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "known": [
+    "https://ethglobal.com/showcase/agentrail-5dppt"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "7b16cd95a9048eb1784d62175099615f81820aa9c67aa6286d03d80f4e0fadc7"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 27",
+   "asked_by": "https://ethglobal.com/showcase/atlas-4p553",
+   "known": [
+    "https://ethglobal.com/showcase/atlas-w4yw4"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "6fe4e3bee1a7836173ef3c0fcd6390b14e6df2d397ffb2348971f267485b46a2"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 27",
+   "asked_by": "https://ethglobal.com/showcase/atlas-w4yw4",
+   "known": [
+    "https://ethglobal.com/showcase/atlas-4p553"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "66a8187b24456c72ae5f05d4eed6d1146a53c5dbca3e26b8a41cc1680afa6339"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 28",
+   "asked_by": "https://ethglobal.com/showcase/covenant-kxv95",
+   "known": [
+    "https://ethglobal.com/showcase/covenant-6j7sn"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "8d9ed0febb7747b3b7acb610640130d5ec3a103c2886d69fab456a9e8c8904a4"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 28",
+   "asked_by": "https://ethglobal.com/showcase/covenant-6j7sn",
+   "known": [
+    "https://ethglobal.com/showcase/covenant-kxv95"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "d4d9b2b49dc03df6b7c8d58895ab0c8757c8c58021b276753d376cf0f4c84394"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 29",
+   "asked_by": "https://ethglobal.com/showcase/vouch-63ywx",
+   "known": [
+    "https://ethglobal.com/showcase/vouch-gade2"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "6d7628b1ca58cc45bfff6204b31a74b9dc46ebcc0f70a15f1558e47f164a73c1"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 29",
+   "asked_by": "https://ethglobal.com/showcase/vouch-gade2",
+   "known": [
+    "https://ethglobal.com/showcase/vouch-63ywx"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "e17425ad4fe3d66e57e70631895494a9a844143d37ae1e0fc9f5a7d5247c25d6"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 30",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#acoer-team",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#acoer-team"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "0ac490ff250184f33ed3df354c6fc1a50b77393ff65a365b5281427d1b6ae4d5"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 30",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#acoer-team",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#acoer-team"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "9c7014d03a1421e6af75a576f815112728773fbe9b314304a7db93c8e3959848"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 31",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#osmiumlabs",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#osmiumlabs"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "9ea7a9045cce2069d17dacb35df9c9ea997e385ef6e582ddbd1a1eb8e61f627d"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 31",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#osmiumlabs",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hellofuture-hackathon-2-0#osmiumlabs"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "ca44c16376070a4c02107ec3ac812be6b7d6d440edc95583d8bb22ab64fcb101"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 32",
+   "asked_by": "https://ethglobal.com/showcase/hedron-msiu8",
+   "known": [
+    "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-origins-hackathon#hedron"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "6802f4b805f5f0dc6e12d5a6e2d11fb9f35df2f2e9db2cdf1b0fd3a1e71da55e"
+  },
+  {
+   "kind": "look alike",
+   "source": "same name",
+   "group": "pair 32",
+   "asked_by": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-origins-hackathon#hedron",
+   "known": [
+    "https://ethglobal.com/showcase/hedron-msiu8"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "b8388961b4d298ee1c54e288d31686af78166850c8fbcebb4e951916db857527"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 33",
+   "asked_by": "https://ethglobal.com/showcase/froggy-284ag",
+   "known": [
+    "https://ethglobal.com/showcase/onchain-heartbeat-sxze9"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "0a07db992a0a2860bc845af0f81e649587feda5337d2e7a2c3b504e349b61643"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 33",
+   "asked_by": "https://ethglobal.com/showcase/onchain-heartbeat-sxze9",
+   "known": [
+    "https://ethglobal.com/showcase/froggy-284ag"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "1f81936ec4e56a960c8f1fbcfa38e2e03919571eaf01839d60a5f47984f4d065"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 34",
+   "asked_by": "https://ethglobal.com/showcase/reveal-k4mq7",
+   "known": [
+    "https://ethglobal.com/showcase/sotto-ukx6e"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "340c5a5d90635c23669cc35317156364ccf6ebae58d3d5415fb945ba5416e24f"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 34",
+   "asked_by": "https://ethglobal.com/showcase/sotto-ukx6e",
+   "known": [
+    "https://ethglobal.com/showcase/reveal-k4mq7"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "d361387ce11b6b8f99bfd441a9c608dc0a76de00ffe2562a212fc598939027f2"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 35",
+   "asked_by": "https://ethglobal.com/showcase/froggy-284ag",
+   "known": [
+    "https://ethglobal.com/showcase/hands-unchained-6kdf3"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "0a07db992a0a2860bc845af0f81e649587feda5337d2e7a2c3b504e349b61643"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 35",
+   "asked_by": "https://ethglobal.com/showcase/hands-unchained-6kdf3",
+   "known": [
+    "https://ethglobal.com/showcase/froggy-284ag"
+   ],
+   "places": [
+    9
+   ],
+   "counted": false,
+   "idea_sha256": "801a326cf8578f0fa287f3d8a8e1b73782df4dd5d0f25e4cc6ddf578d5949bdd"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 36",
+   "asked_by": "https://ethglobal.com/showcase/tenor-market-cxywq",
+   "known": [
+    "https://ethglobal.com/showcase/tokenize-it-tsusj"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "00e56bb07d216699c69de698a1455118a83fd0a6f5974824e7dfd891162d0484"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 36",
+   "asked_by": "https://ethglobal.com/showcase/tokenize-it-tsusj",
+   "known": [
+    "https://ethglobal.com/showcase/tenor-market-cxywq"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "87c2d79cb3ef92df33cb12e9e6aa877e6cb107f2f8942dc0326ff40695587a15"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 37",
+   "asked_by": "https://ethglobal.com/showcase/covenant-hedera-4jvyy",
+   "known": [
+    "https://ethglobal.com/showcase/forfait-eam6y"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "1c3a8a8a4de84a72042e8c3ab936c05b8ba7a44319da5dda4c5fd9d2cca00642"
+  },
+  {
+   "kind": "look alike",
+   "source": "same Hedera ID",
+   "group": "pair 37",
+   "asked_by": "https://ethglobal.com/showcase/forfait-eam6y",
+   "known": [
+    "https://ethglobal.com/showcase/covenant-hedera-4jvyy"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "63a2f3265ce7787e5353289a36c221a646ea37b3bee79273820fda2a56d7a19c"
+  },
+  {
+   "kind": "look alike",
+   "source": "read in Test 1",
+   "group": "pair 38",
+   "asked_by": "https://ethglobal.com/showcase/accrue-racfy",
+   "known": [
+    "https://ethglobal.com/showcase/adralis-v042p"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "ec53b9e8bfeff8c3ad826ec76ea8768de28b810c27c87b2a66d0281d240e7069"
+  },
+  {
+   "kind": "look alike",
+   "source": "read in Test 1",
+   "group": "pair 38",
+   "asked_by": "https://ethglobal.com/showcase/adralis-v042p",
+   "known": [
+    "https://ethglobal.com/showcase/accrue-racfy"
+   ],
+   "places": [
+    2
+   ],
+   "counted": false,
+   "idea_sha256": "f874c8f6c9bd5a46b08324847df5af88f1486dbac6f2f1a16a8d17c85800e786"
+  },
+  {
+   "kind": "look alike",
+   "source": "read in Test 1",
+   "group": "pair 39",
+   "asked_by": "https://ethglobal.com/showcase/chemical-01b4r",
+   "known": [
+    "https://ethglobal.com/showcase/common-arcade-vb6ao"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "9edc95a48575429cbecd80b709000cf7456ad893c1c220d2345b0247a5c59b67"
+  },
+  {
+   "kind": "look alike",
+   "source": "read in Test 1",
+   "group": "pair 39",
+   "asked_by": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+   "known": [
+    "https://ethglobal.com/showcase/chemical-01b4r"
+   ],
+   "places": [
+    null
+   ],
+   "counted": false,
+   "idea_sha256": "9ee7b87e6144b1db0040af17ecdbe53434babd27c7eb3ecf8197a0d02b76be11"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 3",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/decomp-re471"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "21275470fda8e8d4e6d290ff5a61f3a7acfd973823a267a46ab62d8c966a586f"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 9",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/viral-games-b65bf"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "b482d62a00f50b64376d20fa24422cfdf0ce624754ad6a58a7f651c71177c375"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 15",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/safesign-pfalzai-a7qnn"
+   ],
+   "places": [
+    1
+   ],
+   "counted": false,
+   "idea_sha256": "e673e5dbb346d7266ccf8849cce550aed6f372dfc6a425261774988bfe264354"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 17",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/hivera-are13"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "1be1aa042ced8a8b4fc1e8a3f56ece384ec2ba3a1117ff73fadb972298fe969e"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 18",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/assay-qiz12",
+    "https://ethglobal.com/showcase/assay-26egq"
+   ],
+   "places": [
+    null,
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "3e913e2612c4c1add32abc18bca84bfb4a84fc5e287c2b71ce4e5a31d23ba436"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 23",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/meterx402-8i147"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "4600ce7b2a08df9ce40f303e08d7fcef80fd89faf19274290479e14b1315afb2"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 24",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/jurybox-a0dkt"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "89b50597bd2ed5d743a7304e30da492e319c4b89ac9735c02715b7459f98ef87"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 25",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/reveal-k4mq7"
+   ],
+   "places": [
+    1
+   ],
+   "counted": true,
+   "idea_sha256": "95bf38792b12f03e7b05803ee6ba57047c1d2a11eb0d34b6c612fb5948b3931d"
+  },
+  {
+   "kind": "idea",
+   "source": "the maintainer's words",
+   "group": "idea 29",
+   "asked_by": null,
+   "known": [
+    "https://ethglobal.com/showcase/nilhak-msba7"
+   ],
+   "places": [
+    null
+   ],
+   "counted": true,
+   "idea_sha256": "70d600e757b84817b407ddb7f6090904d82fcc6e0f3c2a2348d3e1b2c499b13e"
+  }
+ ]
+}

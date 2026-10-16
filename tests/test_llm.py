@@ -78,7 +78,7 @@ def test_the_form_has_the_seven_fields_of_the_design() -> None:
         "problem",
         "solution",
     ]
-    assert len(Category) == 16  # the list of design 4.5
+    assert len(Category) == 17  # the list of design 4.5, split once on 15 October 2026
 
 
 # ------------------------------------------------------------------ the answer
@@ -90,7 +90,7 @@ def test_a_valid_answer_becomes_a_card_with_its_cost() -> None:
 
     assert result.model == FLASH
     assert result.thinking_level == "LOW"
-    assert result.instructions_version == "card-form-0"
+    assert result.instructions_version == "card-form-2"
     assert result.fields.what_it_does.label is Label.STATED
     assert result.fields.category.category is Category.PAYMENTS
     assert result.fields.problem.label is Label.NOT_FOUND

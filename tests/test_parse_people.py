@@ -334,3 +334,17 @@ def test_a_handle_inside_a_link_is_hidden_and_the_rest_of_the_link_stays(
 )
 def test_the_name_of_a_package_in_a_link_stays(text: str) -> None:
     assert hide_in_text(text) == (text, 0)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "A service (Node.js/@sample-scope/sdk) on port 8001.",
+        "Built with Next.js/@sample-scope/og and Vue.js/@sample-scope/x.",
+        "See Pebble.sol/@sample-scope/lib for the vault.",
+    ],
+)
+def test_a_framework_or_a_file_before_a_package_is_not_a_site(text: str) -> None:
+    # "Node.js" has a dot like "medium.com", but ".js" is the end of a kind of file, not of a
+    # site on the web, so "@sample-scope/sdk" after it is the name of a package.
+    assert hide_in_text(text) == (text, 0)

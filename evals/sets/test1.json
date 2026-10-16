@@ -1,0 +1,368 @@
+{
+  "set": "test1",
+  "drawn_on": "2026-10-12",
+  "seed": 20261013,
+  "groups": "the length of the text the model reads (short, medium, long; cut at 2526 and 4472 letters) and whether a Hedera id is given (design 13.2)",
+  "cases": [
+    {
+      "page": "https://ethglobal.com/showcase/sealsign-o3b90",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:46:41Z",
+      "sha256": "acdee914f3d7555651107027ac4336aa342db8b83ae8d48309bed5a30e7bc8a7"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/code4ai-7spr5",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:28:09Z",
+      "sha256": "11ca401c4edc8d436829b86fcf51dbc691318ed9dd61531a697e04c2b24b41c4"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/scree-rprid",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:19:35Z",
+      "sha256": "ff0b2974ee944a21b14453cf0727baa14d598a8fb5797292750ac84b4d97afdc"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/paybound-kcezf",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:21:09Z",
+      "sha256": "cb0bf197c68e918e86607fb7b1167af587501f2810dff83443a4c854977ddaf2"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/assay-26egq",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:37:24Z",
+      "sha256": "95ce71c2a1f01b745ea0369c06e3d783debb1241c2a6f1852506ca9958ea804e"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/tenor-8wx00",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:30:05Z",
+      "sha256": "edab7f124d41428d161e2ce671d2e4a56011007d0097107ce1ac1abff2580883"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/allowance-x9syo",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:14:31Z",
+      "sha256": "d0f3f7a8fe2034368a31fccf5852888c28c4711419e5b4d8f0beac80f4fc0e7d"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/latticeprime-kn8ke",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:30:46Z",
+      "sha256": "cc42aa13b2f57b3a24b4fae0ab008807987458db3e411d9e7d6e5a6895786360"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/aivy-quorum-1b5u1",
+      "group": "long, an id given",
+      "read_at": "2026-10-10T19:42:46Z",
+      "sha256": "97703310bae69746d9619ebd8d3e4f5af20c375b436a2a0ecd0969e8a9403181"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/proctor-f8bk7",
+      "group": "long, an id given",
+      "read_at": "2026-10-11T01:07:10Z",
+      "sha256": "52de366f53b0258d259fe6976430ac86d9189089a5c47e563c4071bab59e1e48"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/common-arcade-vb6ao",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T01:18:21Z",
+      "sha256": "f9e03abf9eb42796fa7ab4e3178b73ceb50101efdad256ff8b9b914437593cd6"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/ztomic-swap-ufv2r",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T01:53:30Z",
+      "sha256": "03e0f3a6343f43e2f6dcac557f18bca7d266be89d8ea3218f22139fe09af6435"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/proofy-s0e8c",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T02:07:31Z",
+      "sha256": "ba5885133c5b6d512e3500474b787f3cfa02945c5599cfe3d9400ecf812b81f6"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/factorflow-quk1t",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T01:29:44Z",
+      "sha256": "65e8e14adf8ec496b074c2e3f399b61a1ff9fbf1cd59576ffa16b82ffcd528fa"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/veiledswap-9esbt",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T02:14:01Z",
+      "sha256": "9480e57ba39fe6cfd9cea95763277339736a118cfce478d72e1638ae4c048154"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/azimuth-7w256",
+      "group": "long, no id given",
+      "read_at": "2026-10-10T19:43:44Z",
+      "sha256": "dd3c326bf51cdf72c9c412d02686a35de4decd443baa929b77318df0469df51f"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/noforma-3efoh",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T02:06:28Z",
+      "sha256": "506167e3f9b5ff947a38be65a105c9af61e0ae61052e8b673bcf22eb64f3f5e8"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+      "group": "long, no id given",
+      "read_at": "2026-10-10T19:45:04Z",
+      "sha256": "7272d47932739cb368a7d54f4175f89422b9eff5a0e4bdbbccf5ff2ab62c2491"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/emosifloww-bkqkc",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T02:10:50Z",
+      "sha256": "1016eae104c2947f73e5496c9cff796a7ea42ed0b1a40dbae43bf49115b69473"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/vaultbreaker-xw79k",
+      "group": "long, no id given",
+      "read_at": "2026-10-11T01:25:32Z",
+      "sha256": "9591f206848f808f955db0a938c92fa1fd2903e3d0c28bcef3e24269396c7ba5"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T01:15:23Z",
+      "sha256": "0c443a3d4d00006cdcd7ce65cdf7aec306862093611deabfebb1fb42a0e301cd"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/galvanic-5g3wr",
+      "group": "medium, an id given",
+      "read_at": "2026-10-10T23:58:01Z",
+      "sha256": "cf3aa77c0106c1cab095cb1d10cbc0b480afb1775ed1fbb972364dd8136d9b23"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/notyet-hy3kh",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T01:14:52Z",
+      "sha256": "0fe15ab95d97d0d6049249e5246a9fc3e25b26152937ef90c5461f6da6253480"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T01:42:07Z",
+      "sha256": "6973b74cd4060a563735c7d769df1b7d9d089cacfb6ffa570da3acf315e46b6d"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/squash-4x5ep",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T00:00:04Z",
+      "sha256": "abd72b3adab9cf400dc5225e8db40e0a2935ec78720a2d8022ef3c8c80c674bf"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+      "group": "medium, an id given",
+      "read_at": "2026-10-10T19:45:09Z",
+      "sha256": "91a4f42b44011994108c329c24a9d88711d11ae91ad7db6bee0ae6d339e7af19"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/chemical-01b4r",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T01:53:19Z",
+      "sha256": "a99e6fc2ace5975a4a0bf0caec9c98a7233015583cbeb4e20ff50c7e280e1a12"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/ctrlz-p8tn8",
+      "group": "medium, an id given",
+      "read_at": "2026-10-11T01:42:49Z",
+      "sha256": "d063ae4bee587a1d904826dda1b24c8959434378fbd4ac3b9f1c46a13c7f6ccf"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/mars-ua1qc",
+      "group": "medium, an id given",
+      "read_at": "2026-10-10T19:43:53Z",
+      "sha256": "16cd0bee2a2ac300b73f817ecb0b7da3ba592f7ff59523e0e78b15fbdca04fd7"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/namegate-63d0m",
+      "group": "medium, an id given",
+      "read_at": "2026-10-10T19:42:55Z",
+      "sha256": "b5d2f3d4139bb01f833c2ff562de782fcbbb08db418764c51c1741b608b758fa"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/arc-reserve-t4v51",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T01:04:33Z",
+      "sha256": "2822ac0d179c0e538cbf98c4012c75c412fe7688325c456a3accdad92615c9bd"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/sonos-txqdm",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T01:49:08Z",
+      "sha256": "4c6fda051d05d2e84a6790d6c06300c433602366ce2fb703edbe0cfb52a9d5c2"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/eth-various-swusm",
+      "group": "medium, no id given",
+      "read_at": "2026-10-10T19:46:34Z",
+      "sha256": "98c438b0b41692609d5ae03b3c73b441d1e2b1b2621ca8c8e1a60f3be0a9e8ae"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/accrue-racfy",
+      "group": "medium, no id given",
+      "read_at": "2026-10-10T19:43:56Z",
+      "sha256": "7cb488b974bc8d15257cb27f61bea55ebe1cb9c8dce034f8d927b42c4ff50273"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/cubic-g1kwb",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T01:30:15Z",
+      "sha256": "61c4e5a3cdab1d020b5263a0487300e90799bac1a6ef0838b112326bcfebd68f"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/ecorestore-network-qrcx7",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T01:17:50Z",
+      "sha256": "c631c808ce52ece1ecd3566225a157c6efc7f7cc4692c0a4eccdb426624a4628"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/mind-your-data-5pyj3",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T02:18:34Z",
+      "sha256": "84e2747bbb67f24aeafbae40eea4f41436eea7170e1af34d9ff35305dcf2825a"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/truelens-40d1x",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T02:17:31Z",
+      "sha256": "ccac612d4e512b07764efc385e7ad0219cd59d60890b3964f72a549e9c747db6"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/play-network-sps8r",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T02:22:16Z",
+      "sha256": "6e9390fd56c1f5fa8639f20673143a232893c9b336089a9524d601b23a6cad3e"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/bear-market-r4qym",
+      "group": "medium, no id given",
+      "read_at": "2026-10-11T02:19:17Z",
+      "sha256": "68da71ff17234b3690fad9b5ba8715b6234c5857b83e1071ba2dbd32bb677a34"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/hedera-world-rootbot-53oit",
+      "group": "short, an id given",
+      "read_at": "2026-10-11T01:52:16Z",
+      "sha256": "874be0c6aecb7e8b56c261d00b4ef03030f3223d90c19e160e6152ffef1d86dc"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/policyprobe-tbebd",
+      "group": "short, an id given",
+      "read_at": "2026-10-10T23:59:05Z",
+      "sha256": "1f6aeff847cc924b4823e9151970bed7c78aecd1ac43b266d6f596687409f21c"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/proofs-of-inference-6rug4",
+      "group": "short, an id given",
+      "read_at": "2026-10-10T19:45:40Z",
+      "sha256": "23720411ac2c135a129f1ac0385043224be7c780d0843ace495405152c4bda8a"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+      "group": "short, an id given",
+      "read_at": "2026-10-11T02:12:05Z",
+      "sha256": "5183e7a5e2aa24b5a2fd1d5335a5e594e63db40fa43add779cc9790aabb61565"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+      "group": "short, an id given",
+      "read_at": "2026-10-10T19:41:10Z",
+      "sha256": "a5d1f793524ff75dd93251c5675f77f1982932ff2099fe582562a79462bd3fce"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+      "group": "short, an id given",
+      "read_at": "2026-10-11T01:26:56Z",
+      "sha256": "5d539c1f9f874bdab0e94a1eacd9e170e7ccaeb2eaf8e1ae0c462cef87d7f713"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/ognef-dqsm0",
+      "group": "short, an id given",
+      "read_at": "2026-10-10T19:43:15Z",
+      "sha256": "0ca7e76fad45eb9b6484f0c2c696734fa1002aff50ad7d17e9ac60966d416c06"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/credence-ea4oo",
+      "group": "short, an id given",
+      "read_at": "2026-10-11T01:15:02Z",
+      "sha256": "80e943dd5db3182f5b355fb51546d74fa51b5d39d55d61660c06a52eee604f85"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/provenance-chain-8g8a1",
+      "group": "short, an id given",
+      "read_at": "2026-10-10T19:44:15Z",
+      "sha256": "3c6663c1cd28f7dfc2b16f6f471535e73fa427f53434fbb6aa9d431b7fbdeedb"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+      "group": "short, an id given",
+      "read_at": "2026-10-11T01:46:10Z",
+      "sha256": "402ba1755c1a40c5bcb870965b672dca62fabe2d3a3b8aca7708b7aa336cfca7"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/kinxp-p1jn3",
+      "group": "short, no id given",
+      "read_at": "2026-10-10T19:44:41Z",
+      "sha256": "86be3ea4770976f9e39c5f68d8e279f81de18cac6833a303ac5f8e1a3f486d42"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/tx-delay-insurance-5fhae",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T02:15:46Z",
+      "sha256": "7fe6fee78392044fc97d04926a2e890b3c150997dd598197ea066a983a5fb781"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T01:55:25Z",
+      "sha256": "4f85e4cc936f9bc0e07d90be30520518518898955f3da1a26f10c8620085a3ee"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+      "group": "short, no id given",
+      "read_at": "2026-10-10T19:45:12Z",
+      "sha256": "0658df8fc5bc49c166edcf0b86f81b297f57afe7203ca0d2047053b768af1432"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/humanos-mk20p",
+      "group": "short, no id given",
+      "read_at": "2026-10-10T19:45:07Z",
+      "sha256": "b5cd2eb3893e9d0253ed3a575c59ce8066c904a407cb96f3eed02dee4dae2b17"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/corpus-j7an5",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T01:47:55Z",
+      "sha256": "220ee8b3eafaeef71e2f1d466101e892d415559c9aa21ffcbf60f322177bd1d0"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/adralis-v042p",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T02:09:47Z",
+      "sha256": "29b48a5fd4ff5b7ea552836fd4582c75a06b82e76afe73d354a023279ac5048c"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/hedron-msiu8",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T01:52:27Z",
+      "sha256": "a8840f396bd08de9c8f26c60e9bac898d7fa363758d5b188e7dd9d10d8c28fdf"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/stage-6540h",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T01:36:31Z",
+      "sha256": "0ed8b51401ea14093bfe08380c23e023c99d6be14a1c13257bea983473e00c0e"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/moneychain3-0-yehk0",
+      "group": "short, no id given",
+      "read_at": "2026-10-11T01:53:09Z",
+      "sha256": "ce8862731410f3b183ed8a15b2b9e25cd5c847ad07dfda95f328563640f00368"
+    }
+  ]
+}

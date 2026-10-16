@@ -175,13 +175,14 @@ An empty field is right only when the page really has nothing. When the informat
 - **Proof status** of the Hedera IDs: section 7.2.
 - **Life status** of the project: section 7.4.
 
-### 4.5 Categories (first version, confirmed by a test)
+### 4.5 Categories (split once after Test 1)
 
-Payments and remittance. Lending, saving and investing. Real-world assets and tokens. Identity and credentials. Supply chain and provenance. Sustainability, energy and climate. Health. Education. Agriculture. Gaming and entertainment. Social and community. AI agents and automation. Developer tools. Data and devices. Public services. Other.
+Payments and remittance. Lending, saving and investing. Real-world assets and tokens. Identity and credentials. Supply chain and provenance. Sustainability, energy and climate. Health. Education. Agriculture. Gaming and entertainment. Social and community. AI agents and automation. Tools for AI agents. Developer tools. Data and devices. Public services. Other.
 
 - **Why a list of our own.** The tracks of the events cannot do this job. They change from one event to the next, and some say nothing about the subject, like "Open Track" and "Legacy Builders".
-- **One category for each project.** It is chosen by who the project serves, not by the technology inside. "AI agents and automation" and "Developer tools" are used only when the agent or the tool is itself the product.
+- **One category for each project.** It is chosen by who the project serves, not by the technology inside. "AI agents and automation" is used only when an agent or an automation is what people run or get, such as a trading agent. "Tools for AI agents" is used when the project is built for AI agents to use, such as limits on what an agent may spend, an identity for agents, or a market where agents buy services. "Developer tools" is used for tools for people who build software.
 - **How the list is confirmed.** On the projects of Test 1 (section 13.2), two graders each pick a category, separately. The list is accepted if they agree on at least 80% of the projects and if at most 15% land in "Other". If not, categories are merged or split once, before the full run.
+- **The split of 15 October 2026.** In the run of October 2026 the two graders picked the same category on 4 of 11 projects, and neither picked "Other", so the first list of 16 was not accepted. Most differences were about tools built for AI agents, so "Tools for AI agents" came out of "AI agents and automation". The cards are made again with the new list.
 
 ### 4.6 Winner entries: a thinner card
 
@@ -796,6 +797,7 @@ Rules for every test:
 - **Cases:** 60 real projects, picked at random from groups. The groups depend on the source. On ETHGlobal's pages they are formed from what really differs there, for example the length of the text and whether a Hedera ID is given. The groups are fixed before the 60 are drawn.
 - **Not used for tuning:** the instructions of the LLM are written and improved on 15 other projects, never on these 60.
 - **Grading:** the maintainer sees the page and the card side by side, field by field, with the quotes, and grades each field right, partly or wrong. A second grading of the same sample is made separately, by a model that is not the one under test, before it sees the first grades. The report says how often the two agree.
+- **When a grading does not cover every project:** a grader's numbers come from the projects it graded in full, and the pass marks use a grader who graded every project. In the run of October 2026, the second grading covered all 60 projects and the maintainer graded 10 of them. This rule was added on 15 October 2026, after the grading and before the key of the planted cards was opened.
 - **Four numbers:**
   1. Faithful: of the filled fields, how many the page really supports.
   2. Kept: when the page had the information, how often the card has it.
@@ -827,7 +829,7 @@ No outside standard gives these numbers. A pass mark is a decision about how muc
 | Test 1, faithful | At most 5% of the filled fields are graded wrong. The low end of the range for "not wrong" is 90% or more. | A wrong sentence about a real team's project is the worst error of this tool, so it gets the strictest mark. |
 | Test 1, honest labels | At least 90% of the labels are right. | The "less sure" mark tells the reader what to trust less. If more than one label in ten is wrong, the mark means nothing. |
 | Test 1, kept | At least 85%. | A missing detail does less harm than a wrong one: the original text stays on the card and in the search. |
-| Test 1, planted cards | Both graders catch every planted wrong card. | This tests the graders, not the model. |
+| Test 1, planted cards | Each grader catches every planted wrong card in the projects it graded, and every planted card is graded. | This tests the graders, not the model. |
 | Test 2 | At least 80% of the known similar projects are in the first 10 results. | A builder reads the first screen. If one known project in five is missing there, "nothing similar" cannot be trusted. |
 | Test 3 | At least 95% of the IDs found, at most 2% invented, and the proof status agrees with the hand check at least 90% of the time. | This is ordinary code with exact right answers, so the marks are high, and a miss is a bug to fix. |
 | Test 4 | The maintainer can do every task without help, and no "sure" finding stays open. | A screen that cannot be used alone is not finished. |

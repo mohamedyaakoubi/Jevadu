@@ -1,4 +1,4 @@
-# Exact versions that the tests ran with on 9 October 2026.
+# Exact versions that the tests ran with on 13 October 2026.
 # Made with: pip freeze --exclude-editable. Use it with: pip install -c constraints.txt -e ".[dev]"
 # It is written by a tool: do not edit it by hand.
 annotated-types==0.8.0
@@ -17,6 +17,7 @@ eth-utils==6.0.0
 eth_abi==5.2.0
 google-auth==2.61.0
 google-genai==2.29.0
+greenlet==3.5.6
 grpcio==1.84.0
 h11==0.16.0
 hiero-sdk-python==0.2.10
@@ -28,17 +29,19 @@ lxml==6.1.3
 packaging==26.3
 parsimonious==0.10.0
 pgvector==0.5.1
+playwright==1.62.0
 pluggy==1.6.0
 protobuf==7.36.2
-psycopg-binary==3.3.6
 psycopg==3.3.6
+psycopg-binary==3.3.6
 pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pycparser==3.11
 pycryptodome==3.24.0
-pydantic-settings==2.15.0
 pydantic==2.14.0
+pydantic-settings==2.15.0
 pydantic_core==2.50.0
+pyee==13.0.1
 Pygments==2.21.0
 pytest==9.1.1
 python-dotenv==1.2.4
