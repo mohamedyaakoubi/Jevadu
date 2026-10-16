@@ -1,11 +1,16 @@
-{# The comparison of each project with the idea (design 8.3), asked for after the results are shown. #}
-{% for project_id, one in found.items() %}
-<div class="compare" data-project="{{ project_id }}">
+{# The comparison of each project with the idea (design 8.3). Each part replaces the waiting text
+   of its result, by its id (an out-of-band swap of htmx). #}
+{% for project_id in asked_ids %}
+{% set one = found.get(project_id) %}
+<div class="compare" id="compare-{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
+{% if one %}
   <p><b>The same:</b> {{ one.same }}</p>
   <p><b>Differs:</b> {{ one.differs }}</p>
-  <p class="source">Written by a model from {% for name in one.fields_used %}{{ TEXT_WORDS.get(name, name) | lower }}{% if not loop.last %}, {% endif %}{% else %}the texts of the project{% endfor %}. It does not judge the project.</p>
+  <p class="source-note">Written by a model from {% for name in one.fields_used %}{{ TEXT_WORDS.get(name, name) | lower }}{% if not loop.last %}, {% endif %}{% else %}the texts of the project{% endfor %}. It does not judge the project.</p>
+{% elif failed %}
+  <p>The comparison with your idea could not be written just now. Everything else on this page is complete.</p>
+{% else %}
+  <p>No comparison was written for this project.</p>
+{% endif %}
 </div>
 {% endfor %}
-{% if failed %}
-<div class="compare-failed" data-failed="yes">The comparison with your idea could not be written just now. Everything else on this page is complete.</div>
-{% endif %}

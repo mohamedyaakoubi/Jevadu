@@ -1,0 +1,40 @@
+{# The parts that the search page and its fragments share. #}
+{% import "_marks.html" as marks %}
+
+{% macro result(card, summary, line, snippet, rank, query, open_id, compared) -%}
+{% set link = "/?" ~ (query ~ "&" if query else "") ~ "open=" ~ card.hit.project_id %}
+<li class="result" id="result-{{ card.hit.project_id }}"{% if open_id == card.hit.project_id %} aria-current="true"{% endif %}>
+  <h3 class="result-title">
+    {% if rank %}<span class="rank" aria-hidden="true">{{ rank }}</span>{% endif %}
+    <a class="result-link" href="{{ link }}"
+       hx-get="/project/{{ card.hit.project_id }}/panel{% if query %}?{{ query }}{% endif %}"
+       hx-target="#panel" hx-swap="innerHTML" hx-push-url="{{ link }}">{{ card.name }}</a>
+  </h3>
+  <p class="meta">{{ card.event }}{% if card.prize_state %} · {{ PRIZE_WORDS.get(card.prize_state, card.prize_state) }}{% endif %}</p>
+  {% if summary and summary.text %}
+  <p class="snippet">{{ line or summary.text }}
+    {% if summary.source == "model" %}<span class="source-note">written by a model, {{ "stated" if summary.label == "stated" else "inferred: less sure" }}</span>{% else %}<span class="source-note">from the project's page</span>{% endif %}
+  </p>
+  {% endif %}
+  {% if snippet %}
+  <p class="matched"><span class="source-note">Where your words stand in its page:</span> &hellip;{{ snippet }}&hellip;</p>
+  {% endif %}
+  <p class="marks">{{ marks.proof(card.proof_status) }} {{ marks.life(card.life) }}
+    {% if card.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
+  </p>
+  {% if compared %}
+  <div class="compare waiting" id="compare-{{ card.hit.project_id }}">Comparing with your idea&hellip; This usually takes less than 10 seconds.</div>
+  {% endif %}
+</li>
+{%- endmacro %}
+
+{% macro filter_select(name, label, all_words, options, current) -%}
+<div class="filter-group">
+  <label class="filter-label" for="filter-{{ name }}">{{ label }}</label>
+  <select id="filter-{{ name }}" name="{{ name }}">
+    <option value="">{{ all_words }}</option>
+    {% for choice in options %}<option value="{{ choice.value }}"{% if choice.value == current %} selected{% endif %}>{{ choice.words }} ({{ choice.count }})</option>
+    {% endfor %}
+  </select>
+</div>
+{%- endmacro %}

@@ -1,4 +1,5 @@
-"""The website: the search and the project card, on three invented projects, with Google faked."""
+"""The website: the search, the card beside it and the method page, on three invented projects,
+with Google faked."""
 
 from __future__ import annotations
 
@@ -24,6 +25,8 @@ pytestmark = [
     pytest.mark.filterwarnings("ignore:Using `httpx` with `starlette.testclient`"),
 ]
 ON_PEBBLE = "A street vendor takes a coin."
+VENDOR = "help a street vendor get paid with a coin"
+PAYMENTS = "Payments and remittance"
 
 
 def field(label: str, value: object, quotes: list[str], state: str = "kept") -> dict:
@@ -57,7 +60,7 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
             ),  # fmt: skip
             "for_whom": field("stated", "Street vendors.", [ON_PEBBLE]),
             "hedera_services": field("not_found", "", [], "not_found"),
-            "category": field("inferred", "Payments and remittance", [ON_PEBBLE]),
+            "category": field("inferred", PAYMENTS, [ON_PEBBLE]),
             "problem": field("stated", "", [], "dropped"),
             "solution": field("not_found", "", [], "not_found"),
         }
@@ -71,26 +74,80 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
     return TestClient(create_app(settings, google=client, llm=client)), fake, ids, database
 
 
-def test_the_start_page_asks_for_an_idea_and_calls_no_model(site) -> None:  # noqa: ANN001
-    client, fake, _, _ = site
+# ----------------------------------------------------------------- the start page and the list
+
+
+def test_the_start_page_lists_the_projects_and_calls_no_model(site) -> None:  # noqa: ANN001
+    client, fake, ids, _ = site
     before = len(fake.requests)  # the embeddings of the three projects were made already
     page = client.get("/")
     assert page.status_code == 200
     assert '<textarea id="idea"' in page.text and "Search past projects" in page.text
-    assert 'class="result"' not in page.text
+    assert "All 3 projects" in page.text and page.text.count('class="result"') == 3
+    assert f'hx-get="/project/{ids["Pebble Pay"]}/panel"' in page.text
+    assert "The card of a project opens here" in page.text
     assert len(fake.requests) == before
+
+
+def test_a_page_after_the_end_of_the_list_says_so(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/", params={"page": "2"})
+    assert 'class="result"' not in page.text
+    assert "There are no more projects in this list." in page.text
+
+
+# ----------------------------------------------------------------- the search
 
 
 def test_a_search_shows_the_closest_projects_with_their_marks(site) -> None:  # noqa: ANN001
     client, _, ids, _ = site
-    page = client.get("/", params={"idea": "help a street vendor get paid with a coin"})
+    page = client.get("/", params={"idea": VENDOR})
     assert page.status_code == 200
     first = page.text.index('class="result"')
-    assert f'href="/project/{ids["Pebble Pay"]}?idea=' in page.text[first : first + 400]
-    assert "A vendor takes coins." in page.text  # the model's sentence, with its label
+    assert f'hx-get="/project/{ids["Pebble Pay"]}/panel?idea=' in page.text[first : first + 600]
+    # The model's sentence, with its label, and the words of the idea marked in it.
+    assert "A <mark>vendor</mark> takes <mark>coins</mark>." in page.text
     assert "written by a model, stated" in page.text
     assert "from the project's page" in page.text  # the others have no card yet
     assert "Hedera proof:" in page.text and "What the marks mean" in page.text
+    assert "projects closest to your idea" in page.text and "found in" in page.text
+
+
+def test_the_words_of_the_idea_are_marked_and_a_page_never_runs_as_code(site) -> None:  # noqa: ANN001
+    client, _, ids, database = site
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET short_line = %s WHERE id = %s",
+                     ("<b>A ballot</b> paid with a coin", ids["Fern Vote"]))  # fmt: skip
+    page = client.get("/", params={"idea": "a coin for a ballot"})
+    assert "<b>A ballot</b>" not in page.text
+    assert "&lt;b&gt;A <mark>ballot</mark>&lt;/b&gt;" in page.text
+    assert "<mark>coin</mark>" in page.text
+
+
+def test_each_mode_of_search_can_be_chosen(site) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    for mode in ("both", "meaning", "words"):
+        page = client.get("/", params={"idea": VENDOR, "mode": mode})
+        assert f'value="{mode}" checked' in page.text
+    before = len(fake.requests)
+    words = client.get("/", params={"idea": "parcel", "mode": "words"})
+    assert len(fake.requests) == before  # by words only, the idea is not embedded
+    assert "Where your words stand in its page:" in words.text
+    odd = client.get("/", params={"idea": VENDOR, "mode": "magic"})
+    assert 'value="both" checked' in odd.text  # an unknown mode is the default
+
+
+def test_a_card_opens_beside_the_list_and_has_its_own_address(site) -> None:  # noqa: ANN001
+    client, _, ids, _ = site
+    pebble = ids["Pebble Pay"]
+    page = client.get("/", params={"idea": VENDOR, "open": str(pebble)})
+    assert f'id="card-title-{pebble}"' in page.text
+    assert f'id="result-{pebble}" aria-current="true"' in page.text
+    part = client.get(f"/project/{pebble}/panel", params={"idea": VENDOR})
+    assert part.status_code == 200 and "<html" not in part.text
+    assert f'id="card-title-{pebble}"' in part.text and "Back to the results" in part.text
+    missing = client.get("/project/999999/panel")
+    assert missing.status_code == 404 and "There is no project with this number" in missing.text
 
 
 def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
@@ -99,9 +156,9 @@ def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
     assert page.status_code == 200
     text = page.text
     places = [text.index(words) for words in
-              ("From the project's page", "From the code and the ledger",
+              ("From the code and the ledger", "From the project's page",
                "Written by a model")]  # fmt: skip
-    assert places == sorted(places)
+    assert places == sorted(places)  # the facts first, then the page, then the model
     assert "Pebble Pay, invented." in text  # the short line, word for word
     assert "Inferred: less sure" in text and ">Stated<" in text
     assert f"&ldquo;{ON_PEBBLE}&rdquo;" in text  # the quote that the field rests on
@@ -128,7 +185,7 @@ def test_without_google_the_words_are_searched_and_the_page_says_so(site) -> Non
     page = client.get("/", params={"idea": "a vendor and a coin"})
     assert page.status_code == 200
     assert "only its words were searched" in page.text
-    assert f'href="/project/{ids["Pebble Pay"]}?idea=' in page.text
+    assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
 
 
 def test_without_the_database_the_page_says_how_to_start_it() -> None:
@@ -144,7 +201,7 @@ def test_without_the_database_the_page_says_how_to_start_it() -> None:
     assert page.status_code == 503 and "docker compose up -d --wait db" in page.text
     start = client.get("/")  # the start page still opens, without the filters, and says why
     assert start.status_code == 200 and "docker compose up -d --wait db" in start.text
-    assert '<select name="event">' not in start.text
+    assert 'name="event"' not in start.text
 
 
 def test_the_text_of_a_page_is_shown_as_text_never_as_code(site) -> None:  # noqa: ANN001
@@ -155,6 +212,22 @@ def test_the_text_of_a_page_is_shown_as_text_never_as_code(site) -> None:  # noq
     page = client.get(f"/project/{ids['Fern Vote']}")
     assert "<script>alert(1)</script>" not in page.text
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page.text
+
+
+def test_a_long_idea_is_cut_and_the_page_says_so(site) -> None:  # noqa: ANN001
+    from hackathon_memory.web.app import LONGEST_IDEA
+
+    client, _, _, _ = site
+    page = client.get("/", params={"idea": "coin " * (LONGEST_IDEA // 4)})
+    assert f"The idea was longer than {LONGEST_IDEA:,} characters, so it was cut." in page.text
+
+
+def test_the_method_page_explains_the_search_and_its_tests(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/method")
+    assert page.status_code == 200
+    assert "The search, step by step" in page.text and "The ways to search" in page.text
+    assert "What the marks mean" in page.text and "What this tool cannot do" in page.text
 
 
 # ----------------------------------------------------------------- the comparison (design 8.3)
@@ -169,49 +242,50 @@ def compare_answer(*parts: tuple[int, list[str]]) -> str:
 
 
 def test_the_search_page_waits_for_the_comparison_without_blocking(site) -> None:  # noqa: ANN001
-    client, fake, ids, _ = site
+    client, fake, _, _ = site
     before = len(fake.requests)
-    page = client.get("/", params={"idea": "help a street vendor get paid with a coin"})
-    assert 'data-compare-url="/compare?idea=help%20a%20street%20vendor' in page.text
+    page = client.get("/", params={"idea": VENDOR})
+    assert 'hx-get="/compare?idea=help%20a%20street%20vendor' in page.text
     assert page.text.count('class="compare waiting"') == 3
-    assert '<script src="/static/compare.js" defer></script>' in page.text
+    assert "This usually takes less than 10 seconds." in page.text
     assert not [path for path, _ in fake.requests[before:] if "generateContent" in path]
 
 
 def test_the_comparison_names_the_texts_it_used(site) -> None:  # noqa: ANN001
     client, fake, ids, _ = site
-    pebble, cedar = ids["Pebble Pay"], ids["Cedar Post"]
+    pebble, cedar, fern = ids["Pebble Pay"], ids["Cedar Post"], ids["Fern Vote"]
     fake.answer_text = compare_answer((1, ["what_it_does", "made_up"]), (2, ["short_line"]),
                                       (9, ["name"]))  # fmt: skip
     part = client.get("/compare", params={"idea": "a coin for a vendor",
-                                          "ids": f"{pebble},{cedar}"})  # fmt: skip
+                                          "ids": f"{pebble},{cedar},{fern}"})  # fmt: skip
     assert part.status_code == 200
-    assert f'data-project="{pebble}"' in part.text and f'data-project="{cedar}"' in part.text
+    assert f'id="compare-{pebble}" hx-swap-oob="true"' in part.text
     assert "Same 1." in part.text and "Differs 2." in part.text
     assert "Same 9." not in part.text  # a number that is not in the list
     assert "Written by a model from what it does." in part.text  # "made_up" was dropped
     assert "Written by a model from the short line." in part.text
+    assert part.text.count("No comparison was written for this project.") == 1  # the third
     sent = [body for path, body in fake.requests if "generateContent" in path][-1]
     assert "A vendor takes coins." in json.dumps(sent)  # Pebble's card field went to the model
 
 
-def test_a_comparison_that_fails_says_so(site) -> None:  # noqa: ANN001
+def test_a_comparison_that_fails_says_so_in_each_place(site) -> None:  # noqa: ANN001
     client, fake, ids, _ = site
     assert client.get("/compare", params={"idea": "x"}).status_code == 400
     fake.fail_with = (503, "unavailable")
-    part = client.get("/compare", params={"idea": "a coin", "ids": str(ids["Pebble Pay"])})
-    assert part.status_code == 503 and "could not be written just now" in part.text
+    asked = f"{ids['Pebble Pay']},{ids['Cedar Post']}"
+    part = client.get("/compare", params={"idea": "a coin", "ids": asked})
+    assert part.status_code == 503
+    assert part.text.count("could not be written just now") == 2
 
 
 # ----------------------------------------------------------------- the filters (design 8.2)
-
-PAYMENTS = "Payments and remittance"
 
 
 def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = client.get("/")
-    assert '<select name="event">' in page.text and '<select name="life">' in page.text
+    assert 'name="event"' in page.text and 'name="life"' in page.text
     assert "ETHGlobal Sample Event (3)" in page.text
     assert f"{PAYMENTS} (1)" in page.text  # the one card of the fixture
     assert "Only 1 of the 3 projects have a category" in page.text
@@ -219,15 +293,20 @@ def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
 
 def test_a_filtered_search_shows_only_the_matching_projects(site) -> None:  # noqa: ANN001
     client, _, ids, _ = site
-    page = client.get("/", params={"idea": "help a street vendor get paid with a coin",
-                                   "category": PAYMENTS})  # fmt: skip
+    page = client.get("/", params={"idea": VENDOR, "category": PAYMENTS})
     assert page.text.count('class="result"') == 1
-    assert f'href="/project/{ids["Pebble Pay"]}?idea=' in page.text
+    assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
     assert "category=Payments+and+remittance" in page.text  # the link keeps the filter
     assert "Only the projects that match the filters were searched." in page.text
     card = client.get(f"/project/{ids['Pebble Pay']}", params={"idea": "a coin",
                                                                "category": PAYMENTS})  # fmt: skip
-    assert 'href="/?idea=a+coin&amp;category=Payments+and+remittance"' in card.text
+    assert 'href="/?idea=a+coin&amp;category=Payments+and+remittance#results"' in card.text
+
+
+def test_a_filter_without_an_idea_narrows_the_list(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/", params={"category": PAYMENTS})
+    assert "1 project matches the filters" in page.text and page.text.count('class="result"') == 1
 
 
 def test_filters_that_leave_no_project_say_so_and_ask_nothing(site) -> None:  # noqa: ANN001
@@ -240,7 +319,7 @@ def test_filters_that_leave_no_project_say_so_and_ask_nothing(site) -> None:  # 
         conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (other, ids["Fern Vote"]))
     before = len(fake.requests)
     page = client.get("/", params={"idea": "a coin", "event": str(other), "category": PAYMENTS})
-    assert "No project matches these filters." in page.text
+    assert "No project matches these filters" in page.text
     assert 'class="result"' not in page.text
     assert len(fake.requests) == before  # the idea was not even embedded
 
@@ -256,36 +335,37 @@ def test_a_filter_value_that_no_project_has_is_left_out_and_said(site) -> None: 
 
 
 def test_a_date_is_written_as_the_pages_write_it() -> None:
-    from hackathon_memory.web.app import day
+    from hackathon_memory.web.app import day, iso_day
 
     assert day(date(2025, 7, 6)) == "6 July 2025"
     assert day(datetime(2026, 10, 10, 19, 0, tzinfo=UTC)) == "10 October 2026"
+    assert iso_day("2026-10-14") == "14 October 2026" and iso_day("not a day") == "not a day"
 
 
 def test_an_idea_with_no_known_word_says_that_only_the_meaning_was_compared(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = client.get("/", params={"idea": "zzqx wvvq qqzx"})
     assert "No word of your idea was found in the projects searched" in page.text
-    words = client.get("/", params={"idea": "help a street vendor get paid with a coin"})
+    words = client.get("/", params={"idea": VENDOR})
     assert "No word of your idea was found" not in words.text
 
 
-def test_every_page_has_a_tab_icon_and_the_wait_is_announced(site) -> None:  # noqa: ANN001
+def test_every_page_has_a_tab_icon_and_a_way_to_the_results(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = client.get("/", params={"idea": "a coin for a vendor"})
     assert '<link rel="icon" href="/static/icon.svg"' in page.text
     assert client.get("/static/icon.svg").status_code == 200
-    assert "This can take up to a minute." in page.text
     assert 'action="/#results"' in page.text and 'id="results"' in page.text
+    assert 'href="#results">Skip to the results</a>' in page.text
 
 
-# ------------------------------------------------- the page's one script, in a real browser
+# ------------------------------------------------- the page's script, in a real browser
 
 
 @pytest.fixture(scope="module")
 def chromium():  # noqa: ANN201
-    """Only a browser runs the script that puts the comparison in its places. Skipped where
-    Playwright or its Chromium is not installed: python -m playwright install chromium."""
+    """Only a browser runs htmx and the page's script. Skipped where Playwright or its
+    Chromium is not installed: python -m playwright install chromium."""
     sync_api = pytest.importorskip("playwright.sync_api")
     with sync_api.sync_playwright() as driver:
         try:
@@ -299,9 +379,9 @@ def chromium():  # noqa: ANN201
 SEARCH = "http://site.test/?idea=help+a+street+vendor+get+paid+with+a+coin"
 
 
-def served(chromium, client, before_compare=lambda: None):  # noqa: ANN001, ANN201
+def served(chromium, client, before_compare=lambda: None, **context):  # noqa: ANN001, ANN201
     """A page whose every request is answered by the website's test client: no server runs."""
-    page = chromium.new_page()
+    page = chromium.new_context(**context).new_page()
 
     def answer(route) -> None:  # noqa: ANN001
         parts = urlsplit(route.request.url)
@@ -316,7 +396,7 @@ def served(chromium, client, before_compare=lambda: None):  # noqa: ANN001, ANN2
 
 
 @pytest.mark.browser
-def test_the_script_puts_each_comparison_in_its_place(site, chromium) -> None:  # noqa: ANN001
+def test_each_comparison_takes_its_place(site, chromium) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]))
     page = served(chromium, client)
@@ -326,38 +406,52 @@ def test_the_script_puts_each_comparison_in_its_place(site, chromium) -> None:  
     assert "Same 1." in results.nth(0).inner_text() and "Differs 1." in results.nth(0).inner_text()
     assert "Same 2." in results.nth(1).inner_text()
     assert "No comparison was written for this project." in results.nth(2).inner_text()
-    page.close()
+    page.context.close()
 
 
 @pytest.mark.browser
-def test_the_script_says_when_the_comparison_failed(site, chromium) -> None:  # noqa: ANN001
+def test_a_failed_comparison_says_so_and_the_results_stay(site, chromium) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     page = served(chromium, client, lambda: setattr(fake, "fail_with", (503, "unavailable")))
     page.goto(SEARCH)
     page.wait_for_function("!document.querySelector('.compare.waiting')")
     texts = page.locator(".compare").all_inner_texts()
     assert len(texts) == 3 and all("could not be written just now" in text for text in texts)
-    assert page.locator("li.result h3 a").count() == 3  # the results stay
-    page.close()
+    assert page.locator("li.result .result-link").count() == 3  # the results stay
+    page.context.close()
 
 
 @pytest.mark.browser
-def test_a_search_on_a_phone_jumps_to_its_results(site, chromium) -> None:  # noqa: ANN001
-    client, _, _, _ = site
-    phone = chromium.new_context(viewport={"width": 390, "height": 844}, is_mobile=True)
-    page = phone.new_page()
+def test_a_card_opens_in_the_panel_without_leaving_the_page(site, chromium) -> None:  # noqa: ANN001
+    client, _, ids, _ = site
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(SEARCH)
+    page.locator(".result-link", has_text="Cedar Post").click()
+    page.wait_for_selector(f"#card-title-{ids['Cedar Post']}")
+    assert f"open={ids['Cedar Post']}" in page.url
+    assert page.locator(f"#result-{ids['Cedar Post']}").get_attribute("aria-current") == "true"
+    assert page.evaluate("document.activeElement.id") == f"card-title-{ids['Cedar Post']}"
+    assert page.locator("li.result").count() == 3  # the list is still there
+    page.context.close()
 
-    def answer(route) -> None:  # noqa: ANN001
-        parts = urlsplit(route.request.url)
-        got = client.get(parts.path + (f"?{parts.query}" if parts.query else ""))
-        route.fulfill(status=got.status_code, body=got.content,
-                      headers={"content-type": got.headers["content-type"]})  # fmt: skip
 
-    page.route(lambda url: url.startswith("http://site.test/"), answer)
+@pytest.mark.browser
+def test_on_a_phone_the_results_come_first_and_the_card_covers_the_list(site, chromium) -> None:  # noqa: ANN001
+    client, _, ids, _ = site
+    page = served(chromium, client, viewport={"width": 390, "height": 844}, is_mobile=True)
     page.goto("http://site.test/")
-    page.locator("#idea").fill("help a street vendor get paid with a coin")
+    assert page.locator("#filters").get_attribute("open") is None  # folded on a phone
+    page.locator("#idea").fill(VENDOR)
     page.get_by_role("button", name="Search past projects").click()
-    page.wait_for_load_state("load")
-    assert page.url.endswith("#results")
+    page.wait_for_function(
+        "document.activeElement && document.activeElement.id === 'results-title'"
+    )
+    assert "idea=" in page.url
     assert page.evaluate("window.scrollY") > 0  # the results, not the box, are on the screen
-    phone.close()
+    page.locator(".result-link").first.click()
+    page.wait_for_selector("#panel.open .card-head h2")
+    assert page.evaluate("document.querySelector('#results').inert") is True
+    page.get_by_role("button", name="Back to the results").click()
+    page.wait_for_function("!document.querySelector('#panel.open')")
+    assert "open=" not in page.url and page.locator("li.result").count() == 3
+    page.context.close()

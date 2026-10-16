@@ -21,7 +21,10 @@ def main(argv: Sequence[str]) -> int:
     arguments = parser.parse_args(argv)
     print(f"Open http://127.0.0.1:{arguments.port} in your browser. Stop with Ctrl+C.")
     # 127.0.0.1 only: the website is not reachable from other computers (nothing is put online).
-    uvicorn.run(create_app(), host="127.0.0.1", port=arguments.port, log_level="warning")
+    # An idea travels in the address of the page: 64 KB hold the longest idea in any script
+    # (app.LONGEST_IDEA); the default of h11 is 16 KB.
+    uvicorn.run(create_app(), host="127.0.0.1", port=arguments.port, log_level="warning",
+                h11_max_incomplete_event_size=64 * 1024)  # fmt: skip
     return 0
 
 

@@ -4,18 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Hackathon Memory{% endblock %}</title>
+<meta name="description" content="Search past Hedera hackathon projects by idea, and see what the public Hedera ledger says about each one.">
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<meta name="htmx-config" content='{"historyCacheSize": 0, "refreshOnHistoryMiss": true}'>
+<link rel="preload" href="/static/vendor/atkinson-next-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/atkinson-next-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/style.css">
+<script src="/static/vendor/htmx.min.js" defer></script>
+<script src="/static/site.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="/">Hackathon Memory</a>
-  <span class="tagline">Projects sent to Hedera hackathons, checked against the public ledger</span>
+<a class="skip-link" href="#{% block skip_target %}main{% endblock %}">{% block skip_words %}Skip to the content{% endblock %}</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="Hackathon Memory, start page">
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect x="9" y="3" width="20" height="13" rx="2.5" style="fill:none;stroke:currentColor;stroke-width:2;opacity:.4"/>
+      <rect x="5.5" y="8" width="20" height="13" rx="2.5" style="fill:var(--surface);stroke:currentColor;stroke-width:2;opacity:.7"/>
+      <rect x="2" y="13" width="22" height="16" rx="2.5" style="fill:var(--accent)"/>
+      <path d="M7.5 21.5l3.4 3.3 7-7" style="fill:none;stroke:var(--on-accent);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"/>
+    </svg>
+    <span>Hackathon Memory</span>
+  </a>
+  <span class="tagline">Past Hedera hackathon projects, checked against the public ledger</span>
+  <nav class="site-nav" aria-label="Main">
+    <a href="/"{% if nav == "search" %} aria-current="page"{% endif %}>Search</a>
+    <a href="/method"{% if nav == "method" %} aria-current="page"{% endif %}>How it works</a>
+  </nav>
 </header>
-<main>
+<main id="main">
 {% block main %}{% endblock %}
 </main>
-<footer>
+<footer class="site-footer">
   <p>The texts of each card come from the project's own page, and each card links to it. The facts about Hedera come from the public mirror node. Fields written by a model always show their label and the sentences of the page they rest on. Nothing here scores or ranks a project: the order of a list only says how close a project is to an idea.</p>
 </footer>
 </body>

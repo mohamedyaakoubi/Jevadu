@@ -19,11 +19,12 @@ from datetime import datetime
 from pathlib import Path
 
 import psycopg
+from markupsafe import Markup, escape
 
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
-from hackathon_memory.search.engine import Hit
+from hackathon_memory.search.engine import LANGUAGE, Hit
 from hackathon_memory.search.listing import ResultCard
 
 FIELD_TITLES = {
@@ -202,3 +203,86 @@ def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:
         return datetime.fromisoformat(fetched.replace("Z", "+00:00")) if fetched else None
     except ValueError:
         return None
+
+
+# ------------------------------------------------------------------ what the list shows
+
+# Two characters that a page never uses mark the start and the end of a matched word. The text is
+# escaped first, and only then are they turned into <mark>, so no text of a page can reach the
+# browser as code (PostgreSQL's manual warns that ts_headline does not make its output safe).
+_START, _STOP = "", ""
+_MARK_OPEN, _MARK_CLOSE = Markup("<mark>"), Markup("</mark>")
+_HEADLINE_OPTIONS = (
+    f'StartSel="{_START}", StopSel="{_STOP}", MaxWords=24, MinWords=10, MaxFragments=1, '
+    'FragmentDelimiter=" ... "'
+)
+
+
+def matched_words(conninfo: str, project_ids: Sequence[int], idea: str) -> dict[int, Markup]:
+    """For each project whose page has a word of the idea: the part of its short line and first
+    text where those words stand, with each one marked. A project found only by meaning has
+    none."""
+    if not project_ids or not idea.strip():
+        return {}
+    with psycopg.connect(conninfo) as conn:
+        rows = conn.execute(
+            "WITH q AS (SELECT replace(plainto_tsquery(%(language)s, %(idea)s)::text, ' & ', "
+            "' | ')::tsquery AS query), docs AS (SELECT p.id, concat_ws(' ', p.short_line, "
+            "(SELECT s.body FROM sections s WHERE s.project_id = p.id ORDER BY s.position "
+            "LIMIT 1)) AS document FROM projects p WHERE p.id = ANY(%(ids)s)) "
+            "SELECT d.id, ts_headline(%(language)s, d.document, q.query, %(options)s) "
+            "FROM docs d, q WHERE q.query::text <> '' "
+            "AND to_tsvector(%(language)s, d.document) @@ q.query",
+            {"language": LANGUAGE, "idea": idea, "ids": list(project_ids),
+             "options": _HEADLINE_OPTIONS},
+        ).fetchall()  # fmt: skip
+    return {
+        project_id: escape(" ".join(headline.split()))
+        .replace(_START, _MARK_OPEN)
+        .replace(_STOP, _MARK_CLOSE)
+        for project_id, headline in rows
+    }
+
+
+def browse(
+    conninfo: str, only: Sequence[int] | None, *, offset: int, limit: int
+) -> tuple[list[int], int]:
+    """The projects to list when no idea is given, newest events first, and how many there are
+    in all. With `only`, the projects are those (the filters)."""
+    ids = None if only is None else list(only)
+    with psycopg.connect(conninfo) as conn:
+        total = conn.execute(
+            "SELECT count(*) FROM projects WHERE %s::bigint[] IS NULL OR id = ANY(%s)", (ids, ids)
+        ).fetchone()[0]
+        rows = conn.execute(
+            "SELECT p.id FROM projects p JOIN events e ON e.id = p.event_id "
+            "WHERE %s::bigint[] IS NULL OR p.id = ANY(%s) "
+            "ORDER BY coalesce(e.ends_on, e.starts_at::date) DESC NULLS LAST, e.name, p.name, p.id "
+            "OFFSET %s LIMIT %s",
+            (ids, ids, offset, limit),
+        ).fetchall()
+    return [row[0] for row in rows], total
+
+
+def marked_lines(conninfo: str, lines: dict[int, str], idea: str) -> dict[int, Markup]:
+    """Each line (the sentence that a result shows) with the words of the idea marked, for the
+    lines that have one. The words count by their stem, as in the search by words."""
+    if not lines or not idea.strip():
+        return {}
+    ids = list(lines)
+    with psycopg.connect(conninfo) as conn:
+        rows = conn.execute(
+            "WITH q AS (SELECT replace(plainto_tsquery(%(language)s, %(idea)s)::text, ' & ', "
+            "' | ')::tsquery AS query) "
+            "SELECT t.id, ts_headline(%(language)s, t.line, q.query, %(options)s) "
+            "FROM unnest(%(ids)s::bigint[], %(lines)s::text[]) AS t(id, line), q "
+            "WHERE q.query::text <> '' AND to_tsvector(%(language)s, t.line) @@ q.query",
+            {"language": LANGUAGE, "idea": idea, "ids": ids, "lines": [lines[i] for i in ids],
+             "options": f'StartSel="{_START}", StopSel="{_STOP}", HighlightAll=true'},
+        ).fetchall()  # fmt: skip
+    return {
+        project_id: escape(" ".join(line.split()))
+        .replace(_START, _MARK_OPEN)
+        .replace(_STOP, _MARK_CLOSE)
+        for project_id, line in rows
+    }

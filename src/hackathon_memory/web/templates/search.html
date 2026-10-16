@@ -1,87 +1,151 @@
 {% extends "base.html" %}
 {% import "_marks.html" as marks %}
+{% import "_parts.html" as parts %}
 {% block title %}{% if idea %}{{ idea[:60] }}: {% endif %}Hackathon Memory{% endblock %}
-{% macro filter_select(name, label, all_words, options, current) %}
-<label class="filter">{{ label }}
-  <select name="{{ name }}">
-    <option value="">{{ all_words }}</option>
-    {% for choice in options %}<option value="{{ choice.value }}"{% if choice.value == current %} selected{% endif %}>{{ choice.words }} ({{ choice.count }})</option>
-    {% endfor %}
-  </select>
-</label>
-{% endmacro %}
+{% block skip_target %}results{% endblock %}
+{% block skip_words %}Skip to the results{% endblock %}
 {% block main %}
-<h1>Is my idea new on Hedera?</h1>
-<form class="ask" method="get" action="/#results">
-  <label for="idea">Describe your idea in one or two sentences, as you would tell a friend.</label>
-  <textarea id="idea" name="idea" rows="3" maxlength="1000" required placeholder="An app that lets a street vendor take payments without a bank account">{{ idea }}</textarea>
+<form id="ask" class="app" method="get" action="/#results" role="search"
+      hx-get="/" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
+      hx-push-url="true" hx-indicator="#busy" hx-disinherit="*"
+      hx-trigger="submit, change[target.matches('#workspace select, #workspace input[name=mode]')]">
+<div class="search-band">
+  <div class="search-inner">
+    <div class="ask">
+      <div class="ask-label">
+        <label for="idea">Your idea</label>
+        <span class="hint" id="idea-hint">Say it in your own words. One sentence is enough, and a whole project description works too.</span>
+      </div>
+      <textarea id="idea" name="idea" rows="2" maxlength="{{ LONGEST_IDEA }}" aria-describedby="idea-hint idea-count"
+        placeholder="For example: an app that lets a street vendor take card payments without a bank account">{{ idea }}</textarea>
+      <button class="button" type="submit">Search past projects</button>
+      <div class="ask-under">
+        <p class="try">Try:
+          <a href="/?idea=limits+on+what+an+AI+agent+may+spend#results">limits on what an AI agent may spend</a>
+          <a href="/?idea=tracking+coffee+from+the+farm+to+the+cup#results">tracking coffee from the farm to the cup</a>
+          <a href="/?idea=a+ticket+market+without+scalpers#results">a ticket market without scalpers</a>
+        </p>
+        <span class="busy" id="busy" role="status">Searching&hellip;</span>
+        <p class="counter" id="idea-count" data-limit="{{ LONGEST_IDEA }}">Up to {{ "{:,}".format(LONGEST_IDEA) }} characters.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="workspace" class="workspace">
+  {% if open_id %}<input type="hidden" name="open" value="{{ open_id }}">{% endif %}
+  {% if problem or notes %}
+  <div class="notice">
+    {% if problem %}<p class="problem" role="alert">{{ problem }}</p>{% endif %}
+    {% for note in notes or [] %}<p class="note">{{ note }}</p>{% endfor %}
+  </div>
+  {% endif %}
+
   {% if offer %}
   {% set picked = chosen.chosen() %}
-  <details class="filters"{% if picked %} open{% endif %}>
-    <summary>Filters{% if picked %}: {{ picked | length }} chosen{% endif %}</summary>
-    <div class="filter-grid">
-      {{ filter_select("event", "Event", "All events", offer.event, chosen.event) }}
-      {{ filter_select("year", "Year", "All years", offer.year, chosen.year) }}
-      {{ filter_select("category", "Category", "All categories", offer.category, chosen.category) }}
-      {{ filter_select("proof", "Hedera proof", "Any result", offer.proof, chosen.proof) }}
-      {{ filter_select("life", "Life", "Any life", offer.life, chosen.life) }}
+  <details class="filters" id="filters" open>
+    <summary>Filters {% if picked %}<span class="chosen-count">{{ picked | length }} chosen</span>{% endif %}</summary>
+    <div class="filter-body">
+      {{ parts.filter_select("event", "Event", "All events", offer.event, chosen.event) }}
+      {{ parts.filter_select("year", "Year", "All years", offer.year, chosen.year) }}
+      {{ parts.filter_select("category", "Category", "All categories", offer.category, chosen.category) }}
+      {{ parts.filter_select("proof", "Hedera proof", "Any result", offer.proof, chosen.proof) }}
+      {{ parts.filter_select("life", "Life", "Any life", offer.life, chosen.life) }}
+      <p class="filter-note">The number after each choice is how many projects have it. Only {{ offer.with_category }} of the {{ offer.projects }} projects have a category so far, because only they have a card written by a model.</p>
+      <div class="filter-actions">
+        <noscript><button class="button quiet" type="submit">Apply the filters</button></noscript>
+        {% if picked %}<a href="/{% if idea %}?idea={{ idea | urlencode }}{% endif %}#results">Clear the filters</a>{% endif %}
+      </div>
     </div>
-    <p class="hint">The number after each choice is how many projects have it. Only {{ offer.with_category }} of the {{ offer.projects }} projects have a category, because only they have a card written by a model so far. The year is known for {{ offer.year | sum(attribute="count") }} of the {{ offer.projects }} projects: those of the events with a date.</p>
   </details>
   {% endif %}
-  <button type="submit">Search past projects</button>
-</form>
 
-<div id="results">
-{% if problem %}
-<p class="problem" role="alert">{{ problem }}</p>
-{% endif %}
-{% for note in notes or [] %}
-<p class="note">{{ note }}</p>
-{% endfor %}
-
-{% if not asked %}
-<section class="start">
-  <p>The search looks through the projects sent to Hedera hackathons: every project of ETHGlobal's showcase that is tied to Hedera, and the published winners of Hedera's own hackathons. It finds projects close to your idea by meaning and by words.</p>
-  <p>For each project you see what it does, its event, and what the public Hedera ledger says about it. Open a project to read its own page, its code and the checks behind each fact.</p>
-</section>
-{% elif nothing_matches %}
-<p class="empty">No project matches these filters. Open "Filters" and remove one, or <a href="/?idea={{ idea | urlencode }}">search all projects</a>.</p>
-{% elif not results and not problem %}
-<p class="empty">No project came close to this idea. Try other words, or describe what the users of your idea do.</p>
-{% elif results %}
-<h2 class="count">The {{ results | length }} closest projects</h2>
-<p class="hint">The first project is the closest in meaning and words. The order says nothing about quality.</p>
-{% if chosen and chosen.chosen() %}
-<p class="hint">Only the projects that match the filters were searched. <a href="/?idea={{ idea | urlencode }}">Search all projects</a></p>
-{% endif %}
-<ol class="results" data-compare-url="/compare?idea={{ idea | urlencode }}&amp;ids={% for card, summary in results %}{{ card.hit.project_id }}{% if not loop.last %},{% endif %}{% endfor %}">
-{% for card, summary in results %}
-  <li class="result">
-    <h3><a href="/project/{{ card.hit.project_id }}{% if search_query %}?{{ search_query }}{% endif %}">{{ card.name }}</a></h3>
-    <p class="event">{{ card.event }}{% if card.prize_state %} · {{ PRIZE_WORDS.get(card.prize_state, card.prize_state) }}{% endif %}</p>
-    {% if summary and summary.text %}
-    <p class="summary">{{ summary.text }}
-      {% if summary.source == "model" %}<span class="source">written by a model, {{ "stated" if summary.label == "stated" else "inferred: less sure" }}</span>{% else %}<span class="source">from the project's page</span>{% endif %}
-    </p>
+  <section class="results" id="results" aria-labelledby="results-title" tabindex="-1">
+    {% if asked %}
+      {% if modes %}
+      <fieldset class="modes">
+        <legend>How to search</legend>
+        <div class="mode-options">
+        {% for option in modes %}
+          <label><input type="radio" name="mode" value="{{ option.key }}"{% if option.key == mode %} checked{% endif %}> {{ option.label }}</label>
+        {% endfor %}
+        </div>
+        {% for option in modes if option.key == mode %}<p class="mode-facts">{{ option.facts }} <a href="/method#modes">How we measured</a></p>{% endfor %}
+        <noscript><button class="button quiet" type="submit">Search again</button></noscript>
+      </fieldset>
+      {% endif %}
+      {% if nothing_matches %}
+        <div class="empty-state"><h2 id="results-title">No project matches these filters</h2>
+          <p>Remove a filter, or <a href="/?idea={{ idea | urlencode }}#results">search all projects</a>.</p></div>
+      {% elif not results and not problem %}
+        <div class="empty-state"><h2 id="results-title">No project came close to this idea</h2>
+          <p>Try other words, or describe what the people who use your idea would do with it.</p></div>
+      {% elif results %}
+        <div class="results-head">
+          {% set n = results | length %}<h2 id="results-title">{{ n }} project{{ "s" if n != 1 }} closest to your idea</h2>
+          {% if elapsed is not none %}<span class="meta">found in {{ "%.1f" | format(elapsed) }} s</span>{% endif %}
+        </div>
+        <p class="results-explain">The first is the closest in meaning and words. The order says nothing about quality.</p>
+        {% if chosen and chosen.chosen() %}<p class="results-explain">Only the projects that match the filters were searched. <a href="/?idea={{ idea | urlencode }}#results">Search all projects</a></p>{% endif %}
+        <ol class="result-list" id="result-list">
+        {% for card, summary, line, snippet in results %}
+          {{ parts.result(card, summary, line, snippet, loop.index, search_query, open_id, compared=True) }}
+        {% endfor %}
+        </ol>
+        <div id="compare-loader" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={% for card, summary, line, snippet in results %}{{ card.hit.project_id }}{% if not loop.last %},{% endif %}{% endfor %}"
+             hx-trigger="load" hx-swap="none" hx-target="this" hx-push-url="false"></div>
+        <details class="legends legends-box">
+          <summary>What the marks mean</summary>
+          {{ marks.proof_legend() }}
+          {{ marks.life_legend() }}
+          <dl class="legend"><dt>The same, differs</dt><dd>A fast model reads your idea and the texts of each project, and writes what they share and the main difference. It names the texts it used, and it does not judge the projects.</dd></dl>
+        </details>
+      {% endif %}
+    {% elif not problem %}
+      <div class="collection" aria-label="The collection">
+        <div><b>{{ "{:,}".format(offer.projects) if offer else "" }}</b><span>projects</span></div>
+        <div><b>{{ offer.event | length if offer else "" }}</b><span>events</span></div>
+        {% if offer %}{% for choice in offer.proof if choice.value == "proof_found" %}<div><b>{{ choice.count }}</b><span>with a Hedera proof found</span></div>{% endfor %}{% endif %}
+      </div>
+      <div class="results-head">
+        <h2 id="results-title">{% if chosen and chosen.chosen() %}{{ "{:,}".format(total) }} project{{ "s" if total != 1 }} match{{ "es" if total == 1 }} the filters{% else %}All {{ "{:,}".format(total) }} projects{% endif %}</h2>
+        <span class="meta">newest events first{% if total > page_size %}, {{ first_shown }} to {{ last_shown }}{% endif %}</span>
+      </div>
+      <p class="results-explain">Describe an idea above to find the projects closest to it, or narrow this list with the filters.</p>
+      {% if results %}
+      <ol class="result-list" id="result-list" start="{{ first_shown }}">
+      {% for card, summary, line, snippet in results %}
+        {{ parts.result(card, summary, line, snippet, none, search_query, open_id, compared=False) }}
+      {% endfor %}
+      </ol>
+      <details class="legends legends-box">
+        <summary>What the marks mean</summary>
+        {{ marks.proof_legend() }}
+        {{ marks.life_legend() }}
+      </details>
+      <nav class="more" aria-label="Pages of the list">
+        {% if page > 1 %}<a class="button quiet" href="/?{{ search_query ~ '&' if search_query }}page={{ page - 1 }}#results">Previous {{ page_size }}</a>{% endif %}
+        {% if last_shown < total %}<a class="button quiet" href="/?{{ search_query ~ '&' if search_query }}page={{ page + 1 }}#results">Next {{ page_size }}</a>{% endif %}
+      </nav>
+      {% elif page > 1 %}
+      <div class="empty-state"><p>There are no more projects in this list. <a href="/{{ '?' ~ search_query if search_query }}#results">Go back to its first page</a></p></div>
+      {% else %}
+      <div class="empty-state"><p>No project matches these filters. Remove a filter to see more.</p></div>
+      {% endif %}
     {% endif %}
-    <p class="marks">{{ marks.proof(card.proof_status) }} {{ marks.life(card.life) }}
-      {% if card.entry_kind == WINNER_ENTRY %}<span class="mark winner">Winner entry: only the organiser's list is public</span>{% endif %}
-    </p>
-    <div class="compare waiting" data-project="{{ card.hit.project_id }}">Comparing with your idea&hellip; This can take up to a minute.</div>
-  </li>
-{% endfor %}
-</ol>
-<script src="/static/compare.js" defer></script>
-<section class="legends">
-  <h2>What the marks mean</h2>
-  {{ marks.proof_legend() }}
-  {{ marks.life_legend() }}
-  <dl class="legend">
-    <dt>The same, differs</dt>
-    <dd>A fast model reads your idea and the texts of each project, and writes what they share and the main difference. It names the texts it used, and it does not judge the projects.</dd>
-  </dl>
-</section>
-{% endif %}
+  </section>
+
+  <section class="panel{% if panel_card %} open{% endif %}" id="panel" aria-label="The card of the chosen project" tabindex="-1">
+    {% if panel_card %}
+      {% with card = panel_card, back_query = search_query %}{% include "_panel.html" %}{% endwith %}
+    {% else %}
+      <div class="panel-empty">
+        <h2>The card of a project opens here</h2>
+        <p>Choose a project in the list. Its card shows three sources, kept apart: the project's own page, word for word; the facts from its code and the Hedera ledger; and the fields written by a model, each checked against the page.</p>
+        <p><a href="/method#marks">What the marks mean</a></p>
+      </div>
+    {% endif %}
+  </section>
 </div>
+</form>
 {% endblock %}
