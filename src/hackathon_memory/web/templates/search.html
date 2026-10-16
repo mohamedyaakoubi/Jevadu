@@ -73,7 +73,7 @@
       <div class="hm-results-head">
         <div class="hm-results-titles">
           <h2 class="hm-results-title" id="results-title">{% if asked %}{% if with_ai %}Ordered by Gemini{% else %}Quick results{% endif %}{% elif chosen and chosen.chosen() %}{{ "{:,}".format(total) }} project{{ "s" if total != 1 }} match{{ "es" if total == 1 }} the filters{% else %}All {{ "{:,}".format(total) }} projects{% endif %}</h2>
-          {% if view != "charts" and results %}<p class="hm-results-sub">{% if asked %}{{ first_shown }} to {{ last_shown }} of the {{ total }} closest{% if mode == "words" %} that use your words{% elif with_ai %}: Gemini put its ten first among the 30 closest in meaning{% else %} in meaning: Gemini has not read them{% endif %}{% if elapsed is not none %} &middot; {{ "%.1f" | format(elapsed) }} s{% endif %}{% else %}Newest events first &middot; {{ first_shown }} to {{ last_shown }}{% endif %}</p>{% endif %}
+          {% if view != "charts" and results %}<p class="hm-results-sub">{% if asked %}{{ first_shown }} to {{ last_shown }} of {% if chosen and chosen.chosen() %}the {{ total }} with these filters, among the {{ shown_limit }} closest{% else %}the {{ total }} closest{% endif %}{% if mode == "words" %} that use your words{% elif with_ai %}: Gemini put its ten first among the 30 closest in meaning{% else %} in meaning: Gemini has not read them{% endif %}{% if elapsed is not none %} &middot; {{ "%.1f" | format(elapsed) }} s{% endif %}{% else %}Newest events first &middot; {{ first_shown }} to {{ last_shown }}{% endif %}</p>{% endif %}
         </div>
         <div class="hm-switches">
           {% if asked and mode == "meaning" %}
@@ -97,6 +97,8 @@
         {% include "_charts.html" %}
       {% elif nothing_matches %}
         <div class="empty"><p class="empty-title">No project matches these filters</p><p class="empty-subtitle text-secondary">Remove a filter to see more.</p></div>
+      {% elif none_close %}
+        <div class="empty"><p class="empty-title">None of the {{ shown_limit }} projects closest to your idea has these values</p><p class="empty-subtitle text-secondary">Remove a filter, or write the idea in other words.</p></div>
       {% elif asked and not results %}
         <div class="empty"><p class="empty-title">{% if mode == "words" %}No project uses these words{% else %}No project came close to this idea{% endif %}</p>
           <p class="empty-subtitle text-secondary">{% if mode == "words" %}Check the spelling, or search by meaning to find the same idea in other words.{% else %}Try other words, or say what the people who use your idea would do with it.{% endif %}</p></div>

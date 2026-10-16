@@ -440,6 +440,21 @@ def test_a_filter_without_an_idea_narrows_the_list(site) -> None:  # noqa: ANN00
     assert "1 project matches the filters" in page.text and page.text.count('class="result"') == 1
 
 
+def test_a_filter_keeps_the_closest_projects_that_have_its_value(site, monkeypatch) -> None:  # noqa: ANN001
+    """The number next to a value is what the filter leaves (design 8.2): a filter narrows the
+    closest projects of a search, it does not search again among all the projects."""
+    from hackathon_memory.web import app as web_app
+
+    client, _, _, _ = site
+    monkeypatch.setattr(web_app, "SHOWN", 1)  # "the closest" is one project in this test
+    vendor = client.get("/", params={"idea": VENDOR, "category": PAYMENTS})
+    assert "1 to 1 of the 1 with these filters, among the 1 closest" in vendor.text
+    assert vendor.text.count('class="result"') == 1 and "Pebble Pay" in vendor.text
+    ballot = client.get("/", params={"idea": "a ballot for a small club", "category": PAYMENTS})
+    assert "None of the 1 projects closest to your idea has these values" in ballot.text
+    assert 'class="result"' not in ballot.text  # Pebble Pay has the value, but it is not close
+
+
 def test_filters_that_leave_no_project_say_so_and_ask_nothing(site) -> None:  # noqa: ANN001
     client, fake, ids, database = site
     with psycopg.connect(database) as conn:

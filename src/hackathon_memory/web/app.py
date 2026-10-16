@@ -316,19 +316,27 @@ def create_app(
         notes: list[str],
     ) -> tuple[list[int], str | None]:
         """The projects closest to the idea, closest first, at most SHOWN, and where Gemini's
-        order came from when it was asked for. When Google cannot be reached, the words."""
+        order came from when it was asked for. When Google cannot be reached, the words.
+
+        A filter keeps the projects of the SHOWN closest that have its values (design 8.2), so
+        the number next to a value of a filter is the number of projects it leaves."""
+        allowed = None if only is None else set(only)
+
+        def narrowed(ids: list[int]) -> list[int]:
+            return ids if allowed is None else [pid for pid in ids if pid in allowed]
+
         try:
             if only == []:
                 return [], None
             if mode == WORDS:
-                return engine.by_words(conninfo, idea, limit=SHOWN, only=only), None
+                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
             if not EmbeddingStore(conninfo).counts(settings.gemini_embedding_model)["embeddings"]:
                 notes.append(NO_PAGE_EMBEDDINGS)
-                return engine.by_words(conninfo, idea, limit=SHOWN, only=only), None
-            ranking = engine.by_meaning(
+                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
+            ranking = narrowed(engine.by_meaning(
                 EmbeddingStore(conninfo), client("google", "embed_query"), idea,
-                model=settings.gemini_embedding_model, limit=SHOWN, only=only,
-            )  # fmt: skip
+                model=settings.gemini_embedding_model, limit=SHOWN,
+            ))  # fmt: skip
             if not (with_ai and ranking):
                 return ranking, None
             order, how = rerank.order_pool(
@@ -341,7 +349,7 @@ def create_app(
             return order + ranking[rerank.POOL :], how
         except (*FAILED_CALLS, BudgetExceeded):
             notes.append(GOOGLE_AWAY)
-            return engine.by_words(conninfo, idea, limit=SHOWN, only=only), None
+            return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
 
     def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
                      only: list[int] | None, every: filtering.Choices,
@@ -411,6 +419,7 @@ def create_app(
                  "cards_query": search_query(values, drop=("view",)),
                  "charts_query": search_query({**values, "view": CHARTS}),
                  "check_events": every.event, "all_projects": every.projects,
+                 "shown_limit": SHOWN,
                  "with_category": every.with_category, "notes": notes}  # fmt: skip
         try:
             panel_card = card_of(conninfo, open_id) if open_id else None
@@ -436,11 +445,13 @@ def create_app(
             if cut:
                 notes.append(IDEA_CUT)
             ordered = how in (rerank.KEPT, rerank.ASKED)
+            none_close = bool(only) and not ranking  # the filters match, but none is close
             if view == CHARTS:
                 built, groups = charts_of(conninfo, ranking)
                 return render(request, "search.html", asked=True, results=[], total=len(ranking),
                               charts=built, came_back=groups, offer=offer,
-                              nothing_matches=only == [], panel_card=panel_card,
+                              nothing_matches=only == [], none_close=none_close,
+                              panel_card=panel_card,
                               **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
             total = len(ranking)
             pages = max(1, math.ceil(total / PAGE_SIZE))
@@ -455,7 +466,7 @@ def create_app(
         return render(request, "search.html", asked=True, results=results, total=total,
                       pages=pages, page=page_number, first_shown=first + 1,
                       last_shown=first + len(results), nothing_matches=only == [],
-                      panel_card=panel_card, offer=offer,
+                      none_close=none_close, panel_card=panel_card, offer=offer,
                       **{**shown, "elapsed": elapsed, "with_ai": ordered,
                          "compare_ids": compare_ids})  # fmt: skip
 
