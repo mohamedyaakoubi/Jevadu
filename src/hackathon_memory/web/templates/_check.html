@@ -35,7 +35,7 @@
         <div class="card-body">
           <h3 id="check-ledger-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>
           {% set window = event.window %}
-          <p class="hm-small">{% if no_dates %}No hackathon was given, so the dates of the IDs are shown and not judged.{% elif window %}The window of the event runs from {{ window.start | day }} to {{ window.end | day }}: 30 days before its first day to 14 days after its last.{% else %}The last day of this event is not typed in yet, so the dates of the IDs are not judged.{% endif %}</p>
+          <p class="hm-small">{% if no_dates %}No hackathon was given, so the dates of the IDs are shown and not judged.{% elif window %}The window of the event runs from {{ window.start | day }} to {{ window.end | day }}: 30 days before its first day to 14 days after its last.{% else %}The last day of this event is not known yet, so the dates of the IDs are not judged.{% endif %}</p>
           {% if result.ids %}
           <ul class="id-list">
           {% for one in result.ids %}

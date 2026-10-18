@@ -19,7 +19,7 @@ SHARE_NEEDS = 20
 EVENTS_SHOWN = 15
 PROOF_LABELS = {
     "proof_found": "Proof found",
-    "window_not_known": "End of the event not typed in",
+    "window_not_known": "End of the event not known yet",
     "dates_do_not_fit": "Dates do not fit",
     "found_but_empty": "ID found, but empty",
     "another_kind": "Another kind of ID",

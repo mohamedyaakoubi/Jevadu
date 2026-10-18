@@ -27,7 +27,7 @@ PRIZE_WORDS = {
 }
 STATUS_WORDS = {
     "proof_found": "proof found",
-    "window_not_known": "found, the end of the event is not typed in yet",
+    "window_not_known": "found, the end of the event is not known yet",
     "dates_do_not_fit": "found, but the dates do not fit",
     "found_but_empty": "found, but empty",
     "another_kind": "found, but as another kind of thing",

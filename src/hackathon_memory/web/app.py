@@ -91,7 +91,7 @@ EXAMPLES = ("limits on what an AI agent may spend", "tracking coffee from the fa
             "a ticket market without scalpers")  # fmt: skip
 PROOF_SHORT = {
     "proof_found": "found",
-    "window_not_known": "end of the event not typed in",
+    "window_not_known": "end of the event not known yet",
     "dates_do_not_fit": "dates do not fit",
     "found_but_empty": "ID empty",
     "another_kind": "another kind of ID",
