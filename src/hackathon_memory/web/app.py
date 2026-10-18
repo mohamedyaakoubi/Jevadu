@@ -299,6 +299,12 @@ def create_app(
                                  version=INSTRUCTIONS_VERSION,
                                  raw_dir=data_paths(settings).raw_dir)  # fmt: skip
 
+    def linked_to(conninfo: str, project_id: int) -> list[tuple[str, Any]]:
+        """The projects linked to one project (design 8.4): each with why, and its name."""
+        found = seen.links_of(conninfo, project_id)
+        named = data.members(conninfo, [[pid] for pid, _ in found])
+        return [(by, group[0]) for (_, by), group in zip(found, named, strict=True) if group]
+
     def kept_comparison(conninfo: str, idea: str, project_id: int) -> Any:
         """The comparison of the last day for this idea and project, or None: never asked here."""
         items = comparing.items_for(conninfo, [project_id], model=settings.gemini_rewrite_model,
@@ -678,14 +684,16 @@ def create_app(
     def project(request: Request, project_id: int) -> HTMLResponse:
         back = search_query(dict(request.query_params))
         try:
-            card = card_of(database(), project_id)
+            conninfo = database()
+            card = card_of(conninfo, project_id)
+            linked = linked_to(conninfo, project_id) if card else []
         except (SettingsError, psycopg.OperationalError):
             return render(request, "project.html", 503, card=None, back_query=back,
                           problem=DATABASE_DOWN)  # fmt: skip
         if card is None:
             return render(request, "project.html", 404, card=None, back_query=back,
                           problem=NO_SUCH_PROJECT)  # fmt: skip
-        return render(request, "project.html", card=card, back_query=back, idea="")
+        return render(request, "project.html", card=card, back_query=back, idea="", linked=linked)
 
     @app.get("/project/{project_id}/panel", response_class=HTMLResponse)
     def project_panel(request: Request, project_id: int, idea: str = "") -> HTMLResponse:
@@ -697,12 +705,13 @@ def create_app(
             conninfo = database()
             card = card_of(conninfo, project_id)
             kept = kept_comparison(conninfo, idea, project_id) if card and idea else None
+            linked = linked_to(conninfo, project_id) if card else []
         except (SettingsError, psycopg.OperationalError):
             return render(request, "_problem.html", 503, problem=DATABASE_DOWN)
         if card is None:
             return render(request, "_problem.html", 404, problem=NO_SUCH_PROJECT)
         return render(request, "_panel.html", card=card, back_query=back, idea=idea,
-                      kept_comparison=kept)  # fmt: skip
+                      kept_comparison=kept, linked=linked)  # fmt: skip
 
     @app.get("/compare", response_class=HTMLResponse)
     def comparison(

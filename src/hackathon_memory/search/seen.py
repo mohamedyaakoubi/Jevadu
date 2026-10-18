@@ -126,6 +126,44 @@ def came_back(conninfo: str) -> list[list[int]]:
     return groups(members, ids, named)
 
 
+def links(
+    members: Iterable[Member],
+    ids: Iterable[tuple[int, str]],
+    named: Iterable[tuple[int, str]],
+    project_id: int,
+) -> list[tuple[int, str]]:
+    """The projects that one project shares its repository or a Hedera ID with, by the rule of
+    `groups` but with no chain, at its own event or at another: each as (project, "repository")
+    or (project, "network:ID"), in the order of their numbers."""
+    found = {member.project_id: member for member in members}
+    own = found.get(project_id)
+    if own is None:
+        return []
+    ids = list(ids)
+    shared = shared_services(
+        (key, found[pid].repository_id or -pid, found[pid].event)
+        for pid, key in named
+        if pid in found
+    )
+    linked: dict[int, str] = {}
+    if own.repository_id is not None:
+        for pid, member in found.items():
+            if pid != project_id and member.repository_id == own.repository_id:
+                linked[pid] = "repository"
+    keys = {key for pid, key in ids if pid == project_id and key not in shared}
+    for pid, key in sorted(ids):
+        if pid != project_id and key in keys:
+            linked.setdefault(pid, key)
+    return sorted(linked.items())
+
+
+def links_of(conninfo: str, project_id: int) -> list[tuple[int, str]]:
+    """The links of one project, read from the tables."""
+    with psycopg.connect(conninfo) as conn:
+        members, ids, named = _collection(conn)
+    return links(members, ids, named, project_id)
+
+
 @dataclass(frozen=True)
 class Matches:
     """What the collection says about the repository and the Hedera IDs of one submission."""

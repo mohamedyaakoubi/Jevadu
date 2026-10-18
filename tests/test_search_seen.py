@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from hackathon_memory.search.seen import Member, groups
+from hackathon_memory.search.seen import Member, groups, links
 
 A, B = ("ethglobal.com", "a"), ("ethglobal.com", "b")
 
@@ -40,6 +40,17 @@ def test_an_id_that_two_teams_name_at_one_event_links_nothing() -> None:
     # One code at one event counts once: the same team, back at another event, still links.
     members = [Member(1, A, 11), Member(2, A, 11), Member(3, B, 13)]
     assert groups(members, found) == [[1, 2, 3]]
+
+
+def test_the_links_of_one_project_say_why() -> None:
+    members = [Member(1, A, 10), Member(2, B, 10), Member(3, B, 11), Member(4, A, 12)]
+    found = [(1, "testnet:0.0.5"), (3, "testnet:0.0.5"), (2, "mainnet:0.0.7"), (4, "mainnet:0.0.7")]
+    assert links(members, found, found, 1) == [(2, "repository"), (3, "testnet:0.0.5")]
+    assert links(members, found, found, 4) == [(2, "mainnet:0.0.7")]
+    assert links(members, found, found, 99) == []  # no such project
+    # A fifth team at the first event names the ID too: a shared service, which links nothing.
+    named = [*found, (5, "testnet:0.0.5")]
+    assert links([*members, Member(5, A, 13)], found, named, 1) == [(2, "repository")]
 
 
 def test_a_name_alone_links_nothing() -> None:

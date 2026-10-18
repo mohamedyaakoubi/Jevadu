@@ -30,6 +30,20 @@
 
   <div class="project-cols">
     <div class="project-col project-facts">
+      {% if linked %}
+      <section class="card project-section linked-section" aria-labelledby="linked-{{ pid }}-title">
+        <div class="card-body">
+          <h3 id="linked-{{ pid }}-title">Linked projects{{ parts.info("seen", "linked projects") }}</h3>
+          <ul class="hm-link-list">
+          {% for by, member in linked %}
+            <li><a href="/project/{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML" data-open-viewer="{{ member.project_id }}">{{ member.name }}</a> <span class="text-secondary">{{ member.event }}</span>
+              <span class="hm-small d-block">{{ parts.link_reason(by) }}</span></li>
+          {% endfor %}
+          </ul>
+          <p class="hm-small">A link says only that: a team may have built on its earlier work, or used the same account again. People judge.</p>
+        </div>
+      </section>
+      {% endif %}
       <section class="card project-section ledger-section" aria-labelledby="ledger-{{ pid }}-title">
         <div class="card-body">
           <h3 id="ledger-{{ pid }}-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>

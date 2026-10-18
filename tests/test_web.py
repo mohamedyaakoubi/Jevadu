@@ -260,6 +260,23 @@ def test_a_project_opens_in_the_window_with_its_own_address(site) -> None:  # no
     assert missing.status_code == 404 and "There is no project with this number" in missing.text
 
 
+def test_the_card_of_a_project_names_the_projects_linked_to_it(site) -> None:  # noqa: ANN001
+    """Two projects with the same code: the card of each names the other, says why, and opens
+    it in the same window (design 8.4). A project with no link shows no box."""
+    from hackathon_memory.db.repositories import RepositoryStore
+
+    client, _, ids, database = site
+    pebble, cedar, fern = ids["Pebble Pay"], ids["Cedar Post"], ids["Fern Vote"]
+    assert "Linked projects" not in client.get(f"/project/{pebble}/panel").text
+    RepositoryStore(database).link({pebble: REPO, cedar: REPO})
+    part = client.get(f"/project/{pebble}/panel")
+    box = part.text.split("Linked projects", 1)[1].split("</section>", 1)[0]
+    assert f'hx-get="/project/{cedar}/panel"' in box and "The same repository." in box
+    assert f"/project/{fern}" not in box
+    page = client.get(f"/project/{cedar}")  # the page of its own names the link too
+    assert "Linked projects" in page.text and f'hx-get="/project/{pebble}/panel"' in page.text
+
+
 def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
     client, _, ids, _ = site
     page = client.get(f"/project/{ids['Pebble Pay']}")
