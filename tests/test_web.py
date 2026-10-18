@@ -192,6 +192,16 @@ def test_the_words_of_the_idea_are_marked_and_a_page_never_runs_as_code(site) ->
     assert "<mark>coin</mark>" in page.text
 
 
+def test_common_words_of_the_idea_are_not_marked(site) -> None:  # noqa: ANN001
+    """The marks show why a project is close: "app", "lets" or "take" stand in many ideas and
+    are not marked; "vendor" and "coins" are."""
+    client, _, _, _ = site
+    page = client.get("/", params={"idea": "an app that lets a street vendor take coins"})
+    assert "A <mark>vendor</mark> takes <mark>coins</mark>." in page.text
+    only_common = client.get("/", params={"idea": "an app that lets people take it"})
+    assert "<mark>" not in only_common.text  # no word left to mark
+
+
 def test_the_ways_to_search(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     for mode in ("meaning", "words"):

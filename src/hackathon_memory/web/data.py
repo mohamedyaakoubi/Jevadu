@@ -221,13 +221,27 @@ _HEADLINE_OPTIONS = (
 )
 
 
+# Words that stand in many ideas and say little about one, so a result does not mark them (the
+# maintainer's review of 18 October 2026). How often a word appears is no guide: "payment" stands
+# in 35% of the projects and "app" in 14%, and only "payment" tells why a project is close.
+# PostgreSQL already leaves out the smallest words, such as "a", "the" and "that".
+COMMON_WORDS = (
+    "app apps application applications platform tool tools system solution project product "
+    "user users people use uses using let lets allow allows help helps without within via "
+    "make makes take takes get gets new simple easy way ways also every one thing things like"
+)
+
+
 def _idea_query(conn: psycopg.Connection, idea: str) -> str:
     """The words of the idea that are marked, as the text of a query that matches any one of
-    them by its stem; empty when the idea has none."""
-    row = conn.execute(
-        "SELECT replace(plainto_tsquery(%s, %s)::text, ' & ', ' | ')", (LANGUAGE, idea)
-    ).fetchone()
-    return row[0] if row else ""
+    them by its stem, the common words left out; empty when none is left."""
+    rows = conn.execute(
+        "SELECT word FROM unnest(tsvector_to_array(to_tsvector(%s, %s))) AS word "
+        "EXCEPT SELECT unnest(tsvector_to_array(to_tsvector(%s, %s)))",
+        (LANGUAGE, idea, LANGUAGE, COMMON_WORDS),
+    ).fetchall()
+    quoted = ("'" + word.replace("\\", "\\\\").replace("'", "''") + "'" for (word,) in sorted(rows))
+    return " | ".join(quoted)
 
 
 def matched_words(conninfo: str, project_ids: Sequence[int], idea: str) -> dict[int, Markup]:
