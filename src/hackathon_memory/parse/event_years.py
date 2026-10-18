@@ -15,6 +15,7 @@ no date is known.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 FILE_NAME = "event-years.txt"
@@ -27,17 +28,21 @@ class EventYearsError(Exception):
     """The file of the years of events has a line that cannot be read. Nothing of it is used."""
 
 
-def read_event_years(path: Path) -> dict[tuple[str, str], int]:
-    """The year of each event that the file names, by site and short name. No file gives none."""
+def _lines(path: Path) -> Iterator[tuple[str, list[str]]]:
+    """Each line of the file that is not empty, without its comment: where it stands, for an
+    error, and its parts. No file gives none."""
     if not path.exists():
-        return {}
-    years: dict[tuple[str, str], int] = {}
+        return
     for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         line = raw.split("#", 1)[0].strip()
-        if not line:
-            continue
-        parts = line.split()
-        where = f"{path.name}, line {number}"
+        if line:
+            yield f"{path.name}, line {number}", line.split()
+
+
+def read_event_years(path: Path) -> dict[tuple[str, str], int]:
+    """The year of each event that the file names, by site and short name. No file gives none."""
+    years: dict[tuple[str, str], int] = {}
+    for where, parts in _lines(path):
         if (len(parts) != 3 or not _SITE.match(parts[0]) or not _SLUG.match(parts[1])
                 or not _YEAR.match(parts[2])):  # fmt: skip
             raise EventYearsError(
