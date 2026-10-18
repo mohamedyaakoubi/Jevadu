@@ -41,6 +41,16 @@ class Member:
     repository_id: int | None
 
 
+def shared_services(named: Iterable[tuple[str, int]]) -> set[str]:
+    """The network:IDs that are shared services, which join nothing: those that more than
+    SHARED_AFTER codes name. `named` holds (network:ID, code) pairs; the code of a project is its
+    repository, or the project itself when it has none."""
+    codes: dict[str, set[int]] = defaultdict(set)
+    for key, code in named:
+        codes[key].add(code)
+    return {key for key, found in codes.items() if len(found) > SHARED_AFTER}
+
+
 def groups(
     members: Iterable[Member],
     ids: Iterable[tuple[int, str]],
@@ -52,10 +62,11 @@ def groups(
     README names, found or not, and decides which IDs are shared services (by default `ids`)."""
     found = {member.project_id: member for member in members}
     ids = list(ids)
-    users: dict[str, set[int]] = defaultdict(set)
-    for pid, key in ids if named is None else named:
-        if pid in found:
-            users[key].add(found[pid].repository_id or -pid)
+    shared = shared_services(
+        (key, found[pid].repository_id or -pid)
+        for pid, key in (ids if named is None else named)
+        if pid in found
+    )
     parent = {pid: pid for pid in found}
 
     def root(pid: int) -> int:
@@ -79,7 +90,7 @@ def groups(
     for together in by_repository.values():
         join(together)
     for key, together in by_id.items():
-        if len(users[key]) <= SHARED_AFTER:  # projects with other code that name it, in all
+        if key not in shared:
             join(together)
     grouped: dict[int, list[int]] = defaultdict(list)
     for pid in sorted(found):
@@ -124,17 +135,13 @@ def submission_matches(conninfo: str, repository: str, keys: Sequence[str]) -> M
         found = conn.execute(_FOUND + " WHERE h.entity_id = ANY(%s)",
                              (list(CONFIRMED), entity_ids)).fetchall()  # fmt: skip
         named = conn.execute(_NAMED + " WHERE h.entity_id = ANY(%s)", (entity_ids,)).fetchall()
-    users: dict[str, set[int]] = defaultdict(set)
     other_code: set[str] = set()
-    for pid, key, repository_id in named:
-        users[key].add(repository_id or -pid)
+    for _, key, repository_id in named:
         if own_code is None or repository_id != own_code:
             other_code.add(key.split(":", 1)[1])
-    shared = set()
-    for key in keys:
-        users[key].add(own_code or 0)  # the submission itself; 0 is no project's number
-        if len(users[key]) > SHARED_AFTER:
-            shared.add(key)
+    users = [(key, repository_id or -pid) for pid, key, repository_id in named]
+    users += [(key, own_code or 0) for key in keys]  # the submission; 0 is no project's number
+    shared = shared_services(users) & set(keys)
     same_id: dict[str, list[int]] = defaultdict(list)
     for pid, key in sorted(found):
         if key in keys and key not in shared and pid not in same_id[key]:
