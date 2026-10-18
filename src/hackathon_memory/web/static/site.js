@@ -73,6 +73,16 @@
     if (local) local.removeItem("hm-last");
   }, true);
 
+  // "Check your GitHub link here", under the results: the box of the check takes the cursor.
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest("[data-focus-check]")) return;
+    var box = $("check-repo");
+    if (!box) return;
+    event.preventDefault();
+    box.scrollIntoView({ block: "center" });
+    box.focus({ preventScroll: true });
+  });
+
   // ---------------------------------------------------------------- the check of a submission
   document.addEventListener("change", function (event) {
     if (event.target.id !== "check-event") return;

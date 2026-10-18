@@ -127,6 +127,7 @@ def test_the_start_page_lists_the_projects_and_calls_no_model(site) -> None:  # 
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel"' in page.text
     assert "The card of a project opens here" not in page.text  # it opens when it is chosen
     assert '<dialog class="viewer" id="viewer"' in page.text
+    assert "Building this?" not in page.text  # only under the results of an idea
     assert 'id="tip-proof" popover' in page.text and page.text.count('id="tip-proof"') == 1
     assert len(fake.requests) == before
 
@@ -179,6 +180,8 @@ def test_quick_results_ask_no_model_that_writes(site) -> None:  # noqa: ANN001
     # The model's sentence, and the words of the idea marked in it.
     assert "A <mark>vendor</mark> takes <mark>coins</mark>." in page.text
     assert 'id="compare-loader"' not in page.text  # no comparison without the button
+    # One sentence invites the builder back to check the code before submitting it.
+    assert 'Building this? Before you submit, <a href="#check-repo" data-focus-check>' in page.text
 
 
 def test_the_words_of_the_idea_are_marked_and_a_page_never_runs_as_code(site) -> None:  # noqa: ANN001

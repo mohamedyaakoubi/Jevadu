@@ -317,6 +317,8 @@ body:has(dialog[open]) { overflow: hidden; }
 .check-progress li { margin-bottom: 0.375rem; }
 .hm-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
 .hm-section-head h3 { margin: 0; }
+.hm-come-back { margin: 1rem 0 0; color: var(--tblr-secondary); }
+.hm-come-back a { text-decoration: underline; text-underline-offset: 2px; }
 .hm-close-list { list-style: none; padding: 0; margin: 0.75rem 0 0; display: grid; gap: 0.75rem; }
 .hm-close-list li { padding-bottom: 0.75rem; border-bottom: 1px solid var(--tblr-border-color); }
 .hm-close-list li:last-child { padding-bottom: 0; border-bottom: 0; }
