@@ -15,6 +15,9 @@ What "happened on it" means depends on the kind, because the node shows differen
 * an account: its transactions. The last one, searched back to the day the account was made.
 * a token: only the token itself, when it was made and when it was last changed. Who sent it to
   whom is not looked at. "Empty" means that no unit of it exists.
+* a transaction: the one action itself, its kind (a transfer, the creation of a token, a message
+  to a topic) and the moment the network agreed on it. "Empty" means that it failed: the network
+  wrote it down, but the action did not happen.
 
 Of an answer only a few named fields are kept. The code of a contract is big and not needed, and
 a memo, a key or the text of a message is nothing that the check uses.
@@ -27,7 +30,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from hackathon_memory.hedera.mirror import MirrorNode, when
-from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
+from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC, TRANSACTION
 
 KINDS = (TOKEN, TOPIC, CONTRACT, ACCOUNT)  # the order in which the kinds are asked
 
@@ -61,7 +64,10 @@ def _time(stamp: object) -> datetime | None:
 
 def kinds_to_ask(entity_id: str, said_kind: str | None) -> tuple[str, ...]:
     """The kinds in the order they are asked: the one the page names first, a contract before
-    an account. An EVM address can only be a contract or an account."""
+    an account. An EVM address can only be a contract or an account, and a transaction ID only
+    a transaction."""
+    if "-" in entity_id:
+        return (TRANSACTION,)
     if entity_id.startswith("0x"):
         return (CONTRACT, ACCOUNT)
     if said_kind == ACCOUNT:
@@ -80,7 +86,8 @@ def read_facts(
 ) -> LedgerFacts:
     """Ask the network of `mirror` about one id. A MirrorError goes on to the caller."""
     asked_at = now()
-    readers = {TOKEN: _token, TOPIC: _topic, CONTRACT: _contract, ACCOUNT: _account}
+    readers = {TOKEN: _token, TOPIC: _topic, CONTRACT: _contract, ACCOUNT: _account,
+               TRANSACTION: _transaction}  # fmt: skip
     for kind in kinds_to_ask(entity_id, said_kind):
         facts = readers[kind](mirror, entity_id)
         if facts is not None:
@@ -168,6 +175,27 @@ def _contract(mirror: MirrorNode, entity_id: str) -> dict | None:
         "first_activity_at": _time(oldest[0].get("timestamp")) if oldest else None,
         "last_activity_at": _time(newest[0].get("timestamp")) if newest else None,
         "details": {"evm_address": address} if address else {},
+    }
+
+
+def _transaction(mirror: MirrorNode, entity_id: str) -> dict | None:
+    items = (mirror.transaction(entity_id) or {}).get("transactions") or []
+    parent = next((item for item in items if not item.get("nonce")), items[0] if items else None)
+    if not isinstance(parent, dict):
+        return None
+    moment = _time(parent.get("consensus_timestamp"))
+    result = parent.get("result")
+    return {
+        "ledger_id": parent.get("transaction_id"),
+        "created_at": moment,
+        "first_activity_at": moment,
+        "last_activity_at": moment,
+        "empty": result != "SUCCESS",
+        "details": {
+            key: parent.get(key)
+            for key in ("name", "result", "entity_id")
+            if parent.get(key) is not None
+        },  # fmt: skip
     }
 
 

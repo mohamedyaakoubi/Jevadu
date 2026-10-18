@@ -757,6 +757,7 @@ def create_app(
         "REF_NUMBER": references.NUMBER,
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
+        "ACTION_WORDS": data.ACTION_WORDS,
         "hashscan_topic": hashscan_topic,
         "page_numbers": page_numbers,
         "measured_mode": evidence.mode_named,

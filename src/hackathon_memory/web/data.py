@@ -38,7 +38,22 @@ FIELD_TITLES = {
 }
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\n+")
 # HashScan has a page for each of these kinds; a number of another kind, or not found, gets none.
-HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token"})
+HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transaction"})
+# The kinds of action of a transaction that the mirror node names, in plain words. Another kind is
+# shown as the node writes it.
+ACTION_WORDS = {
+    "CRYPTOTRANSFER": "a transfer",
+    "CRYPTOCREATEACCOUNT": "the creation of an account",
+    "TOKENCREATION": "the creation of a token",
+    "TOKENMINT": "new units of a token",
+    "TOKENASSOCIATE": "an account joined to a token",
+    "CONSENSUSCREATETOPIC": "the creation of a topic",
+    "CONSENSUSSUBMITMESSAGE": "a message to a topic",
+    "CONTRACTCREATEINSTANCE": "the creation of a smart contract",
+    "CONTRACTCALL": "a call of a smart contract",
+    "ETHEREUMTRANSACTION": "a transaction sent from an Ethereum wallet",
+    "SCHEDULECREATE": "a scheduled action",
+}
 NETWORKS = frozenset({"mainnet", "testnet", "previewnet"})
 
 

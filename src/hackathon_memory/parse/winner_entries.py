@@ -38,7 +38,7 @@ from hackathon_memory.parse.project import (
     Section,
 )
 
-PARSER_VERSION = "winner-entries-1"
+PARSER_VERSION = "winner-entries-2"  # single transactions
 SUFFIX = ".entries.json"
 AS_PUBLISHED = "as_published"  # the kind of the one text of a winner entry
 _REQUIRED = ("name", "event", "source_url", "description_as_published")

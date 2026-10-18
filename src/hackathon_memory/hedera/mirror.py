@@ -64,6 +64,7 @@ MAX_LINKS = 24
 
 _ENTITY_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}$")
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_TRANSACTION_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}-\d{1,11}-\d{1,9}$")
 _BEFORE = re.compile(r"timestamp=lte?:(\d+\.\d+)")
 _AFTER = re.compile(r"timestamp=gte?:(\d+\.\d+)")
 
@@ -193,6 +194,15 @@ class MirrorNode:
     def contract(self, contract: str) -> dict | None:
         """A contract, by its id or by its EVM address."""
         return self._get(f"/contracts/{self._entity_or_address(contract)}")
+
+    def transaction(self, transaction_id: str) -> dict | None:
+        """One transaction, by its ID "0.0.12345-1700000000-123456789": the list "transactions",
+        the parent first. Read on 18 October 2026: each item has "name" (the kind of action, such
+        as CRYPTOTRANSFER), "result" (SUCCESS or the reason it failed) and "consensus_timestamp".
+        The form with "@" is refused by the node with a 400."""
+        if not _TRANSACTION_ID.match(transaction_id):
+            raise MirrorError(f"not a transaction id: {transaction_id!r}")
+        return self._get(f"/transactions/{transaction_id}")
 
     def topic_message(self, topic_id: str, sequence_number: int) -> dict | None:
         return self._get(f"/topics/{self._entity(topic_id)}/messages/{int(sequence_number)}")

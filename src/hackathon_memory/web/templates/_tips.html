@@ -66,12 +66,12 @@
 {% endcall %}
 
 {% call tip("proof", "Hedera proof") %}
-<p>Does the project show that it really used Hedera? A program looks for Hedera IDs on the page and in the code: an account{{ parts.ref("account") }}, a topic{{ parts.ref("topic") }}, a token{{ parts.ref("token") }} or a smart contract{{ parts.ref("contract") }}. It asks the public mirror node{{ parts.ref("mirror") }} what each one is.</p>
+<p>Does the project show that it really used Hedera? A program looks for Hedera IDs on the page and in the code: an account{{ parts.ref("account") }}, a topic{{ parts.ref("topic") }}, a token{{ parts.ref("token") }}, a smart contract{{ parts.ref("contract") }}, or one single transaction: an action such as a transfer or the creation of a token, with the moment it happened. It asks the public mirror node{{ parts.ref("mirror") }} what each one is.</p>
 <ul>
   <li><b>Proof found:</b> the ledger knows the ID as that kind of thing, made or used at the time of the event.</li>
   <li><b>Dates do not fit:</b> it exists, but from another time.</li>
   <li><b>Another kind of ID:</b> the ledger knows the number as something else.</li>
-  <li><b>ID empty:</b> nothing ever happened with it.</li>
+  <li><b>ID empty:</b> nothing ever happened with it, or the transaction failed.</li>
   <li><b>ID not found:</b> the ledger does not know it.</li>
   <li><b>No ID given:</b> neither the page nor the code names one. This says nothing bad about the project.</li>
 </ul>

@@ -559,6 +559,33 @@ def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -
     assert days.status_code == 200 and "6 March 2026 to 8 March 2026" in days.text
 
 
+def test_a_transaction_named_on_a_page_is_shown_as_one_action(site) -> None:  # noqa: ANN001
+    """A single transaction is its own kind of Hedera ID: the window says what the action was,
+    when it happened, and links to it on HashScan (design 7.1)."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    client, _, ids, database = site
+    tx = "0.0.7162784-1772884800-640883616"
+    LedgerStore(database).save_facts(LedgerFacts(
+        tx, "testnet", datetime(2026, 10, 18, tzinfo=UTC), found=True, kind="transaction",
+        ledger_id=tx, created_at=datetime(2026, 3, 7, 12, tzinfo=UTC),
+        first_activity_at=datetime(2026, 3, 7, 12, tzinfo=UTC),
+        last_activity_at=datetime(2026, 3, 7, 12, tzinfo=UTC), empty=False,
+        details={"name": "TOKENCREATION", "result": "SUCCESS"},
+    ))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, %s, 'testnet', 'transaction', 'page', "
+            "'invented', true) RETURNING id", (ids["Pebble Pay"], tx)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    part = client.get(f"/project/{ids['Pebble Pay']}/panel")
+    assert "A transaction: the creation of a token, on 7 March 2026." in part.text
+    assert f'href="https://hashscan.io/testnet/transaction/{tx}"' in part.text
+
+
 def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     """The tool is a memory, not a live view: with no hackathon, the facts are shown with their
     own dates and not judged, and the register asks for one (design 12.1, S3)."""

@@ -16,6 +16,13 @@ An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for three r
 An address of the EVM kind (0x and 40 letters) is kept only when a HashScan link names it. The
 same address can live on any other chain, so a bare one is not taken for Hedera.
 
+A transaction is one action on the ledger: a transfer, the creation of a token, a message to a
+topic, a call of a contract. Its ID is the account that paid for it and the moment it was sent:
+"0.0.12345@1700000000.123456789" or "0.0.12345-1700000000-123456789". Both give two IDs: the
+transaction itself, which says exactly what happened and when, and the account that paid. The
+mirror node asks for the second form only (measured on 18 October 2026), so every transaction is
+kept in it. A link to a transaction that gives only a time names no ID.
+
 Sources, read on 11 October 2026. The shape of an id with its check word of five letters is the
 one of hiero-sdk-python 0.2.10 (utils/entity_id_helper.py, ID_REGEX). The first number that a
 user can own is 1001: the default of `firstUserEntity` in the code of the network's nodes
@@ -29,6 +36,7 @@ from dataclasses import dataclass
 
 NETWORKS = ("mainnet", "testnet", "previewnet")
 ACCOUNT, TOKEN, TOPIC, CONTRACT = "account", "token", "topic", "contract"
+TRANSACTION = "transaction"
 FIRST_USER_NUMBER = 1001
 
 # How far from an id the name of a network is looked for, in characters: on its own line, and
@@ -62,6 +70,11 @@ _HASHSCAN = re.compile(
     re.IGNORECASE,
 )
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+# A transaction: the account that paid, then the seconds and the nanoseconds of the moment it was
+# sent, joined by "@" and "." or by two "-".
+_TRANSACTION = re.compile(
+    r"(?<![\w.@])0\.0\.([1-9]\d{0,11})(?:@(\d{1,11})\.(\d{1,9})|-(\d{1,11})-(\d{1,9}))(?!\w|\.\d)"
+)
 # What a HashScan link says the thing is. The payer of a transaction is an account. "address"
 # is an address of the EVM kind, which can be an account or a contract.
 _HASHSCAN_KINDS = {
@@ -96,6 +109,19 @@ def find_ids(*texts: str) -> list[FoundId]:
     return _merge(mentions)
 
 
+def transaction_id(match: re.Match[str]) -> str | None:
+    """A transaction as the mirror node asks for it, from a match of _TRANSACTION. In the form
+    with a dot, the digits after the dot are the start of the nanoseconds."""
+    account = int(match.group(1))
+    if account < FIRST_USER_NUMBER:
+        return None
+    if match.group(2) is not None:
+        seconds, nanos = match.group(2), match.group(3).ljust(9, "0")
+    else:
+        seconds, nanos = match.group(4), match.group(5)
+    return f"0.0.{account}-{int(seconds)}-{int(nanos)}"
+
+
 def _mentions(text: str) -> list[FoundId]:
     found: list[tuple[int, FoundId]] = []
     links: list[tuple[int, int]] = []
@@ -113,6 +139,22 @@ def _mentions(text: str) -> list[FoundId]:
             continue
         words = _kept(text, *link.span())
         found.append((link.start(3), FoundId(entity, network, kind, words, True)))
+        transaction = (
+            _TRANSACTION.fullmatch(target) if link.group(2).lower() == "transaction" else None
+        )
+        if transaction and (exact := transaction_id(transaction)):
+            found.append((link.start(3), FoundId(exact, network, TRANSACTION, words, True)))
+    payers: set[int] = set()  # where a transaction starts: the account there paid for it
+    for match in _TRANSACTION.finditer(text):
+        start, end = match.span()
+        payers.add(start)
+        exact = transaction_id(match)
+        if exact is None or any(left <= start < right for left, right in links):
+            continue  # a link has already said it
+        mention = FoundId(
+            exact, _said_network(text, start, end), TRANSACTION, _kept(text, start, end)
+        )
+        found.append((start, mention))
     ids = [match for match in _ID.finditer(text)]
     spans = [match.span() for match in ids]
     for match in ids:
@@ -125,7 +167,7 @@ def _mentions(text: str) -> list[FoundId]:
         mention = FoundId(
             f"0.0.{match.group(1)}",
             _said_network(text, start, end),
-            _said_kind(text, start, end, others),
+            ACCOUNT if start in payers else _said_kind(text, start, end, others),
             _kept(text, start, end),
         )
         found.append((start, mention))

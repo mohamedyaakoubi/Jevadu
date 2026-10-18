@@ -396,6 +396,11 @@ class StandInMirror:
     def account(self, entity: str) -> dict | None:
         return self._one("account", entity)
 
+    def transaction(self, entity: str) -> dict | None:
+        """The answer of /transactions/{id}: a list, the parent first, or nothing."""
+        found = self._one("transaction", entity)
+        return {"transactions": [found]} if found is not None else None
+
     def _end(
         self,
         what: str,

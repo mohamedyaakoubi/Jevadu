@@ -17,7 +17,7 @@ from hackathon_memory.check.ledger import (
     was_used_inside,
 )
 from hackathon_memory.hedera.mirror import MirrorError, when
-from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
+from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC, TRANSACTION
 
 NOW = datetime(2026, 10, 11, 2, 0, tzinfo=UTC)
 ADDRESS = "0x00000000000000000000000000000000002345ab"
@@ -39,6 +39,48 @@ def test_the_kind_that_the_page_names_is_asked_first() -> None:
     assert kinds_to_ask("0.0.2345678", TOPIC) == (TOPIC, TOKEN, CONTRACT, ACCOUNT)
     assert kinds_to_ask("0.0.2345678", CONTRACT) == (CONTRACT, TOKEN, TOPIC, ACCOUNT)
     assert kinds_to_ask("0.0.2345678", "something else") == (TOKEN, TOPIC, CONTRACT, ACCOUNT)
+
+
+def test_a_transaction_id_is_asked_only_as_a_transaction() -> None:
+    assert kinds_to_ask("0.0.2345678-1700000000-123456789", None) == (TRANSACTION,)
+    assert kinds_to_ask("0.0.2345678-1700000000-123456789", ACCOUNT) == (TRANSACTION,)
+
+
+def transaction(result: str = "SUCCESS", **changes: object) -> dict:
+    """One item of /transactions/{id}, in the shape of the test network (18 October 2026)."""
+    item = {
+        "name": "TOKENCREATION",
+        "result": result,
+        "consensus_timestamp": MADE,
+        "valid_start_timestamp": "1785016490.000000001",
+        "entity_id": "0.0.4567890",
+        "transaction_id": "0.0.2345678-1785016490-1",
+        "nonce": 0,
+        "scheduled": False,
+    }
+    item.update(changes)
+    return item
+
+
+def test_a_transaction_is_one_action_at_one_moment() -> None:
+    entity = "0.0.2345678-1785016490-1"
+    mirror = StandInMirror(transaction={entity: transaction()})
+    facts = facts_of(mirror, entity, TRANSACTION)
+    assert (facts.found, facts.kind, facts.empty) == (True, TRANSACTION, False)
+    assert facts.created_at == facts.first_activity_at == facts.last_activity_at == when(MADE)
+    assert facts.details == {
+        "name": "TOKENCREATION",
+        "result": "SUCCESS",
+        "entity_id": "0.0.4567890",
+    }
+    assert mirror.asked == [("transaction", entity)]  # nothing else is asked
+
+
+def test_a_failed_transaction_is_empty_and_an_unknown_one_is_not_found() -> None:
+    entity = "0.0.2345678-1785016490-1"
+    failed = StandInMirror(transaction={entity: transaction("INSUFFICIENT_PAYER_BALANCE")})
+    assert facts_of(failed, entity).empty is True
+    assert facts_of(StandInMirror(), entity).found is False
 
 
 def test_a_contract_is_always_asked_before_an_account() -> None:

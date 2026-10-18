@@ -50,6 +50,8 @@ class LedgerLine:
     created_at: datetime | None
     last_activity_at: datetime | None
     asked_at: datetime | None
+    action: str | None = None  # for a transaction: its kind, such as CRYPTOTRANSFER
+    outcome: str | None = None  # for a transaction: SUCCESS, or why it failed
 
 
 @dataclass(frozen=True)
@@ -115,7 +117,8 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         ledger: dict[int, list[LedgerLine]] = {}
         for row in conn.execute(
             "SELECT h.project_id, h.entity_id, h.found_in, c.network, c.status, f.kind, "
-            "f.created_at, f.last_activity_at, f.asked_at "
+            "f.created_at, f.last_activity_at, f.asked_at, f.details ->> 'name', "
+            "f.details ->> 'result' "
             "FROM hedera_ids h LEFT JOIN id_checks c ON c.hedera_id = h.id "
             "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "
             "WHERE h.project_id = ANY(%s) ORDER BY h.project_id, h.id, c.network",

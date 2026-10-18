@@ -10,6 +10,7 @@ from hackathon_memory.parse.hedera_ids import (
     FIRST_USER_NUMBER,
     TOKEN,
     TOPIC,
+    TRANSACTION,
     FoundId,
     find_ids,
 )
@@ -185,15 +186,6 @@ def test_a_hashscan_link_says_the_network_and_the_kind_exactly() -> None:
         ("https://hashscan.io/mainnet/token/0.0.2345678.", ("0.0.2345678", "mainnet", TOKEN)),
         ("hashscan.io/previewnet/contract/0.0.2345678", ("0.0.2345678", "previewnet", CONTRACT)),
         ("https://HashScan.io/Testnet/Token/0.0.2345678", ("0.0.2345678", "testnet", TOKEN)),
-        # The payer of a transaction is an account.
-        (
-            "https://hashscan.io/testnet/transaction/0.0.2345678@1700000000.123456789",
-            ("0.0.2345678", "testnet", ACCOUNT),
-        ),
-        (
-            "https://hashscan.io/testnet/transaction/0.0.2345678-1700000000-123456789",
-            ("0.0.2345678", "testnet", ACCOUNT),
-        ),
         (
             "https://hashscan.io/testnet/contract/0x00000000000000000000000000000000002345AB.",
             ("0x00000000000000000000000000000000002345ab", "testnet", CONTRACT),
@@ -207,6 +199,35 @@ def test_a_hashscan_link_says_the_network_and_the_kind_exactly() -> None:
 def test_what_a_hashscan_link_gives(link: str, expected: tuple[str, str, str | None]) -> None:
     assert ids(link) == [expected]
     assert find_ids(link)[0].in_hashscan_link
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "https://hashscan.io/testnet/transaction/0.0.2345678@1700000000.123456789",
+        "https://hashscan.io/testnet/transaction/0.0.2345678-1700000000-123456789",
+    ],
+)
+def test_a_transaction_link_gives_the_transaction_and_the_account_that_paid(link: str) -> None:
+    """Both forms give the transaction in the form the mirror node asks for (measured on
+    18 October 2026: it refuses the form with "@")."""
+    assert ids(link) == [
+        ("0.0.2345678", "testnet", ACCOUNT),
+        ("0.0.2345678-1700000000-123456789", "testnet", TRANSACTION),
+    ]
+
+
+def test_a_transaction_in_the_text_is_found_with_its_payer() -> None:
+    # The digits after the dot are the start of the nanoseconds; a full stop ends a sentence.
+    assert ids("Our transfer: 0.0.2345678@1700000000.12.") == [
+        ("0.0.2345678-1700000000-120000000", None, TRANSACTION),
+        ("0.0.2345678", None, ACCOUNT),
+    ]
+    assert ids("on testnet, tx 0.0.2345678-1700000000-5 went through") == [
+        ("0.0.2345678-1700000000-5", "testnet", TRANSACTION),
+        ("0.0.2345678", "testnet", ACCOUNT),
+    ]
+    assert ids("v0.0.2345678@1700000000.1", "0.0.98@1700000000.1") == []  # not an id
 
 
 @pytest.mark.parametrize(
