@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 18 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the two tests of quality have run. A website runs on one laptop: the search, the card of each project, charts of every list, the check of a submission and the register on Hedera. The register is built and tested, and its topic on the test network is not created yet. See "What works today" below.
+> **State on 18 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the three tests of quality have run. A website runs on one laptop: the search, the card of each project, charts of every list, the check of a submission and the register on Hedera. The register is built and tested, and its topic on the test network is not created yet. See "What works today" below.
 >
 > **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The pages stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
@@ -48,7 +48,7 @@ Many tools score hackathon submissions with AI. This tool does not score.
 
 ## What works today
 
-First the four small proofs that the ground holds (Gate A), then what runs on the real data today, the two tests of quality, and the website.
+First the four small proofs that the ground holds (Gate A), then what runs on the real data today, the three tests of quality, and the website.
 
 | Proof of Gate A | State on 11 October 2026 |
 |---|---|
@@ -75,10 +75,11 @@ What runs on the real data today:
 
 - **The cards.** Gemini 3.1 Pro reads a page and writes seven fields: what the project does, how it works, for whom, its Hedera services, its category, its problem and its solution. Each field carries a label and quotes, and a field whose quotes are not found on the page is dropped (design 6.3). Every one of the 658 full pages has its card (16 October 2026): 8,909 of the 8,931 quotes that the model gave were found word for word in their page, and 4 fields were dropped (`evals/results/20261018T050534Z-overview.json`). The 168 projects known only from organisers' lists of winners have none.
 
-The two tests of quality, with their short reports:
+The three tests of quality, with their short reports:
 
 - **Test 1, the fields of the model** (design 13.2): 60 pages, each card graded field by field against its page. In the second run, with the list of 17 categories, no field was graded wrong, 98.5% were fully right, 99.5% of the labels were right, and all four pass marks were met. See `evals/test1/report-gemini-3.1-pro.md`.
 - **Test 2, the search** (design 13.3): of the known similar projects, 34 of 57 (59.7%) were in the first 10 results, under the pass mark of 80%. Most misses are tools for AI agents, a theme with many projects close to each other. See `evals/test2/report-2026-10.md`.
+- **Test 3, the Hedera IDs** (design 13.4): 50 pages and their READMEs, every Hedera ID written down by a person and checked against the mirror node. The tool found all 156 IDs that the person found (pass mark 95%) and gave 94.9% of them the same status (pass mark 90%). It also counted 22 IDs that are not the project's (12.4%, over the pass mark of 2%): IDs of a local test network, example values, and scheduled transactions. See `evals/test3/report-2026-10.md`.
 
 The website, on one laptop: `python -m hackathon_memory.web` serves it at http://127.0.0.1:8000, for this computer only (design 12.1). Everything happens on one page. While an idea is typed, quick results by meaning (or by words) appear as a grid of ten projects with numbered pages; no model writes anything for them. One button asks Gemini 3.8 Flash to put the 30 closest in order and to say, for each of the first ten, what it shares with the idea and how it differs (design 8.2 and 8.3); its answers are kept for one day, so a reload or the back button never asks again. The card of a project opens in a window over the list, with buttons at its head for the project's page, its code and its live demo, and names the projects that it is linked to by the same code or the same Hedera ID. Filters in one row narrow the list by event, year, category, Hedera proof and life, and a switch shows the same list as charts, counted from the tables, with the projects linked across events first. Each term has an (i) that explains it, with numbered sources, Hedera's documentation first. The windows "How it works", "Common questions" and "Sources and references" open from the bottom of the page. A switch at the top right chooses a light or a dark theme, or follows the computer, and a request that fails says so in plain words. The page is built on Tabler, a design system on Bootstrap 5, with htmx and Chart.js.
 
