@@ -92,11 +92,11 @@
       </section>
 
       {% if register %}{% include "_register_box.html" %}
-      {% elif no_dates and result.code and result.code.status == "found" %}
+      {% elif (no_dates or event.typed) and result.code and result.code.status == "found" %}
       <section class="card project-section check-register-section" aria-labelledby="register-title">
         <div class="card-body">
           <h3 id="register-title">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
-          <p class="text-secondary">A registration names its hackathon. To write this submission to the register, check it again with its hackathon.</p>
+          <p class="text-secondary">{% if no_dates %}A registration names its hackathon. To write this submission to the register, check it again with its hackathon.{% else %}A registration names a hackathon of the list, so that all the teams of one hackathon name it the same way. Days typed by hand can be checked, but not registered.{% endif %}</p>
         </div>
       </section>
       {% endif %}

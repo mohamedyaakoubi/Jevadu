@@ -585,6 +585,28 @@ def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -
     typed = {"repo": REPO, "event": "other", "starts": "2026-03-06", "ends": "2026-03-08"}
     days = client.get("/check", params=typed, headers=HX)
     assert days.status_code == 200 and "6 March 2026 to 8 March 2026" in days.text
+    # Typed days are checked, but a registration names a hackathon of the list.
+    assert "Days typed by hand can be checked, but not registered." in days.text
+    assert "Write it on Hedera" not in days.text
+    form = {**typed, "account": ""}
+    refused = client.post("/register", data=form, headers=HX)
+    assert refused.status_code == 400 and "Choose it in the list" in refused.text
+    assert client.writes.written == []
+
+
+def test_a_hackathon_of_the_list_can_be_checked_and_registered(site) -> None:  # noqa: ANN001
+    """A hackathon that the collection does not hold, added to the list by hand: it is offered
+    in the list of the check, its days are not judged before they are known, and the register
+    names it by its key."""
+    from hackathon_memory.hedera.listed import LISTED
+
+    client, _, _, _ = site
+    one = LISTED[0]
+    page = client.get("/")
+    assert f'<option value="{one.key}">' in page.text
+    check = client.get("/check", params={"repo": REPO, "event": one.key}, headers=HX)
+    assert check.status_code == 200 and one.name in check.text
+    assert one.key in check.text and "Write it on Hedera" in check.text
 
 
 def test_a_transaction_named_on_a_page_is_shown_as_one_action(site) -> None:  # noqa: ANN001

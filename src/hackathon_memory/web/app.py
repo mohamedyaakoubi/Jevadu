@@ -20,7 +20,7 @@ import math
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode
@@ -48,7 +48,7 @@ from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
 from hackathon_memory.finops.budget import BudgetExceeded
-from hackathon_memory.hedera import registry
+from hackathon_memory.hedera import listed, registry
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode, hashscan_topic
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
@@ -153,6 +153,10 @@ NOT_AN_ACCOUNT = (
     "A Hedera account looks like 0.0.12345. Leave the box empty to register without one."
 )
 CHECK_FIRST = "Check the repository first: only code that GitHub shows can be registered."
+NOT_LISTED = (
+    "A registration names a hackathon of the list, so that all the teams of one hackathon name it "
+    "the same way. Choose it in the list. Days typed by hand can be checked, but not registered."
+)
 REGISTER_CLOSED = (
     "The public register is not open yet: its topic on Hedera's test network has not been created."
 )
@@ -555,6 +559,10 @@ def create_app(
         if event == "other":
             days = submission.typed_days(starts, ends)
             return (submission.event_of_days(*days), None) if days else (None, NO_DAYS)
+        one = listed.listed(event)
+        if one is not None:
+            first = datetime(*one.first.timetuple()[:3], tzinfo=UTC) if one.first else None
+            return submission.EventDays(one.name, first, one.last, key=one.key), None
         if not event.isdigit():
             return None, NO_EVENT
         with psycopg.connect(conninfo) as conn:
@@ -636,7 +644,8 @@ def create_app(
         except (SettingsError, psycopg.OperationalError):
             return render(request, name, 503, problem=DATABASE_DOWN)
         found = result.code is not None and result.code.status == CODE_FOUND
-        view = register_view(repository, days) if found and days is not None else None
+        listed_one = days is not None and not days.typed
+        view = register_view(repository, days) if found and listed_one else None
         return render(request, name, result=result, closest=closest, closest_note=note,
                       seen_before=list(zip(result.seen, members, strict=True)), register=view,
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
@@ -665,6 +674,8 @@ def create_app(
             return render(request, name, 503, problem=DATABASE_DOWN)
         if days is None:
             return render(request, name, 400, problem=wrong or EVENT_FOR_REGISTER)
+        if days.typed:
+            return render(request, name, 400, problem=NOT_LISTED)
         store = RawStore(github.raw_dir(settings))
         code = saved_facts(store, repository)
         if code is None or code.status != CODE_FOUND:
@@ -811,6 +822,7 @@ def create_app(
         "hashscan": data.hashscan,
         "ACTION_WORDS": data.ACTION_WORDS,
         "hashscan_topic": hashscan_topic,
+        "LISTED_HACKATHONS": listed.LISTED,
         "github_reads": github_reads,
         "page_numbers": page_numbers,
         "measured_mode": evidence.mode_named,
