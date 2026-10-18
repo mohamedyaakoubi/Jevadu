@@ -203,6 +203,29 @@ def iso_day(value: str) -> str:
         return value
 
 
+def github_reads(code: Any, readme: Any, version: Any) -> str:
+    """On which day GitHub was read for a check, in one sentence. What was read on the same day
+    is named together: "Read from GitHub: its facts and its README on 16 October 2026, the
+    version on 18 October 2026"."""
+    days: dict[str, list[str]] = {}
+    if code is not None:
+        days.setdefault(code.fetched_at[:10], []).append("its facts")
+    if readme is not None and readme.status == "found":
+        name = f" ({readme.name})" if readme.name else ""
+        days.setdefault(readme.fetched_at[:10], []).append(f"its README{name}")
+    if version is not None and version.status == "found":
+        days.setdefault(version.fetched_at[:10], []).append("the version")
+
+    def joined(items: list[str]) -> str:
+        return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+    if len(days) == 1:
+        ((when, items),) = days.items()
+        return f"Read from GitHub on {iso_day(when)}: {joined(items)}."
+    each = [f"{joined(items)} on {iso_day(when)}" for when, items in sorted(days.items())]
+    return f"Read from GitHub: {', '.join(each)}." if each else ""
+
+
 def search_query(values: dict[str, str], *, drop: tuple[str, ...] = ()) -> str:
     """The part of an address that repeats a search: the idea, the way, Gemini's order when it was
     asked for, the filters and the view. The defaults need no word in the address."""
@@ -759,6 +782,7 @@ def create_app(
         "hashscan": data.hashscan,
         "ACTION_WORDS": data.ACTION_WORDS,
         "hashscan_topic": hashscan_topic,
+        "github_reads": github_reads,
         "page_numbers": page_numbers,
         "measured_mode": evidence.mode_named,
         "compare_numbers": lambda: evidence.compare_numbers(settings.gemini_search_thinking_level),

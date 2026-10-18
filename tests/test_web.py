@@ -518,8 +518,10 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert model_calls(fake, before) == 0  # the closest projects need an embedding only
     assert len(client.github_site.seen) == 3  # the facts, the README and the version, once
     assert 'Version checked: <span class="id">7260ea729063</span>' in part.text
-    version = part.text.split("Version checked:")[1].split("</p>")[0]
-    assert re.search(r"; read from GitHub on \d{1,2} [A-Z][a-z]+ \d{4}\.$", version)  # its own day
+    assert "the newest commit of the branch main" in part.text  # the branch, by its name
+    day = r"\d{1,2} [A-Z][a-z]+ \d{4}"
+    assert re.search(rf"Read from GitHub on {day}: its facts, its README \(README\.md\) and the "
+                     r"version\.", part.text)  # fmt: skip
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
     assert len(client.github_site.seen) == 3  # GitHub was not asked again
@@ -744,6 +746,23 @@ def test_a_date_is_written_as_the_pages_write_it() -> None:
     assert day(date(2025, 7, 6)) == "6 July 2025"
     assert day(datetime(2026, 10, 10, 19, 0, tzinfo=UTC)) == "10 October 2026"
     assert iso_day("2026-10-14") == "14 October 2026" and iso_day("not a day") == "not a day"
+
+
+def test_the_reads_of_github_are_named_once_for_each_day() -> None:
+    from types import SimpleNamespace
+
+    from hackathon_memory.web.app import github_reads
+
+    code = SimpleNamespace(fetched_at="2026-10-16T08:00:00Z")
+    readme = SimpleNamespace(status="found", name="README.md", fetched_at="2026-10-16T08:00:01Z")
+    version = SimpleNamespace(status="found", fetched_at="2026-10-18T05:00:00Z")
+    assert github_reads(code, readme, version) == (
+        "Read from GitHub: its facts and its README (README.md) on 16 October 2026, "
+        "the version on 18 October 2026."
+    )
+    assert github_reads(code, SimpleNamespace(status="none"), None) == (
+        "Read from GitHub on 16 October 2026: its facts."
+    )  # a README that is missing is said apart
 
 
 def test_every_page_has_a_tab_icon_and_a_way_to_the_results(site) -> None:  # noqa: ANN001

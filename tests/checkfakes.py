@@ -39,6 +39,7 @@ def facts_answer(**changes: object) -> bytes:
         "fork": False,
         "archived": False,
         "language": "TypeScript",
+        "default_branch": "main",
         "owner": {"login": "invented-owner"},
     }
     answer.update(changes)
