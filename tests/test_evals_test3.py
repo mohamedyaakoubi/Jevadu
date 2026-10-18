@@ -15,6 +15,15 @@ def test_the_net_catches_ids_transactions_addresses_and_links() -> None:
     assert all("Topic" in one["around"] for one in caught(text)[:1])  # with the words around
 
 
+def test_a_text_cannot_close_the_block_that_holds_it() -> None:
+    from evals.test3.sheet import fence
+
+    assert fence("plain words") == "```"
+    readme = "Run it:\n```bash\nnpm start\n```\nand a ```` four-tick run"
+    assert fence(readme) == "`````"  # longer than any run of backticks in the text
+    assert fence(readme) not in readme
+
+
 def test_the_net_leaves_out_internet_addresses_and_versions_after_a_letter() -> None:
     strings = [one["string"] for one in caught("the node at 10.0.0.1 runs v1.2.3 of the tool")]
     assert strings == []

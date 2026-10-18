@@ -48,6 +48,14 @@ def caught(text: str) -> list[dict]:
     return found
 
 
+def fence(text: str) -> str:
+    """A fence of backticks longer than any run of backticks in the text, so that a README's own
+    code block cannot close the block that holds it (the first sheet used three backticks, and a
+    reading of it stopped each README at its first code block, 18 October 2026)."""
+    longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+    return "`" * max(3, longest + 1)
+
+
 def page_texts(conninfo: str, page: str) -> tuple[int, str, str | None] | None:
     """The project of a page: its number, the text that the tool read, and its repository."""
     with psycopg.connect(conninfo) as conn:
@@ -85,7 +93,8 @@ def make(settings: Settings, folder: Path) -> int:
         readme_text = readme.text if readme is not None and readme.status == FOUND else ""
         lines += [f"## {number}. {page}", f"Project {pid}. Repository: {repository or 'none'}", ""]
         for where, body in (("page", text), ("readme", readme_text)):
-            lines += [f"### The {where}", "", "```text", body or "(nothing)", "```", ""]
+            mark = fence(body)
+            lines += [f"### The {where}", "", f"{mark}text", body or "(nothing)", mark, ""]
             lines += [f"Caught by the net in the {where}:"] + [
                 f"- [net] `{one['string']}`: {one['around']}" for one in caught(body)
             ] + [""]  # fmt: skip
