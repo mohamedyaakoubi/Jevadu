@@ -103,15 +103,19 @@
 
       <section class="card project-section check-close-section" aria-labelledby="check-close-title">
         <div class="card-body">
-          <h3 id="check-close-title">The closest past projects{{ parts.info("closest", "the closest past projects") }}</h3>
+          <div class="hm-section-head">
+            <h3 id="check-close-title">The closest past projects{{ parts.info("closest", "the closest past projects") }}</h3>
+            {% if closest %}
+            {% set close_ids = closest | map(attribute="0.hit.project_id") | join(",") %}
+            <div class="compare-ask" id="check-compare-ask">
+              <div class="hm-ai-group"><button type="button" class="btn btn-primary btn-sm" data-check-compare
+                hx-get="/compare?idea={{ readme_idea | urlencode }}&amp;ids={{ close_ids }}&amp;place=check" hx-swap="none"
+                hx-indicator="#check-compare-ask" hx-disabled-elt="this">Compare these {{ closest | length }} with Gemini</button>{{ parts.info("check-compare", "comparing with Gemini") }}</div>
+            </div>
+            {% endif %}
+          </div>
           {% if closest %}
           <p class="hm-small">By the meaning of the README, as the search finds an idea. Close in meaning is not a copy.</p>
-          {% set close_ids = closest | map(attribute="0.hit.project_id") | join(",") %}
-          <div class="compare-ask" id="check-compare-ask">
-            <div class="hm-ai-group"><button type="button" class="btn btn-primary btn-sm" data-check-compare
-              hx-get="/compare?idea={{ readme_idea | urlencode }}&amp;ids={{ close_ids }}&amp;place=check" hx-swap="none"
-              hx-indicator="#check-compare-ask" hx-disabled-elt="this">Compare with Gemini</button>{{ parts.info("check-compare", "comparing with Gemini") }}</div>
-          </div>
           <ol class="hm-close-list">
           {% for card, summary, _, _ in closest %}
             <li>

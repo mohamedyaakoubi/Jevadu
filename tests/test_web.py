@@ -535,8 +535,8 @@ def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) ->
     part = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
     before = len(fake.requests)
     asked = re.search(r'hx-get="(/compare\?idea=[^"]+&amp;place=check)"', part.text)
-    assert asked is not None and "Compare with Gemini" in part.text
     places = re.findall(r'id="check-compare-(\d+)"', part.text)
+    assert asked is not None and f"Compare these {len(places)} with Gemini</button>" in part.text
     assert places and model_calls(fake, before) == 0  # nothing is asked before the button
     fake.answer_text = compare_answer(*[(n, ["what_it_does"]) for n in range(1, len(places) + 1)])
     done = client.get(asked.group(1).replace("&amp;", "&"), headers=HX)
