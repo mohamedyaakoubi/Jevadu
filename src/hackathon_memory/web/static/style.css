@@ -344,6 +344,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .table-wrap { overflow-x: auto; margin: 0.75rem 0 1rem; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius, 4px); }
 .table-wrap table { width: 100%; border-collapse: collapse; }
 .table-wrap th, .table-wrap td { padding: 0.625rem 0.875rem; text-align: left; vertical-align: top; }
+.table-wrap thead th:first-child { width: 34%; } /* the columns of numbers get the rest */
 .table-wrap thead th { font-size: 0.8125rem; font-weight: 600; white-space: nowrap; background: var(--tblr-bg-surface-secondary); }
 .table-wrap tbody td { border-top: 1px solid var(--tblr-border-color); }
 .about-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
