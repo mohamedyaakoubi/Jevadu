@@ -282,6 +282,13 @@ def test_the_card_of_a_project_names_the_projects_linked_to_it(site) -> None:  #
     assert "Linked projects" in shared.text and f'hx-get="/project/{pebble}/panel"' in shared.text
 
 
+def test_the_live_demo_has_a_button_at_the_head_of_the_card(site) -> None:  # noqa: ANN001
+    client, _, ids, _ = site
+    part = client.get(f"/project/{ids['Pebble Pay']}/panel")
+    head = part.text.split('class="project-cols"', 1)[0]
+    assert 'href="https://demo.example.test/pebble-pay"' in head and "Its live demo" in head
+
+
 def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
     client, _, ids, _ = site
     page = client.get(f"/project/{ids['Pebble Pay']}")
