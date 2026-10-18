@@ -290,7 +290,7 @@
       if (checkSaved !== null && target.querySelector(".project[data-project]")) {
         var back = document.createElement("p");
         back.className = "viewer-back";
-        back.innerHTML = '<button type="button" class="btn btn-sm btn-ghost-secondary" data-back-to-check>&lsaquo; Back to the check</button>';
+        back.innerHTML = '<button type="button" class="btn btn-sm btn-secondary" data-back-to-check>&lsaquo; Back to the check</button>';
         target.insertBefore(back, target.firstChild);
         document.querySelectorAll("[data-viewer-step]").forEach(function (button) { button.hidden = true; });
       }
