@@ -81,7 +81,7 @@
           <ul class="hm-link-list">
           {% for one, member in seen_before %}
             <li><a href="/project/{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML" data-open-viewer="{{ member.project_id }}" data-from-check>{{ member.name }}</a> <span class="text-secondary">{{ member.event }}</span>
-              <span class="hm-small d-block">{% if one.by == "repository" %}The same repository.{% else %}The same Hedera ID, {{ one.by.split(":", 1)[1] }} on the {{ "test" if one.by.startswith("testnet") else "main" if one.by.startswith("mainnet") else "preview" }} network, found by the ledger for both.{% endif %}</span></li>
+              <span class="hm-small d-block">{{ parts.link_reason(one.by) }}</span></li>
           {% endfor %}
           </ul>
           <p class="hm-small">A link says only that: a team may have built on its earlier work, or used the same account again. People judge.</p>

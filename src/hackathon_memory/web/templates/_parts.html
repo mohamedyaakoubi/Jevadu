@@ -45,6 +45,11 @@
 </li>
 {%- endmacro %}
 
+{# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
+{% macro link_reason(by) -%}
+{% if by == "repository" %}The same repository.{% else %}The same Hedera ID, {{ by.split(":", 1)[1] }} on the {{ "test" if by.startswith("testnet") else "main" if by.startswith("mainnet") else "preview" }} network, found by the ledger for both.{% endif %}
+{%- endmacro %}
+
 {% macro pager(page, pages, query, label="Pages of the list") -%}
 {% if pages > 1 %}
 {% set base = "/?" ~ (query ~ "&" if query else "") %}
