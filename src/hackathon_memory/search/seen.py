@@ -2,7 +2,9 @@
 
 Two projects are the same when they share a repository, or a Hedera ID on the same network that
 the ledger found. An ID that more than three projects with other code name is a shared service,
-such as a popular token, and joins nothing. A returning name is only a hint and joins nothing.
+such as a popular token, and joins nothing. So is an ID that two projects with other code name at
+one event: teams of one hackathon that use one ID most likely use a service, such as a public
+payment address, and are not one team. A returning name is only a hint and joins nothing.
 Exact matching, with no AI.
 """
 
@@ -24,9 +26,10 @@ _FOUND = (
     "JOIN id_checks c ON c.hedera_id = h.id AND c.status = ANY(%s)"
 )
 # Every (project, network:ID) pair that a page or a README names, found or not, on each network
-# it was asked on; an ID never asked counts on both networks. With the repository of the project.
+# it was asked on; an ID never asked counts on both networks. With the repository and the event of
+# the project.
 _NAMED = (
-    "SELECT DISTINCT h.project_id, n.network || ':' || h.entity_id, p.repository_id "
+    "SELECT DISTINCT h.project_id, n.network || ':' || h.entity_id, p.repository_id, p.event_id "
     "FROM hedera_ids h JOIN projects p ON p.id = h.project_id "
     "LEFT JOIN id_checks c ON c.hedera_id = h.id "
     "CROSS JOIN LATERAL (SELECT unnest(CASE WHEN c.network IS NULL "
@@ -41,14 +44,19 @@ class Member:
     repository_id: int | None
 
 
-def shared_services(named: Iterable[tuple[str, int]]) -> set[str]:
+def shared_services(named: Iterable[tuple[str, int, object]]) -> set[str]:
     """The network:IDs that are shared services, which join nothing: those that more than
-    SHARED_AFTER codes name. `named` holds (network:ID, code) pairs; the code of a project is its
-    repository, or the project itself when it has none."""
+    SHARED_AFTER codes name in all, and those that two codes or more name at one event. On 18
+    October 2026 three teams of one event, each with its own code, named one account of the main
+    network, and the old rule made them one group. `named` holds (network:ID, code, event)
+    triples; the code of a project is its repository, or the project itself when it has none."""
     codes: dict[str, set[int]] = defaultdict(set)
-    for key, code in named:
+    at_event: dict[tuple[str, object], set[int]] = defaultdict(set)
+    for key, code, event in named:
         codes[key].add(code)
-    return {key for key, found in codes.items() if len(found) > SHARED_AFTER}
+        at_event[(key, event)].add(code)
+    shared = {key for key, found in codes.items() if len(found) > SHARED_AFTER}
+    return shared | {key for (key, _), found in at_event.items() if len(found) > 1}
 
 
 def groups(
@@ -63,7 +71,7 @@ def groups(
     found = {member.project_id: member for member in members}
     ids = list(ids)
     shared = shared_services(
-        (key, found[pid].repository_id or -pid)
+        (key, found[pid].repository_id or -pid, found[pid].event)
         for pid, key in (ids if named is None else named)
         if pid in found
     )
@@ -107,7 +115,7 @@ def came_back(conninfo: str) -> list[list[int]]:
                                 "JOIN events e ON e.id = p.event_id").fetchall()]  # fmt: skip
         ids = conn.execute(_FOUND, (list(CONFIRMED),)).fetchall()
         # Every project that names the ID counts for a shared service.
-        named = [(pid, key) for pid, key, _ in conn.execute(_NAMED).fetchall()]
+        named = [(pid, key) for pid, key, _, _ in conn.execute(_NAMED).fetchall()]
     return groups(members, ids, named)
 
 
@@ -136,11 +144,12 @@ def submission_matches(conninfo: str, repository: str, keys: Sequence[str]) -> M
                              (list(CONFIRMED), entity_ids)).fetchall()  # fmt: skip
         named = conn.execute(_NAMED + " WHERE h.entity_id = ANY(%s)", (entity_ids,)).fetchall()
     other_code: set[str] = set()
-    for _, key, repository_id in named:
+    for _, key, repository_id, _ in named:
         if own_code is None or repository_id != own_code:
             other_code.add(key.split(":", 1)[1])
-    users = [(key, repository_id or -pid) for pid, key, repository_id in named]
-    users += [(key, own_code or 0) for key in keys]  # the submission; 0 is no project's number
+    users = [(key, repository_id or -pid, event) for pid, key, repository_id, event in named]
+    # The submission, with no event of the collection; 0 is no project's number.
+    users += [(key, own_code or 0, None) for key in keys]
     shared = shared_services(users) & set(keys)
     same_id: dict[str, list[int]] = defaultdict(list)
     for pid, key in sorted(found):

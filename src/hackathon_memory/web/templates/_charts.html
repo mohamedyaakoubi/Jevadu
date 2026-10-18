@@ -30,7 +30,7 @@
   <div class="card-body">
     <h3 class="hm-chart-title" id="chart-linked">Linked across events</h3>
     {% if came_back %}
-    <p class="hm-chart-note">These projects of the list share the same code repository or the same Hedera ID with a project of another event. A link says only that: a team may have built on its earlier work, or used the same account again. An ID that more than three projects with other code name, such as a common test account, links nothing, and a name alone links nothing.</p>
+    <p class="hm-chart-note">These projects of the list share the same code repository or the same Hedera ID with a project of another event. A link says only that: a team may have built on its earlier work, or used the same account again. An ID that many teams name, such as a common test account, links nothing: more than three teams in all, or two at one hackathon. A name alone links nothing.</p>
     <ul class="hm-linked">
     {% for group in came_back %}
       <li>{% for member in group %}<a href="/?open={{ member.project_id }}" data-open-viewer="{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML">{{ member.name }}</a> <span class="text-secondary">{{ member.event }}</span>{% if not loop.last %}<span aria-hidden="true"> &rarr; </span>{% endif %}{% endfor %}</li>
