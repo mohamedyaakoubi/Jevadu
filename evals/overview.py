@@ -7,7 +7,10 @@ the ledger confirms, and by theme (only the projects whose card keeps a category
 all the projects of the event and for those that took a Hedera prize. Also how many projects are
 linked across events: the same repository, or the same Hedera ID that is not a shared service
 (design 8.4, search/seen.py). The charts of the website count in the same way
-(search/counts.py), for the list on the screen.
+(search/counts.py), for the list on the screen. Also the cards of the model and the version of
+the website: how many there are, how many quotes the model gave, how many of them were found word
+for word in their page, and how many fields were dropped for a quote that was not found (design
+6.3).
 
 It writes evals/results/<UTC time>-overview.json, in numbers only: an event is named by its site
 and its short name in the address, never by a text of a page. The life of a project depends on
@@ -24,6 +27,7 @@ from pathlib import Path
 
 import psycopg
 
+from hackathon_memory.db.cards import CardStore
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.search import counts as counting
 from hackathon_memory.search import filters, seen
@@ -65,6 +69,7 @@ def counts(conninfo: str, *, model: str, version: str, now: datetime) -> dict:
         "projects": len(rows),
         "events": events,
         "came_back": seen.counted(seen.came_back(conninfo)),
+        "cards": CardStore(conninfo).counts(model, version),
     }
 
 
