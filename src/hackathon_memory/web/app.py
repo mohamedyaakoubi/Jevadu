@@ -490,6 +490,7 @@ def create_app(
                  "with_category": every.with_category, "notes": notes}  # fmt: skip
         try:
             panel_card = card_of(conninfo, open_id) if open_id else None
+            shown["panel_linked"] = linked_to(conninfo, open_id) if panel_card else []
             if not idea:
                 total = len(only) if only is not None else every.projects
                 if view == CHARTS:

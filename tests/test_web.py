@@ -278,6 +278,8 @@ def test_the_card_of_a_project_names_the_projects_linked_to_it(site) -> None:  #
     assert f"/project/{fern}" not in box
     page = client.get(f"/project/{cedar}")  # the page of its own names the link too
     assert "Linked projects" in page.text and f'hx-get="/project/{pebble}/panel"' in page.text
+    shared = client.get("/", params={"open": str(cedar)})  # opened from a link that was shared
+    assert "Linked projects" in shared.text and f'hx-get="/project/{pebble}/panel"' in shared.text
 
 
 def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
