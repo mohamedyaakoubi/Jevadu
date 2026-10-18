@@ -523,6 +523,26 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert len(client.github_site.seen) == 3  # GitHub was not asked again
 
 
+def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) -> None:  # noqa: ANN001
+    """Only the named button calls Gemini; its answers fill the places of the check, which have
+    their own ids, and the button gives way to a line that says who wrote them."""
+    client, fake, _, database = site
+    event = checkable(database)
+    part = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    before = len(fake.requests)
+    asked = re.search(r'hx-get="(/compare\?idea=[^"]+&amp;place=check)"', part.text)
+    assert asked is not None and "Compare with Gemini" in part.text
+    places = re.findall(r'id="check-compare-(\d+)"', part.text)
+    assert places and model_calls(fake, before) == 0  # nothing is asked before the button
+    fake.answer_text = compare_answer(*[(n, ["what_it_does"]) for n in range(1, len(places) + 1)])
+    done = client.get(asked.group(1).replace("&amp;", "&"), headers=HX)
+    assert done.status_code == 200 and model_calls(fake, before) == 1
+    assert all(f'id="check-compare-{pid}" hx-swap-oob="true"' in done.text for pid in places)
+    assert "Same 1." in done.text and "Compared by Gemini with the README" in done.text
+    again = client.get(asked.group(1).replace("&amp;", "&"), headers=HX)
+    assert "Same 1." in again.text and model_calls(fake, before) == 1  # kept for one day
+
+
 def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -> None:  # noqa: ANN001
     client, _, _, database = site
     event = checkable(database)
@@ -562,14 +582,18 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
 
 @pytest.mark.browser
 def test_a_project_of_a_check_opens_over_it_and_the_check_comes_back(site, chromium) -> None:  # noqa: ANN001
-    client, _, _, database = site
+    client, fake, _, database = site
     event = checkable(database)
+    fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["what_it_does"]))
     page = served(chromium, client, reduced_motion="reduce")
     page.goto("http://site.test/")
     page.fill("#check-repo", "github.com/sample-org/pebble-pay")
     page.select_option("#check-event", event)
     page.locator("#check button[type=submit]").click()
     page.wait_for_selector("#viewer[open] .check-result")
+    page.locator("[data-check-compare]").click()  # Gemini, on its named button only
+    page.wait_for_selector(".check-result .hm-compare-text")
+    assert "Compared by Gemini with the README" in page.locator("#check-compare-ask").inner_text()
     page.locator(".check-result .hm-close-name a").first.click()
     page.wait_for_selector("#viewer[open] .project[data-project]")
     assert page.locator("[data-back-to-check]").is_visible()

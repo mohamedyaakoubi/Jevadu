@@ -1,6 +1,7 @@
 {# The comparison of each project with the idea (design 8.3). In the list, each part replaces the
    waiting shape of its card, by its id (an out-of-band swap of htmx); in the window of one project,
-   one part replaces the button that asked for it. #}
+   one part replaces the button that asked for it. In the check of a submission, the README stands
+   for the idea, and the places have their own ids, so a project shown twice is filled once. #}
 {% if one_place %}
 {% set pid = asked_ids[0] if asked_ids else none %}
 {% set one = found.get(pid) if pid is not none else none %}
@@ -12,10 +13,13 @@
 {% else %}
 {% for project_id in asked_ids %}
 {% set one = found.get(project_id) %}
-<div class="hm-compare compare" id="compare-{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
+<div class="hm-compare compare" id="{{ prefix }}{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
 {% if one %}{% include "_compare_one.html" %}
-{% elif failed %}<p class="text-secondary">The comparison with your idea could not be written just now. Everything else on this page is complete.</p>
+{% elif failed %}<p class="text-secondary">The comparison {{ "with this submission" if check_place else "with your idea" }} could not be written just now. Everything else on this page is complete.</p>
 {% else %}<p class="text-secondary">No comparison was written for this project.</p>{% endif %}
 </div>
 {% endfor %}
+{% if check_place %}
+<div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">{% if not failed %}<p class="hm-small">Compared by Gemini with the README of this submission. Not a judgment of the projects.</p>{% endif %}</div>
+{% endif %}
 {% endif %}

@@ -596,6 +596,7 @@ def create_app(
         found = result.code is not None and result.code.status == CODE_FOUND
         view = register_view(repository, days) if found and days is not None else None
         return render(request, name, result=result, closest=closest, closest_note=note,
+                      readme_idea=submission.readme_words(result.readme_text),
                       seen_before=list(zip(result.seen, members, strict=True)), register=view,
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
 
@@ -681,15 +682,20 @@ def create_app(
                       kept_comparison=kept)  # fmt: skip
 
     @app.get("/compare", response_class=HTMLResponse)
-    def comparison(request: Request, idea: str = "", ids: str = "", one: str = "") -> HTMLResponse:
-        """What is the same and what differs, for the first results of an idea (design 8.3), or
-        for one project in its window (`one`): kept from the last day, or asked now and kept."""
+    def comparison(
+        request: Request, idea: str = "", ids: str = "", one: str = "", place: str = ""
+    ) -> HTMLResponse:
+        """What is the same and what differs, for the first results of an idea (design 8.3), for
+        one project in its window (`one`), or for the closest past projects of a checked
+        submission, whose README stands for the idea (`place=check`): kept from the last day, or
+        asked now and kept."""
         idea = " ".join(idea.split())[:LONGEST_IDEA]
         try:
             project_ids = [int(part) for part in ids.split(",") if part.strip()][:PAGE_SIZE]
         except ValueError:
             project_ids = []
-        place = {"one_place": one == "1"}
+        place = {"one_place": one == "1", "check_place": place == "check",
+                 "prefix": "check-compare-" if place == "check" else "compare-"}  # fmt: skip
         if not idea or not project_ids:
             return render(request, "_compare.html", 400, found={}, failed=True, asked_ids=[],
                           **place)  # fmt: skip

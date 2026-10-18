@@ -264,6 +264,13 @@
       var space = $("workspace");
       if (space) space.classList.add("asking-ai");
     }
+    if (elt && elt.hasAttribute("data-check-compare")) {
+      document.querySelectorAll("[id^='check-compare-'].compare").forEach(function (place) {
+        place.classList.add("waiting");
+        place.setAttribute("aria-busy", "true");
+        place.textContent = "Gemini is comparing this project with the README.";
+      });
+    }
     if (elt && elt.id === "compare-loader") {
       window.setTimeout(function () {
         document.querySelectorAll(".compare.waiting").forEach(function (place) {
@@ -363,7 +370,7 @@
     var elt = event.detail.elt;
     var status = event.detail.xhr.status;
     var shown = elt && (elt.id === "compare-loader" || elt.id === "check" || elt.id === "register-form" ||
-      elt.closest(".compare-ask"));
+      elt.hasAttribute("data-check-compare") || elt.closest(".compare-ask"));
     if (shown && (status === 503 || status === 400)) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;
