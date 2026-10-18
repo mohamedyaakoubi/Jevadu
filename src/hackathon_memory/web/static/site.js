@@ -96,6 +96,17 @@
   // ---------------------------------------------------------------- the charts
   // Each canvas carries its numbers; Chart.js draws them as horizontal bars, all the projects
   // and those with a Hedera prize. The same numbers stand in a list for screen readers.
+  // Chart.js gives the labels of a horizontal chart at most half of its width; a longer label
+  // is cut at the left edge (seen on 18 October 2026), so it breaks into lines here.
+  function lines(label) {
+    var words = String(label).split(" "), out = [], line = "";
+    words.forEach(function (word) {
+      if (line && (line + " " + word).length > 22) { out.push(line); line = word; }
+      else line = line ? line + " " + word : word;
+    });
+    if (line) out.push(line);
+    return out.length > 1 ? out : out[0];
+  }
   function drawCharts(root) {
     if (!window.Chart) return;
     var style = window.getComputedStyle(document.body);
@@ -120,7 +131,7 @@
         options: {
           indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false,
           plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } },
-          scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { autoSkip: false } } }
+          scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { autoSkip: false, callback: function (value) { return lines(this.getLabelForValue(value)); } } } }
         }
       });
     });

@@ -201,7 +201,8 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 /* ------------------------------------------------------------------ the charts */
 
 .hm-charts-note { color: var(--tblr-secondary); font-size: 0.875rem; margin: 0 0 1rem; }
-.hm-charts { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+.hm-charts { display: flex; flex-wrap: wrap; gap: 1rem; }
+.hm-charts > .hm-chart { flex: 1 1 26rem; min-width: 0; }
 .hm-chart { margin: 0; }
 .hm-chart.hm-wide { margin-top: 1rem; }
 .hm-charts-note + .hm-chart.hm-wide { margin: 0.5rem 0 1rem; } /* the linked projects, first */
