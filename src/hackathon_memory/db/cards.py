@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Collection
 from dataclasses import dataclass
+from datetime import datetime
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -75,16 +76,25 @@ class CardStore:
             ).fetchall()
         return dict(rows)
 
-    def save(self, card: CardInput, result: CardResult, checked: CheckedCard) -> None:
-        """Keep the card, in place of an older one of the same model and version."""
+    def save(
+        self,
+        card: CardInput,
+        result: CardResult,
+        checked: CheckedCard,
+        *,
+        made_at: datetime | None = None,
+    ) -> None:
+        """Keep the card, in place of an older one of the same model and version. `made_at` is
+        the time of a card put back from a file (read/restore.py); a new card is made now."""
         usage = result.usage
         cost = result.cost_usd
         with psycopg.connect(self._conninfo) as conn:
             conn.execute(
                 "INSERT INTO cards (project_id, model, instructions_version, thinking_level, "
                 "input_sha256, fields, answer, quotes_given, quotes_found, fields_dropped, "
-                "attempts, input_tokens, output_tokens, thinking_tokens, cost_usd) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+                "attempts, input_tokens, output_tokens, thinking_tokens, cost_usd, made_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                "coalesce(%s, now())) "
                 "ON CONFLICT (project_id, model, instructions_version) DO UPDATE SET "
                 "thinking_level = EXCLUDED.thinking_level, input_sha256 = EXCLUDED.input_sha256, "
                 "fields = EXCLUDED.fields, answer = EXCLUDED.answer, "
@@ -92,7 +102,7 @@ class CardStore:
                 "fields_dropped = EXCLUDED.fields_dropped, attempts = EXCLUDED.attempts, "
                 "input_tokens = EXCLUDED.input_tokens, output_tokens = EXCLUDED.output_tokens, "
                 "thinking_tokens = EXCLUDED.thinking_tokens, cost_usd = EXCLUDED.cost_usd, "
-                "made_at = now()",
+                "made_at = EXCLUDED.made_at",
                 (
                     card.project_id,
                     result.model,
@@ -109,6 +119,7 @@ class CardStore:
                     usage.output_tokens,
                     usage.thought_tokens,
                     cost,
+                    made_at,
                 ),
             )
 

@@ -17,6 +17,9 @@
     python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json
                                                            the cards of the LLM for the pages
                                                            of a set (it costs money)
+    python -m hackathon_memory.pipeline cards --export FILE   write every card to a file
+    python -m hackathon_memory.pipeline cards --restore FILE  put the cards of a file back, for a
+                                                           database built again (no model)
 
 "parse" sends no request: it works on the pages that are saved, and on the winner entries that a
 person copied by hand into data/by-hand (design 4.6). It also writes the last day of
@@ -67,6 +70,7 @@ from hackathon_memory.llm.client import GoogleSetupError
 from hackathon_memory.parse import event_ends, event_years
 from hackathon_memory.pipeline import check_ids, code, embed, parse_pages, readmes
 from hackathon_memory.read import cards as card_step
+from hackathon_memory.read import restore
 from hackathon_memory.read.sets import SetError, pages_of
 from hackathon_memory.settings import Settings, SettingsError
 
@@ -111,6 +115,8 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--no-requests", action="store_true")
     parser.add_argument("--wait", action="store_true")
     parser.add_argument("--set", dest="set_file")
+    parser.add_argument("--export", dest="export_file")
+    parser.add_argument("--restore", dest="restore_file")
     arguments = parser.parse_args(argv)
     every = arguments.step == ALL  # the options of every step go with it
     is_parse = every or arguments.step == parse_pages.STEP
@@ -118,8 +124,16 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     is_readmes = every or arguments.step in (readmes.STEP, code.STEP)  # the steps of GitHub
     is_embed = every or arguments.step == embed.STEP
     is_cards = arguments.step == card_step.STEP
-    if is_cards != (arguments.set_file is not None):
-        raise ValueError("cards needs --set, the file of a set of pages, and --set goes with it")
+    sources = [arguments.set_file, arguments.export_file, arguments.restore_file]
+    if is_cards != (sum(one is not None for one in sources) == 1) or (
+        not is_cards and any(one is not None for one in sources)
+    ):
+        raise ValueError(
+            "cards needs --set (the file of a set of pages), or --export or --restore (a file "
+            "of cards), only one of them, and these go with cards only"
+        )
+    if arguments.limit is not None and (arguments.export_file or arguments.restore_file):
+        raise ValueError("--limit goes with --set, not with --export or --restore")
     limited = is_parse or is_embed or is_cards
     if arguments.limit is not None and (not limited or arguments.limit < 1):
         raise ValueError("--limit goes with parse, embed or cards, and must be 1 or more")
@@ -275,6 +289,13 @@ def _run_step(
             code.read_code(
                 RepositoryStore(conninfo), RawStore(github.raw_dir(settings)), run, fetch=fetch
             )
+        elif step == card_step.STEP and arguments.export_file:
+            run.counts["cards_written"] = restore.export_cards(
+                conninfo, Path(arguments.export_file)
+            )
+        elif step == card_step.STEP and arguments.restore_file:
+            saved = restore.read_saved(Path(arguments.restore_file))
+            restore.restore_cards(CardStore(conninfo), saved, run)
         elif step == card_step.STEP:
             pages = pages_of(Path(arguments.set_file))  # a wrong set stops before Google
             google = services.google
@@ -323,6 +344,10 @@ def _run_step(
         lines += _problem_lines(run, "Stopped or not done, and why:")
     elif step == embed.STEP:
         lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
+    elif step == card_step.STEP and arguments.export_file:
+        lines = [f"Cards written to {arguments.export_file}: {run.counts['cards_written']}."]
+    elif step == card_step.STEP and arguments.restore_file:
+        lines = restore.restore_lines(run) + _problem_lines(run, "Not put back, and why:")
     elif step == card_step.STEP:
         lines = card_step.cards_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
     else:

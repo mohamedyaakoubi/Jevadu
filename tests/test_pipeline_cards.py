@@ -113,3 +113,25 @@ def test_the_command_needs_a_set_and_makes_its_cards(
     assert "a street vendor" not in out.lower()  # numbers only, never the text of a page
     assert pipeline_main(["cards", "--set", str(tmp_path / "none.json")], settings) == 1
     assert "cannot be read as a set" in capsys.readouterr().out
+
+
+def test_the_command_writes_the_cards_to_a_file_and_puts_them_back(
+    database: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """For a database built again: the cards come back from a file, and no model is called."""
+    settings = Settings(_env_file=None, database_url=database)
+    client, fake, _ = google()
+    fake.answer_text = ANSWER
+    path = write_set(tmp_path, [PAGE.format("pebble-pay")])
+    assert pipeline_main(["cards", "--set", str(path)], settings, google=client) == 0
+    saved = tmp_path / "cards.jsonl"
+    assert pipeline_main(["cards", "--export", str(saved)], settings) == 0
+    assert "Cards written to" in capsys.readouterr().out
+    with psycopg.connect(database) as conn:
+        conn.execute("DELETE FROM cards")
+    before = len(fake.requests)
+    assert pipeline_main(["cards", "--restore", str(saved)], settings, google=client) == 0
+    out = capsys.readouterr().out
+    assert "Put back: 1, with 3 of 3 quotes found again" in out
+    assert len(fake.requests) == before  # no model was called
+    assert pipeline_main(["cards", "--set", str(path), "--restore", str(saved)], settings) == 2
