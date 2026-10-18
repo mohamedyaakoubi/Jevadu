@@ -1,0 +1,881 @@
+{
+ "test": "compare-inputs-grades",
+ "made_on": "2026-10-18",
+ "grades_the_answers_of": "evals/results/20261018T044605Z-compare-inputs.json",
+ "graded_by": "the second reader, on the maintainer's word of 18 October 2026",
+ "method": "Both answers of each pair were read. Where they state different facts about the project, the project's page was read for that fact. Elsewhere only the more specific answer is judged.",
+ "pairs": 90,
+ "pairs_graded": 80,
+ "numbers": {
+  "full_text_more_specific": 30,
+  "both_alike": 50,
+  "card_more_specific": 0,
+  "card_answer_wrong_on_a_fact": 3,
+  "card_answer_missed_the_main_likeness": 3,
+  "full_text_answer_wrong_on_a_fact": 0,
+  "pairs_checked_on_the_page": 8,
+  "pairs_without_a_full_text_answer": 10
+ },
+ "verdicts": [
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/decomp-re471",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": true,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/mach402-w6y5k",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/agencia-7ggvd",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/kleeto-2pv4f",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/bank-of-agent-cf0mh",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/inference-exchange-6awz7",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/trustedswarm-fk2q4",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/dagent-b5rc7",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": true,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/toll-nvhsv",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 3,
+   "page": "https://ethglobal.com/showcase/alt-agent-bt6pb",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/viral-games-b65bf",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/arxiv-predict-uh7os",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/chimera-y13o4",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/betai-zpy9e",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/market-minds-ok0qp",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/horizon-degee",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/nyaya-oc6yw",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/grail-market-53egz",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/dynamica-nvc5w",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": true,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 9,
+   "page": "https://ethglobal.com/showcase/stakeyourtake-n95kr",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/safesign-pfalzai-a7qnn",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": true,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/presign-ckd8t",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://hol.org/blog/hedera-ai-hackathon-winners#hederapaybot",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/hauth-ngzy6",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/preflight-agents-1s5hv",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/speculum-w1w4c",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/chainguard-lite-ie2ms",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/aegis-pay-8emw4",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/repayd-qad62",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 15,
+   "page": "https://ethglobal.com/showcase/sentinelai-qk7ee",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/mithra-c5q9f",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://hol.org/blog/hedera-ai-hackathon-winners#novix",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/inference-exchange-6awz7",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/agent-bazaar-g7jpr",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/wayfare-z05zy",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/agentmarket-9cn1t",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/agentalpha-okdr9",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/molt-expert-mto3a",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/agentbazaar-u6rnp",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 17,
+   "page": "https://ethglobal.com/showcase/turnstile-ovks1",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/agentindex-cuxs7",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#dossier",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/zkred-agent-id-4aesd",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/siren-fhz7k",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/agentranker-0mo6w",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/agentbook-eth-qwix7",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/agentguard-ni4os",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/vouch-gade2",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/assay-qiz12",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 18,
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/meterx402-8i147",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/agencia-7ggvd",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/agentgate-scs65",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/turnstile-ovks1",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/faregate-w3jpz",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/foundereum-i8go2",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/onchainrouter-8r4jm",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/prompt2api-wrkwx",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/vendingagent-zriwp",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 23,
+   "page": "https://ethglobal.com/showcase/intentgraph-jtw1k",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/jurybox-a0dkt",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/modus-ops-ivawj",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/nyaya-oc6yw",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/justice4sosigdogs-78d76",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/arbiter402-xp6um",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": true,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/judgebuddy-nje6q",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#gathoora",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/verdikt-5w7hw",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/molt-expert-mto3a",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 24,
+   "page": "https://ethglobal.com/showcase/vendorrank-ai-hm5rq",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/reveal-k4mq7",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/towns-whisper-tbuhk",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/opendnd-4a8ce",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://hedera-hackathon.hashgraph.swiss/#cryptonia-city",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/whisper-v50ju",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/pastel-fye2n",
+   "graded": true,
+   "verdict": "full_more_specific",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": true,
+   "full_text_wrong": false,
+   "checked_on_the_page": true
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/mithra-c5q9f",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/planbound-wqxy5",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/votive-p78qo",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 25,
+   "page": "https://ethglobal.com/showcase/warrant-protocol-9911a",
+   "graded": true,
+   "verdict": "same",
+   "card_wrong": false,
+   "card_missed_the_main_likeness": false,
+   "full_text_wrong": false,
+   "checked_on_the_page": false
+  },
+  {
+   "idea": 29,
+   "page": "https://ethglobal.com/showcase/proxyproof402-0cpni",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://hedera.com/blog/these-are-the-winners-of-the-2024-hellofuture-hackathon#verifai",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://ethglobal.com/showcase/tollist-qekan",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://ethglobal.com/showcase/trulyopenrouter-xqs8n",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://ethglobal.com/showcase/polydata-brokers-v01bi",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://ethglobal.com/showcase/nilhak-msba7",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-apex-hackathon#aivy",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://ethglobal.com/showcase/turnstile-ovks1",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://ethglobal.com/showcase/mithra-c5q9f",
+   "graded": false,
+   "why": "the call on the full text failed"
+  },
+  {
+   "idea": 29,
+   "page": "https://hedera.com/blog/these-are-the-winners-of-the-hello-future-ascension-hackathon#decenter-ai",
+   "graded": false,
+   "why": "the call on the full text failed"
+  }
+ ]
+}
