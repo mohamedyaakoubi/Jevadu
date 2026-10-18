@@ -245,6 +245,8 @@ Collection by a program is a proof of the idea. Real use would need the sites to
 - Running the collection again skips pages that are already saved, and pages that an earlier run read and did not keep.
 - Everything else in the system can be rebuilt from the raw pages with one command. This is also the backup.
 
+**Built again on 18 October 2026** (`evals/results/20261018T102138Z-rebuild.json`, the steps at the top of `evals/rebuild.py`). A new, empty database was built from the saved pages, the saved answers of GitHub and the hand-typed files, with the mirror node asked again and the embeddings made again; the cards came back from a file that `cards --export` wrote, since the model would not write them twice, and their quotes were checked again (`cards --restore`). Of 36 counts, 33 are the same, among them every count that the site uses. The other 3 are one outdated card of the first version of the instructions, refused because its page text changed after it was made.
+
 ### 5.4 Personal data
 
 Project pages can show team members. The tool does not store their names, emails or photos. It needs none of them. The account name inside a repository link is kept because the link needs it.
@@ -896,6 +898,8 @@ Rules for every test:
 
 - **Cases:** pages where the IDs were checked by hand on HashScan and the right answer was written down.
 - **The numbers:** how many IDs the parser found, how many it invented, and how often the proof status agrees with the hand check.
+
+**Begun on 18 October 2026.** The guideline (`evals/test3/guideline.md`) was written before any page was checked. The 50 pages (`evals/sets/test3.json`) were drawn from three groups fixed before the draw: 15 with an ID on the page, 20 with an ID in the README only, and 15 with no ID found, the last group for the IDs that the tool missed. The sheet (`python -m evals.test3.sheet`) shows each page and its README with every string shaped like an ID; the facts of the ledger are asked with plain HTTP, not with the tool's code (`evals.test3.facts`); `evals.test3.run` gives the three numbers with their ranges. Three planted IDs, which stand in no text, must be counted as missed.
 
 ### 13.5 Test 4: usability
 
