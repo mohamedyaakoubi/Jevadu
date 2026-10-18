@@ -66,7 +66,7 @@
           {% if code and code.status == "found" %}
           <p>{% if code.created_at %}Made {{ code.created_at | day }}{% endif %}{% if code.pushed_at %}, last change {{ code.pushed_at | day }}{% endif %}.{% if code.archived %} Archived: it can no longer change.{% endif %}{% if code.fork %} GitHub marks it as a fork of another repository.{% endif %}</p>
           {% endif %}
-          {% if result.version and result.version.status == "found" %}<p class="hm-small">Version checked: <span class="id">{{ result.version.sha[:12] }}</span>, the newest change of its main branch{% if result.version.made_at %}, made {{ result.version.made_at | day }}{% endif %}.</p>{% endif %}
+          {% if result.version and result.version.status == "found" %}<p class="hm-small">Version checked: <span class="id">{{ result.version.sha[:12] }}</span>, the newest change of its main branch{% if result.version.made_at %}, made {{ result.version.made_at | day }}{% endif %}; read from GitHub on {{ result.version.fetched_at[:10] | iso_day }}.</p>{% endif %}
           {% if code %}<p class="hm-small">Read from GitHub on {{ code.fetched_at[:10] | iso_day }}{% if result.readme %}; {% if result.readme.status == "found" %}its README{% if result.readme.name %} ({{ result.readme.name }}){% endif %} was read too{% elif result.readme.status == "none" %}it has no README{% else %}its README could not be read as text{% endif %}{% endif %}. Each answer of GitHub is kept, so a second check asks nothing again.</p>{% endif %}
           {% if result.life and not no_dates %}<p class="hm-small">Life: {{ result.life.status }}, {{ result.life.why }}{% if result.life.last_sign %}; last sign {{ result.life.last_sign | day }}{% endif %}.</p>{% endif %}
         </div>

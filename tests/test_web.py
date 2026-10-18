@@ -518,6 +518,8 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert model_calls(fake, before) == 0  # the closest projects need an embedding only
     assert len(client.github_site.seen) == 3  # the facts, the README and the version, once
     assert 'Version checked: <span class="id">7260ea729063</span>' in part.text
+    version = part.text.split("Version checked:")[1].split("</p>")[0]
+    assert re.search(r"; read from GitHub on \d{1,2} [A-Z][a-z]+ \d{4}\.$", version)  # its own day
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
     assert len(client.github_site.seen) == 3  # GitHub was not asked again
