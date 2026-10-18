@@ -450,7 +450,7 @@ The numbers 30 and 14 are a first choice. Test 3 (section 13.4) tells whether th
 
 ### 7.3 Facts from the code
 
-The GitHub API is asked with a read-only token. Without a token the limit is 60 requests per hour. With a token it is 5,000 per hour. Requests go one after the other, the limit headers are read, and every answer is stored so it is never asked twice.
+The GitHub API is asked with a read-only token. Without a token the limit is 60 requests per hour. With a token it is 5,000 per hour. Requests go one after the other, the limit headers are read, and every answer is stored. A repository is asked again only when a team registers it, because its line must be read in the README at that moment (9.2); GitHub's limits are far above what the tool sends (read on docs.github.com on 18 October 2026).
 
 **How GitHub is asked.** The rules of section 5.7 hold here too: the name of the tool and a contact address in every request, at least one second between two requests, a limit of requests counted on disk over all runs, and a stop switch in `.env` (`COLLECT_GITHUB`), read again before every request. GitHub's own rules, read on its documentation on 11 October 2026, are kept as well:
 
@@ -549,13 +549,17 @@ For the first results, the LLM reads the cards and the user's idea. For each pro
 
 **The card or the full text? (measured on 18 October 2026)** The comparison could read the whole text of each page instead of its card. For the 9 ideas of Test 2, both were asked (`evals/results/20261018T044605Z-compare-inputs.json`): a middle time of 7.1 seconds with the cards and 7.8 with the full texts, and 4.3 against 7.7 cents for the 9 ideas; one call on a full text failed after 342 seconds. Which one writes the more right sentences is for a person to read: the sentences stand side by side in a local page, and the cards stay until then.
 
+**Graded on 18 October 2026** (`evals/results/20261018T085521Z-compare-inputs-grades.json`). Of the 80 pairs with both answers, the full text was the more specific in 30, both were alike in 50, and the card was never the more specific. Where the two answers stated different facts, the project's page was read (8 projects): the answer from the card was wrong 3 times, for instance that a project did not charge by the five seconds when its page says it does, and it missed the main likeness 3 times; the answer from the full text was right each time. The reason: a card is a summary, so a detail that it leaves out reads as missing from the project. The comparison keeps reading the cards, by the maintainer's decision: the full text costs about 80% more, and one call on it failed after 342 seconds.
+
 **The check of a submission** (screen S3) uses the same comparison on a button: the README of the submission stands for the idea, and its closest past projects are compared with it.
 
 ### 8.4 "Seen before"
 
 Two entries are the same project when they share the same repository link, or the same Hedera ID on the same network. This is exact matching, with no AI.
 
-One trap: some IDs are services that many projects use, like a popular token. An ID that appears in more than three projects with different repositories is treated as a shared service. It is shown as such and is not used for "seen before".
+One trap: some IDs are services that many projects use, like a popular token. An ID that appears in more than three projects with different repositories, or in two projects with different repositories at one event, is treated as a shared service. It is shown as such and is not used for "seen before".
+
+**Since 18 October 2026.** The second part of the rule is new: three teams of one event, each with its own code, named one account of the main network, and the first part alone made them one group, with a fourth project. The groups of the collection went from 2 with 7 projects to 2 with 5 (`evals/results/20261018T092000Z-overview.json`). The card of a project names the projects it is linked to, and why; the charts show the projects linked across events first.
 
 A returning name is a hint, not "seen before". Two teams can pick the same name.
 
@@ -583,6 +587,10 @@ A **topic** is a public message list on Hedera. Nobody can edit or delete a mess
 
 If the same fingerprint appears again later, at any event, the tool says "seen before" and shows the first date.
 
+**Who writes (18 October 2026).** A registration is the team's own. Before the button, the page gives a line made from the link and the event, such as `hackathon-memory: 7K2F9QXD`. The team adds it to the README of its repository, and the button reads the README on GitHub again and writes only when the line is there. Only who can change the repository can add it, so a stranger cannot register a team's code, and the line says that the team agrees to the record. Judges and organisers only read. The projects of the collection are never registered: they are not the tool's to register.
+
+**A hackathon of the list (18 October 2026).** A registration names a hackathon of a list: an event of the collection, or one added by hand from its organiser's announcement. The first one added is the FSS Campus Edition of the Hedera Cross Campus Challenge 2026, whose days are not announced yet. A name or days typed by each team would differ from team to team. Days typed in serve the check only, which writes nothing.
+
 **Why a ledger and not a normal database.** Hedera's hackathons run on several websites that do not share data. A register that belongs to none of them makes sense. And nobody, including the people who run the tool, can change a date afterwards.
 
 ### 9.3 The record
@@ -608,7 +616,7 @@ If the same fingerprint appears again later, at any event, the tool says "seen b
 
 ### 9.4 What the register proves, and what it does not
 
-It proves that a fingerprint was registered through the tool at a given time. It does not prove who registered it, because in the first version the tool's account does the writing. A stronger form, where the team signs with its own account, is not in the first version.
+It proves that a fingerprint was registered through the tool at a given time, and that the README of the repository carried the team's line at that time, which only someone who could change the repository can add. It does not prove that the team took part in the hackathon: only its organiser knows that. Nor does it prove who pressed the button: in the first version the tool's account does the writing. A stronger form, where the team signs with its own account, is not in the first version.
 
 ### 9.5 The keys of the topic
 
@@ -778,11 +786,11 @@ No page is built before its row here is agreed. For each screen: who uses it, wh
 
 | # | Screen | Who | What they decide | What must be on the screen |
 |---|---|---|---|---|
-| S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. Quick results by meaning while the idea is typed, said to be quick. A button that says what the model will do, in how long and for how much, and then orders the closest and compares them. The closest projects as a grid of ten cards, each with its one-sentence description, event, proof status and life status, and after the button what is the same and what differs. Filters in one row under the box. Numbered pages. |
-| S2 | Project card | Everybody | What is this project really? | Opens over the results, on most of the screen, with the results still seen behind it; on a phone, on the whole screen. The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan. The date of each check. The previous and the next card of the list. |
-| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box beside the box of the idea: the GitHub link of a repository and, if the judge wants, its hackathon, from the list of past hackathons whose days are known or with its first and last day typed in. The tool is a memory of past hackathons, not a live view, so without a hackathon the check shows every fact with its own date and judges none, and an (i) says so. The steps while the check runs, in the window over the page. Then the proof status with the facts of each Hedera ID of the README, the life of the code, the version of the code, "seen before", and the five closest past projects by the meaning of the README; each of them opens in the same window, with a way back to the check. No model writes, except on the button "Compare with Gemini". |
-| S4 | Register | Builder | Do I want my submission on the public register? | Reached from the result of S3. What will be written, in plain words, before the button. Existing registrations with the same fingerprint. After the button: the receipt with number, time and link. |
-| S5 | Charts of a list | Organiser | What did this event produce? | A switch beside the grid shows the same list as charts: the whole collection, a search, or the filters of an event and a year. Counts by theme, by Hedera service, by proof status and by life status, for all the projects and for those with a Hedera prize; the projects of each event, with a link to its page; and the projects linked across events. A share only with 20 projects or more behind it. Counted from the tables when the page is made, with the same tally as the dated overview job (evals/overview.py). |
+| S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. Quick results by meaning while the idea is typed, said to be quick. A button that says what the model will do, in how long and for how much, and then orders the closest and compares them. The closest projects as a grid of ten cards, each with its one-sentence description, event, proof status and life status, and after the button what is the same and what differs. Filters in one row under the box. Numbered pages. Under the results of an idea, one sentence invites a builder back: "Building this? Before you submit, check your GitHub link here." |
+| S2 | Project card | Everybody | What is this project really? | Opens over the results, on most of the screen, with the results still seen behind it; on a phone, on the whole screen. The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan. The date of each check. The previous and the next card of the list. The projects it is linked to, when there are some (8.4). |
+| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box beside the box of the idea: the GitHub link of a repository and, if the judge wants, its hackathon, from the list of hackathons (the past ones whose days are known, and those added by hand) or with its first and last day typed in. The tool is a memory of past hackathons, not a live view, so without a hackathon the check shows every fact with its own date and judges none, and an (i) says so. The steps while the check runs, in the window over the page. Then the proof status with the facts of each Hedera ID of the README, the life of the code, the version of the code, "seen before", and the five closest past projects by the meaning of the README; each of them opens in the same window, with a way back to the check. No model writes, except on the button "Compare these 5 with Gemini" at the head of the closest projects. |
+| S4 | Register | Builder | Do I want my submission on the public register? | Reached from the result of S3. What will be written, in plain words, before the button. Existing registrations with the same fingerprint. Only for a hackathon of the list (9.2). Before the button, the line that the team adds to its README; at the press, the README and the newest version of the code are read again. After the button: the receipt with number, time and link. |
+| S5 | Charts of a list | Organiser | What did this event produce? | A switch beside the grid shows the same list as charts: the whole collection, a search, or the filters of an event and a year. Counts by theme, by Hedera service, by proof status and by life status, for all the projects and for those with a Hedera prize; the projects of each event, with a link to its page; and the projects linked across events, first when the list holds some, with their number. A share only with 20 projects or more behind it. Counted from the tables when the page is made, with the same tally as the dated overview job (evals/overview.py). |
 | S6 | Method and limits | Everybody | How far can I trust this tool? | A window opened from the bottom of every page: the steps of the search, the test results with their ranges, what the tool cannot do, and what exists elsewhere. |
 
 Every screen also needs three more states: while loading, when there is nothing to show, and when something failed. Each one says in plain words what happened and what to do.
