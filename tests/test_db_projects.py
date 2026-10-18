@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime
 
 import psycopg
 import pytest
@@ -389,6 +389,20 @@ def test_the_typed_year_of_an_event_is_written_and_used_when_no_date_is_known(
     with psycopg.connect(database) as conn:  # a known date wins over the typed year
         conn.execute("UPDATE events SET ends_on = '2026-03-08'")
     assert {row.year for row in filters.facts(database, model="m", version="v")} == {"2026"}
+
+
+def test_the_typed_days_of_an_event_become_its_start_and_its_end(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)
+    with psycopg.connect(database) as conn:  # an event of a list of winners: no date at all
+        conn.execute("UPDATE events SET starts_at = NULL, ends_on = NULL")
+    days = {("ethglobal.com", "sample-event"): (date(2024, 7, 22), date(2024, 8, 20)),
+            ("ethglobal.com", "none"): (date(2024, 1, 1), date(2024, 1, 2))}  # fmt: skip
+    assert store.set_event_days(days) == (1, ["ethglobal.com none"])
+    assert store.set_event_days(days)[0] == 0  # the same days again write nothing
+    with psycopg.connect(database) as conn:
+        start, end = conn.execute("SELECT starts_at, ends_on FROM events").fetchone()
+    assert start == datetime(2024, 7, 22, tzinfo=UTC) and end == date(2024, 8, 20)
 
 
 def test_an_end_before_the_start_is_refused(database: str) -> None:

@@ -27,7 +27,7 @@ from hackathon_memory.parse.ethglobal_page import (
     read_project_page,
 )
 from hackathon_memory.parse.event_ends import EventEndsError, read_event_ends
-from hackathon_memory.parse.event_years import EventYearsError, read_event_years
+from hackathon_memory.parse.event_years import EventYearsError, read_event_days, read_event_years
 from hackathon_memory.parse.hedera_posts import read_hedera_posts
 from hackathon_memory.parse.project import ProjectPage
 from hackathon_memory.parse.winner_entries import PARSER_VERSION as WINNER_PARSER
@@ -134,6 +134,9 @@ def apply_event_years(projects: ProjectStore, path: Path, run: Run) -> None:
         run.counts["event_years_written"] += written
     for event in unknown:
         run.problem(f"{path.name}: {event}", "no saved project names this event")
+    days_written, _ = projects.set_event_days(read_event_days(path))
+    if days_written:
+        run.counts["event_days_written"] += days_written
 
 
 def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) -> None:

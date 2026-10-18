@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, date
+from datetime import UTC, date, datetime, time
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -75,6 +75,32 @@ class ProjectStore:
                 "SELECT count(*) FROM events WHERE site = %s AND ends_on IS NULL", (site,)
             ).fetchone()[0]
         return done
+
+    def set_event_days(
+        self, days: Mapping[tuple[str, str], tuple[date, date]]
+    ) -> tuple[int, list[str]]:
+        """Write the typed first and last day of each event that `days` names, as its start (the
+        first day, at midnight UTC) and its end. Returns how many were written and the events
+        that no saved project names."""
+        written, unknown = 0, []
+        with psycopg.connect(self._conninfo) as conn:
+            for (site, slug), (first, last) in sorted(days.items()):
+                start = datetime.combine(first, time.min, tzinfo=UTC)
+                changed = conn.execute(
+                    "UPDATE events SET starts_at = %s, ends_on = %s WHERE site = %s AND slug = %s "
+                    "AND (starts_at, ends_on) IS DISTINCT FROM (%s, %s)",
+                    (start, last, site, slug, start, last),
+                ).rowcount
+                exists = (
+                    changed
+                    or conn.execute(
+                        "SELECT 1 FROM events WHERE site = %s AND slug = %s", (site, slug)
+                    ).fetchone()
+                )
+                if not exists:
+                    unknown.append(f"{site} {slug}")
+                written += changed
+        return written, unknown
 
     def set_event_years(self, years: Mapping[tuple[str, str], int]) -> tuple[int, list[str]]:
         """Write the typed year of each event that `years` names, by site and short name, in one

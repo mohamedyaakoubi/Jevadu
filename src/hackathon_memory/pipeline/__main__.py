@@ -165,6 +165,8 @@ def parse_lines(run: Run) -> list[str]:
         )
     if counts["event_years_written"]:
         lines.append(f"Years of events typed by hand: {counts['event_years_written']} written.")
+    if counts["event_days_written"]:
+        lines.append(f"Days of events typed by hand: {counts['event_days_written']} written.")
     return lines + _problem_lines(run, "Not used, and why:")
 
 
