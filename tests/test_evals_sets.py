@@ -7,7 +7,17 @@ from pathlib import Path
 
 import pytest
 
-from evals.sets import Candidate, SetError, draw, group_of, pages_of, thirds, write_set
+from evals.sets import (
+    Candidate,
+    Found,
+    SetError,
+    draw,
+    draw_test3,
+    group_of,
+    pages_of,
+    thirds,
+    write_set,
+)
 
 
 def candidates(per_group: int = 20) -> list[Candidate]:
@@ -67,3 +77,29 @@ def test_a_wrong_set_file_is_refused(tmp_path: Path) -> None:
     path.write_text("not json", encoding="utf-8")
     with pytest.raises(SetError, match="cannot be read"):
         pages_of(path)
+
+
+def found(per_group: int = 25) -> list[Found]:
+    pages = []
+    for on_page, in_readme in ((True, True), (False, True), (False, False)):
+        for n in range(per_group):
+            page = f"https://example.test/{on_page}-{in_readme}-{n}"
+            pages.append(Found(page, on_page, in_readme, "2026-10-10T19:00:00Z", "a" * 64))
+    return pages
+
+
+def test_test3_takes_fifteen_twenty_and_fifteen_pages_by_where_the_ids_stand(
+    tmp_path: Path,
+) -> None:
+    cases = draw_test3(found())
+    shares = {
+        group: sum(c["group"] == group for c in cases) for group in {c["group"] for c in cases}
+    }
+    assert shares == {"an id on the page": 15, "an id in the README only": 20, "no id found": 15}
+    assert draw_test3(list(reversed(found()))) == cases  # the same seed, the same draw
+    path = tmp_path / "test3.json"
+    write_set(path, "test3", cases, groups="where the ids stand", seed=7)
+    record = json.loads(path.read_text(encoding="utf-8"))
+    assert record["groups"] == "where the ids stand" and record["seed"] == 7
+    with pytest.raises(SetError, match="fewer than the draw needs"):
+        draw_test3(found(per_group=16))
