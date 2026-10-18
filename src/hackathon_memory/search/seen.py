@@ -107,15 +107,22 @@ def groups(
             if len({found[pid].event for pid in together}) > 1]  # fmt: skip
 
 
+def _collection(conn: psycopg.Connection) -> tuple[list[Member], list, list]:
+    """Every project with its event and its repository, the (project, network:ID) pairs that the
+    ledger found, and every pair that a page or a README names: each counts for a shared
+    service."""
+    members = [Member(pid, (site, slug), repository) for pid, site, slug, repository in
+               conn.execute("SELECT p.id, e.site, e.slug, p.repository_id FROM projects p "
+                            "JOIN events e ON e.id = p.event_id").fetchall()]  # fmt: skip
+    ids = conn.execute(_FOUND, (list(CONFIRMED),)).fetchall()
+    named = [(pid, key) for pid, key, _, _ in conn.execute(_NAMED).fetchall()]
+    return members, ids, named
+
+
 def came_back(conninfo: str) -> list[list[int]]:
     """The groups of projects that came back, read from the tables."""
     with psycopg.connect(conninfo) as conn:
-        members = [Member(pid, (site, slug), repository) for pid, site, slug, repository in
-                   conn.execute("SELECT p.id, e.site, e.slug, p.repository_id FROM projects p "
-                                "JOIN events e ON e.id = p.event_id").fetchall()]  # fmt: skip
-        ids = conn.execute(_FOUND, (list(CONFIRMED),)).fetchall()
-        # Every project that names the ID counts for a shared service.
-        named = [(pid, key) for pid, key, _, _ in conn.execute(_NAMED).fetchall()]
+        members, ids, named = _collection(conn)
     return groups(members, ids, named)
 
 
