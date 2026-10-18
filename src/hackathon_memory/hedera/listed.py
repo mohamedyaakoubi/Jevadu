@@ -23,8 +23,11 @@ class Listed:
 
 
 # The FSS Campus Edition of the Hedera Cross Campus Challenge 2026; the short name fits the
-# list of the check.
-LISTED = (Listed("listed/fss-campus-edition-2026", "FSS Campus Edition 2026"),)
+# list of the check. Its registration opened on 10 August 2026, the first day the teams may
+# build; its last day is announced when the submission opens.
+LISTED = (
+    Listed("listed/fss-campus-edition-2026", "FSS Campus Edition 2026", first=date(2026, 8, 10)),
+)
 
 
 def listed(key: str) -> Listed | None:
