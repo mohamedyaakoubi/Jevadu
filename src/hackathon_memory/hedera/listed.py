@@ -22,8 +22,9 @@ class Listed:
     last: date | None = None  # the last day they may submit
 
 
-LISTED = (Listed("listed/fss-campus-edition-2026",
-                 "Hedera Cross Campus Challenge 2026, FSS Campus Edition"),)  # fmt: skip
+# The FSS Campus Edition of the Hedera Cross Campus Challenge 2026; the short name fits the
+# list of the check.
+LISTED = (Listed("listed/fss-campus-edition-2026", "FSS Campus Edition 2026"),)
 
 
 def listed(key: str) -> Listed | None:
