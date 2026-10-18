@@ -146,4 +146,13 @@
   <li>It shows when a code was registered, not who registered it. When the same code comes back for another event, the check shows the first date.</li>
 </ul>
 {% endcall %}
+
+{% call tip("hackathon", "The hackathon of a submission (optional)") %}
+<p>This tool is a memory of past hackathons, not a live view. It cannot see the other projects of a hackathon that is running now.</p>
+<ul>
+  <li><b>No hackathon:</b> the check shows each fact with its own date, for example "a token made on 7 March 2026", and you judge.</li>
+  <li><b>A hackathon, or its first and last day:</b> the check also says whether each Hedera ID was made or used at that time, and whether the code changed after it.</li>
+</ul>
+<p>The list holds the past hackathons whose days are known. A registration on Hedera names its hackathon, so it needs one.</p>
+{% endcall %}
 </div>

@@ -181,6 +181,7 @@
   // ---------------------------------------------------------------- the window of a project
   var viewer = function () { return $("viewer"); };
   var pushed = false; // the window added an entry to the history, so "back" closes it
+  var checkSaved = null; // the result of a check, while one of its projects is open over it
   function openParam(id) {
     var url = new URL(window.location.href);
     if (id) url.searchParams.set("open", id); else url.searchParams.delete("open");
@@ -224,7 +225,19 @@
     if (pushed) { history.back(); return; } // the history's own "back" closes it, below
     dialog.close();
   }
+  // "Back to the check": the result of the check comes back as it was, with no new request.
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest("[data-back-to-check]") || checkSaved === null) return;
+    var body = $("viewer-body");
+    body.innerHTML = checkSaved;
+    checkSaved = null;
+    if (window.htmx) window.htmx.process(body);
+    steps();
+    var title = $("viewer-title");
+    if (title) title.focus({ preventScroll: true });
+  });
   function closed() {
+    checkSaved = null;
     var row = document.querySelector(".result[aria-current] .result-link");
     if (!pushed && new URL(window.location.href).searchParams.has("open")) {
       history.replaceState(history.state, "", openParam(null));
@@ -236,9 +249,11 @@
     var target = event.detail.target;
     if (target && target.id === "viewer-body") {
       var link = event.detail.elt.closest("[data-open-viewer]");
+      var fromCheck = !!(link && link.hasAttribute("data-from-check"));
+      checkSaved = fromCheck ? target.innerHTML : null; // a project of a check keeps the check
       target.innerHTML = event.detail.elt.id === "check" ? checking() : skeleton();
       showViewer();
-      if (link) {
+      if (link && !fromCheck) {
         var id = link.getAttribute("data-open-viewer");
         if (!pushed) { history.pushState({ hmViewer: id }, "", openParam(id)); pushed = true; }
         else history.replaceState({ hmViewer: id }, "", openParam(id));
@@ -265,6 +280,13 @@
       if (title) title.focus({ preventScroll: true });
       target.scrollTop = 0;
       steps();
+      if (checkSaved !== null && target.querySelector(".project[data-project]")) {
+        var back = document.createElement("p");
+        back.className = "viewer-back";
+        back.innerHTML = '<button type="button" class="btn btn-sm btn-ghost-secondary" data-back-to-check>&lsaquo; Back to the check</button>';
+        target.insertBefore(back, target.firstChild);
+        document.querySelectorAll("[data-viewer-step]").forEach(function (button) { button.hidden = true; });
+      }
     }
     if (target && target.id === "register-box") {
       var heading = $("register-title");

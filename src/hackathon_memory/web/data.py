@@ -321,6 +321,17 @@ def event_pages(conninfo: str) -> dict[str, tuple[str, str, str | None]]:
             for event_id, name, year, site, slug, page in rows}  # fmt: skip
 
 
+def dated_events(conninfo: str) -> list[tuple[str, str, datetime, datetime]]:
+    """The hackathons whose first and last day are known, the newest first: the number of each,
+    its name and its two days, for the list of the GitHub check (design 12.1, S3)."""
+    with psycopg.connect(conninfo) as conn:
+        rows = conn.execute(
+            "SELECT id, name, starts_at::date, ends_on FROM events "
+            "WHERE starts_at IS NOT NULL AND ends_on IS NOT NULL ORDER BY ends_on DESC, name"
+        ).fetchall()
+    return [(str(event_id), name, first, last) for event_id, name, first, last in rows]
+
+
 def members(conninfo: str, groups: Sequence[Sequence[int]]) -> list[list[Member]]:
     """The name and the event of each project of the groups, in the order given."""
     ids = [pid for group in groups for pid in group]

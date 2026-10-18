@@ -130,11 +130,11 @@
     <p class="hm-check-text">Paste the GitHub link of a project. A program reads its README and the dates of its code, asks the ledger about its Hedera IDs, and finds the closest past projects. No model writes anything.</p>
     <label class="form-label" for="check-repo">GitHub repository</label>
     <input class="form-control" id="check-repo" name="repo" placeholder="github.com/owner/project" autocomplete="off" spellcheck="false" required>
-    <label class="form-label" for="check-event">The event it was sent to</label>
-    <select class="form-select" id="check-event" name="event" required>
-      <option value="">Choose the event</option>
-      {% for one in check_events or [] %}<option value="{{ one.value }}">{{ one.words }}</option>{% endfor %}
-      <option value="other">Another event: type its first and last day</option>
+    <div class="hm-idea-label hm-check-label"><label class="form-label" for="check-event">The hackathon it was sent to <span class="text-secondary">(optional)</span></label>{{ parts.info("hackathon", "the hackathon of a submission") }}</div>
+    <select class="form-select" id="check-event" name="event">
+      <option value="">No hackathon: show the facts only</option>
+      {% for value, event_name, first, last in check_events or [] %}<option value="{{ value }}">{{ event_name }}, {{ first | day }} to {{ last | day }}</option>{% endfor %}
+      <option value="other">Another hackathon: type its first and last day</option>
     </select>
     <div class="hm-check-days" data-check-days hidden>
       <div><label class="form-label" for="check-start">First day</label><input class="form-control" type="date" id="check-start" name="starts"></div>

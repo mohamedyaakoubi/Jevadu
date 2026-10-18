@@ -1,8 +1,8 @@
 """Check one submission: its code, its Hedera proof, its life, and whether it was seen before
 (design 12.1, screen S3, with the rules of 7.2, 7.3, 7.4 and 8.4).
 
-A judge pastes the link of a repository and names the event it was sent to. Programs read
-everything here, and no model writes anything:
+A judge pastes the link of a repository and, if they want, the hackathon it was sent to.
+Programs read everything here, and no model writes anything:
 
 * GitHub's API gives the dates of the code and the README, through the polite client of the
   pipeline (collect/github.py): the tool's name and contact address in every request, the pause,
@@ -104,7 +104,7 @@ class SeenBefore:
 @dataclass
 class SubmissionCheck:
     repository: str
-    event: EventDays
+    event: EventDays | None  # None: no hackathon given, so the dates are shown and not judged
     code: RepositoryFacts | None = None
     readme: Readme | None = None
     ids: list[IdResult] = field(default_factory=list)
@@ -221,7 +221,7 @@ def readme_words(text: str) -> str:
 def check_submission(
     conninfo: str,
     repository: str,
-    event: EventDays,
+    event: EventDays | None,
     *,
     client: PoliteClient | None,
     store: RawStore,
@@ -230,8 +230,9 @@ def check_submission(
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     problems: list[str] | None = None,
 ) -> SubmissionCheck:
-    """Check the repository for the event. `problems` holds what the caller already knows went
-    wrong, such as a GitHub that may not be asked now."""
+    """Check the repository, for the hackathon when one is given: without one, the dates of the
+    IDs and of the code are shown and not judged. `problems` holds what the caller already knows
+    went wrong, such as a GitHub that may not be asked now."""
     check = SubmissionCheck(repository, event, problems=list(problems or []))
     check.code, check.readme, asked = read_code(client, store, repository, collector=collector)
     check.problems.extend(asked)
@@ -239,7 +240,8 @@ def check_submission(
         check.problems.append(NO_SUCH_CODE if check.code.status != "blocked" else BLOCKED_CODE)
     found = find_ids(check.readme_text)
     check.ids_left_out = max(0, len(found) - MAX_IDS)
-    judged = judge_ids(found[:MAX_IDS], event.window, mirrors, LedgerStore(conninfo), now=now)
+    window = event.window if event is not None else None
+    judged = judge_ids(found[:MAX_IDS], window, mirrors, LedgerStore(conninfo), now=now)
     keys = [f"{one.network}:{one.found.entity_id}" for one in judged
             if one.network and one.status in seen.CONFIRMED]  # fmt: skip
     known = seen.submission_matches(conninfo, repository, keys)
@@ -258,7 +260,7 @@ def check_submission(
            if one.facts is not None and one.status in seen.CONFIRMED
            and not one.named_elsewhere and one.facts.last_activity_at]  # fmt: skip
     pushed = check.code.pushed_at if check.code and check.code.status == CODE_FOUND else None
-    check.life = life_of(event_end=event.ends_on, last_push=pushed,
+    check.life = life_of(event_end=event.ends_on if event is not None else None, last_push=pushed,
                          last_ledger_activity=max(own) if own else None, now=now())  # fmt: skip
     check.seen = [SeenBefore(pid, "repository") for pid in known.same_repository]
     for key, projects in known.same_id.items():

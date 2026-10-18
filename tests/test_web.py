@@ -522,19 +522,61 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert len(client.github_site.seen) == 2  # GitHub was not asked again
 
 
-def test_a_check_without_a_repository_or_an_event_says_what_to_do(site) -> None:  # noqa: ANN001
+def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -> None:  # noqa: ANN001
     client, _, _, database = site
     event = checkable(database)
     wrong = client.get("/check", params={"repo": "my project", "event": event}, headers=HX)
     assert wrong.status_code == 400 and "This is not the link of a repository" in wrong.text
-    none = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
-    assert none.status_code == 400 and "Choose the event" in none.text
     backwards = {"repo": REPO, "event": "other", "starts": "2026-03-08", "ends": "2026-03-06"}
-    assert client.get("/check", params=backwards, headers=HX).status_code == 400
+    late = client.get("/check", params=backwards, headers=HX)
+    assert late.status_code == 400 and "Type the first and the last day" in late.text
+    unknown = client.get("/check", params={"repo": REPO, "event": "99999"}, headers=HX)
+    assert unknown.status_code == 400 and "There is no such hackathon" in unknown.text
     assert client.github_site.seen == []  # nothing was asked of GitHub
     typed = {"repo": REPO, "event": "other", "starts": "2026-03-06", "ends": "2026-03-08"}
     days = client.get("/check", params=typed, headers=HX)
     assert days.status_code == 200 and "6 March 2026 to 8 March 2026" in days.text
+
+
+def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
+    """The tool is a memory, not a live view: with no hackathon, the facts are shown with their
+    own dates and not judged, and the register asks for one (design 12.1, S3)."""
+    client, _, _, database = site
+    checkable(database)
+    start = client.get("/")
+    assert '<option value="">No hackathon: show the facts only</option>' in start.text
+    assert "ETHGlobal Sample Event, 6 March 2026 to 8 March 2026" in start.text  # a dated one
+    part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
+    assert part.status_code == 200 and "no hackathon given" in part.text
+    assert "Proof: found, dates not judged" in part.text
+    head = part.text.split("</header>")[0]  # the marks of the check itself
+    assert "Found; its dates are not judged" in part.text and "Life:" not in head
+    assert "A registration names its hackathon." in part.text
+    assert "Write it on Hedera" not in part.text
+    form = {"repo": REPO, "event": "", "starts": "", "ends": "", "account": ""}
+    refused = client.post("/register", data=form, headers=HX)
+    assert refused.status_code == 400 and "A registration names its hackathon" in refused.text
+    assert client.writes.written == []
+
+
+@pytest.mark.browser
+def test_a_project_of_a_check_opens_over_it_and_the_check_comes_back(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, database = site
+    event = checkable(database)
+    page = served(chromium, client, reduced_motion="reduce")
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] .check-result")
+    page.locator(".check-result .hm-close-name a").first.click()
+    page.wait_for_selector("#viewer[open] .project[data-project]")
+    assert page.locator("[data-back-to-check]").is_visible()
+    assert not page.locator("[data-viewer-step]").first.is_visible()  # no list to step through
+    page.locator("[data-back-to-check]").click()
+    page.wait_for_selector("#viewer[open] .check-result")
+    assert page.locator("#register-form").count() == 1  # the check as it was
+    page.context.close()
 
 
 # ----------------------------------------------------------------- the register (S4)

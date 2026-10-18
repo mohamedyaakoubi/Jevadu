@@ -219,3 +219,15 @@ def test_without_github_only_what_was_saved_is_read(database: str, tmp_path: Pat
         collector=COLLECTOR, mirrors=nodes(), now=lambda: NOW,
     )  # fmt: skip
     assert empty.code is None and empty.ids == [] and empty.proof == "no_id_given"
+
+
+@pytest.mark.integration
+def test_without_a_hackathon_the_dates_are_shown_and_not_judged(
+    database: str, tmp_path: Path
+) -> None:
+    result = run(database, tmp_path, found_code(tmp_path)[0], event=None)
+    assert result.event is None
+    assert [(one.status, one.facts.kind) for one in result.ids] == [("window_not_known", "topic")]
+    assert result.ids[0].facts.created_at is not None  # the date is there, for a person to read
+    assert result.life.status == "unknown"  # no end of a hackathon: life is not judged
+    assert [one.by for one in result.seen] == ["repository"]  # the rest of the check is the same

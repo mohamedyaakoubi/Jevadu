@@ -97,6 +97,7 @@ PROOF_SHORT = {
     "no_id_given": "no ID given",
     filtering.NOT_CHECKED: "not checked yet",
     submission.NOT_ASKED: "the ledger did not answer",
+    "dates_not_judged": "found, dates not judged",
 }
 NO_SUCH_PROJECT = "There is no project with this number. Close this window and search again."
 DATABASE_DOWN = (
@@ -124,8 +125,16 @@ NOT_A_REPOSITORY = (
     "github.com/owner/project, then press the button again."
 )
 NO_EVENT = (
-    "Choose the event that the project was sent to. For another event, type its first and its "
-    "last day; the last day may not come before the first."
+    "There is no such hackathon in the list. Choose one from the list, or no hackathon, and "
+    "press the button again."
+)
+NO_DAYS = (
+    "Type the first and the last day of the hackathon; the last day may not come before the "
+    "first. Or choose no hackathon: the check then shows the dates without judging them."
+)
+EVENT_FOR_REGISTER = (
+    "A registration names its hackathon. Check the repository again with its hackathon, then "
+    "write it to the register."
 )
 CLOSEST = 5  # the closest past projects that the check of a submission shows
 NO_README_TO_SEARCH = (
@@ -418,7 +427,7 @@ def create_app(
                  "unfiltered_query": search_query(values, drop=FILTERS),
                  "cards_query": search_query(values, drop=("view",)),
                  "charts_query": search_query({**values, "view": CHARTS}),
-                 "check_events": every.event, "all_projects": every.projects,
+                 "check_events": data.dated_events(conninfo), "all_projects": every.projects,
                  "shown_limit": SHOWN,
                  "with_category": every.with_category, "notes": notes}  # fmt: skip
         try:
@@ -489,21 +498,25 @@ def create_app(
             }
         return clients["mirrors"]
 
-    def event_days(conninfo: str, event: str, starts: str, ends: str) -> Any:
-        """The event that a submission was sent to, or None when none was given."""
+    def event_days(conninfo: str, event: str, starts: str, ends: str) -> tuple[Any, str | None]:
+        """The hackathon that a submission was sent to, with what went wrong in plain words.
+        (None, None) when none is given: it is optional, since the tool is a memory of past
+        hackathons and not a live view (design 12.1, S3)."""
+        if not event:
+            return None, None
         if event == "other":
             days = submission.typed_days(starts, ends)
-            return submission.event_of_days(*days) if days else None
+            return (submission.event_of_days(*days), None) if days else (None, NO_DAYS)
         if not event.isdigit():
-            return None
+            return None, NO_EVENT
         with psycopg.connect(conninfo) as conn:
             row = conn.execute("SELECT name, starts_at, ends_on, site, slug FROM events "
                                "WHERE id = %s", (int(event),)).fetchone()  # fmt: skip
         if row is None:
-            return None
+            return None, NO_EVENT
         name, starts_at, ends_on, site, slug = row
         return submission.EventDays(name, starts_at, ends_on,
-                                    key=registry.event_key(site, slug))  # fmt: skip
+                                    key=registry.event_key(site, slug)), None  # fmt: skip
 
     def register_view(repository: str, days: submission.EventDays) -> RegisterView:
         """The register's records of this code, read from the mirror node (design 9.2)."""
@@ -559,9 +572,9 @@ def create_app(
             return render(request, name, 400, problem=NOT_A_REPOSITORY)
         try:
             conninfo = database()
-            days = event_days(conninfo, event, starts, ends)
-            if days is None:
-                return render(request, name, 400, problem=NO_EVENT)
+            days, wrong = event_days(conninfo, event, starts, ends)
+            if wrong:
+                return render(request, name, 400, problem=wrong)
             asker, why = github_or_why()
             result = submission.check_submission(
                 conninfo, repository, days, client=asker,
@@ -575,7 +588,7 @@ def create_app(
         except (SettingsError, psycopg.OperationalError):
             return render(request, name, 503, problem=DATABASE_DOWN)
         found = result.code is not None and result.code.status == CODE_FOUND
-        view = register_view(repository, days) if found else None
+        view = register_view(repository, days) if found and days is not None else None
         return render(request, name, result=result, closest=closest, closest_note=note,
                       seen_before=list(zip(result.seen, members, strict=True)), register=view,
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
@@ -598,12 +611,12 @@ def create_app(
         if typed and account is None:
             return render(request, name, 400, problem=NOT_AN_ACCOUNT)
         try:
-            days = event_days(database(), form.get("event", ""), form.get("starts", ""),
-                              form.get("ends", ""))  # fmt: skip
+            days, wrong = event_days(database(), form.get("event", ""), form.get("starts", ""),
+                                     form.get("ends", ""))  # fmt: skip
         except (SettingsError, psycopg.OperationalError):
             return render(request, name, 503, problem=DATABASE_DOWN)
         if days is None:
-            return render(request, name, 400, problem=NO_EVENT)
+            return render(request, name, 400, problem=wrong or EVENT_FOR_REGISTER)
         code = saved_facts(RawStore(github.raw_dir(settings)), repository)
         if code is None or code.status != CODE_FOUND:
             return render(request, name, 400, problem=CHECK_FIRST)
