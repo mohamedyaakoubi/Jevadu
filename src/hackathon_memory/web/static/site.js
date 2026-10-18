@@ -27,6 +27,42 @@
     });
   }
 
+  // ---------------------------------------------------------------- the switch of the theme
+  // The choice is kept in this browser; "auto" follows the computer, also when the computer
+  // changes. The script in the head of the page applies it before the page is drawn.
+  var DARK = window.matchMedia("(prefers-color-scheme: dark)");
+  function chosenTheme() {
+    var local = store("localStorage");
+    var chosen = local && local.getItem("hm-theme");
+    return chosen === "light" || chosen === "dark" ? chosen : "auto";
+  }
+  function applyTheme(choice) {
+    var root = document.documentElement;
+    var theme = (choice === "auto" ? DARK.matches : choice === "dark") ? "dark" : "light";
+    document.querySelectorAll("input[name=hm-theme]").forEach(function (input) {
+      input.checked = input.value === choice;
+    });
+    if (root.getAttribute("data-bs-theme") === theme) return;
+    root.setAttribute("data-bs-theme", theme);
+    if (!window.Chart) return;
+    document.querySelectorAll("canvas[data-chart]").forEach(function (canvas) {
+      var chart = window.Chart.getChart(canvas); // Chart.js 4.5.1: the chart drawn on this canvas
+      if (chart) chart.destroy();
+      delete canvas.dataset.drawn;
+    });
+    drawCharts(document); // the colours of the charts come from the theme
+  }
+  document.addEventListener("change", function (event) {
+    if (!event.target.matches("input[name=hm-theme]")) return;
+    var choice = event.target.value;
+    try {
+      if (choice === "auto") window.localStorage.removeItem("hm-theme");
+      else window.localStorage.setItem("hm-theme", choice);
+    } catch (error) { /* the browser keeps nothing: the choice holds for this page only */ }
+    applyTheme(choice);
+  });
+  DARK.addEventListener("change", function () { if (chosenTheme() === "auto") applyTheme("auto"); });
+
   // ---------------------------------------------------------------- the last search is kept
   function remember(address) {
     var local = store("localStorage");
@@ -444,6 +480,9 @@
   });
 
   document.addEventListener("DOMContentLoaded", function () {
+    applyTheme(chosenTheme());
+    var themes = document.querySelector("[data-theme-switch]");
+    if (themes) themes.hidden = false; // it needs this script, so it is hidden without it
     showCount();
     drawCharts(document);
     remember(window.location.href);

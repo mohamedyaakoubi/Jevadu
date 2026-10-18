@@ -14,14 +14,17 @@
 <link rel="stylesheet" href="/static/vendor/tabler-themes.min.css">
 <link rel="stylesheet" href="/static/style.css">
 <script>
-/* Before the page is drawn: the light or dark look of the computer; a search that the person has
-   not cleared comes back (design 12.1); and the first page of a visit shows the name of the tool,
-   unless less motion is asked. */
+/* Before the page is drawn: the theme chosen with the switch at the top of the page, or else the
+   light or dark look of the computer; a search that the person has not cleared comes back (design
+   12.1); and the first page of a visit shows the name of the tool, unless less motion is asked. */
 (function () {
   var root = document.documentElement;
+  var chosen = null;
+  try { chosen = window.localStorage.getItem("hm-theme"); } catch (error) { /* nothing is kept */ }
+  var dark = chosen === "dark" || chosen === "light" ? chosen === "dark" :
+    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  root.setAttribute("data-bs-theme", dark ? "dark" : "light");
   try {
-    root.setAttribute("data-bs-theme",
-      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     var here = window.location;
     if (here.pathname === "/" && !here.search) {
       var last = window.localStorage.getItem("hm-last");
@@ -49,6 +52,19 @@
 <a class="skip-link" href="#{% block skip_target %}results{% endblock %}">{% block skip_words %}Skip to the results{% endblock %}</a>
 <div class="page">
   <div class="page-wrapper">
+    <header class="container-xl hm-topline" data-theme-switch hidden>
+      <fieldset class="hm-theme">
+        <legend class="hm-way-legend">Theme</legend>
+        <div class="btn-group" role="group">
+          <input type="radio" class="btn-check" name="hm-theme" value="light" id="theme-light">
+          <label class="btn btn-sm" for="theme-light">light</label>
+          <input type="radio" class="btn-check" name="hm-theme" value="dark" id="theme-dark">
+          <label class="btn btn-sm" for="theme-dark">dark</label>
+          <input type="radio" class="btn-check" name="hm-theme" value="auto" id="theme-auto">
+          <label class="btn btn-sm" for="theme-auto" title="The same as the computer">auto<span class="visually-hidden">: the same as the computer</span></label>
+        </div>
+      </fieldset>
+    </header>
     <main id="main" hx-history-elt>
     {% block main %}{% endblock %}
     </main>

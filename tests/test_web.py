@@ -1040,6 +1040,37 @@ def test_on_a_phone_the_window_covers_the_screen(site, chromium) -> None:  # noq
     page.context.close()
 
 
+def test_every_page_has_the_switch_of_the_theme(site) -> None:  # noqa: ANN001
+    client, _, ids, _ = site
+    for address in ("/", f"/project/{ids['Pebble Pay']}", "/about/how"):
+        page = client.get(address).text
+        assert "data-theme-switch hidden" in page  # shown by the script that makes it work
+        for value in ("light", "dark", "auto"):
+            assert f'name="hm-theme" value="{value}"' in page
+
+
+@pytest.mark.browser
+def test_the_theme_switch_holds_its_choice_and_redraws_the_charts(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1440, "height": 900}, color_scheme="light",
+                  reduced_motion="reduce")  # fmt: skip
+    theme = "document.documentElement.getAttribute('data-bs-theme')"
+    chart = "Chart.getChart(document.querySelector('canvas[data-chart]'))"
+    colour = f"{chart}.data.datasets[0].backgroundColor"
+    page.goto("http://site.test/?view=charts")
+    page.wait_for_function(f"window.Chart && {chart}")
+    assert page.evaluate(theme) == "light" and page.locator("#theme-auto").is_checked()
+    light = page.evaluate(colour)
+    page.locator("label[for='theme-dark']").click()
+    assert page.evaluate(theme) == "dark" and page.evaluate(colour) != light  # drawn again
+    page.reload()
+    assert page.evaluate(theme) == "dark" and page.locator("#theme-dark").is_checked()
+    page.locator("label[for='theme-auto']").click()
+    assert page.evaluate(theme) == "light"  # the computer's
+    assert page.evaluate("localStorage.getItem('hm-theme')") is None
+    page.context.close()
+
+
 @pytest.mark.browser
 def test_the_window_how_it_works_gives_its_table_the_whole_width(site, chromium) -> None:  # noqa: ANN001
     """The numbers of its table were squeezed into the width of a line of text (seen on 18
