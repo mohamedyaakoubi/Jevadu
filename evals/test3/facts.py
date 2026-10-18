@@ -44,7 +44,10 @@ def moment(value: object) -> str | None:
 def summary(kind: str, thing: dict, first: dict | None, last: dict | None) -> dict:
     """What a person needs to judge an ID, from the answers about it."""
     made = moment(thing.get("created_timestamp") or thing.get("consensus_timestamp"))
-    times = [moment(one.get("consensus_timestamp")) for one in (first, last) if one]
+    # A message or a transaction carries "consensus_timestamp"; a contract's call carries
+    # "timestamp" (the mirror node's answers, read on 18 October 2026).
+    times = [moment(one.get("consensus_timestamp") or one.get("timestamp"))
+             for one in (first, last) if one]  # fmt: skip
     empty = {
         "topics": first is None,
         "tokens": str(thing.get("total_supply", "1")) == "0",

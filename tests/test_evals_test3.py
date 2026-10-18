@@ -77,3 +77,19 @@ def test_a_failed_transaction_is_empty() -> None:
          "name": "TOKENMINT", "nonce": 0}]}}  # fmt: skip
     found = ask_one(answers.get, entity)
     assert found["kind"] == "transaction" and found["empty"] and found["action"] == "TOKENMINT"
+
+
+def test_the_activity_of_a_contract_comes_from_the_time_of_its_calls() -> None:
+    """A contract's call names its time "timestamp", not "consensus_timestamp"; reading only the
+    second gave every contract of the hand check no activity at all (18 October 2026)."""
+    from evals.test3.facts import ask_one
+
+    calls = "contracts/0.0.7007/results?limit=1&order="
+    answers = {
+        "contracts/0.0.7007": {"created_timestamp": stamp(2026, 3, 1)},
+        f"{calls}asc": {"results": [{"timestamp": stamp(2026, 3, 7)}]},
+        f"{calls}desc": {"results": [{"timestamp": stamp(2026, 3, 9)}]},
+    }
+    found = ask_one(answers.get, "0.0.7007")
+    assert found["kind"] == "contract" and found["made"] == "2026-03-01"
+    assert (found["first_activity"], found["last_activity"]) == ("2026-03-07", "2026-03-09")
