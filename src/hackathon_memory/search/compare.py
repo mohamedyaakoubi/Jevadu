@@ -28,7 +28,7 @@ from hackathon_memory.db.idea_answers import AnswerStore, KeptComparison
 from hackathon_memory.llm.client import again_if_dropped
 from hackathon_memory.read.quotes import KEPT
 
-INSTRUCTIONS_VERSION = "compare-1"
+INSTRUCTIONS_VERSION = "compare-2"
 FIRST_TEXT_LETTERS = 700  # of the page's first text, when the project has no card
 MAX_OUTPUT_TOKENS = 8192
 SYSTEM_INSTRUCTIONS = """\
@@ -42,6 +42,8 @@ when the texts show nothing in common.
 
 Rules:
 - Use only the texts given. Do not use what you know about the projects from elsewhere.
+- The texts of a project are a short summary of its page, not the whole page. When they do not \
+mention something, write that its texts do not say it; never write that the project does not do it.
 - Do not score, rank or judge the projects, and do not say that a project is a copy of anything.
 - Write for a reader whose first language is not English: common words, at most 20 words in a \
 sentence.

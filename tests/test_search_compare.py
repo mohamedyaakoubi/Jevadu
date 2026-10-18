@@ -42,6 +42,16 @@ def test_without_a_time_limit_the_client_keeps_its_own_options() -> None:
     assert client.configs[0].http_options is None
 
 
+def test_the_model_is_told_that_the_texts_are_a_summary() -> None:
+    """Measured on 18 October 2026: a card that did not name a feature led to an answer that the
+    project lacks it, while its page has it. The comparison now says what the texts do not say."""
+    client = Stub()
+    compare(client, "a coin", ITEMS, model="m", thinking_level="LOW")
+    told = client.configs[0].system_instruction
+    assert "a short summary of its page" in told
+    assert "never write that the project does not do it" in told
+
+
 def test_a_comparison_is_asked_only_for_the_projects_not_kept(empty_database: str) -> None:
     import json as _json
 
