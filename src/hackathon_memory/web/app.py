@@ -41,6 +41,8 @@ from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
 from hackathon_memory.collect.github_commits import saved_version
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
 from hackathon_memory.collect.github_facts import saved_facts
+from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
+from hackathon_memory.collect.github_readmes import saved_readme
 from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
@@ -298,6 +300,17 @@ def create_app(
         return data.project_card(conninfo, project_id, model=settings.gemini_rewrite_model,
                                  version=INSTRUCTIONS_VERSION,
                                  raw_dir=data_paths(settings).raw_dir)  # fmt: skip
+
+    def readme_idea(repo: str) -> str:
+        """The words of the README that the check of a repository saved, or "" when there is
+        none. Nothing is asked of GitHub here."""
+        repository = submission.repository_link(repo[:300])
+        if repository is None:
+            return ""
+        readme = saved_readme(RawStore(github.raw_dir(settings)), repository)
+        if readme is None or readme.status != README_FOUND:
+            return ""
+        return submission.readme_words(readme.text)
 
     def linked_to(conninfo: str, project_id: int) -> list[tuple[str, Any]]:
         """The projects linked to one project (design 8.4): each with why, and its name."""
@@ -625,7 +638,6 @@ def create_app(
         found = result.code is not None and result.code.status == CODE_FOUND
         view = register_view(repository, days) if found and days is not None else None
         return render(request, name, result=result, closest=closest, closest_note=note,
-                      readme_idea=submission.readme_words(result.readme_text),
                       seen_before=list(zip(result.seen, members, strict=True)), register=view,
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
 
@@ -715,12 +727,20 @@ def create_app(
 
     @app.get("/compare", response_class=HTMLResponse)
     def comparison(
-        request: Request, idea: str = "", ids: str = "", one: str = "", place: str = ""
+        request: Request,
+        idea: str = "",
+        ids: str = "",
+        one: str = "",
+        place: str = "",
+        repo: str = "",
     ) -> HTMLResponse:
         """What is the same and what differs, for the first results of an idea (design 8.3), for
         one project in its window (`one`), or for the closest past projects of a checked
-        submission, whose README stands for the idea (`place=check`): kept from the last day, or
-        asked now and kept."""
+        submission (`place=check`), whose README stands for the idea: the address names the
+        repository (`repo`), and the README is the one that the check saved, so its words never
+        travel in the address. Kept from the last day, or asked now and kept."""
+        if place == "check":
+            idea = readme_idea(repo)
         idea = " ".join(idea.split())[:LONGEST_IDEA]
         try:
             project_ids = [int(part) for part in ids.split(",") if part.strip()][:PAGE_SIZE]

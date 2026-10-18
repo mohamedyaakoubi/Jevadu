@@ -551,9 +551,10 @@ def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) ->
     event = checkable(database)
     part = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
     before = len(fake.requests)
-    asked = re.search(r'hx-get="(/compare\?idea=[^"]+&amp;place=check)"', part.text)
+    asked = re.search(r'hx-get="(/compare\?repo=[^"]+&amp;place=check)"', part.text)
     places = re.findall(r'id="check-compare-(\d+)"', part.text)
     assert asked is not None and f"Compare these {len(places)} with Gemini</button>" in part.text
+    assert len(asked.group(1)) < 200  # the address names the repository, not the README
     assert places and model_calls(fake, before) == 0  # nothing is asked before the button
     fake.answer_text = compare_answer(*[(n, ["what_it_does"]) for n in range(1, len(places) + 1)])
     done = client.get(asked.group(1).replace("&amp;", "&"), headers=HX)
@@ -562,6 +563,9 @@ def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) ->
     assert "Same 1." in done.text and "Compared by Gemini with the README" in done.text
     again = client.get(asked.group(1).replace("&amp;", "&"), headers=HX)
     assert "Same 1." in again.text and model_calls(fake, before) == 1  # kept for one day
+    never = {"repo": "github.com/nobody/never-checked", "ids": places[0], "place": "check"}
+    unknown = client.get("/compare", params=never, headers=HX)
+    assert unknown.status_code == 400 and model_calls(fake, before) == 1  # no README was saved
 
 
 def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -> None:  # noqa: ANN001
