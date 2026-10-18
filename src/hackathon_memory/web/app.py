@@ -57,7 +57,7 @@ from hackathon_memory.search import counts as counting
 from hackathon_memory.search import engine, listing, rerank, seen
 from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
-from hackathon_memory.web import charts, data, evidence, references
+from hackathon_memory.web import charts, data, evidence, hackathons, references
 
 HERE = Path(__file__).parent
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
@@ -854,7 +854,9 @@ def create_app(
         "hashscan": data.hashscan,
         "ACTION_WORDS": data.ACTION_WORDS,
         "hashscan_topic": hashscan_topic,
-        "LISTED_HACKATHONS": listed.LISTED,
+        "hackathon_groups": lambda collected: hackathons.groups(
+            collected, listed.LISTED, datetime.now(UTC).date()
+        ),
         "github_reads": github_reads,
         "page_numbers": page_numbers,
         "measured_mode": evidence.mode_named,

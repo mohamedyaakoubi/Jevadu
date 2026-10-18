@@ -679,7 +679,8 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     checkable(database)
     start = client.get("/")
     assert '<option value="">No hackathon: show the facts only</option>' in start.text
-    assert "ETHGlobal Sample Event, 6 March 2026 to 8 March 2026" in start.text  # a dated one
+    assert '<optgroup label="2026"><option value="' in start.text  # a group for each year
+    assert "ETHGlobal Sample Event (6 to 8 March)</option>" in start.text  # a dated one
     part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
     assert part.status_code == 200 and "no hackathon given" in part.text
     assert "Proof: found, dates not judged" in part.text

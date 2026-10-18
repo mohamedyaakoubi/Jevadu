@@ -134,8 +134,9 @@
     <div class="hm-idea-label hm-check-label"><label class="form-label" for="check-event">The hackathon it was sent to <span class="text-secondary">(optional)</span></label>{{ parts.info("hackathon", "the hackathon of a submission") }}</div>
     <select class="form-select" id="check-event" name="event">
       <option value="">No hackathon: show the facts only</option>
-      {% for one in LISTED_HACKATHONS %}<option value="{{ one.key }}">{{ one.name }}{% if one.first and one.last %}, {{ one.first | day }} to {{ one.last | day }}{% else %}, days not announced yet{% endif %}</option>{% endfor %}
-      {% for value, event_name, first, last in check_events or [] %}<option value="{{ value }}">{{ event_name }}, {{ first | day }} to {{ last | day }}</option>{% endfor %}
+      {% for group in hackathon_groups(check_events or []) %}
+      <optgroup label="{{ group.label }}">{% for one in group.choices %}<option value="{{ one.value }}">{{ one.text }}</option>{% endfor %}</optgroup>
+      {% endfor %}
       <option value="other">Another hackathon: type its first and last day</option>
     </select>
     <div class="hm-check-days" data-check-days hidden>
