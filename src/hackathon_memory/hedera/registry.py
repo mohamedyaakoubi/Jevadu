@@ -32,6 +32,7 @@ creates the topic once, checks its keys on the mirror node, and says which line 
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import re
@@ -93,6 +94,23 @@ def event_key(site: str, slug: str) -> str:
 
 def days_key(first: date, last: date) -> str:
     return f"days/{first.isoformat()}/{last.isoformat()}"
+
+
+def readme_line(event: str, code: str) -> str:
+    """The line that a team adds to its README before a registration (design 9.2). Only who can
+    change the repository can add it, so it shows that the code is the team's, and that the team
+    agrees to the record. It is made from the event and the fingerprint of the link, so it serves
+    for this pair only."""
+    digest = hashlib.sha256(f"{event}|{code}".encode()).digest()
+    return f"hackathon-memory: {base64.b32encode(digest).decode()[:8]}"
+
+
+def carries_line(text: str, line: str) -> bool:
+    """Whether a README carries the line, with any spaces around its colon, in any case."""
+    word, _, mark = line.partition(": ")
+    found = re.search(rf"{re.escape(word)}\s*:\s*{re.escape(mark)}(?![A-Za-z0-9])", text,
+                      re.IGNORECASE)  # fmt: skip
+    return found is not None
 
 
 def record(event: str, code: str, commit: str, account: str | None = None) -> bytes:

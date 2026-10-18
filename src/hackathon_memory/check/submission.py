@@ -173,6 +173,18 @@ def read_code(
     return facts, readme, version, problems
 
 
+def read_again(
+    client: PoliteClient, store: RawStore, repository: str, *, collector: str
+) -> tuple[Readme | None, Version | None, list[str]]:
+    """The README and the version of a repository, asked for now, for a registration: it needs
+    the team's line in the README, and stamps the newest version (design 9.2). `store` is a new
+    one, since a saved answer is never replaced."""
+    problems: list[str] = []
+    _note(fetch_readmes(client, store, [repository], collector=collector), problems)
+    _note(fetch_versions(client, store, [repository], collector=collector), problems)
+    return saved_readme(store, repository), saved_version(store, repository), problems
+
+
 def _note(done: AnswersRun, problems: list[str]) -> None:
     if done.stopped:
         problems.append(f"GitHub was not asked: {done.stopped}")

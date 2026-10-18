@@ -510,6 +510,18 @@ def test_a_filter_value_that_no_project_has_is_left_out_and_said(site) -> None: 
 # ----------------------------------------------------------------- the check of a submission (S3)
 
 
+def with_line(client, check_text: str) -> str:  # noqa: ANN001
+    """The team adds the line that the box of the register asks for to its README on GitHub."""
+    from checkfakes import README, readme_answer
+    from fakes import Reply
+    from hackathon_memory.collect.github import readme_address
+
+    line = re.search(r"hackathon-memory: [A-Z2-7]{8}", check_text).group(0)
+    readme = readme_answer(f"{README}\n\n{line}\n")
+    client.github_site.pages[readme_address(REPO)] = Reply(200, readme)
+    return line
+
+
 def checkable(database: str) -> str:
     """Pebble Pay keeps the code of the submission, and the event's end is typed in. Returns the
     number of the event, as the form sends it."""
@@ -694,6 +706,12 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     assert "The register does not hold this code yet." in check.text
     assert "ethglobal.com/sample-event" in check.text and "Write it on Hedera" in check.text
     form = {**asked, "starts": "", "ends": "", "account": "0.0.4567890"}
+    asked_before = len(client.github_site.seen)
+    missing = client.post("/register", data=form, headers=HX)
+    assert missing.status_code == 400 and "does not carry the line" in missing.text
+    assert len(client.github_site.seen) == asked_before + 2  # the README and the version, again
+    assert client.writes.written == []  # nothing is written without the team's line
+    with_line(client, check.text)
     done = client.post("/register", data=form, headers=HX)
     assert done.status_code == 200 and "Registered on Hedera" in done.text
     assert "<dt>Number</dt><dd>1, on the topic" in done.text
@@ -719,7 +737,8 @@ def test_a_registration_needs_a_checked_repository_and_a_real_account(site) -> N
     form = {"repo": REPO, "event": event, "starts": "", "ends": "", "account": ""}
     first = client.post("/register", data=form, headers=HX)
     assert first.status_code == 400 and "Check the repository first" in first.text
-    client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    check = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    with_line(client, check.text)
     wrong = client.post("/register", data={**form, "account": "my wallet"}, headers=HX)
     assert wrong.status_code == 400 and "A Hedera account looks like 0.0.12345" in wrong.text
     assert client.writes.written == []
@@ -1047,6 +1066,12 @@ def test_axe_finds_no_problem(site, chromium, monkeypatch, width, scheme) -> Non
     page.locator("#check button[type=submit]").click()
     page.wait_for_selector("#viewer[open] .check-result #viewer-title")
     assert problems(page) == []
+    page.locator(".check-result .hm-close-name a").first.click()  # a project of the check
+    page.wait_for_selector("[data-back-to-check]")
+    assert problems(page) == []
+    page.locator("[data-back-to-check]").click()
+    page.wait_for_selector("#viewer[open] .check-result")
+    with_line(client, page.content())  # the team adds its line to the README
     page.locator("#register-form button[type=submit]").click()  # the register, with its receipt
     page.wait_for_selector("#register-box .hm-receipt")
     assert problems(page) == []

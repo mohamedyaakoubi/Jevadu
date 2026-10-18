@@ -310,6 +310,8 @@ body:has(dialog[open]) { overflow: hidden; }
 
 /* the check of a submission (S3): its progress, and the closest past projects */
 .viewer-back { margin: 0 0 0.75rem; }
+.hm-back { color: var(--tblr-body-color); background: color-mix(in oklch, var(--tblr-body-color) 12%, var(--tblr-bg-surface)); border: 1px solid var(--tblr-border-color); }
+.hm-back:hover, .hm-back:focus-visible { color: var(--tblr-body-color); background: color-mix(in oklch, var(--tblr-body-color) 22%, var(--tblr-bg-surface)); }
 /* a project named in a line of text is a link that is not told by its colour alone */
 .check-result .hm-link-list a, .linked-section .hm-link-list a, .hm-close-name a { text-decoration: underline; text-underline-offset: 2px; }
 .check-result .project-title { overflow-wrap: anywhere; }
@@ -327,6 +329,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-close-line { margin: 0 0 0.25rem; }
 .hm-close-marks { display: flex; flex-wrap: wrap; gap: 0.25rem 0.375rem; margin: 0; }
 .hm-written { padding-left: 1.2rem; margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+.hm-line { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; color: var(--tblr-body-color); background: var(--tblr-bg-surface-secondary); border: 1px solid var(--tblr-border-color); font-size: 0.9375rem; user-select: all; }
 .hm-receipt { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 1rem; margin: 0.5rem 0 0.75rem; }
 .hm-receipt dt { font-weight: 600; }
 .hm-receipt dd { margin: 0; overflow-wrap: anywhere; }

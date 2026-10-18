@@ -38,7 +38,6 @@ from hackathon_memory.check import submission
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
-from hackathon_memory.collect.github_commits import saved_version
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
 from hackathon_memory.collect.github_facts import saved_facts
 from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
@@ -153,6 +152,11 @@ NOT_AN_ACCOUNT = (
     "A Hedera account looks like 0.0.12345. Leave the box empty to register without one."
 )
 CHECK_FIRST = "Check the repository first: only code that GitHub shows can be registered."
+NO_LINE = (
+    "The README of the repository on GitHub does not carry the line {line} yet. Add it to the "
+    "README of the default branch, then press the button again. It shows that the code is "
+    "yours, and that you agree to the record."
+)
 NOT_LISTED = (
     "A registration names a hackathon of the list, so that all the teams of one hackathon name it "
     "the same way. Choose it in the list. Days typed by hand can be checked, but not registered."
@@ -199,6 +203,8 @@ class RegisterView:
     earlier: list = field(default_factory=list)  # the registrations of this code, oldest first
     same_event: Any = None  # the registration of this code for this event, if there is one
     problem: str | None = None
+    line: str = ""  # the line that the team adds to its README before the registration
+    line_found: bool = False  # the README that the check read carries it already
 
 
 def iso_day(value: str) -> str:
@@ -581,6 +587,7 @@ def create_app(
             return RegisterView(open=False)
         view = RegisterView(True, settings.hedera_network, topic,
                             registry.code_fingerprint(repository), days.key)  # fmt: skip
+        view.line = registry.readme_line(view.event, view.code)
         try:
             found = registry.registrations(mirror_nodes()[view.network], topic)
         except MirrorError:
@@ -646,6 +653,8 @@ def create_app(
         found = result.code is not None and result.code.status == CODE_FOUND
         listed_one = days is not None and not days.typed
         view = register_view(repository, days) if found and listed_one else None
+        if view is not None and view.open:
+            view.line_found = registry.carries_line(result.readme_text or "", view.line)
         return render(request, name, result=result, closest=closest, closest_note=note,
                       seen_before=list(zip(result.seen, members, strict=True)), register=view,
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
@@ -680,15 +689,29 @@ def create_app(
         code = saved_facts(store, repository)
         if code is None or code.status != CODE_FOUND:
             return render(request, name, 400, problem=CHECK_FIRST)
-        version = saved_version(store, repository)  # read at the check; nothing is asked here
-        if version is None or version.status != VERSION_FOUND or version.sha is None:
-            return render(request, name, 400, problem=NO_VERSION)
         view = register_view(repository, days)
         if not view.open or view.problem:
             return render(request, name, 503, problem=view.problem or REGISTER_CLOSED)
         values = {"view": view, "network": view.network, "topic_id": view.topic_id}
         if view.same_event is not None:  # never written twice: the first record stands
             return render(request, name, done=view.same_event, already=True, **values)
+        # The README and the version, read again now: the team's line must be in the README, and
+        # the newest version is stamped. Each read goes to a new folder; nothing saved is replaced.
+        asker, why = github_or_why()
+        if asker is None:
+            return render(request, name, 503, problem=why)
+        when = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+        readme, version, problems = submission.read_again(
+            asker, RawStore(github.raw_dir(settings) / "register" / when), repository,
+            collector=f"{settings.collector_name.strip()}/{__version__}",
+        )  # fmt: skip
+        if problems:
+            return render(request, name, 503, problem=problems[0])
+        readme_text = readme.text if readme and readme.status == README_FOUND else ""
+        if not registry.carries_line(readme_text, view.line):
+            return render(request, name, 400, problem=NO_LINE.format(line=view.line))
+        if version is None or version.status != VERSION_FOUND or version.sha is None:
+            return render(request, name, 400, problem=NO_VERSION)
         write, why = writer_or_why()
         if write is None:
             return render(request, name, 503, problem=why)

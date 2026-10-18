@@ -21,11 +21,14 @@
       {% elif not (result.version and result.version.status == "found") %}
       <p class="mt-2 text-secondary">The version of the code could not be read on GitHub, so it cannot be registered now.</p>
       {% else %}
+      <p class="mt-2 mb-1"><b>First, show that the code is yours.</b> Add this line to the README of the repository on GitHub, in its default branch:</p>
+      <p class="mb-1"><code class="hm-line">{{ view.line }}</code></p>
+      <p class="hm-small">{% if view.line_found %}The README that this check read carries it already.{% else %}Only someone who can change the repository can add it, so it shows that the code is yours, and that you agree to the record.{% endif %} When you press the button, the tool reads the README again on GitHub to find the line.</p>
       <p class="mt-2 mb-1">The button writes one record to the tool's public register on Hedera's test network{{ parts.ref("topic") }}. It holds:</p>
       <ul class="hm-written">
         <li>the event: <span class="id">{{ view.event }}</span></li>
         <li>the fingerprint of the repository's link: <span class="id">{{ view.code[:16] }}&hellip;</span></li>
-        <li>the version of the code that was checked (its commit ID): <span class="id">{{ result.version.sha[:12] }}&hellip;</span></li>
+        <li>the newest version of the code when you press the button (its commit ID; now <span class="id">{{ result.version.sha[:12] }}&hellip;</span>)</li>
         <li>the fingerprint of your Hedera account, if you give one below</li>
       </ul>
       <p class="hm-small">Nothing else: no link, no name, no text. Hedera adds a number and the time. A record can never be changed or deleted.</p>

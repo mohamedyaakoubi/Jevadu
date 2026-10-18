@@ -5,8 +5,10 @@ a time. The token in .env reads public repositories only.
 
 The rules of design 5.7 hold here too, through the polite client: the name of the tool and the
 contact address in every request, one request at a time with a pause, a stop switch in .env
-(COLLECT_GITHUB), a limit of requests counted on disk, and nothing asked twice, because every
-answer is saved.
+(COLLECT_GITHUB), and a limit of requests counted on disk. Every answer is saved, so a
+repository is asked again only when a team registers it (design 9.2): GitHub's limits are far
+above what the tool sends, and the rule of a page asked once holds for the sites that it was
+promised to.
 
 GitHub's own rules, read on docs.github.com on 11 October 2026:
 
