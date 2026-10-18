@@ -25,6 +25,10 @@ def test_an_id_has_one_spelling_and_the_best_status_counts() -> None:
 
     assert key(" 0.0.6000@1700000000.123 ") == "0.0.6000-1700000000-123000000"
     assert key("0xAbC") == "0xabc" and key("0.0.12345") == "0.0.12345"
+    # One transaction in its three spellings: after a dash the nanoseconds are a whole number.
+    spellings = ["0.0.7@1789279979.058986056", "0.0.7-1789279979-058986056"]
+    spellings.append("0.0.7-1789279979-58986056")
+    assert {key(one) for one in spellings} == {"0.0.7-1789279979-058986056"}
     assert best(["not_found", "proof_found", None]) == "proof_found"
     assert best([None]) == "not checked"
 

@@ -39,14 +39,20 @@ PLANTED, PLANT_SEED = 3, 20261019
 PLANTED_ID = ("page", "0.0.999999999")  # stands in no text of the set
 NOT_CHECKED = "not checked"
 _AT = re.compile(r"(0\.0\.\d+)@(\d+)\.(\d+)")
+_DASHES = re.compile(r"(0\.0\.\d+)-(\d+)-(\d+)")
 
 
 def key(entity: str) -> str:
-    """One spelling of an ID: lower case, and a transaction in the form with dashes."""
+    """One spelling of an ID: lower case, and a transaction in the form with dashes, its
+    nanoseconds in nine digits. After "@" they are the decimals of a second, so zeros are added
+    on the right; after a dash they are a whole number, so "58986056" is "058986056"."""
     entity = entity.strip().lower()
     found = _AT.fullmatch(entity)
     if found:
         return f"{found.group(1)}-{found.group(2)}-{found.group(3).ljust(9, '0')}"
+    found = _DASHES.fullmatch(entity)
+    if found:
+        return f"{found.group(1)}-{found.group(2)}-{found.group(3).zfill(9)}"
     return entity
 
 
