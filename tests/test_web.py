@@ -615,6 +615,19 @@ def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -
     assert client.writes.written == []
 
 
+def test_with_no_hackathon_the_check_offers_the_one_of_the_same_code(site) -> None:  # noqa: ANN001
+    """A faster registration: Pebble Pay of the collection holds the same code, so the check
+    offers its hackathon, and the button checks the code again for it."""
+    client, _, _, database = site
+    event = checkable(database)
+    part = client.get("/check", params={"repo": REPO}, headers=HX)
+    assert "Is that the hackathon you register it for?" in part.text
+    offer = re.search(r'hx-get="(/check\?repo=[^"]+&amp;event=(\d+))"', part.text)
+    assert offer is not None and offer.group(2) == event
+    again = client.get(offer.group(1).replace("&amp;", "&"), headers=HX)
+    assert again.status_code == 200 and "Write it on Hedera" in again.text
+
+
 def test_a_hackathon_of_the_list_can_be_checked_and_registered(site) -> None:  # noqa: ANN001
     """A hackathon that the collection does not hold, added to the list by hand: it is offered
     in the list of the check, its days are not judged before they are known, and the register
@@ -661,6 +674,8 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     """The tool is a memory, not a live view: with no hackathon, the facts are shown with their
     own dates and not judged, and the register asks for one (design 12.1, S3)."""
     client, _, _, database = site
+    alone = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
+    assert "A registration names its hackathon." in alone.text  # no project keeps this code yet
     checkable(database)
     start = client.get("/")
     assert '<option value="">No hackathon: show the facts only</option>' in start.text
@@ -670,7 +685,7 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     assert "Proof: found, dates not judged" in part.text
     head = part.text.split("</header>")[0]  # the marks of the check itself
     assert "Found; its dates are not judged" in part.text and "Life:" not in head
-    assert "A registration names its hackathon." in part.text
+    assert "Is that the hackathon you register it for?" in part.text  # Pebble Pay keeps it
     assert "Write it on Hedera" not in part.text
     form = {"repo": REPO, "event": "", "starts": "", "ends": "", "account": ""}
     refused = client.post("/register", data=form, headers=HX)
@@ -719,6 +734,23 @@ def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # 
     page.wait_for_selector("#viewer[open] .check-result")
     page.locator("#register-form button[type=submit]").click()  # no line in the README yet
     page.wait_for_selector("#register-box:has-text('does not carry the line')")
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_the_offered_hackathon_checks_the_code_again_in_the_window(site, chromium) -> None:  # noqa: ANN001
+    """The faster registration: with no hackathon given, the button of the hackathon where the
+    collection keeps the same code checks it again for that hackathon, in the same window."""
+    client, _, _, database = site
+    checkable(database)
+    page = served(chromium, client, reduced_motion="reduce")
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] [data-check-again]")
+    page.locator("[data-check-again]").first.click()
+    page.wait_for_selector("#viewer[open] #register-form")
+    assert "no hackathon given" not in page.locator("#viewer-body").inner_text()
     page.context.close()
 
 

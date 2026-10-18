@@ -272,7 +272,9 @@
       var link = event.detail.elt.closest("[data-open-viewer]");
       var fromCheck = !!(link && link.hasAttribute("data-from-check"));
       checkSaved = fromCheck ? target.innerHTML : null; // a project of a check keeps the check
-      target.innerHTML = event.detail.elt.id === "check" ? checking() : skeleton();
+      var asking = event.detail.elt;
+      var aCheck = asking.id === "check" || asking.hasAttribute("data-check-again");
+      target.innerHTML = aCheck ? checking() : skeleton();
       showViewer();
       if (link && !fromCheck) {
         var id = link.getAttribute("data-open-viewer");
@@ -394,7 +396,8 @@
     var elt = (config && config.elt) || event.detail.elt;
     var status = event.detail.xhr.status;
     var shown = elt && (elt.id === "compare-loader" || elt.id === "check" || elt.id === "register-form" ||
-      elt.hasAttribute("data-check-compare") || elt.closest(".compare-ask"));
+      elt.hasAttribute("data-check-compare") || elt.hasAttribute("data-check-again") ||
+      elt.closest(".compare-ask"));
     if (shown && (status === 503 || status === 400)) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;

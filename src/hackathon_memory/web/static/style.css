@@ -272,6 +272,7 @@ dialog.viewer::backdrop, dialog.sheet::backdrop {
 body:has(dialog[open]) { overflow: hidden; }
 
 .project-head { margin-bottom: 1.25rem; }
+.check-result .project-head { margin-bottom: 0.25rem; } /* the head opens the left column */
 .project-meta { margin: 0; font-size: 0.875rem; color: var(--tblr-secondary); }
 .project-meta a { color: inherit; }
 .project-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 0.25rem 0 0.5rem; }
@@ -322,6 +323,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-section-head h3 { margin: 0; }
 .hm-come-back { margin: 1rem 0 0; color: var(--tblr-secondary); }
 .hm-come-back a { text-decoration: underline; text-underline-offset: 2px; }
+.hm-offers { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .hm-close-list { list-style: none; padding: 0; margin: 0.75rem 0 0; display: grid; gap: 0.75rem; }
 .hm-close-list li { padding-bottom: 0.75rem; border-bottom: 1px solid var(--tblr-border-color); }
 .hm-close-list li:last-child { padding-bottom: 0; border-bottom: 0; }

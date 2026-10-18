@@ -15,22 +15,24 @@
 {% set no_dates = event is none %}
 {% set proof_shown = "dates_not_judged" if no_dates and result.proof == "window_not_known" else result.proof %}
 <article class="project check-result" data-check>
-  <header class="project-head">
-    <p class="project-meta">Check of a submission &middot; {% if no_dates %}no hackathon given{% elif event.typed %}{{ event.starts_at | day }} to {{ event.ends_on | day }}{% else %}{{ event.name }}{% endif %}</p>
-    <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ short }}</{{ level }}>
-    <p class="project-lede">What programs read on GitHub, on the Hedera ledger and in the collection. <span class="hm-tiny">No model wrote anything here.</span></p>
-    <div class="project-marks">
-      {{ marks.proof(proof_shown) }}{{ parts.info("proof", "Hedera proof") }}
-      {% if result.life and not no_dates %}{{ marks.life(result.life) }}{{ parts.info("life", "life") }}{% endif %}
-    </div>
-    {% for one in result.problems %}<div class="alert alert-warning mt-3 mb-0" role="status">{{ one }}</div>{% endfor %}
-    <p class="project-links">
-      <a class="btn btn-sm" href="{{ result.repository }}" rel="noopener" target="_blank">The code on GitHub<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-    </p>
-  </header>
-
   <div class="project-cols">
     <div class="project-col project-facts">
+      {% if register %}{% include "_register_box.html" %}
+      {% elif (no_dates or event.typed) and result.code and result.code.status == "found" %}
+      <section class="card project-section check-register-section" aria-labelledby="register-title">
+        <div class="card-body">
+          <h3 id="register-title">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
+          {% if no_dates and register_offers %}
+          <p>The collection holds this code for {% for _, event_name in register_offers %}{{ event_name }}{% if not loop.last %}, {% endif %}{% endfor %}. Is that the hackathon you register it for?</p>
+          <div class="hm-offers">{% for event_id, event_name in register_offers %}<button type="button" class="btn btn-sm btn-primary" data-check-again hx-get="/check?repo={{ result.repository | urlencode }}&amp;event={{ event_id }}" hx-target="#viewer-body" hx-swap="innerHTML">Yes: check it for {{ event_name }}</button>{% endfor %}</div>
+          <p class="hm-small mt-2">For another hackathon, choose it in the box of the check.</p>
+          {% else %}
+          <p class="text-secondary">{% if no_dates %}A registration names its hackathon. To write this submission to the register, check it again with its hackathon.{% else %}A registration names a hackathon of the list, so that all the teams of one hackathon name it the same way. Days typed by hand can be checked, but not registered.{% endif %}</p>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
       <section class="card project-section ledger-section" aria-labelledby="check-ledger-title">
         <div class="card-body">
           <h3 id="check-ledger-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>
@@ -74,6 +76,20 @@
     </div>
 
     <div class="project-col project-reading">
+    <header class="project-head">
+      <p class="project-meta">Check of a submission &middot; {% if no_dates %}no hackathon given{% elif event.typed %}{{ event.starts_at | day }} to {{ event.ends_on | day }}{% else %}{{ event.name }}{% endif %}</p>
+      <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ short }}</{{ level }}>
+      <p class="project-lede">What programs read on GitHub, on the Hedera ledger and in the collection. <span class="hm-tiny">No model wrote anything here.</span></p>
+      <div class="project-marks">
+        {{ marks.proof(proof_shown) }}{{ parts.info("proof", "Hedera proof") }}
+        {% if result.life and not no_dates %}{{ marks.life(result.life) }}{{ parts.info("life", "life") }}{% endif %}
+      </div>
+      {% for one in result.problems %}<div class="alert alert-warning mt-3 mb-0" role="status">{{ one }}</div>{% endfor %}
+      <p class="project-links">
+        <a class="btn btn-sm" href="{{ result.repository }}" rel="noopener" target="_blank">The code on GitHub<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+      </p>
+    </header>
+
       <section class="card project-section check-seen-section" aria-labelledby="check-seen-title">
         <div class="card-body">
           <h3 id="check-seen-title">Seen before{{ parts.info("seen", "seen before") }}</h3>
@@ -91,15 +107,6 @@
         </div>
       </section>
 
-      {% if register %}{% include "_register_box.html" %}
-      {% elif (no_dates or event.typed) and result.code and result.code.status == "found" %}
-      <section class="card project-section check-register-section" aria-labelledby="register-title">
-        <div class="card-body">
-          <h3 id="register-title">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
-          <p class="text-secondary">{% if no_dates %}A registration names its hackathon. To write this submission to the register, check it again with its hackathon.{% else %}A registration names a hackathon of the list, so that all the teams of one hackathon name it the same way. Days typed by hand can be checked, but not registered.{% endif %}</p>
-        </div>
-      </section>
-      {% endif %}
 
       <section class="card project-section check-close-section" aria-labelledby="check-close-title">
         <div class="card-body">

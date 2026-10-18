@@ -656,8 +656,16 @@ def create_app(
         view = register_view(repository, days) if found and listed_one else None
         if view is not None and view.open:
             view.line_found = registry.carries_line(result.readme_text or "", view.line)
+        seen_before = list(zip(result.seen, members, strict=True))
+        # With no hackathon given: the hackathons where the collection holds the same code, so
+        # that the team can register it for one of them at once.
+        offers = []
+        for one, member in seen_before:
+            offer = (member.event_id, member.event)
+            if one.by == "repository" and member.event_id is not None and offer not in offers:
+                offers.append(offer)
         return render(request, name, result=result, closest=closest, closest_note=note,
-                      seen_before=list(zip(result.seen, members, strict=True)), register=view,
+                      seen_before=seen_before, register=view, register_offers=offers,
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
 
     @app.post("/register", response_class=HTMLResponse)

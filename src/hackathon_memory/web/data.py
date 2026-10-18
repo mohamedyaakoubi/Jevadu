@@ -314,6 +314,7 @@ class Member:
     project_id: int
     name: str
     event: str
+    event_id: int | None = None
 
 
 def event_page(site: str, slug: str, project_page: str | None) -> str | None:
@@ -354,8 +355,8 @@ def members(conninfo: str, groups: Sequence[Sequence[int]]) -> list[list[Member]
     if not ids:
         return []
     with psycopg.connect(conninfo) as conn:
-        names = {pid: (name, event) for pid, name, event in conn.execute(
-            "SELECT p.id, p.name, e.name FROM projects p JOIN events e ON e.id = p.event_id "
+        names = {pid: (name, event, event_id) for pid, name, event, event_id in conn.execute(
+            "SELECT p.id, p.name, e.name, e.id FROM projects p JOIN events e ON e.id = p.event_id "
             "WHERE p.id = ANY(%s)", (ids,)).fetchall()}  # fmt: skip
     return [[Member(pid, *names[pid]) for pid in group if pid in names] for group in groups]
 
