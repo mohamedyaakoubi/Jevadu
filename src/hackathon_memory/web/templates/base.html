@@ -7,7 +7,7 @@
 <title>{% block title %}Hackathon Memory{% endblock %}</title>
 <meta name="description" content="Search past Hedera hackathon projects by idea, check a submission, and see what the public Hedera ledger says about each project.">
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-<meta name="htmx-config" content='{"historyCacheSize": 20, "refreshOnHistoryMiss": false, "defaultFocusScroll": false}'>
+<meta name="htmx-config" content='{"historyCacheSize": 20, "refreshOnHistoryMiss": false, "defaultFocusScroll": false, "timeout": 90000}'>
 <link rel="preload" href="/static/vendor/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/ibm-plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/tabler.min.css">

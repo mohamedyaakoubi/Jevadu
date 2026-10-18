@@ -424,32 +424,84 @@
       Object.keys(values).forEach(function (key) { if (values[key] === "") delete values[key]; });
     }
   });
-  // The comparison: a 503 carries the words of the failure for each result, so it is shown.
+  // An answer of 400, 404 or 503 says in plain words what happened, and so does an answer of 500
+  // in the window of a project or a check: it takes the place of the waiting state. A 503 of the
+  // comparison carries the words of the failure for each result.
   document.addEventListener("htmx:beforeSwap", function (event) {
     // htmx 2 names the target of the swap as `elt` here; the element that asked is in the
     // request's config (htmx 2.0.11, seen in the browser on 18 October 2026).
     var config = event.detail.requestConfig;
     var elt = (config && config.elt) || event.detail.elt;
+    var target = event.detail.target;
     var status = event.detail.xhr.status;
     var shown = elt && (elt.id === "compare-loader" || elt.id === "check" || elt.id === "register-form" ||
       elt.hasAttribute("data-check-compare") || elt.hasAttribute("data-check-again") ||
       elt.closest(".compare-ask"));
-    if (shown && (status === 503 || status === 400)) {
+    var inWindow = target && target.id === "viewer-body";
+    var inPlace = inWindow || (target && target.id === "workspace");
+    if ((shown && (status === 503 || status === 400)) ||
+        (inPlace && (status === 400 || status === 404 || status === 503)) ||
+        (inWindow && status === 500)) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;
     }
   });
-  function compareFailed(event) {
-    var elt = event.detail.elt;
-    if (!elt || elt.id !== "compare-loader") return;
-    document.querySelectorAll(".compare.waiting").forEach(function (place) {
-      place.classList.remove("waiting");
-      place.removeAttribute("aria-busy");
-      place.textContent = FAILED;
-    });
+  // A request with no answer, or with an answer that cannot be shown, leaves no waiting state on
+  // the screen: the place says what happened and what to do (design 12.3). In htmx 2.0.11 these
+  // events come from the element that asked, with the target of the swap in the detail.
+  var NO_ANSWER = "The server did not answer. Check that it is running and that you are " +
+    "connected, then try again.";
+  var WENT_WRONG = "Something went wrong on the server, so this cannot be shown. Try again in a minute.";
+  // The longest wait of a request is about half a minute (a check, or a comparison), so the page
+  // stops waiting after 90 seconds: "timeout" in the htmx-config of the page's head.
+  var TOO_SLOW = "The server did not answer within 90 seconds, so the page stopped waiting. " +
+    "Try again in a minute.";
+  var CHECK_FAILED = "The comparison with the README could not be written just now. " +
+    "Everything else on this page is complete.";
+  function requestFailed(event) {
+    var elt = event.detail.elt, target = event.detail.target;
+    var words = event.type === "htmx:responseError" ? WENT_WRONG :
+      event.type === "htmx:timeout" ? TOO_SLOW : NO_ANSWER;
+    if (!elt) return;
+    if (elt.id === "compare-loader" || elt.hasAttribute("data-check-compare")) {
+      var failed = elt.id === "compare-loader" ? FAILED : CHECK_FAILED;
+      document.querySelectorAll(".compare.waiting").forEach(function (place) {
+        place.classList.remove("waiting");
+        place.removeAttribute("aria-busy");
+        place.textContent = failed;
+      });
+      return;
+    }
+    if (!target || !document.body.contains(target)) return;
+    if (target.id === "viewer-body" || target.id === "sheet-body") {
+      var name = target.id === "viewer-body" ? "viewer-title" : "sheet-title";
+      target.innerHTML = '<div class="project"><h2 id="' + name + '" class="project-title" ' +
+        'tabindex="-1">This cannot be shown</h2><div class="alert alert-danger" role="alert"></div></div>';
+      target.querySelector(".alert").textContent = words;
+      if (target.id === "viewer-body") {
+        steps();
+        if (checkSaved !== null) { // the check that was open stays one click away
+          var back = document.createElement("p");
+          back.className = "viewer-back";
+          back.innerHTML = '<button type="button" class="btn btn-sm hm-back" data-back-to-check>&lsaquo; Back to the check</button>';
+          target.insertBefore(back, target.firstChild);
+        }
+      }
+      $(name).focus({ preventScroll: true });
+      return;
+    }
+    var line = document.createElement("div"); // the list and the forms keep what they showed
+    line.className = "alert alert-danger hm-failed";
+    line.setAttribute("role", "alert");
+    line.textContent = words + " What is shown below has not changed.";
+    target.insertBefore(line, target.firstChild);
   }
-  document.addEventListener("htmx:sendError", compareFailed);
-  document.addEventListener("htmx:responseError", compareFailed);
+  document.addEventListener("htmx:sendError", requestFailed);
+  document.addEventListener("htmx:timeout", requestFailed);
+  document.addEventListener("htmx:responseError", requestFailed);
+  document.addEventListener("htmx:beforeRequest", function () {
+    document.querySelectorAll(".hm-failed").forEach(function (line) { line.remove(); });
+  });
   // On a phone, after the button or Enter, the results come into view (not while typing).
   var NARROW = window.matchMedia("(max-width: 760px)");
   var bringResults = false;

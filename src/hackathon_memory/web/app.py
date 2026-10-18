@@ -103,6 +103,10 @@ PROOF_SHORT = {
     "dates_not_judged": "found, dates not judged",
 }
 NO_SUCH_PROJECT = "There is no project with this number. Close this window and search again."
+SERVER_FAILED = (
+    "Something went wrong on the server, so this cannot be shown. Try again in a minute. The "
+    "server keeps the details in its log."
+)
 DATABASE_DOWN = (
     "The database is not running, so nothing can be searched. Start Docker Desktop, then run "
     '"docker compose up -d --wait db" in the folder of the project, and load this page again.'
@@ -832,6 +836,15 @@ def create_app(
     def method(request: Request) -> HTMLResponse:
         """How the search works, and what the tests measured (design 12.1, S6)."""
         return about(request, "how")
+
+    @app.exception_handler(Exception)
+    def unexpected(request: Request, error: Exception) -> HTMLResponse:
+        """An error that no route answers in its own words. The page says so in plain words and
+        never shows the error; Starlette 1.8.0 raises it again after this answer, so the server
+        still writes it with its trace in its log (starlette/middleware/errors.py)."""
+        del error
+        name = "_problem.html" if request.headers.get("HX-Request") == "true" else "problem.html"
+        return render(request, name, 500, problem=SERVER_FAILED)
 
     templates.env.filters["day"] = day
     templates.env.filters["moment"] = moment

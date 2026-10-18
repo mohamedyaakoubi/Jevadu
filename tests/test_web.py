@@ -328,6 +328,26 @@ def test_without_google_the_words_are_searched_and_the_page_says_so(site) -> Non
     assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
 
 
+def test_an_unexpected_error_is_answered_in_plain_words(site, monkeypatch) -> None:  # noqa: ANN001
+    """The error itself goes to the log of the server, never to the page."""
+    from fastapi.testclient import TestClient
+
+    from hackathon_memory.web import data
+
+    client, _, _, _ = site
+
+    def broken(conninfo: str) -> list:
+        raise RuntimeError("a secret detail of the server")
+
+    monkeypatch.setattr(data, "dated_events", broken)
+    calm = TestClient(client.app, raise_server_exceptions=False)
+    page = calm.get("/", params={"idea": VENDOR})
+    assert page.status_code == 500 and "Something went wrong on the server" in page.text
+    assert "<h1" in page.text and "secret detail" not in page.text
+    part = calm.get("/", params={"idea": VENDOR}, headers=HX)
+    assert part.status_code == 500 and 'id="viewer-title"' in part.text and "<html" not in part.text
+
+
 def test_without_the_database_the_page_says_how_to_start_it() -> None:
     from fastapi.testclient import TestClient
 
@@ -735,6 +755,40 @@ def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # 
     page.wait_for_selector("#viewer[open] .check-result")
     page.locator("#register-form button[type=submit]").click()  # no line in the README yet
     page.wait_for_selector("#register-box:has-text('does not carry the line')")
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_request_that_fails_leaves_no_waiting_state(site, chromium) -> None:  # noqa: ANN001
+    """With no answer, the window of a project, the check and the list say so; an answer of 503
+    with its own words takes the place of the waiting state."""
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1440, "height": 900},
+                  reduced_motion="reduce")  # fmt: skip
+    page.goto(SEARCH)
+    page.route("**/project/*/panel*", lambda route: route.abort())  # the last route runs first
+    page.locator(".result-link").first.click()
+    page.wait_for_selector("#viewer[open] #viewer-body:has-text('The server did not answer')")
+    assert page.locator("#viewer-body .bone").count() == 0  # no waiting shapes are left
+    page.keyboard.press("Escape")
+    page.unroute("**/project/*/panel*")
+    page.route("**/project/*/panel*", lambda route: route.fulfill(
+        status=503, body=client.get("/project/999999/panel").text.replace(
+            "There is no project with this number", "The database is not running"),
+        headers={"content-type": "text/html; charset=utf-8"}))  # fmt: skip
+    page.locator(".result-link").first.click()
+    page.wait_for_selector("#viewer[open] #viewer-body:has-text('The database is not running')")
+    page.keyboard.press("Escape")
+    page.route(lambda url: "/check?" in url, lambda route: route.abort())
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] #viewer-body:has-text('The server did not answer')")
+    assert page.locator("#viewer-body .check-progress").count() == 0  # the steps are gone
+    page.keyboard.press("Escape")
+    page.route(lambda url: url.startswith("http://site.test/?idea="), lambda route: route.abort())
+    page.locator("#idea").fill("a market for used bicycles")
+    page.wait_for_selector("#workspace .hm-failed:has-text('The server did not answer')")
+    assert page.locator("li.result").count() == 3  # the list that was there stays
     page.context.close()
 
 
