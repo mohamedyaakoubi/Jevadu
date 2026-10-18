@@ -5,6 +5,24 @@
 <div class="empty"><p class="empty-title">No project to count</p><p class="empty-subtitle text-secondary">Remove a filter, or search with other words.</p></div>
 {% else %}
 <p class="hm-charts-note">Counted now from the tables, for {{ "{:,}".format(charts.projects) }} project{{ "s" if charts.projects != 1 }}{% if asked %}: the closest to your idea{% endif %}. A share in brackets is shown only when 20 projects or more stand behind it.</p>
+{% set linked_section %}
+<section class="card hm-chart hm-wide" aria-labelledby="chart-linked">
+  <div class="card-body">
+    <h3 class="hm-chart-title" id="chart-linked">Linked across events{% if came_back %}: {{ came_back | length }} group{{ "s" if came_back | length != 1 }}, {{ came_back | map("length") | sum }} projects{% endif %}{{ parts.info("seen", "linked projects") }}</h3>
+    {% if came_back %}
+    <p class="hm-chart-note">These projects of the list share the same code repository or the same Hedera ID with a project of another event. A link says only that: a team may have built on its earlier work, or used the same account again. An ID that many teams name, such as a common test account, links nothing: more than three teams in all, or two at one hackathon. A name alone links nothing.</p>
+    <ul class="hm-linked">
+    {% for group in came_back %}
+      <li>{% for member in group %}<a href="/?open={{ member.project_id }}" data-open-viewer="{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML">{{ member.name }}</a> <span class="text-secondary">{{ member.event }}</span>{% if not loop.last %}<span aria-hidden="true"> &rarr; </span>{% endif %}{% endfor %}</li>
+    {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hm-chart-note">No project of this list shares its code or a Hedera ID with a project of another event.</p>
+    {% endif %}
+  </div>
+</section>
+{% endset %}
+{% if came_back %}{{ linked_section }}{% endif %}
 <div class="hm-charts">
   {% for one in charts.charts %}{{ parts.chart(one) }}{% endfor %}
 </div>
@@ -25,20 +43,5 @@
     </div>
   </div>
 </section>
-
-<section class="card hm-chart hm-wide" aria-labelledby="chart-linked">
-  <div class="card-body">
-    <h3 class="hm-chart-title" id="chart-linked">Linked across events</h3>
-    {% if came_back %}
-    <p class="hm-chart-note">These projects of the list share the same code repository or the same Hedera ID with a project of another event. A link says only that: a team may have built on its earlier work, or used the same account again. An ID that many teams name, such as a common test account, links nothing: more than three teams in all, or two at one hackathon. A name alone links nothing.</p>
-    <ul class="hm-linked">
-    {% for group in came_back %}
-      <li>{% for member in group %}<a href="/?open={{ member.project_id }}" data-open-viewer="{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML">{{ member.name }}</a> <span class="text-secondary">{{ member.event }}</span>{% if not loop.last %}<span aria-hidden="true"> &rarr; </span>{% endif %}{% endfor %}</li>
-    {% endfor %}
-    </ul>
-    {% else %}
-    <p class="hm-chart-note">No project of this list shares its code or a Hedera ID with a project of another event.</p>
-    {% endif %}
-  </div>
-</section>
+{% if not came_back %}{{ linked_section }}{% endif %}
 {% endif %}

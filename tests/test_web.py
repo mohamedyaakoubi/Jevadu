@@ -710,6 +710,24 @@ def test_a_closed_register_is_said_and_offers_no_button(site) -> None:  # noqa: 
 # ----------------------------------------------------------------- the charts (design 12.1, S5)
 
 
+def test_projects_linked_across_events_come_first_in_the_charts(site) -> None:  # noqa: ANN001
+    from hackathon_memory.db.repositories import RepositoryStore
+
+    client, _, ids, database = site
+    page = client.get("/", params={"view": "charts"})
+    assert page.text.index('id="chart-linked"') > page.text.index("<canvas data-chart=")
+    with psycopg.connect(database) as conn:
+        (later,) = conn.execute(
+            "INSERT INTO events (site, slug, name) VALUES ('ethglobal.com', 'later', 'Later') "
+            "RETURNING id"
+        ).fetchone()
+        conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (later, ids["Cedar Post"]))
+    RepositoryStore(database).link({ids["Pebble Pay"]: REPO, ids["Cedar Post"]: REPO})
+    page = client.get("/", params={"view": "charts"})
+    assert "Linked across events: 1 group, 2 projects" in page.text
+    assert page.text.index('id="chart-linked"') < page.text.index("<canvas data-chart=")
+
+
 def test_the_charts_count_the_list_on_the_screen(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     before = len(fake.requests)
