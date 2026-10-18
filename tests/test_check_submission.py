@@ -12,11 +12,12 @@ from pathlib import Path
 import psycopg
 import pytest
 
-from checkfakes import NOW, README, REPO, TOPIC, found_code, github, nodes
+from checkfakes import COMMIT, NOW, README, REPO, TOPIC, found_code, github, nodes
 from fakes import Reply, StandInMirror, project_page
 from hackathon_memory.check import submission
 from hackathon_memory.check.submission import EventDays
 from hackathon_memory.collect.github import readme_address
+from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.migrate import migrate
@@ -135,7 +136,8 @@ def test_the_check_asks_github_once_and_judges_the_ids_of_the_readme(
     client, site = found_code(tmp_path)
     mirrors = nodes()
     result = run(database, tmp_path, client, mirrors)
-    assert site.urls == [facts_address(REPO), readme_address(REPO)]
+    assert site.urls == [facts_address(REPO), readme_address(REPO), commits_address(REPO)]
+    assert result.version is not None and result.version.sha == COMMIT
     assert all(request.headers["From"] == "owner@example.test" for request in site.seen)
     assert result.code is not None and result.code.language == "TypeScript"
     assert result.readme is not None and "Our topic on testnet" in result.readme_text
@@ -150,7 +152,7 @@ def test_the_check_asks_github_once_and_judges_the_ids_of_the_readme(
     assert [one.by for one in result.seen] == ["repository"]
     asked_before = len(mirrors["testnet"].asked)
     again = run(database, tmp_path, client, mirrors)  # a second check asks nobody again
-    assert len(site.seen) == 2 and again.proof == "proof_found"
+    assert len(site.seen) == 3 and again.proof == "proof_found"
     assert len(mirrors["testnet"].asked) == asked_before  # the ledger's answer is in the table
 
 

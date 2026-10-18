@@ -18,11 +18,14 @@
       {% endif %}
       {% if view.same_event %}
       <p class="mt-2">It is registered for this event already, so nothing more is written.</p>
+      {% elif not (result.version and result.version.status == "found") %}
+      <p class="mt-2 text-secondary">The version of the code could not be read on GitHub, so it cannot be registered now.</p>
       {% else %}
       <p class="mt-2 mb-1">The button writes one record to the tool's public register on Hedera's test network{{ parts.ref("topic") }}. It holds:</p>
       <ul class="hm-written">
         <li>the event: <span class="id">{{ view.event }}</span></li>
         <li>the fingerprint of the repository's link: <span class="id">{{ view.code[:16] }}&hellip;</span></li>
+        <li>the version of the code that was checked (its commit ID): <span class="id">{{ result.version.sha[:12] }}&hellip;</span></li>
         <li>the fingerprint of your Hedera account, if you give one below</li>
       </ul>
       <p class="hm-small">Nothing else: no link, no name, no text. Hedera adds a number and the time. A record can never be changed or deleted.</p>

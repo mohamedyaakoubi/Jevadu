@@ -18,6 +18,7 @@ from hackathon_memory.hedera.register import MessageSubmitted, RegisterError, To
 from hackathon_memory.settings import Settings
 
 REPO = "https://github.com/sample-org/pebble-pay"
+COMMIT = "7260ea7290637399c6ac181ed893a567144d96eb"
 TOPIC = "0.0.7654321"
 OPERATOR = "0.0.1234567"
 
@@ -78,14 +79,16 @@ def settings_with(key: PrivateKey, topic: str = "", network: str = "testnet") ->
 
 def test_the_record_holds_the_event_and_fingerprints_only() -> None:
     code = registry.code_fingerprint(REPO)
-    payload = registry.record("ethglobal.com/prague", code)
-    assert json.loads(payload) == {"v": 1, "event": "ethglobal.com/prague", "code": code}
+    payload = registry.record("ethglobal.com/prague", code, COMMIT)
+    assert json.loads(payload) == {"v": 2, "event": "ethglobal.com/prague", "code": code,
+                                   "commit": COMMIT}  # fmt: skip
     assert b"github" not in payload and b"sample-org" not in payload  # no link in clear text
     assert len(payload) < registry.MAX_RECORD
     account = registry.account_fingerprint("0.0.4567890")
     days = registry.days_key(date(2026, 10, 1), date(2026, 10, 20))
-    full = json.loads(registry.record(days, code, account))
-    assert full == {"v": 1, "event": "days/2026-10-01/2026-10-20", "code": code, "account": account}
+    full = json.loads(registry.record(days, code, COMMIT, account))
+    assert full == {"v": 2, "event": "days/2026-10-01/2026-10-20", "code": code,
+                    "commit": COMMIT, "account": account}  # fmt: skip
 
 
 @pytest.mark.parametrize(
@@ -98,7 +101,9 @@ def test_the_record_holds_the_event_and_fingerprints_only() -> None:
 )
 def test_anything_but_the_fixed_form_is_refused(event: str, code: str) -> None:
     with pytest.raises(RegisterError):
-        registry.record(event, code)
+        registry.record(event, code, COMMIT)
+    with pytest.raises(RegisterError):  # a version that is not a commit ID
+        registry.record("ethglobal.com/prague", "a" * 64, "main")
 
 
 def test_a_typed_account_is_kept_only_in_its_form() -> None:
@@ -113,10 +118,10 @@ def test_registrations_are_read_from_the_topic_page_by_page(monkeypatch) -> None
     monkeypatch.setattr(registry, "PAGE", 2)
     mirror = RegisterMirror()
     code = registry.code_fingerprint(REPO)
-    mirror.add(registry.record("ethglobal.com/prague", code))
+    mirror.add(registry.record("ethglobal.com/prague", code, COMMIT))
     mirror.add(b'{"v":0,"event":"gate-a-proof","fp":"x"}')  # another form: not a registration
     mirror.add(b"not json")
-    mirror.add(registry.record("days/2026-10-01/2026-10-20", code))
+    mirror.add(registry.record("days/2026-10-01/2026-10-20", code, COMMIT))
     found = registry.registrations(mirror, TOPIC)
     assert [(one.sequence_number, one.event) for one in found] == [
         (1, "ethglobal.com/prague"), (4, "days/2026-10-01/2026-10-20")]  # fmt: skip
@@ -128,7 +133,7 @@ def test_registrations_are_read_from_the_topic_page_by_page(monkeypatch) -> None
 
 def test_a_registration_is_written_once_and_read_back() -> None:
     mirror = RegisterMirror()
-    payload = registry.record("ethglobal.com/prague", registry.code_fingerprint(REPO))
+    payload = registry.record("ethglobal.com/prague", registry.code_fingerprint(REPO), COMMIT)
     written: list[bytes] = []
 
     def write(data: bytes) -> MessageSubmitted:
@@ -143,10 +148,10 @@ def test_a_registration_is_written_once_and_read_back() -> None:
 
 def test_another_record_read_back_is_a_failure() -> None:
     mirror = RegisterMirror()
-    payload = registry.record("ethglobal.com/prague", registry.code_fingerprint(REPO))
+    payload = registry.record("ethglobal.com/prague", registry.code_fingerprint(REPO), COMMIT)
 
     def write(data: bytes) -> MessageSubmitted:
-        mirror.add(registry.record("ethglobal.com/other", registry.code_fingerprint(REPO)))
+        mirror.add(registry.record("ethglobal.com/other", registry.code_fingerprint(REPO), COMMIT))
         return MessageSubmitted(TOPIC, 1, "0.0.1234567@1.2", "ab")
 
     with pytest.raises(RegisterError):

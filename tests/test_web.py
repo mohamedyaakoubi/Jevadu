@@ -516,10 +516,11 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert "Seen before" in part.text and "The same repository." in part.text
     assert "The closest past projects" in part.text and "Cedar Post" in part.text
     assert model_calls(fake, before) == 0  # the closest projects need an embedding only
-    assert len(client.github_site.seen) == 2  # the facts and the README, once
+    assert len(client.github_site.seen) == 3  # the facts, the README and the version, once
+    assert 'Version checked: <span class="id">7260ea729063</span>' in part.text
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
-    assert len(client.github_site.seen) == 2  # GitHub was not asked again
+    assert len(client.github_site.seen) == 3  # GitHub was not asked again
 
 
 def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -> None:  # noqa: ANN001
@@ -598,7 +599,8 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     assert "https://hashscan.io/testnet/transaction/1791585601.000000001" in done.text
     (payload,) = client.writes.written
     assert json.loads(payload) == {
-        "v": 1, "event": "ethglobal.com/sample-event",
+        "v": 2, "event": "ethglobal.com/sample-event",
+        "commit": "7260ea7290637399c6ac181ed893a567144d96eb",
         "code": hashlib.sha256(REPO.encode()).hexdigest(),
         "account": hashlib.sha256(b"0.0.4567890").hexdigest(),
     }  # fmt: skip

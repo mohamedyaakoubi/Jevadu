@@ -35,6 +35,7 @@ from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.life import Life, life_of
 from hackathon_memory.check.proof import NO_ID_GIVEN, ORDER, Window, best, judge, window_of
 from hackathon_memory.collect.github import repository_of
+from hackathon_memory.collect.github_commits import Version, fetch_versions, saved_version
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
 from hackathon_memory.collect.github_facts import RepositoryFacts, fetch_facts, saved_facts
 from hackathon_memory.collect.github_once import AnswersRun
@@ -107,6 +108,7 @@ class SubmissionCheck:
     event: EventDays | None  # None: no hackathon given, so the dates are shown and not judged
     code: RepositoryFacts | None = None
     readme: Readme | None = None
+    version: Version | None = None  # the newest commit, which a registration names
     ids: list[IdResult] = field(default_factory=list)
     ids_left_out: int = 0
     proof: str = NO_ID_GIVEN
@@ -151,11 +153,13 @@ def read_code(
     repository: str,
     *,
     collector: str,
-) -> tuple[RepositoryFacts | None, Readme | None, list[str]]:
-    """The facts and the README of a repository: the saved answers, or asked for once now. With
-    no client, only what was saved. Returns them with what went wrong, in plain words."""
+) -> tuple[RepositoryFacts | None, Readme | None, Version | None, list[str]]:
+    """The facts, the README and the version of a repository: the saved answers, or asked for
+    once now. With no client, only what was saved. Returns them with what went wrong, in plain
+    words."""
     problems: list[str] = []
     facts, readme = saved_facts(store, repository), saved_readme(store, repository)
+    version = saved_version(store, repository)
     if client is not None and facts is None:
         _note(fetch_facts(client, store, [repository], collector=collector), problems)
         facts = saved_facts(store, repository)
@@ -163,7 +167,10 @@ def read_code(
     if client is not None and readme is None and code_is_there:
         _note(fetch_readmes(client, store, [repository], collector=collector), problems)
         readme = saved_readme(store, repository)
-    return facts, readme, problems
+    if client is not None and version is None and code_is_there:
+        _note(fetch_versions(client, store, [repository], collector=collector), problems)
+        version = saved_version(store, repository)
+    return facts, readme, version, problems
 
 
 def _note(done: AnswersRun, problems: list[str]) -> None:
@@ -234,7 +241,8 @@ def check_submission(
     IDs and of the code are shown and not judged. `problems` holds what the caller already knows
     went wrong, such as a GitHub that may not be asked now."""
     check = SubmissionCheck(repository, event, problems=list(problems or []))
-    check.code, check.readme, asked = read_code(client, store, repository, collector=collector)
+    check.code, check.readme, check.version, asked = read_code(client, store, repository,
+                                                               collector=collector)  # fmt: skip
     check.problems.extend(asked)
     if check.code is not None and check.code.status != CODE_FOUND:
         check.problems.append(NO_SUCH_CODE if check.code.status != "blocked" else BLOCKED_CODE)

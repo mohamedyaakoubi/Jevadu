@@ -1,15 +1,22 @@
 """The public register on Hedera (design 9.2 to 9.5, screen S4): the record of one submission,
 written to the tool's topic, read back from the mirror node, and found again at any event.
 
-The record is the fixed form of design 9.3, version 1, in compact JSON, and nothing else:
+The record is the fixed form of design 9.3, version 2, in compact JSON, and nothing else:
 
-    {"v":1,"event":"ethglobal.com/prague","code":"<64 hex>"}
-    {"v":1,"event":"days/2026-10-01/2026-10-20","code":"<64 hex>","account":"<64 hex>"}
+    {"v":2,"event":"ethglobal.com/prague","code":"<64 hex>","commit":"<40 hex>"}
+    {"v":2,"event":"days/2026-10-01/2026-10-20","code":"<64 hex>","commit":"<40 hex>",
+     "account":"<64 hex>"}
+
+Version 1 had no "commit"; none was ever written, because the topic did not exist yet.
 
 * "code" is the SHA-256 of the link of the repository, in the one spelling of collect/github.py.
   The link itself is never written: it holds the name of its owner, and a message can never be
   deleted (design rule 8). Anybody can compute the fingerprint again from the link and find its
   records.
+* "commit" is the ID of the newest commit of the repository when it was checked
+  (collect/github_commits.py): it is computed from every file of that version, so the record
+  says which code existed at that time, and not only which address. A repository that is later
+  deleted or made private keeps this proof; only a copy of the code can show it again.
 * "account" is the SHA-256 of the team's Hedera account, only when the team gives one.
 * "event" names the event by its site and its short name, or, for an event that the collection
   does not hold, by its first and its last day.
@@ -53,11 +60,12 @@ from hackathon_memory.hedera.mirror import (
 from hackathon_memory.hedera.register import MessageSubmitted, RegisterError
 from hackathon_memory.settings import Settings
 
-VERSION = 1
-MAX_RECORD = 256  # bytes; one message holds 1,024, and the record must stay far below (design 9.3)
+VERSION = 2
+MAX_RECORD = 384  # bytes; one message holds 1,024, and the record must stay far below (design 9.3)
 PAGE = 100  # messages asked for at once
 MAX_PAGES = 50  # 5,000 registrations; more would need another way to find a fingerprint
 _HEX = re.compile(r"^[0-9a-f]{64}$")
+_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _EVENT = re.compile(r"^(?:[a-z0-9.-]+/[a-z0-9._-]+|days/\d{4}-\d{2}-\d{2}/\d{4}-\d{2}-\d{2})$")
 _ACCOUNT = re.compile(r"^0\.0\.[1-9]\d{0,11}$")
 
@@ -87,11 +95,12 @@ def days_key(first: date, last: date) -> str:
     return f"days/{first.isoformat()}/{last.isoformat()}"
 
 
-def record(event: str, code: str, account: str | None = None) -> bytes:
+def record(event: str, code: str, commit: str, account: str | None = None) -> bytes:
     """The bytes of the record. Refuses anything that is not the fixed form."""
-    if not _EVENT.match(event) or not _HEX.match(code) or (account and not _HEX.match(account)):
+    if (not _EVENT.match(event) or not _HEX.match(code) or not _COMMIT.match(commit)
+            or (account and not _HEX.match(account))):  # fmt: skip
         raise RegisterError("The record holds only the event and fingerprints (design 9.3).")
-    body = {"v": VERSION, "event": event, "code": code}
+    body = {"v": VERSION, "event": event, "code": code, "commit": commit}
     if account:
         body["account"] = account
     payload = json.dumps(body, separators=(",", ":")).encode("utf-8")
@@ -108,6 +117,7 @@ class Registration:
     consensus_timestamp: str  # as the mirror node writes it: seconds.nanoseconds
     event: str
     code: str
+    commit: str
     account: str | None
 
     @property
@@ -119,7 +129,7 @@ class Registration:
 
 
 def read_record(message: dict) -> Registration | None:
-    """A message of the topic as a registration, or None when it is not a record of version 1."""
+    """A message of the topic as a registration, or None when it is not a record of this version."""
     try:
         body = json.loads(decode_message(message).decode("utf-8"))
         sequence, stamp = int(message["sequence_number"]), str(message["consensus_timestamp"])
@@ -128,11 +138,13 @@ def read_record(message: dict) -> Registration | None:
     if not isinstance(body, dict) or body.get("v") != VERSION:
         return None
     event, code, account = body.get("event"), body.get("code"), body.get("account")
-    if not (isinstance(event, str) and _EVENT.match(event) and isinstance(code, str)
-            and _HEX.match(code)) or (account is not None and not (
-                isinstance(account, str) and _HEX.match(account))):  # fmt: skip
+    commit = body.get("commit")
+    parts = ((event, _EVENT), (code, _HEX), (commit, _COMMIT))
+    parts_fit = all(isinstance(value, str) and pattern.match(value) for value, pattern in parts)
+    account_fits = account is None or (isinstance(account, str) and bool(_HEX.match(account)))
+    if not (parts_fit and account_fits):
         return None
-    return Registration(sequence, stamp, event, code, account)
+    return Registration(sequence, stamp, event, code, commit, account)
 
 
 def registrations(mirror: MirrorNode, topic_id: str) -> list[Registration]:

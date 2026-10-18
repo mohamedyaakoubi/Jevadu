@@ -13,6 +13,7 @@ from pydantic import SecretStr
 
 from fakes import FakeSite, FakeTime, Reply, StandInMirror, session_for
 from hackathon_memory.collect.github import GitHubClient, allowed, readme_address
+from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
 from hackathon_memory.collect.polite import CollectorIdentity, RequestCount
 from hackathon_memory.hedera.register import MessageSubmitted
@@ -22,6 +23,7 @@ REGISTER = "0.0.7654321"  # the invented topic of the register
 NOW = datetime(2026, 10, 11, 2, 0, tzinfo=UTC)
 DURING = "1772884800.000000001"  # 7 March 2026, inside the window of the invented event
 TOPIC = "0.0.3456789"
+COMMIT = "7260ea7290637399c6ac181ed893a567144d96eb"  # an invented commit ID
 README = (
     "# Pebble Pay\n\nA vendor takes a coin. Our topic on testnet: 0.0.3456789.\n\n"
     "![logo](https://cdn.example.test/logo.png)\n\n```\nnpm install\n```\n"
@@ -50,6 +52,16 @@ def readme_answer(text: str = README) -> bytes:
     return json.dumps(answer).encode()
 
 
+def commits_answer(sha: str = COMMIT) -> bytes:
+    """The newest commit, in the shape GitHub gave on 18 October 2026, with invented people."""
+    person = {"name": "Invented Person", "email": "invented@example.test",
+              "date": "2026-03-08T09:30:00Z"}  # fmt: skip
+    commit = {"author": person, "committer": person, "message": "Invented message",
+              "tree": {"sha": "f" * 40}, "comment_count": 0}  # fmt: skip
+    return json.dumps([{"sha": sha, "commit": commit, "author": {"login": "invented"},
+                        "committer": {"login": "invented"}, "parents": []}]).encode()  # fmt: skip
+
+
 def github(tmp_path: Path, pages: dict[str, Reply]) -> tuple[GitHubClient, FakeSite]:
     """The polite client of GitHub, with its real headers, over a stand-in site."""
     site = FakeSite(pages)
@@ -73,7 +85,8 @@ def github(tmp_path: Path, pages: dict[str, Reply]) -> tuple[GitHubClient, FakeS
 def found_code(tmp_path: Path, text: str = README) -> tuple[GitHubClient, FakeSite]:
     """GitHub knows the repository REPO, with a README that names the topic."""
     return github(tmp_path, {facts_address(REPO): Reply(200, facts_answer()),
-                             readme_address(REPO): Reply(200, readme_answer(text))})  # fmt: skip
+                             readme_address(REPO): Reply(200, readme_answer(text)),
+                             commits_address(REPO): Reply(200, commits_answer())})  # fmt: skip
 
 
 def nodes() -> dict[str, StandInMirror]:

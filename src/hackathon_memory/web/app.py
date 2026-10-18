@@ -37,6 +37,8 @@ from hackathon_memory import __version__
 from hackathon_memory.check import submission
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
+from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
+from hackathon_memory.collect.github_commits import saved_version
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
 from hackathon_memory.collect.github_facts import saved_facts
 from hackathon_memory.collect.polite import CollectorRefused
@@ -131,6 +133,10 @@ NO_EVENT = (
 NO_DAYS = (
     "Type the first and the last day of the hackathon; the last day may not come before the "
     "first. Or choose no hackathon: the check then shows the dates without judging them."
+)
+NO_VERSION = (
+    "The version of the code could not be read on GitHub, so it cannot be registered. Check "
+    "the repository again in a moment."
 )
 EVENT_FOR_REGISTER = (
     "A registration names its hackathon. Check the repository again with its hackathon, then "
@@ -617,9 +623,13 @@ def create_app(
             return render(request, name, 503, problem=DATABASE_DOWN)
         if days is None:
             return render(request, name, 400, problem=wrong or EVENT_FOR_REGISTER)
-        code = saved_facts(RawStore(github.raw_dir(settings)), repository)
+        store = RawStore(github.raw_dir(settings))
+        code = saved_facts(store, repository)
         if code is None or code.status != CODE_FOUND:
             return render(request, name, 400, problem=CHECK_FIRST)
+        version = saved_version(store, repository)  # read at the check; nothing is asked here
+        if version is None or version.status != VERSION_FOUND or version.sha is None:
+            return render(request, name, 400, problem=NO_VERSION)
         view = register_view(repository, days)
         if not view.open or view.problem:
             return render(request, name, 503, problem=view.problem or REGISTER_CLOSED)
@@ -630,7 +640,7 @@ def create_app(
         if write is None:
             return render(request, name, 503, problem=why)
         account_print = registry.account_fingerprint(account) if account else None
-        payload = registry.record(view.event, view.code, account_print)
+        payload = registry.record(view.event, view.code, version.sha, account_print)
         try:
             done = registry.register_submission(write, mirror_nodes()[view.network],
                                                 view.topic_id, payload)  # fmt: skip
