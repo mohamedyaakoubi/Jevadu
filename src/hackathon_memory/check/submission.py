@@ -92,7 +92,7 @@ class IdResult:
     status: str
     network: str | None  # the network of the status that counts; None when none was asked
     facts: LedgerFacts | None
-    shared: bool = False  # more than three projects with other code name it (design 8.4)
+    shared: bool = False  # a shared service: many teams name it (design 8.4)
     named_elsewhere: bool = False  # a project with other code names it: not a sign of life
 
 
