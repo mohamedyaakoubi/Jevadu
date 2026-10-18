@@ -53,6 +53,7 @@ ACTION_WORDS = {
     "CONTRACTCALL": "a call of a smart contract",
     "ETHEREUMTRANSACTION": "a transaction sent from an Ethereum wallet",
     "SCHEDULECREATE": "a scheduled action",
+    "ATOMICBATCH": "a batch of several actions",  # 3 of the 223 transactions, 18 October 2026
 }
 NETWORKS = frozenset({"mainnet", "testnet", "previewnet"})
 
