@@ -199,6 +199,8 @@ For an event whose submissions are not public, the only thing left is the organi
 
 **What they cannot do.** They do not show the ledger check, and that check is what this tool adds. So the demo is built on full cards. Winner entries only widen the search. Every winner entry says where it comes from, and that only the winners of its event are public.
 
+**Their dates (16 and 18 October 2026).** An organiser's list of winners gives no start and no end, so the year of each of these twelve events is typed by hand from the organiser's own post, in a file that the parse step reads. Where the post also gives the days, its line carries the first and the last day too. The saved posts give them for four events: Hello Future 2024 (22 July to 20 August 2024), Hello Future 2.0, Hello Future Origins and the building stage of Beyond Blockchain 2023. The eight others give only a length, such as four weeks, or nothing. Since no winner entry of these events has a Hedera ID or a repository, the days change no mark: they only let the check of a submission offer these events with their days.
+
 **Where they come from.** Hedera's own winner posts, and winners pages that were copied by hand, with no request by a program. Nothing is read by a program before the rules of section 5.2 allow it.
 
 ---
@@ -417,6 +419,8 @@ Hedera has two networks that matter here: the **main network**, with real money,
 
 For each ID the **mirror node** is asked: what kind of thing is it (account, topic, token or contract), when it was created, how much happened on it, and when the first and the last activity were. The raw answer is stored with the time of the question.
 
+**Built on 18 October 2026: a single transaction.** A page or a README often names one transaction: a link to it on HashScan, or its ID in the text. A transaction is one action on the ledger, such as a transfer, the creation of a token or a message to a topic, and its ID is the account that paid for it and the moment it was sent: `0.0.12345-1700000000-123456789`. It is now its own kind of Hedera ID. The mirror node says what the action was, whether it succeeded and when the network agreed on it, and the proof rule judges it by that moment; a failed transaction counts as empty. The account that paid is kept too, as before. The mirror node refuses the other way of writing it, `0.0.12345@1700000000.123456789` (measured on 18 October 2026), so every transaction is kept in the first form. On the real collection: 223 transactions in 93 projects; 90 of these projects now show a transaction as proof, and none of them depended on it.
+
 ### 7.2 The proof rule
 
 An ID that exists proves almost nothing: nearly every small number exists on Hedera as something. So the rule looks at the kind of thing and at the dates.
@@ -462,7 +466,7 @@ For each repository: does it exist, when was it created, when was the first and 
 
 **The facts of a repository, as built.** One request for each repository asks for its facts (`python -m hackathon_memory.pipeline code`). The answer also holds the account that owns the repository: its photo, and for some accounts a name and an email address. None of it is kept. Before saving, only a fixed list of fields stays: the link, the dates (made, last push), the state (archived, a fork), the language, the size, the short name of the license, and the description with the words about people hidden. The number of changes, the contributors and the libraries are not read yet.
 
-**The check of one submission (16 October 2026).** The check of screen S3 asks GitHub for one repository, with the same client and the same rules: two requests, the facts and the README, one after the other. Both answers are saved, so a repository is never asked for twice, also when it already belongs to the collection.
+**The check of one submission (16 October 2026).** The check of screen S3 asks GitHub for one repository, with the same client and the same rules: three requests, the facts, the README and the newest commit (since 18 October), one after the other. The answers are saved, so a repository is never asked for twice, also when it already belongs to the collection. Of the newest commit only its ID and its date are kept: the names and the addresses of the people who made it are dropped before saving.
 
 ### 7.4 The life rule
 
@@ -531,6 +535,7 @@ The order by the model was better than the old default in 10 cases and worse in 
 - While the idea is typed, the page shows quick results after a pause of half a second, by meaning, or by words when the person chooses words. By meaning they use only the embedding model, which turns the text into numbers and writes nothing (about 0.0005 cent a search in the cost ledger). The page calls them quick results.
 - One button says what the search model will do: read the 30 projects closest in meaning, put the ten most similar first, and write for each of them what is the same and what differs, in about 3 to 10 seconds, for about 0.6 cent. Only this button calls the search model. The measure above is the reason it exists: 42 of 57 known projects in the first ten, against 36 by meaning only.
 - The order of the model and its comparisons are kept for one day under the fingerprint of the idea, the filters and the model. A reload, the back button, or the same search again shows them without a new call.
+- In each result, the words of the idea are marked, except a short list of common ones such as "app", "user" or "without", which say little about one idea (18 October 2026). How often a word appears is no guide: "payment" stands in 35% of the projects and "app" in 14%.
 - A filter works on the quick results at once, with no model. It keeps the projects of the 50 closest that have its value, so the number next to a value is the number of projects the filter leaves (16 October 2026: before, a filter searched again among all the projects with its value, and a value marked 16 gave a list of 50). The model's order for the new filters is asked only with the button again, and kept for one day for those filters.
 - Ten projects a page, with numbered pages; a search shows its 50 closest projects. The way "meaning and words" stays in the measure, and the page offers meaning, words and the order by the model.
 
@@ -541,6 +546,10 @@ The order by the model was better than the old default in 10 cases and worse in 
 ### 8.3 The comparison
 
 For the first results, the LLM reads the cards and the user's idea. For each project it writes what is the same and what differs, and it names the card fields it used. If this call fails, the page still shows the cards. It runs after the results are shown, at the thinking level LOW, and is given up after 30 seconds; the page says when it is slower than usual.
+
+**The card or the full text? (measured on 18 October 2026)** The comparison could read the whole text of each page instead of its card. For the 9 ideas of Test 2, both were asked (`evals/results/20261018T044605Z-compare-inputs.json`): a middle time of 7.1 seconds with the cards and 7.8 with the full texts, and 4.3 against 7.7 cents for the 9 ideas; one call on a full text failed after 342 seconds. Which one writes the more right sentences is for a person to read: the sentences stand side by side in a local page, and the cards stay until then.
+
+**The check of a submission** (screen S3) uses the same comparison on a button: the README of the submission stands for the idea, and its closest past projects are compared with it.
 
 ### 8.4 "Seen before"
 
@@ -583,16 +592,17 @@ If the same fingerprint appears again later, at any event, the tool says "seen b
 - Far below 1 KB, because a longer message is cut into pieces. The record of the Gate A proof has 102 bytes.
 - Only the tool's own account can write to the topic. This keeps strangers from filling it.
 
-**Built on 16 October 2026: version 1 of the record.** In compact JSON:
+**Built on 18 October 2026: version 2 of the record.** In compact JSON:
 
 ```json
-{"v":1,"event":"ethglobal.com/prague","code":"<64 hex>","account":"<64 hex>"}
+{"v":2,"event":"ethglobal.com/prague","code":"<64 hex>","commit":"<40 hex>","account":"<64 hex>"}
 ```
 
 - `code` is the SHA-256 of the repository's link, written in one spelling. The link itself is never written: it holds the name of its owner. Anybody can compute the fingerprint of a link again and find its records.
+- `commit` is the ID of the newest commit of the repository when it was checked. It is computed from every file of that version, so a record says which code existed at that time, and not only which address. If the repository is later deleted or made private, the record still proves this; only a copy of the code can show the code again. Version 1, without it, was never written.
 - `account` is the SHA-256 of the team's Hedera account, and only when the team gives one.
 - `event` names the event by its site and the short name in its address, or by its first and its last day when the collection does not hold it (`days/2026-10-01/2026-10-20`).
-- About 150 bytes. A record above 256 bytes, or one that is not this form, is refused before anything is sent. A code is written once for one event.
+- About 250 bytes. A record above 384 bytes, or one that is not this form, is refused before anything is sent. A code is written once for one event, and a registration without a known version of the code is refused.
 - The topic is created once with `python -m hackathon_memory.hedera.registry open`, which then checks on the mirror node that it has no admin key and the tool's key as its submit key. Until it exists, the page says that the register is not open.
 - The records are read back from the mirror node page by page, with the filter `sequencenumber=gte:`. On 16 October 2026 the test network's node answered `gt:0` with no message and `gte:1` with the first one.
 
@@ -770,7 +780,7 @@ No page is built before its row here is agreed. For each screen: who uses it, wh
 |---|---|---|---|---|
 | S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. Quick results by meaning while the idea is typed, said to be quick. A button that says what the model will do, in how long and for how much, and then orders the closest and compares them. The closest projects as a grid of ten cards, each with its one-sentence description, event, proof status and life status, and after the button what is the same and what differs. Filters in one row under the box. Numbered pages. |
 | S2 | Project card | Everybody | What is this project really? | Opens over the results, on most of the screen, with the results still seen behind it; on a phone, on the whole screen. The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan. The date of each check. The previous and the next card of the list. |
-| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box beside the box of the idea: the GitHub link of a repository, and its event, from the collection or with its first and last day typed in. The steps while the check runs, in the window over the page. Then the proof status with the facts of each Hedera ID of the README, the life of the code, "seen before", and the five closest past projects by the meaning of the README. No model writes. |
+| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box beside the box of the idea: the GitHub link of a repository and, if the judge wants, its hackathon, from the list of past hackathons whose days are known or with its first and last day typed in. The tool is a memory of past hackathons, not a live view, so without a hackathon the check shows every fact with its own date and judges none, and an (i) says so. The steps while the check runs, in the window over the page. Then the proof status with the facts of each Hedera ID of the README, the life of the code, the version of the code, "seen before", and the five closest past projects by the meaning of the README; each of them opens in the same window, with a way back to the check. No model writes, except on the button "Compare with Gemini". |
 | S4 | Register | Builder | Do I want my submission on the public register? | Reached from the result of S3. What will be written, in plain words, before the button. Existing registrations with the same fingerprint. After the button: the receipt with number, time and link. |
 | S5 | Charts of a list | Organiser | What did this event produce? | A switch beside the grid shows the same list as charts: the whole collection, a search, or the filters of an event and a year. Counts by theme, by Hedera service, by proof status and by life status, for all the projects and for those with a Hedera prize; the projects of each event, with a link to its page; and the projects linked across events. A share only with 20 projects or more behind it. Counted from the tables when the page is made, with the same tally as the dated overview job (evals/overview.py). |
 | S6 | Method and limits | Everybody | How far can I trust this tool? | A window opened from the bottom of every page: the steps of the search, the test results with their ranges, what the tool cannot do, and what exists elsewhere. |
