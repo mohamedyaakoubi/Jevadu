@@ -1,0 +1,224 @@
+{
+ "test": "rebuild",
+ "made_on": "2026-10-18",
+ "made_at": "2026-10-18T10:21:38Z",
+ "counts": {
+  "card_fields_dropped": {
+   "card-form-0": {
+    "in_use": 0,
+    "rebuilt": 0,
+    "same": true
+   },
+   "card-form-1": {
+    "in_use": 0,
+    "rebuilt": 0,
+    "same": true
+   },
+   "card-form-2": {
+    "in_use": 4,
+    "rebuilt": 4,
+    "same": true
+   }
+  },
+  "card_quotes_found": {
+   "card-form-0": {
+    "in_use": 241,
+    "rebuilt": 241,
+    "same": true
+   },
+   "card-form-1": {
+    "in_use": 1307,
+    "rebuilt": 1294,
+    "same": false
+   },
+   "card-form-2": {
+    "in_use": 8909,
+    "rebuilt": 8909,
+    "same": true
+   }
+  },
+  "card_quotes_given": {
+   "card-form-0": {
+    "in_use": 242,
+    "rebuilt": 242,
+    "same": true
+   },
+   "card-form-1": {
+    "in_use": 1311,
+    "rebuilt": 1298,
+    "same": false
+   },
+   "card-form-2": {
+    "in_use": 8931,
+    "rebuilt": 8931,
+    "same": true
+   }
+  },
+  "cards": {
+   "card-form-0": {
+    "in_use": 15,
+    "rebuilt": 15,
+    "same": true
+   },
+   "card-form-1": {
+    "in_use": 90,
+    "rebuilt": 89,
+    "same": false
+   },
+   "card-form-2": {
+    "in_use": 658,
+    "rebuilt": 658,
+    "same": true
+   }
+  },
+  "embeddings": {
+   "gemini-embedding-2": {
+    "in_use": 826,
+    "rebuilt": 826,
+    "same": true
+   }
+  },
+  "events": {
+   "all": {
+    "in_use": 26,
+    "rebuilt": 26,
+    "same": true
+   }
+  },
+  "events_with_both_days": {
+   "all": {
+    "in_use": 18,
+    "rebuilt": 18,
+    "same": true
+   }
+  },
+  "hedera_ids": {
+   "page": {
+    "in_use": 139,
+    "rebuilt": 139,
+    "same": true
+   },
+   "readme": {
+    "in_use": 1181,
+    "rebuilt": 1181,
+    "same": true
+   }
+  },
+  "id_checks": {
+   "another_kind": {
+    "in_use": 88,
+    "rebuilt": 88,
+    "same": true
+   },
+   "dates_do_not_fit": {
+    "in_use": 190,
+    "rebuilt": 190,
+    "same": true
+   },
+   "found_but_empty": {
+    "in_use": 11,
+    "rebuilt": 11,
+    "same": true
+   },
+   "not_found": {
+    "in_use": 101,
+    "rebuilt": 101,
+    "same": true
+   },
+   "proof_found": {
+    "in_use": 1173,
+    "rebuilt": 1173,
+    "same": true
+   }
+  },
+  "ledger_facts": {
+   "None": {
+    "in_use": 100,
+    "rebuilt": 100,
+    "same": true
+   },
+   "account": {
+    "in_use": 419,
+    "rebuilt": 419,
+    "same": true
+   },
+   "contract": {
+    "in_use": 274,
+    "rebuilt": 274,
+    "same": true
+   },
+   "token": {
+    "in_use": 59,
+    "rebuilt": 59,
+    "same": true
+   },
+   "topic": {
+    "in_use": 200,
+    "rebuilt": 200,
+    "same": true
+   },
+   "transaction": {
+    "in_use": 215,
+    "rebuilt": 215,
+    "same": true
+   }
+  },
+  "linked_across_events": {
+   "groups": {
+    "in_use": 2,
+    "rebuilt": 2,
+    "same": true
+   },
+   "projects": {
+    "in_use": 5,
+    "rebuilt": 5,
+    "same": true
+   }
+  },
+  "links": {
+   "all": {
+    "in_use": 1236,
+    "rebuilt": 1236,
+    "same": true
+   }
+  },
+  "prizes": {
+   "all": {
+    "in_use": 435,
+    "rebuilt": 435,
+    "same": true
+   }
+  },
+  "projects": {
+   "full_card": {
+    "in_use": 658,
+    "rebuilt": 658,
+    "same": true
+   },
+   "winner_entry": {
+    "in_use": 168,
+    "rebuilt": 168,
+    "same": true
+   }
+  },
+  "repositories": {
+   "all": {
+    "in_use": 651,
+    "rebuilt": 651,
+    "same": true
+   }
+  },
+  "sections": {
+   "all": {
+    "in_use": 1484,
+    "rebuilt": 1484,
+    "same": true
+   }
+  }
+ },
+ "differing": [
+  "card_quotes_found/card-form-1",
+  "card_quotes_given/card-form-1",
+  "cards/card-form-1"
+ ]
+}
