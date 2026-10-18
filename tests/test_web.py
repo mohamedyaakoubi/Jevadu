@@ -1041,6 +1041,24 @@ def test_on_a_phone_the_window_covers_the_screen(site, chromium) -> None:  # noq
 
 
 @pytest.mark.browser
+def test_the_window_how_it_works_gives_its_table_the_whole_width(site, chromium) -> None:  # noqa: ANN001
+    """The numbers of its table were squeezed into the width of a line of text (seen on 18
+    October 2026); the lines of text keep that width, the table takes the whole window."""
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1440, "height": 900},
+                  reduced_motion="reduce")  # fmt: skip
+    page.goto("http://site.test/")
+    page.locator("[data-sheet='how']").click()
+    page.wait_for_selector("#sheet[open] .table-wrap table")
+    sheet = page.locator("#sheet").bounding_box()
+    table = page.locator("#sheet .table-wrap table").bounding_box()
+    line = page.locator("#sheet .about-lede").bounding_box()
+    assert sheet and table and line
+    assert sheet["width"] >= 1000 and table["width"] > line["width"] + 100
+    page.context.close()
+
+
+@pytest.mark.browser
 def test_an_info_mark_explains_its_term(site, chromium) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1440, "height": 900})

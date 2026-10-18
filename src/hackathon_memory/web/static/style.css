@@ -252,7 +252,7 @@ dialog.viewer, dialog.sheet {
   transition: opacity 0.18s ease, transform 0.18s ease, overlay 0.18s allow-discrete, display 0.18s allow-discrete;
 }
 dialog.viewer { width: min(1160px, 88vw); height: min(90vh, 980px); }
-dialog.sheet { width: min(800px, 92vw); height: min(88vh, 940px); }
+dialog.sheet { width: min(1040px, 92vw); height: min(88vh, 940px); }
 dialog.viewer[open], dialog.sheet[open] { display: flex; flex-direction: column; }
 dialog.viewer:not([open]), dialog.sheet:not([open]) { opacity: 0; transform: translateY(10px); }
 @starting-style { dialog.viewer[open], dialog.sheet[open] { opacity: 0; transform: translateY(10px); } }
@@ -338,7 +338,13 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-receipt dd { margin: 0; overflow-wrap: anywhere; }
 #register-title:focus { outline: none; }
 
-.about { max-width: 72ch; }
+.about > :not(.table-wrap) { max-width: 72ch; } /* lines of text stay easy to read; a table takes the whole width */
+.about .where { color: var(--tblr-secondary); font-size: 0.875rem; }
+.table-wrap { overflow-x: auto; margin: 0.75rem 0 1rem; border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius, 4px); }
+.table-wrap table { width: 100%; border-collapse: collapse; }
+.table-wrap th, .table-wrap td { padding: 0.625rem 0.875rem; text-align: left; vertical-align: top; }
+.table-wrap thead th { font-size: 0.8125rem; font-weight: 600; white-space: nowrap; background: var(--tblr-bg-surface-secondary); }
+.table-wrap tbody td { border-top: 1px solid var(--tblr-border-color); }
 .about-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
 .about-title:focus { outline: none; }
 .about-lede { color: var(--tblr-secondary); margin: 0.5rem 0 0; }
