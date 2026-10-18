@@ -22,9 +22,9 @@
     <tbody>
     {% for mode in modes %}
       <tr><td><b>{{ mode.label }}</b><br><span class="where">{{ mode.words }}{% if mode.why_not %} {{ mode.why_not }}{% endif %}</span></td>
-        <td>{% if mode.known %}{{ mode.found }} of {{ mode.known }} ({{ mode.share }}%){% if mode.low is not none %}<br><span class="where">range {{ "%.0f" | format(100 * mode.low) }}% to {{ "%.0f" | format(100 * mode.high) }}%</span>{% endif %}{% else %}not measured yet{% endif %}</td>
-        <td>{% if mode.seconds is not none %}about {{ "%.1f" | format([mode.seconds, 0.1] | max) }} s<br><span class="where">95 of 100 under {{ "%.1f" | format([mode.slow_seconds, 0.1] | max) }} s</span>{% else %}not measured yet{% endif %}</td>
-        <td>{% if mode.cost_usd %}about {{ "%.1f" | format(100 * mode.cost_usd) }} cent{% if mode.key == "ai" and comparing %}<br><span class="where">and about {{ "%.1f" | format(100 * comparing.cost_usd) }} cent more for the comparisons of the ten</span>{% endif %}{% elif mode.seconds is not none %}nothing{% endif %}</td></tr>
+        <td>{% if mode.known %}<span class="text-nowrap">{{ mode.found }} of {{ mode.known }} ({{ mode.share }}%)</span>{% if mode.low is not none %}<br><span class="where">range {{ "%.0f" | format(100 * mode.low) }}% to {{ "%.0f" | format(100 * mode.high) }}%</span>{% endif %}{% else %}not measured yet{% endif %}</td>
+        <td>{% if mode.seconds is not none %}<span class="text-nowrap">about {{ "%.1f" | format([mode.seconds, 0.1] | max) }} s</span><br><span class="where"><span class="text-nowrap">95 of 100 under</span> <span class="text-nowrap">{{ "%.1f" | format([mode.slow_seconds, 0.1] | max) }} s</span></span>{% else %}not measured yet{% endif %}</td>
+        <td>{% if mode.cost_usd %}<span class="text-nowrap">about {{ "%.1f" | format(100 * mode.cost_usd) }} cent</span>{% if mode.key == "ai" and comparing %}<br><span class="where">and about {{ "%.1f" | format(100 * comparing.cost_usd) }} cent more for the comparisons of the ten</span>{% endif %}{% elif mode.seconds is not none %}nothing{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table></div>
