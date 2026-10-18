@@ -11,7 +11,7 @@ tables, and its year. A comment after "#" may say where the year was read.
 When the organiser's post gives the days of the event, a line also carries its first and its last
 day, and they become the start and the end of the event (design 7.2):
 
-    hedera.com  hello-future-2024  2024  2024-07-22  2024-08-20  # "Running from July 22 to ..."
+    hedera.com  hello-future-2024  2024  2024-07-22  2024-08-20  # the days given in the post
 
 An event with a known start or end keeps the year of its dates; the typed year is used only when
 no date is known.
