@@ -221,6 +221,15 @@ _HEADLINE_OPTIONS = (
 )
 
 
+def _idea_query(conn: psycopg.Connection, idea: str) -> str:
+    """The words of the idea that are marked, as the text of a query that matches any one of
+    them by its stem; empty when the idea has none."""
+    row = conn.execute(
+        "SELECT replace(plainto_tsquery(%s, %s)::text, ' & ', ' | ')", (LANGUAGE, idea)
+    ).fetchone()
+    return row[0] if row else ""
+
+
 def matched_words(conninfo: str, project_ids: Sequence[int], idea: str) -> dict[int, Markup]:
     """For each project whose page has a word of the idea: the part of its short line and first
     text where those words stand, with each one marked. A project found only by meaning has
@@ -228,15 +237,16 @@ def matched_words(conninfo: str, project_ids: Sequence[int], idea: str) -> dict[
     if not project_ids or not idea.strip():
         return {}
     with psycopg.connect(conninfo) as conn:
+        query = _idea_query(conn, idea)
         rows = conn.execute(
-            "WITH q AS (SELECT replace(plainto_tsquery(%(language)s, %(idea)s)::text, ' & ', "
-            "' | ')::tsquery AS query), docs AS (SELECT p.id, concat_ws(' ', p.short_line, "
+            "WITH q AS (SELECT %(query)s::tsquery AS query), docs AS (SELECT p.id, "
+            "concat_ws(' ', p.short_line, "
             "(SELECT s.body FROM sections s WHERE s.project_id = p.id ORDER BY s.position "
             "LIMIT 1)) AS document FROM projects p WHERE p.id = ANY(%(ids)s)) "
             "SELECT d.id, ts_headline(%(language)s, d.document, q.query, %(options)s) "
             "FROM docs d, q WHERE q.query::text <> '' "
             "AND to_tsvector(%(language)s, d.document) @@ q.query",
-            {"language": LANGUAGE, "idea": idea, "ids": list(project_ids),
+            {"language": LANGUAGE, "query": query, "ids": list(project_ids),
              "options": _HEADLINE_OPTIONS},
         ).fetchall()  # fmt: skip
     return {
@@ -316,13 +326,13 @@ def marked_lines(conninfo: str, lines: dict[int, str], idea: str) -> dict[int, M
         return {}
     ids = list(lines)
     with psycopg.connect(conninfo) as conn:
+        query = _idea_query(conn, idea)
         rows = conn.execute(
-            "WITH q AS (SELECT replace(plainto_tsquery(%(language)s, %(idea)s)::text, ' & ', "
-            "' | ')::tsquery AS query) "
+            "WITH q AS (SELECT %(query)s::tsquery AS query) "
             "SELECT t.id, ts_headline(%(language)s, t.line, q.query, %(options)s) "
             "FROM unnest(%(ids)s::bigint[], %(lines)s::text[]) AS t(id, line), q "
             "WHERE q.query::text <> '' AND to_tsvector(%(language)s, t.line) @@ q.query",
-            {"language": LANGUAGE, "idea": idea, "ids": ids, "lines": [lines[i] for i in ids],
+            {"language": LANGUAGE, "query": query, "ids": ids, "lines": [lines[i] for i in ids],
              "options": f'StartSel="{_START}", StopSel="{_STOP}", HighlightAll=true'},
         ).fetchall()  # fmt: skip
     return {
