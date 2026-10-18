@@ -377,7 +377,10 @@
   });
   // The comparison: a 503 carries the words of the failure for each result, so it is shown.
   document.addEventListener("htmx:beforeSwap", function (event) {
-    var elt = event.detail.elt;
+    // htmx 2 names the target of the swap as `elt` here; the element that asked is in the
+    // request's config (htmx 2.0.11, seen in the browser on 18 October 2026).
+    var config = event.detail.requestConfig;
+    var elt = (config && config.elt) || event.detail.elt;
     var status = event.detail.xhr.status;
     var shown = elt && (elt.id === "compare-loader" || elt.id === "check" || elt.id === "register-form" ||
       elt.hasAttribute("data-check-compare") || elt.closest(".compare-ask"));

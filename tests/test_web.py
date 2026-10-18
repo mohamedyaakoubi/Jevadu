@@ -693,6 +693,26 @@ def test_a_project_of_a_check_opens_over_it_and_the_check_comes_back(site, chrom
     page.context.close()
 
 
+@pytest.mark.browser
+def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # noqa: ANN001
+    """An answer of 400 takes the place of the steps of the check, and of the register's form."""
+    client, _, _, database = site
+    event = checkable(database)
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "my project")
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer-body:has-text('This is not the link of a repository')")
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] .check-result")
+    page.locator("#register-form button[type=submit]").click()  # no line in the README yet
+    page.wait_for_selector("#register-box:has-text('does not carry the line')")
+    page.context.close()
+
+
 # ----------------------------------------------------------------- the register (S4)
 
 
