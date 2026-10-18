@@ -9,7 +9,7 @@
   <p class="about-lede">What the search does with your idea, and what the tests measured. Every number here comes from a dated result file of a test. The (i) next to each part of the page explains that part.</p>
 
   <h3>The search, step by step</h3>
-  <ol class="steps">
+  <ol>
     <li><b>Quick results, while you type.</b> Google's embedding model{{ parts.ref("embedding") }} turns your idea into numbers and compares them with every project; or, if you choose words, a word search (BM25{{ parts.ref("bm25") }}) finds the projects that use your words. No model writes anything.</li>
     <li><b>Gemini, only when you ask.</b> The button "Order and compare with Gemini" lets Gemini 3.8 Flash{{ parts.ref("gemini") }} read the 30 projects closest in meaning and put the ten most similar first. Then it writes, for each of the ten, what is the same as your idea and what differs. It sees only the projects of step 1, and it never scores a project.</li>
     <li><b>Kept for one day.</b> What the models answered is kept for one day under a fingerprint of the idea, so the same search never asks them again. Your browser keeps your last search until you clear the box.</li>

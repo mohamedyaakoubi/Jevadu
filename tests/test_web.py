@@ -1140,6 +1140,8 @@ def test_the_window_how_it_works_gives_its_table_the_whole_width(site, chromium)
     line = page.locator("#sheet .about-lede").bounding_box()
     assert sheet and table and line
     assert sheet["width"] >= 1000 and table["width"] > line["width"] + 100
+    steps = "getComputedStyle(document.querySelector('#sheet .about ol')).listStyleType"
+    assert page.evaluate(steps) == "decimal"  # the text refers to "step 1"
     page.context.close()
 
 
