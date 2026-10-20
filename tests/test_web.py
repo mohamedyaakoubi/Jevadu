@@ -122,7 +122,7 @@ def test_the_start_page_lists_the_projects_and_calls_no_model(site) -> None:  # 
     before = len(fake.requests)  # the embeddings of the three projects were made already
     page = client.get("/")
     assert page.status_code == 200
-    assert 'id="idea" name="idea"' in page.text and "Order and compare with Gemini" in page.text
+    assert 'id="idea" name="idea"' in page.text and "Sort and compare with Gemini" in page.text
     assert "All 3 projects" in page.text and page.text.count('class="result"') == 3
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel"' in page.text
     assert "The card of a project opens here" not in page.text  # it opens when it is chosen
@@ -136,7 +136,7 @@ def test_a_page_after_the_end_of_the_list_says_so(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = client.get("/", params={"page": "2"})
     assert 'class="result"' not in page.text
-    assert "There are no more projects in this list." in page.text
+    assert "No more projects in this list." in page.text
 
 
 def test_the_list_shows_ten_projects_with_numbered_pages(site) -> None:  # noqa: ANN001
@@ -174,7 +174,7 @@ def test_quick_results_ask_no_model_that_writes(site) -> None:  # noqa: ANN001
     page = client.get("/", params={"idea": VENDOR})
     assert page.status_code == 200
     assert model_calls(fake, before) == 0  # only the embedding of the idea
-    assert "Quick results" in page.text and "Gemini has not read them" in page.text
+    assert 'id="results-title">Results</h2>' in page.text and "closest by meaning" in page.text
     first = page.text.index('class="result"')
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel?idea=' in page.text[first : first + 900]
     # The model's sentence, and the words of the idea marked in it.
@@ -216,8 +216,8 @@ def test_the_ways_to_search(site) -> None:  # noqa: ANN001
     before = len(fake.requests)
     words = client.get("/", params={"idea": "parcel", "mode": "words"})
     assert len(fake.requests) == before  # by words only, the idea is not embedded
-    assert "Where your words stand in its page:" in words.text
-    assert "that use your words" in words.text
+    assert "Matching text:" in words.text
+    assert "closest by keyword" in words.text
 
 
 def test_the_button_orders_with_gemini_and_the_same_search_asks_nothing_again(site) -> None:  # noqa: ANN001
@@ -228,7 +228,7 @@ def test_the_button_orders_with_gemini_and_the_same_search_asks_nothing_again(si
     page = client.get("/", params={"idea": VENDOR, "ai": "1"})
     assert model_calls(fake, before) == 1
     assert order_of(page.text) == [by_meaning[1], by_meaning[0], *by_meaning[2:]]
-    assert "Ordered by Gemini" in page.text and "Quick order</a>" in page.text
+    assert "Sorted by Gemini" in page.text and "Search order</a>" in page.text
     assert 'aria-current="true">Gemini\'s order</a>' in page.text  # the order on the screen
     loader = re.search(r'id="compare-loader" hx-get="/compare\?idea=[^&]+&amp;ids=([\d,]+)"',
                        page.text)  # fmt: skip
@@ -247,7 +247,7 @@ def test_a_wrong_answer_of_gemini_keeps_the_order_of_meaning_and_says_so(site) -
     fake.answer_text = "{}"  # not a list of numbers
     page = client.get("/", params={"idea": VENDOR, "ai": "1"})
     assert order_of(page.text) == by_meaning
-    assert "Gemini did not answer in time, so the projects are in the order of meaning" in page.text
+    assert "Gemini did not respond in time, so the results are in the search order" in page.text
     assert 'id="compare-loader"' not in page.text
 
 
@@ -260,7 +260,7 @@ def test_a_project_opens_in_the_window_with_its_own_address(site) -> None:  # no
     assert part.status_code == 200 and "<html" not in part.text
     assert 'id="viewer-title"' in part.text and "Compare with my idea" in part.text
     missing = client.get("/project/999999/panel")
-    assert missing.status_code == 404 and "There is no project with this number" in missing.text
+    assert missing.status_code == 404 and "There is no project with this ID" in missing.text
 
 
 def test_the_card_of_a_project_names_the_projects_linked_to_it(site) -> None:  # noqa: ANN001
@@ -274,7 +274,7 @@ def test_the_card_of_a_project_names_the_projects_linked_to_it(site) -> None:  #
     RepositoryStore(database).link({pebble: REPO, cedar: REPO})
     part = client.get(f"/project/{pebble}/panel")
     box = part.text.split("Linked projects", 1)[1].split("</section>", 1)[0]
-    assert f'hx-get="/project/{cedar}/panel"' in box and "The same repository." in box
+    assert f'hx-get="/project/{cedar}/panel"' in box and "Same repository." in box
     assert f"/project/{fern}" not in box
     page = client.get(f"/project/{cedar}")  # the page of its own names the link too
     assert "Linked projects" in page.text and f'hx-get="/project/{pebble}/panel"' in page.text
@@ -286,7 +286,7 @@ def test_the_live_demo_has_a_button_at_the_head_of_the_card(site) -> None:  # no
     client, _, ids, _ = site
     part = client.get(f"/project/{ids['Pebble Pay']}/panel")
     head = part.text.split('class="project-cols"', 1)[0]
-    assert 'href="https://demo.example.test/pebble-pay"' in head and "Its live demo" in head
+    assert 'href="https://demo.example.test/pebble-pay"' in head and "Live demo" in head
 
 
 def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
@@ -295,28 +295,28 @@ def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
     assert page.status_code == 200
     text = page.text
     places = [text.index(words) for words in
-              ("On the ledger<", "The code<", "From the project's page<",
-               "Written by a model<")]  # fmt: skip
+              ("On the ledger<", "The code<", "From the project page<",
+               "AI summary<")]  # fmt: skip
     assert places == sorted(places)  # the facts first, then the page, then the model
     assert "Pebble Pay, invented." in text  # the short line, word for word
-    assert "Inferred: less sure" in text and ">Stated<" in text
+    assert ">Inferred<" in text and ">Stated<" in text
     assert f"&ldquo;{ON_PEBBLE}&rdquo;" in text  # the quote that the field rests on
-    assert "Not shown: none of the sentences that the model gave was found" in text
-    assert "Neither the page nor the code names a Hedera ID" in text
-    assert "as the page stood on 10 October 2026" in text  # the day it was saved from its site
+    assert "Hidden: none of its quotes were found" in text
+    assert "No Hedera ID on the page or in the README" in text
+    assert "as of 10 October 2026" in text  # the day it was saved from its site
     assert "compare-section" not in text  # no idea on its own page, so no comparison
 
 
 def test_a_project_without_a_model_card_says_so(site) -> None:  # noqa: ANN001
     client, _, ids, _ = site
     page = client.get(f"/project/{ids['Cedar Post']}")
-    assert "No card has been written by a model for this project yet" in page.text
+    assert "No AI summary for this project yet" in page.text
 
 
 def test_an_unknown_project_is_not_found(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = client.get("/project/999999")
-    assert page.status_code == 404 and "There is no project with this number" in page.text
+    assert page.status_code == 404 and "There is no project with this ID" in page.text
 
 
 def test_without_google_the_words_are_searched_and_the_page_says_so(site) -> None:  # noqa: ANN001
@@ -324,7 +324,7 @@ def test_without_google_the_words_are_searched_and_the_page_says_so(site) -> Non
     fake.fail_with = (503, "unavailable")
     page = client.get("/", params={"idea": "a vendor and a coin"})
     assert page.status_code == 200
-    assert "only its words were searched" in page.text
+    assert "so these are keyword results" in page.text
     assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
 
 
@@ -379,7 +379,8 @@ def test_a_long_idea_is_cut_and_the_page_says_so(site) -> None:  # noqa: ANN001
 
     client, _, _, _ = site
     page = client.get("/", params={"idea": "coin " * (LONGEST_IDEA // 4)})
-    assert f"The idea was longer than {LONGEST_IDEA:,} characters, so it was cut." in page.text
+    cut = f"Your idea was longer than {LONGEST_IDEA:,} characters, so it was shortened."
+    assert cut in page.text
 
 
 # ----------------------------------------------------------------- the windows and the sources
@@ -389,13 +390,13 @@ def test_the_windows_of_the_bottom_of_the_page(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
     how = client.get("/about/how", headers=HX)
     assert how.status_code == 200 and "<html" not in how.text
-    assert "The search, step by step" in how.text and "The ways to search, measured" in how.text
-    assert "What this tool cannot do" in how.text
+    assert "The search, step by step" in how.text and "Search modes compared" in how.text
+    assert "Limits</h3>" in how.text and "Test 3: the Hedera IDs." in how.text
     page = client.get("/about/how")  # without JavaScript, a whole page
     assert "<html" in page.text and "Back to the search" in page.text
     assert client.get("/method").status_code == 200
     questions = client.get("/about/questions", headers=HX)
-    assert "Why does the AI not judge, score or rank the projects?" in questions.text
+    assert "Why doesn't the AI judge, score or rank the projects?" in questions.text
     assert "ETHGlobal was asked before any program read its showcase." in questions.text
     sources = client.get("/about/sources", headers=HX)
     assert sources.text.count('<li id="ref-') >= 15
@@ -429,7 +430,7 @@ def test_the_comparison_names_the_texts_it_used(site) -> None:  # noqa: ANN001
     assert "Same 9." not in part.text  # a number that is not in the list
     assert "By Gemini, from what it does." in part.text  # "made_up" was dropped
     assert "By Gemini, from the short line." in part.text
-    assert part.text.count("No comparison was written for this project.") == 1  # the third
+    assert part.text.count("No comparison for this project.") == 1  # the third
     sent = [body for path, body in fake.requests if "generateContent" in path][-1]
     assert "A vendor takes coins." in json.dumps(sent)  # Pebble's card field went to the model
 
@@ -466,7 +467,7 @@ def test_a_comparison_that_fails_says_so_in_each_place(site) -> None:  # noqa: A
     asked = f"{ids['Pebble Pay']},{ids['Cedar Post']}"
     part = client.get("/compare", params={"idea": "a coin", "ids": asked})
     assert part.status_code == 503
-    assert part.text.count("could not be written just now") == 2
+    assert part.text.count("could not be generated just now") == 2
 
 
 # ----------------------------------------------------------------- the filters (design 8.2)
@@ -478,7 +479,7 @@ def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
     assert 'name="event"' in page.text and 'name="life"' in page.text
     assert "ETHGlobal Sample Event (3)" in page.text
     assert f"{PAYMENTS} (1)" in page.text  # the one card of the fixture
-    assert "1 of 3 projects have one so far" in page.text
+    assert "1 of 3 projects have one" in page.text
 
 
 def test_a_filtered_search_shows_only_the_matching_projects(site) -> None:  # noqa: ANN001
@@ -487,7 +488,7 @@ def test_a_filtered_search_shows_only_the_matching_projects(site) -> None:  # no
     assert page.text.count('class="result"') == 1
     assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
     assert "category=Payments+and+remittance" in page.text  # the link keeps the filter
-    assert "Clear the filters" in page.text
+    assert "Clear filters" in page.text
     card = client.get(f"/project/{ids['Pebble Pay']}", params={"idea": "a coin",
                                                                "category": PAYMENTS})  # fmt: skip
     assert 'href="/?idea=a+coin&amp;category=Payments+and+remittance#results"' in card.text
@@ -507,10 +508,10 @@ def test_a_filter_keeps_the_closest_projects_that_have_its_value(site, monkeypat
     client, _, _, _ = site
     monkeypatch.setattr(web_app, "SHOWN", 1)  # "the closest" is one project in this test
     vendor = client.get("/", params={"idea": VENDOR, "category": PAYMENTS})
-    assert "1 to 1 of the 1 with these filters, among the 1 closest" in vendor.text
+    assert "1 to 1 of the 1 matching your filters, among the 1 closest" in vendor.text
     assert vendor.text.count('class="result"') == 1 and "Pebble Pay" in vendor.text
     ballot = client.get("/", params={"idea": "a ballot for a small club", "category": PAYMENTS})
-    assert "None of the 1 projects closest to your idea has these values" in ballot.text
+    assert "None of the 1 closest projects match these filters" in ballot.text
     assert 'class="result"' not in ballot.text  # Pebble Pay has the value, but it is not close
 
 
@@ -572,17 +573,17 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     part = client.get("/check", params=asked, headers=HX)
     assert part.status_code == 200 and '<h2 id="viewer-title"' in part.text
     assert "github.com/sample-org/pebble-pay</h2>" in part.text
-    assert "Proof: found" in part.text and "No model wrote anything here." in part.text
+    assert "Proof: found" in part.text and "No AI-generated text." in part.text
     assert f'href="https://hashscan.io/testnet/topic/{TOPIC}"' in part.text
-    assert "Seen before" in part.text and "The same repository." in part.text
-    assert "The closest past projects" in part.text and "Cedar Post" in part.text
+    assert "Seen before" in part.text and "Same repository." in part.text
+    assert "Most similar past projects" in part.text and "Cedar Post" in part.text
     assert model_calls(fake, before) == 0  # the closest projects need an embedding only
     assert len(client.github_site.seen) == 3  # the facts, the README and the version, once
-    assert 'Version checked: <span class="id">7260ea729063</span>' in part.text
-    assert "the newest commit of the branch main" in part.text  # the branch, by its name
+    assert 'Commit checked: <span class="id">7260ea729063</span>' in part.text
+    assert "the latest on main" in part.text  # the branch, by its name
     day = r"\d{1,2} [A-Z][a-z]+ \d{4}"
-    assert re.search(rf"Read from GitHub on {day}: its facts, its README \(README\.md\) and the "
-                     r"version\.", part.text)  # fmt: skip
+    assert re.search(rf"Fetched from GitHub on {day}: the repository details, the README "
+                     r"\(README\.md\) and the latest commit\.", part.text)  # fmt: skip
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
     assert len(client.github_site.seen) == 3  # GitHub was not asked again
@@ -604,7 +605,7 @@ def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) ->
     done = client.get(asked.group(1).replace("&amp;", "&"), headers=HX)
     assert done.status_code == 200 and model_calls(fake, before) == 1
     assert all(f'id="check-compare-{pid}" hx-swap-oob="true"' in done.text for pid in places)
-    assert "Same 1." in done.text and "Compared by Gemini with the README" in done.text
+    assert "Same 1." in done.text and "Compared by Gemini with this README" in done.text
     again = client.get(asked.group(1).replace("&amp;", "&"), headers=HX)
     assert "Same 1." in again.text and model_calls(fake, before) == 1  # kept for one day
     never = {"repo": "github.com/nobody/never-checked", "ids": places[0], "place": "check"}
@@ -616,22 +617,22 @@ def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -
     client, _, _, database = site
     event = checkable(database)
     wrong = client.get("/check", params={"repo": "my project", "event": event}, headers=HX)
-    assert wrong.status_code == 400 and "This is not the link of a repository" in wrong.text
+    assert wrong.status_code == 400 and "This is not a GitHub repository link" in wrong.text
     backwards = {"repo": REPO, "event": "other", "starts": "2026-03-08", "ends": "2026-03-06"}
     late = client.get("/check", params=backwards, headers=HX)
-    assert late.status_code == 400 and "Type the first and the last day" in late.text
+    assert late.status_code == 400 and "Enter the start and end dates" in late.text
     unknown = client.get("/check", params={"repo": REPO, "event": "99999"}, headers=HX)
-    assert unknown.status_code == 400 and "There is no such hackathon" in unknown.text
+    assert unknown.status_code == 400 and "That hackathon is not in the list" in unknown.text
     assert client.github_site.seen == []  # nothing was asked of GitHub
     typed = {"repo": REPO, "event": "other", "starts": "2026-03-06", "ends": "2026-03-08"}
     days = client.get("/check", params=typed, headers=HX)
     assert days.status_code == 200 and "6 March 2026 to 8 March 2026" in days.text
     # Typed days are checked, but a registration names a hackathon of the list.
-    assert "Days typed by hand can be checked, but not registered." in days.text
-    assert "Write it on Hedera" not in days.text
+    assert "Custom dates can be checked, but not registered." in days.text
+    assert "Register on Hedera testnet" not in days.text
     form = {**typed, "account": ""}
     refused = client.post("/register", data=form, headers=HX)
-    assert refused.status_code == 400 and "Choose it in the list" in refused.text
+    assert refused.status_code == 400 and "Pick it in the list" in refused.text
     assert client.writes.written == []
 
 
@@ -641,17 +642,16 @@ def test_with_no_hackathon_the_check_offers_the_one_of_the_same_code(site) -> No
     client, _, _, database = site
     event = checkable(database)
     part = client.get("/check", params={"repo": REPO}, headers=HX)
-    assert "Is that the hackathon you register it for?" in part.text
+    assert "Register it for that hackathon?" in part.text
     offer = re.search(r'hx-get="(/check\?repo=[^"]+&amp;event=(\d+))"', part.text)
     assert offer is not None and offer.group(2) == event
     again = client.get(offer.group(1).replace("&amp;", "&"), headers=HX)
-    assert again.status_code == 200 and "Write it on Hedera" in again.text
+    assert again.status_code == 200 and "Register on Hedera testnet" in again.text
 
 
 def test_a_hackathon_of_the_list_can_be_checked_and_registered(site) -> None:  # noqa: ANN001
     """A hackathon that the collection does not hold, added to the list by hand: it is offered
-    in the list of the check, its days are not judged before they are known, and the register
-    names it by its key."""
+    in the list of the check with its days, and the register names it by its key."""
     from hackathon_memory.hedera.listed import LISTED
 
     client, _, _, _ = site
@@ -660,7 +660,7 @@ def test_a_hackathon_of_the_list_can_be_checked_and_registered(site) -> None:  #
     assert f'<option value="{one.key}">' in page.text
     check = client.get("/check", params={"repo": REPO, "event": one.key}, headers=HX)
     assert check.status_code == 200 and one.name in check.text
-    assert one.key in check.text and "Write it on Hedera" in check.text
+    assert one.key in check.text and "Register on Hedera testnet" in check.text
 
 
 def test_a_transaction_named_on_a_page_is_shown_as_one_action(site) -> None:  # noqa: ANN001
@@ -686,7 +686,7 @@ def test_a_transaction_named_on_a_page_is_shown_as_one_action(site) -> None:  # 
         conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
                      "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
     part = client.get(f"/project/{ids['Pebble Pay']}/panel")
-    assert "A transaction: the creation of a token, on 7 March 2026." in part.text
+    assert "Transaction: token created, 7 March 2026." in part.text
     assert f'href="https://hashscan.io/testnet/transaction/{tx}"' in part.text
 
 
@@ -695,22 +695,22 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     own dates and not judged, and the register asks for one (design 12.1, S3)."""
     client, _, _, database = site
     alone = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
-    assert "A registration names its hackathon." in alone.text  # no project keeps this code yet
+    assert "Registering needs a hackathon." in alone.text  # no project keeps this code yet
     checkable(database)
     start = client.get("/")
-    assert '<option value="">No hackathon: show the facts only</option>' in start.text
+    assert '<option value="">None: show the facts, without judging dates</option>' in start.text
     assert '<optgroup label="2026"><option value="' in start.text  # a group for each year
     assert "ETHGlobal Sample Event (6 to 8 March)</option>" in start.text  # a dated one
     part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
-    assert part.status_code == 200 and "no hackathon given" in part.text
+    assert part.status_code == 200 and "no hackathon selected" in part.text
     assert "Proof: found, dates not judged" in part.text
     head = part.text.split("</header>")[0]  # the marks of the check itself
-    assert "Found; its dates are not judged" in part.text and "Life:" not in head
-    assert "Is that the hackathon you register it for?" in part.text  # Pebble Pay keeps it
-    assert "Write it on Hedera" not in part.text
+    assert "Found, dates not judged" in part.text and "Activity:" not in head
+    assert "Register it for that hackathon?" in part.text  # Pebble Pay keeps it
+    assert "Register on Hedera testnet" not in part.text
     form = {"repo": REPO, "event": "", "starts": "", "ends": "", "account": ""}
     refused = client.post("/register", data=form, headers=HX)
-    assert refused.status_code == 400 and "A registration names its hackathon" in refused.text
+    assert refused.status_code == 400 and "Registering needs a hackathon" in refused.text
     assert client.writes.written == []
 
 
@@ -727,7 +727,7 @@ def test_a_project_of_a_check_opens_over_it_and_the_check_comes_back(site, chrom
     page.wait_for_selector("#viewer[open] .check-result")
     page.locator("[data-check-compare]").click()  # Gemini, on its named button only
     page.wait_for_selector(".check-result .hm-compare-text")
-    assert "Compared by Gemini with the README" in page.locator("#check-compare-ask").inner_text()
+    assert "Compared by Gemini with this README" in page.locator("#check-compare-ask").inner_text()
     page.locator(".check-result .hm-close-name a").first.click()
     page.wait_for_selector("#viewer[open] .project[data-project]")
     assert page.locator("[data-back-to-check]").is_visible()
@@ -747,14 +747,14 @@ def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # 
     page.goto("http://site.test/")
     page.fill("#check-repo", "my project")
     page.locator("#check button[type=submit]").click()
-    page.wait_for_selector("#viewer-body:has-text('This is not the link of a repository')")
+    page.wait_for_selector("#viewer-body:has-text('This is not a GitHub repository link')")
     page.goto("http://site.test/")
     page.fill("#check-repo", "github.com/sample-org/pebble-pay")
     page.select_option("#check-event", event)
     page.locator("#check button[type=submit]").click()
     page.wait_for_selector("#viewer[open] .check-result")
     page.locator("#register-form button[type=submit]").click()  # no line in the README yet
-    page.wait_for_selector("#register-box:has-text('does not carry the line')")
+    page.wait_for_selector("#register-box:has-text('does not contain the line')")
     page.context.close()
 
 
@@ -774,7 +774,7 @@ def test_a_request_that_fails_leaves_no_waiting_state(site, chromium) -> None:  
     page.unroute("**/project/*/panel*")
     page.route("**/project/*/panel*", lambda route: route.fulfill(
         status=503, body=client.get("/project/999999/panel").text.replace(
-            "There is no project with this number", "The database is not running"),
+            "There is no project with this ID", "The database is not running"),
         headers={"content-type": "text/html; charset=utf-8"}))  # fmt: skip
     page.locator(".result-link").first.click()
     page.wait_for_selector("#viewer[open] #viewer-body:has-text('The database is not running')")
@@ -805,7 +805,7 @@ def test_the_offered_hackathon_checks_the_code_again_in_the_window(site, chromiu
     page.wait_for_selector("#viewer[open] [data-check-again]")
     page.locator("[data-check-again]").first.click()
     page.wait_for_selector("#viewer[open] #register-form")
-    assert "no hackathon given" not in page.locator("#viewer-body").inner_text()
+    assert "no hackathon selected" not in page.locator("#viewer-body").inner_text()
     page.context.close()
 
 
@@ -819,18 +819,18 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     event = checkable(database)
     asked = {"repo": "github.com/sample-org/pebble-pay", "event": event}
     check = client.get("/check", params=asked, headers=HX)
-    assert "The register does not hold this code yet." in check.text
-    assert "ethglobal.com/sample-event" in check.text and "Write it on Hedera" in check.text
+    assert "This repository is not registered yet." in check.text
+    assert "ethglobal.com/sample-event" in check.text and "Register on Hedera testnet" in check.text
     form = {**asked, "starts": "", "ends": "", "account": "0.0.4567890"}
     asked_before = len(client.github_site.seen)
     missing = client.post("/register", data=form, headers=HX)
-    assert missing.status_code == 400 and "does not carry the line" in missing.text
+    assert missing.status_code == 400 and "does not contain the line" in missing.text
     assert len(client.github_site.seen) == asked_before + 2  # the README and the version, again
     assert client.writes.written == []  # nothing is written without the team's line
     with_line(client, check.text)
     done = client.post("/register", data=form, headers=HX)
     assert done.status_code == 200 and "Registered on Hedera" in done.text
-    assert "<dt>Number</dt><dd>1, on the topic" in done.text
+    assert "<dt>Sequence number</dt><dd>1, on topic" in done.text
     assert "https://hashscan.io/testnet/transaction/1791585601.000000001" in done.text
     (payload,) = client.writes.written
     assert json.loads(payload) == {
@@ -841,10 +841,10 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     }  # fmt: skip
     assert b"github" not in payload and b"pebble" not in payload  # no link in clear text
     again = client.post("/register", data=form, headers=HX)
-    assert "Registered already" in again.text and len(client.writes.written) == 1
+    assert "Already registered" in again.text and len(client.writes.written) == 1
     later = client.get("/check", params=asked, headers=HX)
-    assert "Registered before." in later.text and "number 1" in later.text
-    assert "Write it on Hedera" not in later.text  # it is registered for this event already
+    assert "Already registered." in later.text and "sequence number 1" in later.text
+    assert "Register on Hedera testnet" not in later.text  # it is registered for this event already
 
 
 def test_a_registration_needs_a_checked_repository_and_a_real_account(site) -> None:  # noqa: ANN001
@@ -856,7 +856,7 @@ def test_a_registration_needs_a_checked_repository_and_a_real_account(site) -> N
     check = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
     with_line(client, check.text)
     wrong = client.post("/register", data={**form, "account": "my wallet"}, headers=HX)
-    assert wrong.status_code == 400 and "A Hedera account looks like 0.0.12345" in wrong.text
+    assert wrong.status_code == 400 and "A Hedera account ID looks like 0.0.12345" in wrong.text
     assert client.writes.written == []
     page = client.post("/register", data=form)  # without JavaScript: a page of its own
     assert page.status_code == 200 and "<h1" in page.text and len(client.writes.written) == 1
@@ -868,7 +868,7 @@ def test_a_closed_register_is_said_and_offers_no_button(site) -> None:  # noqa: 
     closed = client.make(hedera_topic_id="")
     check = closed.get("/check", params={"repo": REPO, "event": event}, headers=HX)
     assert "The public register is not open yet" in check.text
-    assert "Write it on Hedera" not in check.text
+    assert "Register on Hedera testnet" not in check.text
 
 
 # ----------------------------------------------------------------- the charts (design 12.1, S5)
@@ -896,13 +896,13 @@ def test_the_charts_count_the_list_on_the_screen(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     before = len(fake.requests)
     page = client.get("/", params={"view": "charts"})
-    assert page.status_code == 200 and 'aria-current="true">Charts</a>' in page.text
-    assert "Counted now from the tables, for 3 projects." in page.text
+    assert page.status_code == 200 and 'aria-current="true">Insights</a>' in page.text
+    assert "Live counts for 3 projects." in page.text
     assert page.text.count("<canvas data-chart=") >= 3 and "Linked across events" in page.text
     assert 'href="https://ethglobal.com/events/sample-event"' in page.text  # the event's page
     assert 'class="result"' not in page.text and len(fake.requests) == before
     search = client.get("/", params={"idea": VENDOR, "view": "charts"})
-    assert "for 3 projects: the closest to your idea" in search.text
+    assert "for 3 projects, the closest to your idea" in search.text
     assert model_calls(fake, before) == 0  # charts call no model that writes
 
 
@@ -915,13 +915,13 @@ def test_a_share_is_shown_only_with_twenty_projects_behind_it() -> None:
     )
     chart = next(one for one in build(few, {}).charts if one.key == "proof")
     assert [(bar.words, bar.count, bar.share) for bar in chart.bars] == [
-        ("Proof found", 2, None), ("No Hedera ID given", 1, None)]  # fmt: skip
+        ("Proof found", 2, None), ("No ID given", 1, None)]  # fmt: skip
     many = Tally(
         projects=40, proof=__import__("collections").Counter({"proof_found": 10, "no_id_given": 30})
     )
     chart = next(one for one in build(many, {}).charts if one.key == "proof")
     assert [bar.share for bar in chart.bars] == [25, 75]
-    assert '"labels": ["Proof found", "No Hedera ID given"]' in chart.data()
+    assert '"labels": ["Proof found", "No ID given"]' in chart.data()
 
 
 # ------------------------------------------------- smaller parts
@@ -956,11 +956,11 @@ def test_the_reads_of_github_are_named_once_for_each_day() -> None:
     readme = SimpleNamespace(status="found", name="README.md", fetched_at="2026-10-16T08:00:01Z")
     version = SimpleNamespace(status="found", fetched_at="2026-10-18T05:00:00Z")
     assert github_reads(code, readme, version) == (
-        "Read from GitHub: its facts and its README (README.md) on 16 October 2026, "
-        "the version on 18 October 2026."
+        "Fetched from GitHub: the repository details and the README (README.md) on 16 October "
+        "2026, the latest commit on 18 October 2026."
     )
     assert github_reads(code, SimpleNamespace(status="none"), None) == (
-        "Read from GitHub on 16 October 2026: its facts."
+        "Fetched from GitHub on 16 October 2026: the repository details."
     )  # a README that is missing is said apart
 
 
@@ -1026,7 +1026,7 @@ def test_each_comparison_takes_its_place(site, chromium) -> None:  # noqa: ANN00
     results = page.locator("li.result")
     assert "Same 1." in results.nth(0).inner_text() and "Differs 1." in results.nth(0).inner_text()
     assert "Same 2." in results.nth(1).inner_text()
-    assert "No comparison was written for this project." in results.nth(2).inner_text()
+    assert "No comparison for this project." in results.nth(2).inner_text()
     page.context.close()
 
 
@@ -1038,7 +1038,7 @@ def test_a_failed_comparison_says_so_and_the_results_stay(site, chromium) -> Non
     page.goto(SEARCH + "&ai=1")
     page.wait_for_function("!document.querySelector('.compare.waiting')")
     texts = page.locator(".compare").all_inner_texts()
-    assert len(texts) == 3 and all("could not be written just now" in text for text in texts)
+    assert len(texts) == 3 and all("could not be generated just now" in text for text in texts)
     assert page.locator("li.result .result-link").count() == 3  # the results stay
     page.context.close()
 
@@ -1051,7 +1051,7 @@ def test_quick_results_come_while_typing_and_ask_no_model(site, chromium) -> Non
     before = len(fake.requests)
     page.locator("#idea").fill(VENDOR)
     page.wait_for_function("new URL(location.href).searchParams.get('idea')")
-    page.wait_for_selector("#results-title:has-text('Quick results')")
+    page.wait_for_selector("#results-title:has-text('Results')")
     assert page.locator("li.result").count() == 3 and model_calls(fake, before) == 0
     assert page.locator("#ai-button").is_enabled()
     page.context.close()

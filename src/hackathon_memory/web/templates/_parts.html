@@ -31,7 +31,7 @@
       <h3 class="hm-card-title"><a class="result-link" href="{{ link }}" data-open-viewer="{{ pid }}"
         hx-get="/project/{{ pid }}/panel{% if query %}?{{ query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ card.name }}</a></h3>
       {% if summary and summary.text %}<p class="hm-line">{{ line or summary.text }}</p>{% endif %}
-      {% if snippet %}<p class="hm-matched"><span class="visually-hidden">Where your words stand in its page: </span>&hellip;{{ snippet }}&hellip;</p>{% endif %}
+      {% if snippet %}<p class="hm-matched"><span class="visually-hidden">Matching text: </span>&hellip;{{ snippet }}&hellip;</p>{% endif %}
       {{ marks.tags(card) }}
     </div>
     <div class="card-footer hm-card-foot">{{ marks.proof(card.proof_status) }}{{ marks.life(card.life) }}</div>
@@ -47,7 +47,7 @@
 
 {# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
 {% macro link_reason(by) -%}
-{% if by == "repository" %}The same repository.{% else %}The same Hedera ID, {{ by.split(":", 1)[1] }} on the {{ "test" if by.startswith("testnet") else "main" if by.startswith("mainnet") else "preview" }} network, found by the ledger for both.{% endif %}
+{% if by == "repository" %}Same repository.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}
 {%- endmacro %}
 
 {% macro pager(page, pages, query, label="Pages of the list") -%}

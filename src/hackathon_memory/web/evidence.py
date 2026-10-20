@@ -63,22 +63,22 @@ def newest(name: str, folder: Path | None = None) -> dict | None:
 
 # The ways to search: the key on the page, the name in the result file, the label, the words.
 WAYS = (
-    ("ai", "meaning, then AI", "Order and compare with Gemini",
-     "The 30 projects closest in meaning, put in order by Gemini 3.8 Flash, on a click."),
-    ("meaning", "meaning", "Quick, by meaning",
-     "Finds projects with the same idea, also when they use other words."),
-    ("words", "words", "Quick, by words",
-     "Finds the projects that use your words. Best for a name or an exact term."),
-    ("", "both", "Meaning and words together",
-     "The two quick lists merged by the place of each project in each list."),
-    ("", "both, then AI", "Meaning and words, then Gemini",
-     "The 30 first of the two lists together, put in order by the same model."),
+    ("ai", "meaning, then AI", "Sort and compare with Gemini",
+     "Gemini 3.8 Flash sorts the 30 projects closest in meaning, on a click."),
+    ("meaning", "meaning", "Semantic",
+     "Finds projects with the same idea, also in other words."),
+    ("words", "words", "Keyword",
+     "Finds the projects that contain your words. Best for a name or an exact term."),
+    ("", "both", "Semantic and keyword together",
+     "Both lists merged by the place of each project in each (reciprocal rank fusion)."),
+    ("", "both, then AI", "Semantic and keyword, then Gemini",
+     "The top 30 of both lists together, sorted by the same model."),
     ("", "AI over every project", "Gemini over every project",
-     "The model reads the short line of every project and picks the 10 closest."),
+     "Gemini reads the tagline of every project and picks the 10 closest."),
 )  # fmt: skip
 WHY_NOT = {
-    "both": "Not offered since 16 October 2026: it found fewer than meaning alone.",
-    "both, then AI": "Not offered: it found no more than the order of the 30 closest in "
+    "both": "Not offered since 16 October 2026: it found fewer than semantic search alone.",
+    "both, then AI": "Not offered: it found no more than Gemini on the 30 closest by "
     "meaning, and was slower.",
     "AI over every project": "Not offered: it found no more, and costs about seven times as "
     "much, because the model reads every project for every search.",

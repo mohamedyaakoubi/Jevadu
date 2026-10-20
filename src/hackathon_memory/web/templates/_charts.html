@@ -4,20 +4,20 @@
 {% if not charts or not charts.projects %}
 <div class="empty"><p class="empty-title">No project to count</p><p class="empty-subtitle text-secondary">Remove a filter, or search with other words.</p></div>
 {% else %}
-<p class="hm-charts-note">Counted now from the tables, for {{ "{:,}".format(charts.projects) }} project{{ "s" if charts.projects != 1 }}{% if asked %}: the closest to your idea{% endif %}. A share in brackets is shown only when 20 projects or more stand behind it.</p>
+<p class="hm-charts-note">Live counts for {{ "{:,}".format(charts.projects) }} project{{ "s" if charts.projects != 1 }}{% if asked %}, the closest to your idea{% endif %}. A percentage appears only when at least 20 projects stand behind it.</p>
 {% set linked_section %}
 <section class="card hm-chart hm-wide" aria-labelledby="chart-linked">
   <div class="card-body">
     <h3 class="hm-chart-title" id="chart-linked">Linked across events{% if came_back %}: {{ came_back | length }} group{{ "s" if came_back | length != 1 }}, {{ came_back | map("length") | sum }} projects{% endif %}{{ parts.info("seen", "linked projects") }}</h3>
     {% if came_back %}
-    <p class="hm-chart-note">These projects of the list share the same code repository or the same Hedera ID with a project of another event. A link says only that: a team may have built on its earlier work, or used the same account again. An ID that many teams name, such as a common test account, links nothing: more than three teams in all, or two at one hackathon. A name alone links nothing.</p>
+    <p class="hm-chart-note">These projects share a repository, or a Hedera ID confirmed by the ledger, with a project at another event. A link is only a fact: a team may have built on earlier work, or reused an account. An ID that many teams use (more than three in all, or two at one hackathon) and a shared name link nothing.</p>
     <ul class="hm-linked">
     {% for group in came_back %}
       <li>{% for member in group %}<a href="/?open={{ member.project_id }}" data-open-viewer="{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML">{{ member.name }}</a> <span class="text-secondary">{{ member.event }}</span>{% if not loop.last %}<span aria-hidden="true"> &rarr; </span>{% endif %}{% endfor %}</li>
     {% endfor %}
     </ul>
     {% else %}
-    <p class="hm-chart-note">No project of this list shares its code or a Hedera ID with a project of another event.</p>
+    <p class="hm-chart-note">No project in this list shares a repository or a Hedera ID with a project at another event.</p>
     {% endif %}
   </div>
 </section>
@@ -29,11 +29,11 @@
 
 <section class="card hm-chart hm-wide" aria-labelledby="chart-event-table">
   <div class="card-body">
-    <h3 class="hm-chart-title" id="chart-event-table">Projects and winners of each event{{ parts.info("event", "an event") }}</h3>
-    <p class="hm-chart-note">Each name opens the event's own page. For the older events, the list of the showcase holds almost only the projects that won a prize, so "with a Hedera prize" is not a share of all the teams there.</p>
+    <h3 class="hm-chart-title" id="chart-event-table">Projects and Hedera prizes by event{{ parts.info("event", "an event") }}</h3>
+    <p class="hm-chart-note">Each name links to the event's page. For the older ETHGlobal events, the showcase lists almost only prize winners, so these counts are not a share of all the teams there.</p>
     <div class="table-responsive" tabindex="0" role="region" aria-label="The table of the events, which scrolls sideways">
       <table class="table table-vcenter card-table">
-        <thead><tr><th scope="col">Event</th><th scope="col">Year</th><th scope="col">Projects here</th><th scope="col">With a Hedera prize</th></tr></thead>
+        <thead><tr><th scope="col">Event</th><th scope="col">Year</th><th scope="col">Projects</th><th scope="col">With a Hedera prize</th></tr></thead>
         <tbody>
         {% for row in charts.events %}
           <tr><td>{% if row.link %}<a href="{{ row.link }}" target="_blank" rel="noopener">{{ row.name }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ row.name }}{% endif %}</td><td>{{ row.year }}</td><td>{{ row.projects }}</td><td>{{ row.winners }}</td></tr>

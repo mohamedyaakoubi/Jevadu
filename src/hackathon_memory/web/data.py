@@ -42,18 +42,18 @@ HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transactio
 # The kinds of action of a transaction that the mirror node names, in plain words. Another kind is
 # shown as the node writes it.
 ACTION_WORDS = {
-    "CRYPTOTRANSFER": "a transfer",
-    "CRYPTOCREATEACCOUNT": "the creation of an account",
-    "TOKENCREATION": "the creation of a token",
-    "TOKENMINT": "new units of a token",
-    "TOKENASSOCIATE": "an account joined to a token",
-    "CONSENSUSCREATETOPIC": "the creation of a topic",
-    "CONSENSUSSUBMITMESSAGE": "a message to a topic",
-    "CONTRACTCREATEINSTANCE": "the creation of a smart contract",
-    "CONTRACTCALL": "a call of a smart contract",
-    "ETHEREUMTRANSACTION": "a transaction sent from an Ethereum wallet",
-    "SCHEDULECREATE": "a scheduled action",
-    "ATOMICBATCH": "a batch of several actions",  # 3 of the 223 transactions, 18 October 2026
+    "CRYPTOTRANSFER": "transfer",
+    "CRYPTOCREATEACCOUNT": "account created",
+    "TOKENCREATION": "token created",
+    "TOKENMINT": "token minted",
+    "TOKENASSOCIATE": "token associated with an account",
+    "CONSENSUSCREATETOPIC": "topic created",
+    "CONSENSUSSUBMITMESSAGE": "message submitted to a topic",
+    "CONTRACTCREATEINSTANCE": "smart contract deployed",
+    "CONTRACTCALL": "smart contract call",
+    "ETHEREUMTRANSACTION": "Ethereum transaction (from an EVM wallet)",
+    "SCHEDULECREATE": "scheduled transaction created",
+    "ATOMICBATCH": "atomic batch of transactions",  # 3 of the 223 transactions, 18 October 2026
 }
 NETWORKS = frozenset({"mainnet", "testnet", "previewnet"})
 

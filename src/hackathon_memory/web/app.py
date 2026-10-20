@@ -91,95 +91,87 @@ EXAMPLES = ("limits on what an AI agent may spend", "tracking coffee from the fa
             "a ticket market without scalpers")  # fmt: skip
 PROOF_SHORT = {
     "proof_found": "found",
-    "window_not_known": "end of the event not known yet",
-    "dates_do_not_fit": "dates do not fit",
-    "found_but_empty": "ID empty",
-    "another_kind": "another kind of ID",
-    "cannot_be_checked": "cannot be checked",
+    "window_not_known": "event end not known yet",
+    "dates_do_not_fit": "dates don't fit",
+    "found_but_empty": "empty ID",
+    "another_kind": "wrong kind of ID",
+    "cannot_be_checked": "can't be checked",
     "not_found": "ID not found",
     "no_id_given": "no ID given",
     filtering.NOT_CHECKED: "not checked yet",
-    submission.NOT_ASKED: "the ledger did not answer",
+    submission.NOT_ASKED: "no answer from the ledger",
     "dates_not_judged": "found, dates not judged",
 }
-NO_SUCH_PROJECT = "There is no project with this number. Close this window and search again."
+NO_SUCH_PROJECT = "There is no project with this ID. Close this window and search again."
 SERVER_FAILED = (
-    "Something went wrong on the server, so this cannot be shown. Try again in a minute. The "
-    "server keeps the details in its log."
+    "Something went wrong on the server, so this cannot be shown. Please try again in a minute."
 )
 DATABASE_DOWN = (
-    "The database is not running, so nothing can be searched. Start Docker Desktop, then run "
-    '"docker compose up -d --wait db" in the folder of the project, and load this page again.'
+    "The database is not running. Start Docker Desktop, run "
+    '"docker compose up -d --wait db" in the project folder, then reload this page.'
 )
 AI_LATE = (
-    "Gemini did not answer in time, so the projects are in the order of meaning. Press the "
-    "button again in a moment for its order."
+    "Gemini did not respond in time, so the results are in the search order. Try the button "
+    "again in a moment."
 )
 GOOGLE_AWAY = (
-    "Google could not be asked about the meaning of the idea just now, so only its words were "
-    "searched. Try again later for the search by meaning."
+    "Semantic search is not available just now (Google's embedding service did not respond), "
+    "so these are keyword results. Try again later."
 )
 GOOGLE_AWAY_CHECK = (
-    "Google could not be asked about the meaning of the README just now, so the closest past "
-    "projects are not shown. Try again later."
+    "The most similar past projects cannot be shown just now: Google's embedding service did "
+    "not respond. Try again later."
 )
-NO_PAGE_EMBEDDINGS = (
-    "The projects have no embeddings yet, so only the words of the idea were searched."
-)
-UNKNOWN_SHEET = "There is no such page. Close this window."
+NO_PAGE_EMBEDDINGS = "The projects have no embeddings yet, so these are keyword results."
+UNKNOWN_SHEET = "Page not found. Close this window."
 NOT_A_REPOSITORY = (
-    "This is not the link of a repository on GitHub. Paste a link such as "
-    "github.com/owner/project, then press the button again."
+    "This is not a GitHub repository link. Paste one such as github.com/owner/project, "
+    "then try again."
 )
-NO_EVENT = (
-    "There is no such hackathon in the list. Choose one from the list, or no hackathon, and "
-    "press the button again."
-)
+NO_EVENT = "That hackathon is not in the list. Pick one from the list, or none, and try again."
 NO_DAYS = (
-    "Type the first and the last day of the hackathon; the last day may not come before the "
-    "first. Or choose no hackathon: the check then shows the dates without judging them."
+    "Enter the start and end dates of the hackathon; the end cannot come before the start. "
+    "Or choose no hackathon to see the dates without judging them."
 )
 NO_VERSION = (
-    "The version of the code could not be read on GitHub, so it cannot be registered. Check "
-    "the repository again in a moment."
+    "The latest commit could not be read from GitHub, so it cannot be registered. Check the "
+    "repository again in a moment."
 )
 EVENT_FOR_REGISTER = (
-    "A registration names its hackathon. Check the repository again with its hackathon, then "
-    "write it to the register."
+    "Registering needs a hackathon. Check the repository again with its hackathon selected, "
+    "then register it."
 )
 CLOSEST = 5  # the closest past projects that the check of a submission shows
 NO_README_TO_SEARCH = (
-    "The repository has no README to read, so no past project can be found by its meaning. "
-    "Type its idea in the search box instead."
+    "This repository has no README, so no similar past project can be found. Describe its "
+    "idea in the search box instead."
 )
-NOT_AN_ACCOUNT = (
-    "A Hedera account looks like 0.0.12345. Leave the box empty to register without one."
-)
-CHECK_FIRST = "Check the repository first: only code that GitHub shows can be registered."
+NOT_AN_ACCOUNT = "A Hedera account ID looks like 0.0.12345. Leave it empty to register without one."
+CHECK_FIRST = "Check the repository first: only a repository that GitHub shows can be registered."
 NO_LINE = (
-    "The README of the repository on GitHub does not carry the line {line} yet. Add it to the "
-    "README of the default branch, then press the button again. It shows that the code is "
-    "yours, and that you agree to the record."
+    "The README on GitHub does not contain the line {line} yet. Add it to the README on the "
+    "default branch, then click the button again. It proves that the repository is yours, and "
+    "that you agree to the record."
 )
 NOT_LISTED = (
-    "A registration names a hackathon of the list, so that all the teams of one hackathon name it "
-    "the same way. Choose it in the list. Days typed by hand can be checked, but not registered."
+    "Registering needs a hackathon from the list, so that every team of one hackathon names it "
+    "the same way. Pick it in the list. Custom dates can be checked, but not registered."
 )
 REGISTER_CLOSED = (
-    "The public register is not open yet: its topic on Hedera's test network has not been created."
+    "The public register is not open yet: its topic on Hedera testnet has not been created."
 )
 REGISTER_UNREAD = (
-    "The register could not be read from the mirror node just now, so nothing can be written. "
-    "Try again in a moment."
+    "The register could not be read from the mirror node just now, so nothing can be "
+    "written. Try again in a moment."
 )
 NOT_YET_VISIBLE = (
     "The record was sent to Hedera, but the mirror node does not show it yet. Check the "
-    "repository again in a minute: the record will be listed among its registrations."
+    "repository again in a minute: it will be listed among its registrations."
 )
 # The mirror node for a page: one more try after 2 seconds, not three over a minute.
 MIRROR_SECONDS = 10.0
 MIRROR_PAUSES = (2.0,)
-IDEA_CUT = f"The idea was longer than {LONGEST_IDEA:,} characters, so it was cut."
+IDEA_CUT = f"Your idea was longer than {LONGEST_IDEA:,} characters, so it was shortened."
 SHEETS = {"how": ("How it works", "_about_how.html"),
           "questions": ("Common questions", "_about_questions.html"),
           "sources": ("Sources and references", "_about_sources.html")}  # fmt: skip
@@ -225,21 +217,21 @@ def github_reads(code: Any, readme: Any, version: Any) -> str:
     version on 18 October 2026"."""
     days: dict[str, list[str]] = {}
     if code is not None:
-        days.setdefault(code.fetched_at[:10], []).append("its facts")
+        days.setdefault(code.fetched_at[:10], []).append("the repository details")
     if readme is not None and readme.status == "found":
         name = f" ({readme.name})" if readme.name else ""
-        days.setdefault(readme.fetched_at[:10], []).append(f"its README{name}")
+        days.setdefault(readme.fetched_at[:10], []).append(f"the README{name}")
     if version is not None and version.status == "found":
-        days.setdefault(version.fetched_at[:10], []).append("the version")
+        days.setdefault(version.fetched_at[:10], []).append("the latest commit")
 
     def joined(items: list[str]) -> str:
         return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
     if len(days) == 1:
         ((when, items),) = days.items()
-        return f"Read from GitHub on {iso_day(when)}: {joined(items)}."
+        return f"Fetched from GitHub on {iso_day(when)}: {joined(items)}."
     each = [f"{joined(items)} on {iso_day(when)}" for when, items in sorted(days.items())]
-    return f"Read from GitHub: {', '.join(each)}." if each else ""
+    return f"Fetched from GitHub: {', '.join(each)}." if each else ""
 
 
 def search_query(values: dict[str, str], *, drop: tuple[str, ...] = ()) -> str:
@@ -822,7 +814,8 @@ def create_app(
             return render(request, "_problem.html", 404, problem=UNKNOWN_SHEET)
         title, part = SHEETS[name]
         values = {"modes": evidence.measured_modes(), "test1": evidence.newest("test1-card-form-2"),
-                  "test2": evidence.newest("test2"), "measured": evidence.newest("search-modes"),
+                  "test2": evidence.newest("test2"), "test3": evidence.newest("test3"),
+                  "measured": evidence.newest("search-modes"),
                   "about_title": title, "about_part": part}  # fmt: skip
         if request.headers.get("HX-Request") == "true":
             return render(request, part, **values)

@@ -19,13 +19,13 @@ SHARE_NEEDS = 20
 EVENTS_SHOWN = 15
 PROOF_LABELS = {
     "proof_found": "Proof found",
-    "window_not_known": "End of the event not known yet",
-    "dates_do_not_fit": "Dates do not fit",
-    "found_but_empty": "ID found, but empty",
-    "another_kind": "Another kind of ID",
-    "cannot_be_checked": "Cannot be checked",
+    "window_not_known": "Event end not known yet",
+    "dates_do_not_fit": "Dates don't fit",
+    "found_but_empty": "Empty ID",
+    "another_kind": "Wrong kind of ID",
+    "cannot_be_checked": "Can't be checked",
     "not_found": "ID not found",
-    "no_id_given": "No Hedera ID given",
+    "no_id_given": "No ID given",
     filters.NOT_CHECKED: "Not checked yet",
 }
 LIFE_LABELS = {ACTIVE: "Active", QUIET: "Quiet", STOPPED: "Stopped",
@@ -95,24 +95,29 @@ def build(found: Tally, events: Mapping[str, tuple[str, str, str | None]]) -> Ch
     """The charts of the projects counted in `found`. `events` gives the name, the year and the
     page of each event, by its number."""
     total = found.projects
-    winners = (f"{found.winners} of them took a Hedera prize." if found.winners
-               else "None of them took a Hedera prize.")  # fmt: skip
+    winners = (f"{found.winners} of them won a Hedera prize." if found.winners
+               else "None of them won a Hedera prize.")  # fmt: skip
+    others = total - found.with_theme
+    if others and others == found.winner_entries:
+        without = "Entries from a winners' list have none: no page to read."
+    else:
+        without = f"{others} have none." if others else ""
     busiest = [event for event, _ in found.events.most_common(EVENTS_SHOWN)]
     charts = (
         Chart("proof", "Hedera proof", "proof",
-              f"What a program found for the Hedera IDs of these {total} projects. {winners}",
+              f"The check of the Hedera IDs of these {total} projects. {winners}",
               _bars(found.proof, found.proof_won, filters.PROOF_ORDER, PROOF_LABELS, total)),
-        Chart("life", "Still worked on after the event?", "life",
-              f"Signs of life in the code or on the ledger, for these {total} projects.",
+        Chart("life", "Activity after the event", "life",
+              f"Commits or on-chain activity after the event, for these {total} projects.",
               _bars(found.life, found.life_won, filters.LIFE_ORDER, LIFE_LABELS, total)),
-        Chart("services", "What the ledger confirms they built with", "ledger",
-              "Projects with at least one ID that the ledger knows as each kind. A project can "
+        Chart("services", "Hedera services used, confirmed by the ledger", "ledger",
+              "Projects with at least one ID of each kind that the ledger confirms. A project can "
               "count in several rows.",
               _bars(found.services, found.services_won, tuple(SERVICE_LABELS), SERVICE_LABELS,
                     total)),
-        Chart("themes", "Themes", "category",
-              f"{found.with_theme} of these {total} projects have a theme, chosen by a model from "
-              "their page; the others have no card yet.",
+        Chart("themes", "Categories", "category",
+              f"{found.with_theme} of these {total} projects have a category, chosen by Gemini "
+              f"from their page. {without}".strip(),
               _bars(found.themes, found.themes_won,
                     sorted(found.themes, key=lambda key: (-found.themes[key], key)), {},
                     found.with_theme)),

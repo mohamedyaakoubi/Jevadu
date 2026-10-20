@@ -7,19 +7,19 @@
 {% set one = found.get(pid) if pid is not none else none %}
 <div class="compare-place" id="one-compare-{{ pid }}">
 {% if one %}{% include "_compare_one.html" %}
-{% elif failed %}<p class="text-secondary">The comparison could not be written just now. Everything else in this window is complete; try again in a moment.</p>
-{% else %}<p class="text-secondary">No comparison was written for this project.</p>{% endif %}
+{% elif failed %}<p class="text-secondary">The comparison could not be generated just now. Everything else in this window is complete; try again in a moment.</p>
+{% else %}<p class="text-secondary">No comparison for this project.</p>{% endif %}
 </div>
 {% else %}
 {% for project_id in asked_ids %}
 {% set one = found.get(project_id) %}
 <div class="hm-compare compare" id="{{ prefix }}{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
 {% if one %}{% include "_compare_one.html" %}
-{% elif failed %}<p class="text-secondary">The comparison {{ "with this submission" if check_place else "with your idea" }} could not be written just now. Everything else on this page is complete.</p>
-{% else %}<p class="text-secondary">No comparison was written for this project.</p>{% endif %}
+{% elif failed %}<p class="text-secondary">The comparison {{ "with this README" if check_place else "with your idea" }} could not be generated just now. Everything else on this page is complete.</p>
+{% else %}<p class="text-secondary">No comparison for this project.</p>{% endif %}
 </div>
 {% endfor %}
 {% if check_place %}
-<div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">{% if not failed %}<p class="hm-small">Compared by Gemini with the README of this submission. Not a judgment of the projects.</p>{% endif %}</div>
+<div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">{% if not failed %}<p class="hm-small">Compared by Gemini with this README. Not a judgment of the projects.</p>{% endif %}</div>
 {% endif %}
 {% endif %}

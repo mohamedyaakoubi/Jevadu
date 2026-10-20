@@ -11,29 +11,29 @@
   <section class="card hm-idea" aria-labelledby="hero-title">
     <div class="card-body">
       <h1 class="hm-title" id="hero-title">Is your idea new on Hedera?</h1>
-      <p class="hm-subtitle">The past Hedera{{ parts.info("hedera", "Hedera") }} hackathon projects closest to your idea, and what the public ledger says about each one.</p>
+      <p class="hm-subtitle">Search past Hedera{{ parts.info("hedera", "Hedera") }} hackathon projects by idea, and see what the Hedera ledger confirms about each one.</p>
       <div class="hm-idea-label"><label class="form-label" for="idea">Your idea</label>{{ parts.info("idea", "your idea") }}</div>
       <textarea class="form-control hm-idea-box" id="idea" name="idea" rows="3" maxlength="{{ LONGEST_IDEA }}" aria-describedby="idea-count"
-        placeholder="What does it do, and for whom? For example: an app that lets a street vendor take card payments without a bank account"
+        placeholder="What does your project do, and who is it for? For example: an app that lets street vendors take card payments without a bank account"
         hx-get="/" hx-include="#ask" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
         hx-trigger="input[this.value.trim().length !== 1 &amp;&amp; this.value.trim().length !== 2] changed delay:500ms"
         hx-replace-url="true" hx-sync="#ask:replace" hx-indicator="#workspace">{{ idea }}</textarea>
       <div class="hm-ask-row">
         <fieldset class="hm-way">
-          <legend class="hm-way-legend">Quick results by</legend>
+          <legend class="hm-way-legend">Search</legend>
           <div class="btn-group" role="group">
             <input type="radio" class="btn-check" name="mode" value="meaning" id="mode-meaning"{% if mode == "meaning" %} checked{% endif %}>
-            <label class="btn btn-sm" for="mode-meaning">meaning</label>
+            <label class="btn btn-sm" for="mode-meaning">Semantic</label>
             <input type="radio" class="btn-check" name="mode" value="words" id="mode-words"{% if mode == "words" %} checked{% endif %}>
-            <label class="btn btn-sm" for="mode-words">words</label>
-          </div>{{ parts.info("quick", "the quick results") }}
+            <label class="btn btn-sm" for="mode-words">Keyword</label>
+          </div>{{ parts.info("quick", "the search modes") }}
         </fieldset>
         <div class="hm-actions">
-          <a class="btn btn-ghost-secondary" href="/?clear=1" data-clear-search hx-get="/" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="/">Clear the search</a>
+          <a class="btn btn-ghost-secondary" href="/?clear=1" data-clear-search hx-get="/" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="/">Clear</a>
           <span class="hm-ai-group">
             <button type="submit" class="btn btn-primary" name="ai" value="1" id="ai-button"
               hx-get="/" hx-include="#ask" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
-              hx-push-url="true" hx-sync="#ask:replace" hx-indicator="#workspace"{% if not idea %} disabled{% endif %}>Order and compare with Gemini</button>{{ parts.info("ai", "ordering and comparing with Gemini") }}
+              hx-push-url="true" hx-sync="#ask:replace" hx-indicator="#workspace"{% if not idea %} disabled{% endif %}>Sort and compare with Gemini</button>{{ parts.info("ai", "sorting and comparing with Gemini") }}
           </span>
         </div>
       </div>
@@ -54,10 +54,10 @@
       {{ parts.filter_select("year", "Year", "All years", offer.year, chosen.year) }}
       {{ parts.filter_select("category", "Category", "All categories", offer.category, chosen.category, "category") }}
       {{ parts.filter_select("proof", "Hedera proof", "Any result", offer.proof, chosen.proof, "proof") }}
-      {{ parts.filter_select("life", "Life", "Any life", offer.life, chosen.life, "life") }}
-      <noscript><button class="btn btn-sm" type="submit">Apply the filters</button></noscript>
-      {% if picked %}<a class="btn btn-sm btn-ghost-secondary hm-clear-filters" href="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-get="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true">Clear the filters</a>{% endif %}
-      {% if asked %}<p class="hm-filters-note">The numbers count the {{ offer.projects }} closest to your idea.</p>{% endif %}
+      {{ parts.filter_select("life", "Activity", "Any activity", offer.life, chosen.life, "life") }}
+      <noscript><button class="btn btn-sm" type="submit">Apply filters</button></noscript>
+      {% if picked %}<a class="btn btn-sm btn-ghost-secondary hm-clear-filters" href="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-get="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true">Clear filters</a>{% endif %}
+      {% if asked %}<p class="hm-filters-note">The counts are for the {{ offer.projects }} projects closest to your idea.</p>{% endif %}
     </div>
     {% endif %}
 
@@ -72,14 +72,14 @@
     {% if not problem %}
       <div class="hm-results-head">
         <div class="hm-results-titles">
-          <h2 class="hm-results-title" id="results-title">{% if asked %}{% if with_ai %}Ordered by Gemini{% else %}Quick results{% endif %}{% elif chosen and chosen.chosen() %}{{ "{:,}".format(total) }} project{{ "s" if total != 1 }} match{{ "es" if total == 1 }} the filters{% else %}All {{ "{:,}".format(total) }} projects{% endif %}</h2>
-          {% if view != "charts" and results %}<p class="hm-results-sub">{% if asked %}{{ first_shown }} to {{ last_shown }} of {% if chosen and chosen.chosen() %}the {{ total }} with these filters, among the {{ shown_limit }} closest{% else %}the {{ total }} closest{% endif %}{% if mode == "words" %} that use your words{% elif with_ai %}: Gemini put its ten first among the 30 closest in meaning{% else %} in meaning: Gemini has not read them{% endif %}{% if elapsed is not none %} &middot; {{ "%.1f" | format(elapsed) }} s{% endif %}{% else %}Newest events first &middot; {{ first_shown }} to {{ last_shown }}{% endif %}</p>{% endif %}
+          <h2 class="hm-results-title" id="results-title">{% if asked %}{% if with_ai %}Sorted by Gemini{% else %}Results{% endif %}{% elif chosen and chosen.chosen() %}{{ "{:,}".format(total) }} project{{ "s" if total != 1 }} match{{ "es" if total == 1 }} the filters{% else %}All {{ "{:,}".format(total) }} projects{% endif %}</h2>
+          {% if view != "charts" and results %}<p class="hm-results-sub">{% if asked %}{{ first_shown }} to {{ last_shown }} of {% if chosen and chosen.chosen() %}the {{ total }} matching your filters, among the {{ shown_limit }} closest{% else %}the {{ total }} closest{% endif %}{% if mode == "words" %} by keyword{% elif with_ai %}: Gemini's top 10 of the 30 closest{% else %} by meaning{% endif %}{% if elapsed is not none %} &middot; {{ "%.1f" | format(elapsed) }} s{% endif %}{% else %}Newest events first &middot; {{ first_shown }} to {{ last_shown }}{% endif %}</p>{% endif %}
         </div>
         <div class="hm-switches">
           {% if asked and mode == "meaning" %}
           <div class="hm-switch">
             <div class="btn-group" role="group" aria-label="The order of the results">
-              <a class="btn btn-sm{% if not with_ai %} active{% endif %}" href="/?{{ quick_query }}" hx-get="/?{{ quick_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if not with_ai %} aria-current="true"{% endif %}>Quick order</a>
+              <a class="btn btn-sm{% if not with_ai %} active{% endif %}" href="/?{{ quick_query }}" hx-get="/?{{ quick_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if not with_ai %} aria-current="true"{% endif %}>Search order</a>
               <a class="btn btn-sm{% if with_ai %} active{% endif %}" href="/?{{ ai_query }}" hx-get="/?{{ ai_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true" data-asks-gemini{% if with_ai %} aria-current="true"{% endif %}>Gemini's order</a>
             </div>{{ parts.info("orders", "the two orders") }}
           </div>
@@ -87,8 +87,8 @@
           <div class="hm-switch">
             <div class="btn-group" role="group" aria-label="How to show the projects">
               <a class="btn btn-sm{% if view != 'charts' %} active{% endif %}" href="/{{ '?' ~ cards_query if cards_query }}" hx-get="/{{ '?' ~ cards_query if cards_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view != 'charts' %} aria-current="true"{% endif %}>Cards</a>
-              <a class="btn btn-sm{% if view == 'charts' %} active{% endif %}" href="/?{{ charts_query }}" hx-get="/?{{ charts_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == 'charts' %} aria-current="true"{% endif %}>Charts</a>
-            </div>{{ parts.info("charts", "the charts") }}
+              <a class="btn btn-sm{% if view == 'charts' %} active{% endif %}" href="/?{{ charts_query }}" hx-get="/?{{ charts_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == 'charts' %} aria-current="true"{% endif %}>Insights</a>
+            </div>{{ parts.info("charts", "the insights") }}
           </div>
         </div>
       </div>
@@ -98,10 +98,10 @@
       {% elif nothing_matches %}
         <div class="empty"><p class="empty-title">No project matches these filters</p><p class="empty-subtitle text-secondary">Remove a filter to see more.</p></div>
       {% elif none_close %}
-        <div class="empty"><p class="empty-title">None of the {{ shown_limit }} projects closest to your idea has these values</p><p class="empty-subtitle text-secondary">Remove a filter, or write the idea in other words.</p></div>
+        <div class="empty"><p class="empty-title">None of the {{ shown_limit }} closest projects match these filters</p><p class="empty-subtitle text-secondary">Remove a filter, or describe the idea in other words.</p></div>
       {% elif asked and not results %}
-        <div class="empty"><p class="empty-title">{% if mode == "words" %}No project uses these words{% else %}No project came close to this idea{% endif %}</p>
-          <p class="empty-subtitle text-secondary">{% if mode == "words" %}Check the spelling, or search by meaning to find the same idea in other words.{% else %}Try other words, or say what the people who use your idea would do with it.{% endif %}</p></div>
+        <div class="empty"><p class="empty-title">{% if mode == "words" %}No project contains these keywords{% else %}No similar project found{% endif %}</p>
+          <p class="empty-subtitle text-secondary">{% if mode == "words" %}Check the spelling, or switch to Semantic to find the same idea in other words.{% else %}Try other words, or describe what people would do with it.{% endif %}</p></div>
       {% elif results %}
         <ol class="hm-grid" id="result-list">
         {% for card, summary, line, snippet in results %}
@@ -115,7 +115,7 @@
              hx-trigger="load" hx-swap="none" hx-target="this"></div>
         {% endif %}
       {% elif page > 1 %}
-        <div class="empty"><p class="empty-title">There are no more projects in this list.</p><p class="empty-subtitle"><a href="/{{ '?' ~ search_query if search_query }}">Go back to its first page</a></p></div>
+        <div class="empty"><p class="empty-title">No more projects in this list.</p><p class="empty-subtitle"><a href="/{{ '?' ~ search_query if search_query }}">Back to the first page</a></p></div>
       {% else %}
         <div class="empty"><p class="empty-title">No project matches these filters.</p><p class="empty-subtitle text-secondary">Remove a filter to see more.</p></div>
       {% endif %}
@@ -128,22 +128,22 @@
 <section class="card hm-check" aria-labelledby="check-title">
   <form id="check" class="card-body" method="get" action="/check" hx-get="/check" hx-target="#viewer-body" hx-swap="innerHTML" data-open-check>
     <h2 class="hm-check-title" id="check-title">Check a submission{{ parts.info("check", "checking a submission") }}</h2>
-    <p class="hm-check-text">Paste the GitHub link of a project. A program reads its README and the dates of its code, asks the ledger about its Hedera IDs, and finds the closest past projects. No model writes anything.</p>
+    <p class="hm-check-text">Paste a GitHub repository. The check reads its README and commit dates, looks up its Hedera IDs on the ledger, and finds the most similar past projects. Facts only: no AI-generated text.</p>
     <label class="form-label" for="check-repo">GitHub repository</label>
     <input class="form-control" id="check-repo" name="repo" placeholder="github.com/owner/project" autocomplete="off" spellcheck="false" required>
-    <div class="hm-idea-label hm-check-label"><label class="form-label" for="check-event">The hackathon it was sent to <span class="text-secondary">(optional)</span></label>{{ parts.info("hackathon", "the hackathon of a submission") }}</div>
+    <div class="hm-idea-label hm-check-label"><label class="form-label" for="check-event">Hackathon <span class="text-secondary">(optional)</span></label>{{ parts.info("hackathon", "the hackathon of a submission") }}</div>
     <select class="form-select" id="check-event" name="event">
-      <option value="">No hackathon: show the facts only</option>
+      <option value="">None: show the facts, without judging dates</option>
       {% for group in hackathon_groups(check_events or []) %}
       <optgroup label="{{ group.label }}">{% for one in group.choices %}<option value="{{ one.value }}">{{ one.text }}</option>{% endfor %}</optgroup>
       {% endfor %}
-      <option value="other">Another hackathon: type its first and last day</option>
+      <option value="other">Other hackathon: enter its dates</option>
     </select>
     <div class="hm-check-days" data-check-days hidden>
-      <div><label class="form-label" for="check-start">First day</label><input class="form-control" type="date" id="check-start" name="starts"></div>
-      <div><label class="form-label" for="check-end">Last day</label><input class="form-control" type="date" id="check-end" name="ends"></div>
+      <div><label class="form-label" for="check-start">Start date</label><input class="form-control" type="date" id="check-start" name="starts"></div>
+      <div><label class="form-label" for="check-end">End date</label><input class="form-control" type="date" id="check-end" name="ends"></div>
     </div>
-    <button class="btn btn-outline-primary w-100" type="submit">Check this repository</button>
+    <button class="btn btn-outline-primary w-100" type="submit">Check repository</button>
   </form>
 </section>
 </div>

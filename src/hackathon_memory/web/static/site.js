@@ -6,7 +6,7 @@
 (function () {
   "use strict";
   var HOVER = window.matchMedia("(hover: hover) and (pointer: fine)");
-  var FAILED = "The comparison with your idea could not be written just now. " +
+  var FAILED = "The comparison with your idea could not be generated just now. " +
     "Everything else on this page is complete.";
 
   function $(id) { return document.getElementById(id); }
@@ -456,7 +456,7 @@
   // stops waiting after 90 seconds: "timeout" in the htmx-config of the page's head.
   var TOO_SLOW = "The server did not answer within 90 seconds, so the page stopped waiting. " +
     "Try again in a minute.";
-  var CHECK_FAILED = "The comparison with the README could not be written just now. " +
+  var CHECK_FAILED = "The comparison with the README could not be generated just now. " +
     "Everything else on this page is complete.";
   function requestFailed(event) {
     var elt = event.detail.elt, target = event.detail.target;
