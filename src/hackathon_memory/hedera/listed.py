@@ -24,9 +24,14 @@ class Listed:
 
 # The FSS Campus Edition of the Hedera Cross Campus Challenge 2026; the short name fits the
 # list of the check. Its registration opened on 10 August 2026, the first day the teams may
-# build; its last day is announced when the submission opens.
+# build. Its submission opened on 19 October 2026 and closes on 7 November 2026, its last day.
 LISTED = (
-    Listed("listed/fss-campus-edition-2026", "FSS Campus Edition 2026", first=date(2026, 8, 10)),
+    Listed(
+        "listed/fss-campus-edition-2026",
+        "FSS Campus Edition 2026",
+        first=date(2026, 8, 10),
+        last=date(2026, 11, 7),
+    ),
 )
 
 
