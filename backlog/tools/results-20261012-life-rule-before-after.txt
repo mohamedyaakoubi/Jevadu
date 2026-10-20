@@ -1,0 +1,15 @@
+run at 2026-10-12 13:26 UTC, on 672 projects
+old rule: {'active': 312, 'stopped': 245, 'unknown': 82, 'quiet': 33}
+new rule: {'too early to tell': 286, 'stopped': 245, 'unknown': 82, 'quiet': 33, 'active': 26}
+from the old status to the new one:
+    26  active -> active
+   286  active -> too early to tell   (changed)
+    33  quiet -> quiet
+   245  stopped -> stopped
+    82  unknown -> unknown
+the reasons of the new rule:
+   286  the event ended less than 90 days ago, nothing later than 30 days yet
+   245  nothing later than 30 days after the event
+    82  no date of the code and no activity of its own ids
+    33  a sign of life, but none in the last 90 days
+    26  a sign of life in the last 90 days

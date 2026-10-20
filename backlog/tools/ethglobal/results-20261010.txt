@@ -1,0 +1,108 @@
+Results of the scripts of this folder, on the data of 10 October 2026. No request was sent.
+Counts and names of events only. No text of a page. Made on 2026-10-10T20:03:34Z.
+
+===== found_stats.py
+pages read 21, complete True
+projects in the list: 658 in 14 events
+projects with a prize: 173; different sponsor ids: 54
+sponsor ids, by number of projects: [('bdi3h', 92), ('3zpxc', 17), ('xdat5', 13), ('fjaae', 12), ('8kguf', 12), ('pfyco', 9), ('qdgjh', 8), ('026zc', 7), ('bw7y9', 7), ('g8xu4', 5), ('qiqkw', 5), ('4pn9u', 5)]
+
+the pages of the hand-made list:
+  contragent-8x0c9: sponsors ['bdi3h'], event 'ETHGlobal Prague', list page 18
+  hedera-agent-trust-mur21: sponsors ['bdi3h'], event 'ETHOnline 2025', list page 15
+ids that every one of them has: ['bdi3h']
+
+projects with a prize of that sponsor: 92
+event                               listed  any prize  this sponsor
+ETHOnline 2026                         271         21            10
+ETHOnline 2025                          79          6             5
+ETHGlobal New Delhi                     60         11             5
+ETHGlobal Lisbon 2026                   46         18            10
+ETHGlobal Cannes 2026                   40         13             9
+ETHGlobal New York 2026                 33         17            11
+ETHOnline 2024                          31         21            10
+ETHGlobal Singapore                     20         11             5
+ETHGlobal Prague                        17         11             5
+ETHGlobal Bangkok                       17         14             3
+ETHGlobal Buenos Aires                  15         10             5
+ETHGlobal Cannes                        12          6             5
+ETHGlobal New York 2025                 11          8             4
+ETHGlobal San Francisco                  6          6             5
+winners with this sponsor only: 60; with other sponsors too: 32
+
+===== found_blocks.py
+the rows of 'ETHGlobal Singapore' do not fit: a shared row sits on the edge of two events
+event                           pages of its prize projects  rows seen  exact
+ETHOnline 2026                                       1 to 9        271    263
+ETHGlobal Lisbon 2026                               9 to 10         46     45
+ETHGlobal New York 2026                            10 to 11         33     32
+ETHGlobal Cannes 2026                              12 to 13         40     39
+ETHGlobal Buenos Aires                             13 to 13         15     14
+ETHOnline 2025                                     14 to 15         79     77
+ETHGlobal New Delhi                                16 to 17         60     58
+ETHGlobal New York 2025                            17 to 18         11     11
+ETHGlobal Cannes                                   18 to 18         12     11
+ETHGlobal Prague                                   18 to 19         17     17
+ETHGlobal Bangkok                                  19 to 19         17     16
+ETHGlobal San Francisco                            19 to 19          6      6
+ETHGlobal Singapore                                20 to 20         20     20
+ETHOnline 2024                                     20 to 21         31     31
+events follow each other in blocks (by their prize projects): True
+rows seen: 658; exact: 640; expected exact: 638
+
+===== inspect_all.py
+saved pages: 92; bytes: smallest 76407, median 82436, largest 108609, total 7672418
+pages with no Hedera prize: 0
+team cut reports: {'{"elements_removed": 2, "json_keys_removed": 0, "strings_guarded": 0}': 92}
+number of prize lines on a page: {1: 60, 2: 19, 3: 6, 4: 5, 5: 1, 7: 1}
+different sets of section titles (h3): 7
+   86  ['Created At', 'Winner of', 'Project Description', "How it's Made", 'Get the latest news and update']
+    1  ['Created At', 'Winner of', 'Project Description', "How it's Made", 'Frontend Web3 Magic', 'Smart Contracts', 'Device Monitor (Python)', 'The Hacky Bits', 'Partner Tech Integration', 'The Architecture', 'Why This Stack Rocks', 'The Secret Sauce', 'Get the latest news and update']
+    1  ['Created At', 'Winner of', 'Project Description', 'Overview', 'Problem', 'Solution', 'How SmolKOL Works', 'Applications', 'Benefits', 'Example Flow', "How it's Made", 'Get the latest news and update']
+    1  ['Created At', 'Winner of', 'Project Description', "How it's Made", '🔧 Unity for VR Environment', '🌐 Hashgraph for Hedera Smart C', '🖥️ Remix IDE for Hedera Smart ', '💻 Solidity for Smart Contract ', 'Get the latest news and update']
+    1  ['Created At', 'Winner of', 'Project Description', "How it's Made", 'XMTP Chat Interface', 'Hedera Consensus Service', 'Galadrieal Factory Contract', 'Get the latest news and update']
+    1  ['Created At', 'Winner of', 'Project Description', 'E', 'F', 'P', "How it's Made", 'Get the latest news and update']
+sponsors named in the prize blocks (first 12 sets): 
+   60  ['Hedera']
+    5  ['Hedera', 'Flow']
+    3  ['Hedera', 'ETHGlobal']
+    2  ['Hedera', 'AirDAO']
+    1  ['Arc', 'Hedera', 'World']
+    1  ['Flow', 'Hedera']
+    1  ['Flow Foundation', 'Hedera', 'Rome Protocol', 'Linea', 'ETHGlobal']
+    1  ['Protocol Labs', 'Hedera']
+    1  ['Blockscout', 'Hedera', 'Pyth Network', 'Neon EVM']
+    1  ['World', 'Hedera', '0G', 'ETHGlobal']
+    1  ['EVVM', 'Hedera']
+    1  ['Hedera', 'Polygon', 'Uniswap Foundation', 'SKALE Network']
+emails: 0 in visible text, 0 in the whole files
+words that start with @ and are not a package scope: 2 in 2 page(s)
+package scopes: {'@hashgraph/': 8, '@hiero-ledger/': 5, '@ensdomains/': 3, '@worldcoin/': 2, '@x402/': 2, '@iden3/': 1, '@playwright/': 1, '@xyflow/': 1, '@google/': 1, '@circle-fin/': 1, '@0glabs/': 1, '@0gfoundation/': 1}
+data keys that could hold a person: {'unauthorized': 92}
+links to social sites, other than the site's own: {} in 0 page(s)
+first parts of the links inside the site: {'events': 368, 'plus': 276, 'faucet': 276, 'about': 276, 'auth': 184, 'showcase': 184, 'swag': 184, '': 92, 'pragma': 92, 'packs': 92, 'rules': 92, 'privacy': 92, 'brand': 92, 'careers': 92, 'discord': 92}
+pages with a link to github.com: 90; pages whose text shows something like 0.0.12345: 6
+key names of the page data over all pages: 124
+  keys that are not on every page: ['autoOriginality', 'autoPracticality', 'autoSummary', 'autoTechnicality', 'completedAt', 'demoElapsed', 'demoEndedAt', 'demoStartedAt', 'demoVideoReady', 'device_contract', 'duration', 'elapsed', 'info_contract', 'lastPausedAt', 'lastResumedAt', 'muxThumbnailUrl', 'muxUrl', 'questionsElapsed', 'questionsEndedAt', 'questionsStartedAt', 'remaining', 'rpc_url', 'startedAt', 'status', 'targetEndTime', 'timer', 'tmpVideoId', 'updatedAt', 'youtubeId']
+
+===== inspect_at_words.py
+@(4 letters): NOT a known word of code; section "How it's Made"; inside code: False; a social word just before it: False; starts with a capital: False; has a digit: True; followed by ' '
+@(6 letters): NOT a known word of code; section "How it's Made"; inside code: False; a social word just before it: False; starts with a capital: False; has a digit: True; followed by ' '
+
+===== inspect_hedera_proof.py
+saved pages: 92
+length of 'project description': smallest 281, median 1251, largest 10158 characters; empty on 0 page(s)
+length of 'how it's made': smallest 279, median 1461, largest 4801 characters; empty on 0 page(s)
+   82 of 92  the word(s): the word Hedera at all
+   44 of 92  the word(s): smart contract
+   39 of 92  the word(s): HCS / consensus service
+   36 of 92  the word(s): HTS / token service
+   34 of 92  the word(s): testnet
+   23 of 92  the word(s): mirror node
+   15 of 92  the word(s): agent kit
+   13 of 92  the word(s): scheduled transaction or service
+    8 of 92  the word(s): hashscan
+    6 of 92  a Hedera id like 0.0.12345
+    5 of 92  the word(s): mainnet
+    3 of 92  an EVM address (0x and 40 letters)
+different Hedera ids in the two texts of a page (5 = five or more): {0: 86, 1: 3, 2: 3}
