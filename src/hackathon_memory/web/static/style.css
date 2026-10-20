@@ -26,8 +26,8 @@
 }
 
 /* Tabler's teal (oklch 64%) gives white text 3:1 only, and WCAG AA asks 4.5:1. So the light
-   theme takes a deeper teal (white text 5.7:1, as text on white 5.7:1), and the dark theme a
-   lighter one with dark text (8:1). The bars of the charts follow the theme. */
+   theme takes a deeper teal (white text 5.7:1, as text on white 5.7:1). The bars of the charts
+   follow the theme. */
 :root[data-bs-theme-primary="teal"] {
   --tblr-primary: oklch(50% 0.105 165deg);
   --tblr-primary-rgb: 0, 118, 84;
@@ -35,14 +35,32 @@
   --hm-chart-all: #007654;
   --hm-chart-won: #a15c00;
 }
+/* The dark theme is not green (20 October 2026). Light text on a dark page spreads a little in
+   the eye (halation), more with astigmatism, and a saturated colour seems to vibrate on a dark
+   ground (Material Design's dark theme: lighter, less saturated colours). So the text is
+   off-white, not white: 12:1 on the page instead of 14:1, and Tabler's headings were pure white
+   (21:1 at most). The one accent is a soft blue, 8.7:1 on the page and with dark text on it; the
+   charts take that blue and a soft amber. */
 :root[data-bs-theme-primary="teal"][data-bs-theme="dark"] {
-  --tblr-primary: oklch(74% 0.13 165deg);
-  --tblr-primary-rgb: 71, 196, 150;
+  --tblr-primary: oklch(78% 0.09 262deg);
+  --tblr-primary-rgb: 152, 184, 242;
   --tblr-primary-fg: oklch(21.61% 0.0061 56.04deg);
-  --hm-ink: #fff;
-  --hm-chart-all: #47c496;
-  --hm-chart-won: #f5b335;
+  --tblr-body-color: oklch(88% 0.006 75deg);
+  --tblr-body-color-rgb: 218, 215, 211;
+  --tblr-heading-color: oklch(92% 0.004 75deg);
+  --tblr-emphasis-color: oklch(92% 0.004 75deg);
+  --tblr-secondary: oklch(74% 0.008 70deg);
+  --tblr-link-color: oklch(78% 0.09 262deg);
+  --tblr-link-hover-color: oklch(85% 0.07 262deg);
+  --hm-ink: oklch(92% 0.004 75deg);
+  --hm-chart-all: #98b8f2;
+  --hm-chart-won: #eabc6e;
 }
+/* Light letters on a dark ground look bolder and closer together: a little more space between
+   letters and lines, and no sub-pixel smoothing where the system offers the choice. */
+[data-bs-theme="dark"] body { letter-spacing: 0.01em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+[data-bs-theme="dark"] .hm-text, [data-bs-theme="dark"] .about, [data-bs-theme="dark"] .tip,
+[data-bs-theme="dark"] .hm-line, [data-bs-theme="dark"] .hm-field p { line-height: 1.6; }
 /* The coloured pills and labels of Tabler put a mid colour on its own 10% tint (2.4:1 for
    green). Their text is pulled towards black, or towards white in the dark theme. */
 .hm-status { color: color-mix(in oklab, var(--tblr-status-color) 55%, var(--hm-ink)); }
@@ -163,6 +181,11 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-switch { display: inline-flex; align-items: center; }
 .hm-switch .btn.active,
 .hm-way .btn-check:checked + .btn, .hm-theme .btn-check:checked + .btn { background: var(--tblr-primary); border-color: var(--tblr-primary); color: var(--tblr-primary-fg, #fff); }
+/* In the dark theme a chosen switch is a tint, not a bright block. */
+[data-bs-theme="dark"] .hm-switch .btn.active,
+[data-bs-theme="dark"] .hm-way .btn-check:checked + .btn, [data-bs-theme="dark"] .hm-theme .btn-check:checked + .btn {
+  background: color-mix(in oklab, var(--tblr-primary) 26%, var(--tblr-bg-surface));
+  border-color: color-mix(in oklab, var(--tblr-primary) 65%, transparent); color: var(--tblr-heading-color); }
 
 .hm-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16.5rem), 1fr)); }
 .hm-grid > li { display: flex; min-width: 0; }

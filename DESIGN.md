@@ -829,6 +829,10 @@ What the look avoids, after the same test: the common look of generated websites
 - **A wider "How it works".** The window is 1040 pixels wide. The lines of text keep their width, so that they stay easy to read, and the table of the ways to search takes the whole width. Its three steps carry their numbers again.
 - **Errors in plain words.** No waiting state stays on the screen after a request that failed. In a window, the content says what happened and what to do; the list and the forms keep what they showed, with a line above them. The page stops waiting after 90 seconds. An error that no part of the server expects gets a short page in plain words, and the server keeps the details in its log.
 
+**The sixth version of the page (20 October 2026).** After a fifth review by the maintainer:
+
+- **A calmer dark theme.** Light text on a dark page spreads a little in the eye (halation), more for people with astigmatism, and a saturated colour seems to vibrate on a dark ground (Material Design's guidance for dark themes: lighter, less saturated colours). For most readers, dark text on a light page reads best (Nielsen Norman Group, 2020, after Piepenbrock and colleagues, 2013), so the switch keeps its three choices. The dark theme is no longer green: its text is off-white (12 to 1 on the page instead of 14 to 1), its headings are no longer pure white, its one accent is a soft blue (8.7 to 1) with a soft amber in the charts, a chosen switch is a tint instead of a bright block, and the letters and lines have a little more space. axe-core finds no problem in either theme.
+
 ### 12.2 Marks and their legend
 
 The statuses and the labels are shown as small marks. Each mark has one meaning, defined once, and a small (i) next to it that explains it, wherever it is shown. A mark is never only a colour: it always has words.
