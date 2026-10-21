@@ -32,6 +32,7 @@ class Reply:
     status: int = 200
     body: bytes = b""
     headers: dict[str, str] = field(default_factory=dict)
+    stream: object = None  # what the answer is read from as it comes, when not the body
 
 
 class FakeTime:
@@ -85,7 +86,9 @@ class FakeSite(BaseAdapter):
             response.headers.update(reply.headers)
             response.url = request.url
             response.request = request
-            response.raw = io.BytesIO(reply.body)
+            response.raw = _Raw(
+                reply.stream if reply.stream is not None else io.BytesIO(reply.body)
+            )
             return response
         finally:
             with self._lock:
@@ -97,6 +100,19 @@ class FakeSite(BaseAdapter):
     @property
     def urls(self) -> list[str]:
         return [str(r.url) for r in self.seen]
+
+
+class _Raw:
+    """The raw stream of an answer, read as urllib3 reads it."""
+
+    def __init__(self, stream: io.RawIOBase | io.BytesIO) -> None:
+        self._stream = stream
+
+    def read(self, amt: int | None = None, decode_content: bool | None = None) -> bytes:  # noqa: ARG002
+        return self._stream.read(-1 if amt is None else amt)
+
+    def close(self) -> None:
+        pass
 
 
 def session_for(site: FakeSite) -> requests.Session:

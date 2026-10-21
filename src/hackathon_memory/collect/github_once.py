@@ -22,9 +22,9 @@ from hackathon_memory.collect.rawstore import RawStore, SavedPage
 # What is saved of an answer: the page, the facts of the answer, and the numbers of what was
 # taken out before saving (or None).
 Keep = Callable[[FetchResult], tuple[bytes, dict, dict | None]]
-# What asks for one address and saves the answer: it returns the status of the saved answer, and
-# raises FetchFailed or StopCollecting as the client does.
-Ask = Callable[[str], str]
+# What asks for one address and saves the answer: it returns the status of the saved answer, or
+# None when nothing was saved, and raises FetchFailed or StopCollecting as the client does.
+Ask = Callable[[str], str | None]
 
 
 @dataclass
@@ -52,9 +52,9 @@ def ask_each(
 ) -> AnswersRun:
     """Ask for the address of every repository that has no saved answer yet, one after the other.
 
-    With `limit`, at most that many are asked for in this run. An answer that fails is counted
-    and asked for again by a later run. A stop (the switch, a no, too many requests) ends the
-    run, and what was saved stays saved.
+    With `limit`, at most that many are asked for in this run. An answer that fails or that was
+    not saved is counted and asked for again by a later run. A stop (the switch, a no, too many
+    requests) ends the run, and what was saved stays saved.
     """
     run = AnswersRun(repositories=len(repositories), by_status=dict.fromkeys(statuses, 0))
     for repository in repositories:
@@ -76,6 +76,9 @@ def ask_each(
             run.left_for_later += 1
             continue
         run.asked += 1
+        if status is None:
+            run.failed += 1
+            continue
         run.by_status[status] = run.by_status.get(status, 0) + 1
     return run
 

@@ -42,22 +42,33 @@ import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TypeVar
 from urllib.parse import urlsplit
 
+import requests
 from pydantic import SecretStr
 from requests.structures import CaseInsensitiveDict
 
 from hackathon_memory.collect.polite import (
+    _REDIRECT_STATUSES,
     CollectorIdentity,
     CollectorRefused,
+    FetchFailed,
+    FetchResult,
     PoliteClient,
     RawAnswer,
     RequestCount,
     StopCollecting,
 )
+from hackathon_memory.parse.hedera_code import LimitedStream
 from hackathon_memory.settings import Settings
 
+T = TypeVar("T")
+
 SITE = "api.github.com"
+# Where GitHub sends the archive of a repository: "Download a repository archive (tar)" answers
+# 302 with an address on this host (docs.github.com and one request, 21 October 2026).
+ARCHIVE_HOST = "codeload.github.com"
 API_VERSION = "2026-03-10"
 # Design rule 10: at least one second between two requests. That is 60 points a minute, a
 # fifteenth of what GitHub allows.
@@ -99,6 +110,20 @@ def readme_address(repository: str) -> str:
     """The address of the README of a repository in GitHub's API."""
     owner, name = repository.removeprefix(f"https://{CODE_HOST}/").split("/")
     return f"https://{SITE}/repos/{owner}/{name}/readme"
+
+
+def archive_address(repository: str) -> str:
+    """The address in GitHub's API that sends the archive of the default branch of a
+    repository ("If you omit :ref, the repository's default branch will be used")."""
+    owner, name = repository.removeprefix(f"https://{CODE_HOST}/").split("/")
+    return f"https://{SITE}/repos/{owner}/{name}/tarball"
+
+
+def _raw_reader(response: requests.Response) -> Callable[[int], bytes]:
+    """Read the bytes of an answer as they came: an archive is gzip, and is not unpacked on the
+    way, also when a server names gzip as the encoding of the answer (urllib3 2.8.0,
+    HTTPResponse.read(amt, decode_content))."""
+    return lambda size: response.raw.read(size, decode_content=False)
 
 
 def allowed(url: str) -> bool:
@@ -162,6 +187,72 @@ class GitHubClient(PoliteClient):
         if raw.status == 404:
             return  # no such repository, or no README: an answer
         super()._judge(raw)  # 401 and every other no, 429, and the errors of the server
+
+    def read_archive(
+        self,
+        url: str,
+        read: Callable[[LimitedStream], T],
+        *,
+        max_bytes: int | None = None,
+        seconds: float | None = None,
+    ) -> tuple[FetchResult, T | None]:
+        """Ask the API for the archive of a repository, then download it from GitHub's archive
+        host as a stream and hand it to `read`: nothing of the archive is kept here. Two
+        requests, one after the other, each counted and paused like every other. The token
+        goes to the API only; the download carries the name of the tool and its contact.
+
+        An answer of the API that is not a redirect (404, a blocked repository) comes back with
+        no result. A download that does not answer 200 is judged like every answer: a no stops
+        the run, too many requests starts the cooldown, anything else fails. A download that
+        broke off on the way counts as an error in a row, like a network error."""
+        with self._lock:
+            self._check_allowed(url)
+            errors = self._errors_in_a_row
+            raw = self._request_once(url)
+            stamp = self.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            if raw.status not in _REDIRECT_STATUSES:
+                content_type = raw.headers.get("Content-Type", "")
+                return FetchResult(url, url, raw.status, raw.body, content_type, stamp), None
+            # The redirect is half of the exchange: it clears no error in a row, so that
+            # downloads that keep breaking off stop the run.
+            self._errors_in_a_row = errors
+            location = str(raw.headers.get("Location", ""))
+            target = urlsplit(location)
+            if target.scheme != "https" or target.netloc != ARCHIVE_HOST:
+                raise StopCollecting(
+                    f"GitHub sent the archive to {target.netloc or 'no address'}, not to "
+                    f"{ARCHIVE_HOST}. Nothing is downloaded."
+                )
+            self._check_may_send()
+            self._wait_turn()
+            self.requests_made += 1
+            if self.count is not None:
+                self.count.add_one()
+            headers = {"User-Agent": self.identity.user_agent, "From": self.identity.contact}
+            try:
+                response = self.session.get(location, headers=headers, timeout=self.timeout,
+                                            allow_redirects=False, stream=True)  # fmt: skip
+            except requests.RequestException as error:
+                self._last_end = self.clock()
+                self._note_error(f"network error {type(error).__name__}")
+                raise FetchFailed(f"network error {type(error).__name__}") from None
+            try:
+                if response.status_code != 200:  # a no, too many requests, or an error
+                    self._last_end = self.clock()
+                    self._judge(RawAnswer(response.status_code, response.headers, b""))
+                    self._failed(f"status {response.status_code} for the archive")
+                stream = LimitedStream(_raw_reader(response), max_bytes=max_bytes,
+                                       seconds=seconds, clock=self.clock)  # fmt: skip
+                result = read(stream)
+            finally:
+                response.close()
+                self._last_end = self.clock()
+            if stream.broken is not None:
+                self._note_error(f"the download broke off ({stream.broken})")
+            else:
+                self._errors_in_a_row = 0
+            content_type = response.headers.get("Content-Type", "")
+            return FetchResult(url, location, 200, b"", content_type, stamp), result
 
     def _note_hour(self, headers: CaseInsensitiveDict) -> None:
         left = str(headers.get("x-ratelimit-remaining", ""))

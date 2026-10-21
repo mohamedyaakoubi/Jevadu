@@ -98,11 +98,14 @@ class RawStore:
         team_cut: dict | None = None,
         answer: dict | None = None,
         suffix: str = ".html",
+        received_sha256: str | None = None,
     ) -> SavedPage:
         """Save `body` (after the team part was cut out). `received` is what the site sent.
 
         `answer` holds facts of the answer that the saved body no longer shows, such as the name
         of a file that an API sent inside its answer. It holds no text of a page.
+        `received_sha256` is the fingerprint of what the site sent when it was read as a stream
+        and not kept, such as the archive of a repository; `received` is then empty.
         """
         body_path, meta_path = self._paths(fetch.url, suffix)
         if body_path.exists() and meta_path.exists():
@@ -118,7 +121,7 @@ class RawStore:
             "content_type": fetch.content_type,
             "bytes": len(body),
             "sha256": fingerprint(body),
-            "received_sha256": fingerprint(received),
+            "received_sha256": received_sha256 or fingerprint(received),
             "team_cut": team_cut,
             "collector": collector,
         }
