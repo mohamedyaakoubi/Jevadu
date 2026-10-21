@@ -6,27 +6,31 @@ A running record of every step on this project: what was done, how, the results,
 
 ## Note for the next session
 
-Written on 18 October 2026, evening. Replace it when it is no longer true.
+Written on 20 October 2026. Replace it when it is no longer true.
 
-**18 October 2026: the third queue and Test 3 are done** (entry 16, the last section).
-`phase-e-website` is pushed at `e503303`. A button to the live demo on a card; the register box at
-the top right of a check, which offers the hackathon of the same code; the list of hackathons in
-groups (FSS Campus Edition from 10 August 2026, "Running now"); a wider "How it works"; a switch of
-the theme; errors in plain words; the comparison told that a card is a summary (compare-2).
-**Test 3 ran** (launch gate 6 struck): found 156 of 156, status 94.9% (both met), added IDs 12.4%
-(not met). Its README reading was redone after a cut reading aid; the second reading is not blind
-for ten projects, and Q45 asks the owner whether the public report says so. The video script is
-`docs/video-script.md`. The start from a clean copy (launch gate 1): passed and struck on 18 October 2026 (a clone of f38aa70 with the README's commands; log data/review/2026-10-18-clean-copy.txt).
+**20 October 2026: the owner's ten points** (entry 17). `phase-e-website` is pushed; its last
+commit of code is `d20c714`.
+Done: the notes are in git (the repository itself is still private); Test 3 says that a language
+model made its reading, and that ten READMEs were not read blind; the FSS Campus Edition runs from 10
+August to 7 November 2026; a calmer dark theme that is not green; the usual words of the field on
+every screen (hard constraint 13 changed); insights in sentences above the charts. The register
+stays closed.
 
-**Waiting for the owner:** the final questions before the register opens (the owner's words: "until
-I get my head around it with final questions later"); Q45; the day the FSS submission closes (it is
-announced when the submission opens, 20 October).
+**Waiting for the owner:**
+- "redo the demo and its above points when I say so": the demo script with research, an idea that
+  they understand with a linked chain, the line about consent, then the logo and the PDF pitch
+  deck (points 4, 5, 6, 9). Do not start them before their word.
+- Their answer on hosting (point 8): the recommendation is in the report of 20 October and in
+  `decisions.md`. Nothing goes online before they write to ETHGlobal again (blueprint 5.7).
+- The final questions before the register opens.
+- **No Google call without their yes:** about $15 of credit in all (hard constraint 7). A local
+  website for pictures or tests runs with `LLM_BUDGET_TEST_USD=0` and `LLM_BUDGET_PROD_USD=0`,
+  so no call can be made.
 
-**Next:** the owner's review layer 2 of the screens (launch gate 7); the README for judges, read once
-more as a judge; the recording of the video; the secret scan again before the submission (launch
-gate 8, clean on 18 October in 286 commits). The website runs on port 8000 with the committed code.
-After a restart: Docker Desktop, `docker compose up -d --wait db`, then `python -m
-hackathon_memory.web`.
+**Next:** the owner's review layer 2 of the screens (launch gate 7); the README for judges, read
+once more as a judge; the secret scan before the submission (launch gate 8). FSS submission closes
+on 7 November 2026. After a restart: Docker Desktop, `docker compose up -d --wait db`, then
+`python -m hackathon_memory.web`.
 
 **Read this first**
 
@@ -54,7 +58,7 @@ hackathon_memory.web`.
 - **The ends of all 14 events** are in `data/by-hand/ethglobal.com/event-ends.txt`: ten from the days of the judging, four read by the owner on the pages of the events (Q30).
 - **The scope of the ETHGlobal collection** was every project that its showcase ties to Hedera: 658 pages ([11](11-all-hedera-projects-and-the-429.md)). 92 took a Hedera prize, 81 a prize of another sponsor only, 485 none. A card says which.
 - **A 429 is a speed limit, not a stop order** (the owner, 11 October). The tool waits one hour and goes on five times slower, by itself. A real no still needs the owner.
-- **A public design document exists:** `DESIGN.md`. If the blueprint changes something that it says, change both. Blueprint version 0.24.
+- **A public design document exists:** `DESIGN.md`. If the blueprint changes something that it says, change both. Blueprint version 0.27.
 - **The cost of the models is counted** ([08](08-rules-clean-history-finops.md)). On 18 October: 12.38 of the 15 dollars of `test` spent (83%); `prod` 30.02 of 30, at STOP after the cards run. One search on the website costs about 0.6 cent: 0.2 for the order by the model, 0.4 for the comparison. The website runs in `test`.
 - **The caches, CAG, Redis and code against model are decided** ([12](12-caches-cag-redis-and-code-against-model.md)). The table of ledger answers is the first exact cache, and it works: a second check asked 5 new questions.
 - **The analytics are decided** ([09](09-analytics-for-all-users.md)): six blocks on the event overview screen. Nothing is built.
@@ -203,3 +207,5 @@ Update this at the end of every block of work.
 | 10 to 11 Oct 2026, night | The owner's laptop, with Claude Code | The owner's seven points. The scope widened to all 658 Hedera projects of ETHGlobal. The site answered 429 after 62 more pages. A cooldown rule in the code. Then the owner's four points: caches, CAG, Redis, code against model, and Phase A is done. Then Gate A passed, Phase A merged and tagged, and the first part of Phase B. Trace: [sessions/2026-10-11-night-all-projects.md](sessions/2026-10-11-night-all-projects.md). |
 | 11 to 12 Oct 2026 | The owner's laptop, with Claude Code | The owner's nine points: hide people (Q31), the password stays (Q32), context and easy words for every ask. Then the README of every project's code through GitHub (cleaned before saving), the ledger check of its IDs (285 projects with an ID, 76 with proof), the facts of the code and the life rule, the embeddings with gemini-embedding-2, the search (meaning and BM25), the step all and the proof of Gate B. Trace: entry 13. |
 | 12 Oct 2026, afternoon and evening | The owner's laptop, with Claude Code | The owner's answers: blind ideas, the scale of three marks, the judgement left to the assistant, the life rule (30 days, "too early to tell"), the ends of four events, and "never take my words granted". Gate B passed. A change of Wi-Fi crashed a run: the clients of Google and of the mirror node now wait and ask again. |
+| 13 to 18 Oct 2026 | The owner's laptop, with Claude Code | Phases B to E, told in entries 13 to 16. |
+| 20 to 21 Oct 2026 | The owner's laptop, with Claude Code | The owner's ten points of 20 October: the notes public, the FSS dates, the $15 credit, a calmer dark theme, the words of the website, insights; hosting answered; the demo waits for their word. Entry [17](17-notes-public-dark-mode-words-insights.md). |
