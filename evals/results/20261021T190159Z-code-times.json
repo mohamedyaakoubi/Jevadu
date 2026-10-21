@@ -1,0 +1,25 @@
+{
+ "test": "code-times",
+ "made_on": "2026-10-21",
+ "made_at": "2026-10-21T19:01:59Z",
+ "readings": 579,
+ "seconds": {
+  "median": 3.45,
+  "p90": 10.8,
+  "p95": 17.66,
+  "largest": 100.34,
+  "all": 3608.8
+ },
+ "megabytes": {
+  "median": 1.2,
+  "p90": 15.59,
+  "p95": 36.97,
+  "largest": 266.8,
+  "all": 3973.0
+ },
+ "live_limits": {
+  "megabytes": 50.0,
+  "seconds": 30.0
+ },
+ "under_both_live_limits": 558
+}
