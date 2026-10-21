@@ -2,7 +2,8 @@
 
 The README of a repository and the facts of a repository are asked for in the same way: one
 request for each repository, one after the other, and every answer saved, so that none is asked
-for twice. What is kept of an answer differs, so each kind gives its own `keep`.
+for twice. What is kept of an answer differs, so each kind gives its own `keep`. The loop itself
+(`ask_each`) takes any way of asking for one address and saving its answer.
 """
 
 from __future__ import annotations
@@ -21,6 +22,9 @@ from hackathon_memory.collect.rawstore import RawStore, SavedPage
 # What is saved of an answer: the page, the facts of the answer, and the numbers of what was
 # taken out before saving (or None).
 Keep = Callable[[FetchResult], tuple[bytes, dict, dict | None]]
+# What asks for one address and saves the answer: it returns the status of the saved answer, and
+# raises FetchFailed or StopCollecting as the client does.
+Ask = Callable[[str], str]
 
 
 @dataclass
@@ -36,17 +40,14 @@ class AnswersRun:
     by_status: dict[str, int] = field(default_factory=dict)
 
 
-def fetch_once(
-    client: PoliteClient,
+def ask_each(
     store: RawStore,
     repositories: list[str],
     *,
     address_of: Callable[[str], str],
-    keep: Keep,
-    status_of: Callable[[SavedPage], str],
+    ask: Ask,
     statuses: Iterable[str],
     suffix: str,
-    collector: str,
     limit: int | None = None,
 ) -> AnswersRun:
     """Ask for the address of every repository that has no saved answer yet, one after the other.
@@ -65,7 +66,7 @@ def fetch_once(
             run.left_for_later += 1
             continue
         try:
-            fetch = client.get(address)
+            status = ask(address)
         except FetchFailed:
             run.asked += 1
             run.failed += 1
@@ -75,6 +76,28 @@ def fetch_once(
             run.left_for_later += 1
             continue
         run.asked += 1
+        run.by_status[status] = run.by_status.get(status, 0) + 1
+    return run
+
+
+def fetch_once(
+    client: PoliteClient,
+    store: RawStore,
+    repositories: list[str],
+    *,
+    address_of: Callable[[str], str],
+    keep: Keep,
+    status_of: Callable[[SavedPage], str],
+    statuses: Iterable[str],
+    suffix: str,
+    collector: str,
+    limit: int | None = None,
+) -> AnswersRun:
+    """Ask for the address of every repository that has no saved answer yet with one request
+    each, and save what `keep` keeps of the answer (`ask_each`)."""
+
+    def ask(address: str) -> str:
+        fetch = client.get(address)
         body, facts, taken_out = keep(fetch)
         saved = store.save(
             fetch,
@@ -85,6 +108,7 @@ def fetch_once(
             answer=facts,
             suffix=suffix,
         )
-        status = status_of(saved)
-        run.by_status[status] = run.by_status.get(status, 0) + 1
-    return run
+        return status_of(saved)
+
+    return ask_each(store, repositories, address_of=address_of, ask=ask, statuses=statuses,
+                    suffix=suffix, limit=limit)  # fmt: skip
