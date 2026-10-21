@@ -43,7 +43,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TypeVar
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import requests
 from pydantic import SecretStr
@@ -51,6 +51,7 @@ from requests.structures import CaseInsensitiveDict
 
 from hackathon_memory.collect.polite import (
     _REDIRECT_STATUSES,
+    MAX_REDIRECTS,
     CollectorIdentity,
     CollectorRefused,
     FetchFailed,
@@ -213,27 +214,35 @@ class GitHubClient(PoliteClient):
             return FetchResult(url, location, 200, b"", content_type, answer.fetched_at), result
 
     def _archive_address(self, url: str) -> tuple[FetchResult, str | None]:
-        """Ask the API where the archive of a repository is. Returns the API's answer, with the
-        address of the archive, or with None when the answer is not a redirect."""
-        self._check_allowed(url)
+        """Ask the API where the archive of a repository is. A moved or renamed repository
+        answers with its new address in the API, which is asked in turn, as `get` does. Returns
+        the API's answer, with the address of the archive, or with None when the answer is not
+        a redirect. An address anywhere else fails this repository only: nothing is
+        downloaded, and the run goes on."""
         errors = self._errors_in_a_row
-        raw = self._request_once(url)
-        stamp = self.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        answer = FetchResult(url, url, raw.status, raw.body, raw.headers.get("Content-Type", ""),
-                             stamp)  # fmt: skip
-        if raw.status not in _REDIRECT_STATUSES:
-            return answer, None
-        # The redirect is half of the exchange: it clears no error in a row, so that downloads
-        # that keep breaking off stop the run.
-        self._errors_in_a_row = errors
-        location = str(raw.headers.get("Location", ""))
-        target = urlsplit(location)
-        if target.scheme != "https" or target.netloc != ARCHIVE_HOST:
-            raise StopCollecting(
-                f"GitHub sent the archive to {target.netloc or 'no address'}, not to "
-                f"{ARCHIVE_HOST}. Nothing is downloaded."
-            )
-        return answer, location
+        current = url
+        for _ in range(MAX_REDIRECTS + 1):
+            self._check_allowed(current)
+            raw = self._request_once(current)
+            stamp = self.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            answer = FetchResult(url, current, raw.status, raw.body,
+                                 raw.headers.get("Content-Type", ""), stamp)  # fmt: skip
+            if raw.status not in _REDIRECT_STATUSES:
+                return answer, None
+            # A redirect is half of the exchange: it clears no error in a row, so that
+            # downloads that keep breaking off stop the run.
+            self._errors_in_a_row = errors
+            location = urljoin(current, str(raw.headers.get("Location", "")))
+            target = urlsplit(location)
+            if target.scheme == "https" and target.netloc == ARCHIVE_HOST:
+                return answer, location
+            if not self.allow(location):
+                self._failed(
+                    f"GitHub sent the archive to {target.netloc or 'no address'}, not to "
+                    f"{ARCHIVE_HOST}; nothing was downloaded"
+                )
+            current = location  # a moved repository: its new address in the API
+        self._failed(f"{self.site} sent too many redirects in a row for one archive")
 
     def _download(
         self,

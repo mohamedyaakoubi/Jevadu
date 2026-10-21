@@ -148,13 +148,34 @@ def test_a_run_reads_each_archive_once_and_keeps_only_what_it_found(tmp_path: Pa
     ["https://archive.example.test/pebble-pay.tar.gz",
      "http://codeload.github.com/sample-org/pebble-pay/legacy.tar.gz/refs/heads/main"],
 )  # fmt: skip
-def test_an_archive_sent_anywhere_else_is_not_downloaded(tmp_path: Path, location: str) -> None:
-    site = FakeSite({archive_address(PEBBLE): sent_to(PEBBLE, location)})
+def test_an_archive_sent_anywhere_else_is_not_downloaded_and_the_run_goes_on(
+    tmp_path: Path, location: str
+) -> None:
+    site = FakeSite({
+        archive_address(PEBBLE): sent_to(PEBBLE, location),
+        archive_address(EEL): Reply(404, b'{"message": "Not Found"}', API),
+    })  # fmt: skip
     store = RawStore(tmp_path / "raw")
     run = fetch_code(client_for(site, tmp_path), store, [PEBBLE, EEL], collector=COLLECTOR)
-    assert run.stopped is not None and "Nothing is downloaded" in run.stopped
-    assert site.urls == [archive_address(PEBBLE)]
-    assert saved_code(store, PEBBLE) is None
+    assert (run.stopped, run.failed, run.by_status[GONE]) == (None, 1, 1)
+    assert site.urls == [archive_address(PEBBLE), archive_address(EEL)]
+    assert saved_code(store, PEBBLE) is None  # a later run asks again
+
+
+def test_a_moved_repository_is_followed_inside_the_api_to_its_archive(tmp_path: Path) -> None:
+    moved = "https://api.github.com/repositories/4242/tarball"
+    site = FakeSite({
+        archive_address(PEBBLE): Reply(301, b"", {**API, "Location": moved}),
+        moved: sent_to(PEBBLE),
+        download(PEBBLE): Reply(200, archive(FILES)),
+    })  # fmt: skip
+    store = RawStore(tmp_path / "raw")
+    run = fetch_code(client_for(site, tmp_path), store, [PEBBLE], collector=COLLECTOR)
+    assert run.by_status[READ] == 1
+    assert site.urls == [archive_address(PEBBLE), moved, download(PEBBLE)]
+    assert all("Authorization" in one.headers for one in site.seen[:2])  # inside the API
+    assert "Authorization" not in site.seen[2].headers
+    assert saved_code(store, PEBBLE).status == READ  # type: ignore[union-attr]
 
 
 def test_a_download_that_breaks_off_is_not_kept_and_a_later_run_reads_it(tmp_path: Path) -> None:
