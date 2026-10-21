@@ -4,15 +4,17 @@
     POSTGRES_DB=<new database> python -m hackathon_memory.pipeline parse
     POSTGRES_DB=<new database> python -m hackathon_memory.pipeline readmes --no-requests
     POSTGRES_DB=<new database> python -m hackathon_memory.pipeline code --no-requests
+    POSTGRES_DB=<new database> python -m hackathon_memory.pipeline hedera_code --no-requests
     POSTGRES_DB=<new database> python -m hackathon_memory.pipeline check
     POSTGRES_DB=<new database> python -m hackathon_memory.pipeline embed
     POSTGRES_DB=<new database> python -m hackathon_memory.pipeline cards --restore <file of cards>
     python -m evals.rebuild <database in use> <new database>
 
-The pages, the READMEs and the facts of the code come from the saved files, with no request; the
-mirror node of Hedera is asked again, since its answers are the ledger of today; the embeddings
-are made again by the model; and the cards come back from the file that `cards --export` wrote,
-with their quotes checked again, since the model would not write the same cards twice.
+The pages, the READMEs, the facts of the code and what the code says about Hedera come from the
+saved files, with no request; the mirror node of Hedera is asked again, since its answers are the
+ledger of today; the embeddings are made again by the model; and the cards come back from the
+file that `cards --export` wrote, with their quotes checked again, since the model would not
+write the same cards twice.
 
 It writes evals/results/<UTC time>-rebuild.json, in numbers only: for each count, the value in
 the database in use, in the new one, and whether they are the same.
@@ -45,6 +47,9 @@ COUNTS = {
     "prizes": "SELECT 'all', count(*) FROM prizes",
     "hedera_ids": "SELECT found_in, count(*) FROM hedera_ids GROUP BY 1",
     "repositories": "SELECT 'all', count(*) FROM repositories",
+    "archives": "SELECT archive_status, count(*) FROM repositories "
+    "WHERE archive_status IS NOT NULL GROUP BY 1",
+    "hedera_in_code": "SELECT kind, count(*) FROM hedera_in_code GROUP BY 1",
     "id_checks": "SELECT status, count(*) FROM id_checks GROUP BY 1",
     "ledger_facts": "SELECT kind, count(*) FROM ledger_facts GROUP BY 1",
     "cards": "SELECT instructions_version, count(*) FROM cards GROUP BY 1",
