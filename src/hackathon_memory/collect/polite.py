@@ -442,6 +442,13 @@ class PoliteClient:
     # ------------------------------------------------------------------ inside
 
     def _check_allowed(self, url: str) -> None:
+        """May this address be asked now? The rules of every request, then the list of pages."""
+        self._check_may_send()
+        if not self.allow(url):
+            raise StopCollecting(f"{url} is not on the list of pages named for {self.site}.")
+
+    def _check_may_send(self) -> None:
+        """May a request be sent now: the switch, a no of the site, a cooldown, the limits."""
         if not self.is_enabled():
             raise StopCollecting(f"The switch for {self.site} is off. Nothing more is requested.")
         refused = self.count.refusal() if self.count is not None else None
@@ -470,8 +477,6 @@ class PoliteClient:
                 f"The limit of {self.count.limit} requests to {self.site} over all runs is "
                 "reached. Nothing more is requested."
             )
-        if not self.allow(url):
-            raise StopCollecting(f"{url} is not on the list of pages named for {self.site}.")
 
     def _headers(self) -> dict[str, str]:
         return {
