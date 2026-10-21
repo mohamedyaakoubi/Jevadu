@@ -7,7 +7,7 @@ import io
 import json
 import random
 
-from fakes import archive
+from fakes import ARCHIVE_COMMIT, archive
 from hackathon_memory.parse import hedera_code as hc
 from hackathon_memory.parse.hedera_code import (
     CHAIN_ID,
@@ -120,9 +120,17 @@ def test_an_archive_says_where_hedera_stands_and_skips_what_is_not_the_projects(
     assert scan.signs[SYSTEM_CONTRACTS].files == 2
     assert sorted(scan.signs[MIRROR_NODE].examples) == [".env.example", "scripts/mirror.py"]
     assert scan.files == 8  # neither node_modules, nor dist, nor .env, nor the huge file
+    assert scan.commit == ARCHIVE_COMMIT
     assert scan.uses_hedera and scan.archive_bytes > 0 and len(scan.archive_sha256) == 64
     record = scan.to_json().decode()
     assert "Quill" not in record and "PRIVATE_KEY" not in record and "not-a-key" not in record
+
+
+def test_an_archive_with_no_commit_in_its_header_names_none() -> None:
+    body = archive({"src/a.ts": b"let a = 1;\n"}, commit=None)
+    assert scan_archive(LimitedStream(io.BytesIO(body).read)).commit is None
+    odd = archive({"src/a.ts": b"let a = 1;\n"}, commit="not a commit")
+    assert scan_archive(LimitedStream(io.BytesIO(odd).read)).commit is None
 
 
 def test_a_class_name_counts_only_with_a_hedera_library() -> None:

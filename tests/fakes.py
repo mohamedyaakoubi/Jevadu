@@ -108,17 +108,19 @@ def session_for(site: FakeSite) -> requests.Session:
 
 # ------------------------------------------------------------------ an invented archive
 
+ARCHIVE_COMMIT = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
 ARCHIVE_TOP = "sample-org-pebble-pay-1a2b3c4"  # the first folder of an archive of GitHub
 
 
-def archive(files: dict[str, bytes], top: str = ARCHIVE_TOP) -> bytes:
+def archive(
+    files: dict[str, bytes], top: str = ARCHIVE_TOP, commit: str | None = ARCHIVE_COMMIT
+) -> bytes:
     """An INVENTED .tar.gz archive of a repository: these files under the first folder, after a
-    global header, as GitHub makes it."""
+    global header that names the commit, as git archive makes it for GitHub."""
     data = io.BytesIO()
-    with tarfile.open(fileobj=data, mode="w:gz") as tar:
-        header = tarfile.TarInfo("pax_global_header")
-        header.type = tarfile.XGLTYPE
-        tar.addfile(header)
+    header = {"comment": commit} if commit else {}
+    with tarfile.open(fileobj=data, mode="w:gz", format=tarfile.PAX_FORMAT,
+                      pax_headers=header) as tar:  # fmt: skip
         for path, body in files.items():
             info = tarfile.TarInfo(f"{top}/{path}")
             info.size = len(body)

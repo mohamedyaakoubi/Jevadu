@@ -318,6 +318,7 @@ class Seen:
 @dataclass
 class CodeScan:
     files: int = 0  # files of the project's own code that were read
+    commit: str | None = None  # the commit that the archive was made from, from its header
     archive_bytes: int = 0
     archive_sha256: str = ""
     partial: str | None = None  # why the reading stopped before the end, or None
@@ -338,7 +339,8 @@ class CodeScan:
                     for name, one in sorted(found.items())}  # fmt: skip
 
         record = {
-            "format": FORMAT, "files": self.files, "archive_bytes": self.archive_bytes,
+            "format": FORMAT, "files": self.files, "commit": self.commit,
+            "archive_bytes": self.archive_bytes,
             "archive_sha256": self.archive_sha256, "partial": self.partial,
             "packages": dict(sorted(self.packages.items())),
             "dependencies": dict(sorted(self.dependencies.items())),
@@ -357,7 +359,8 @@ class CodeScan:
 
         imports = record.get("imports") or {}
         return cls(
-            files=record["files"], archive_bytes=record["archive_bytes"],
+            files=record["files"], commit=record.get("commit"),
+            archive_bytes=record["archive_bytes"],
             archive_sha256=record.get("archive_sha256", ""), partial=record.get("partial"),
             packages=record.get("packages") or {}, dependencies=record.get("dependencies") or {},
             unreadable=record.get("unreadable") or [], features=seen(record.get("features") or {}),
@@ -373,6 +376,8 @@ class ReadLimit(Exception):
 class DownloadBroken(OSError):
     """The download of an archive broke off: the network or the server."""
 
+
+_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 # Why a reading stopped before the end of an archive.
 LIMIT_BYTES = "the archive is larger than the limit of a live check"
@@ -419,6 +424,13 @@ class LimitedStream(io.RawIOBase):
         self.digest.update(data)
         buffer[: len(data)] = data
         return len(data)
+
+
+def _commit_of(headers: dict[str, str]) -> str | None:
+    """The commit that an archive was made from: git archive writes it as the "comment" of the
+    archive's global header (archive-tar.c, write_global_extended_header)."""
+    value = str(headers.get("comment", "")).strip().lower()
+    return value if _COMMIT.fullmatch(value) else None
 
 
 def _own_path(member_name: str) -> str | None:
@@ -505,6 +517,7 @@ def scan_archive(stream: LimitedStream) -> CodeScan:
     calls: list[_Calls] = []
     try:
         with tarfile.open(fileobj=io.BufferedReader(stream, 1 << 16), mode="r|gz") as archive:
+            scan.commit = _commit_of(archive.pax_headers)
             for member in archive:
                 if not member.isfile() or member.size > MAX_FILE_BYTES:
                     continue
