@@ -1,4 +1,5 @@
-"""The repositories of the projects' code, and the ids of their READMEs. All data is invented."""
+"""The repositories of the projects' code, the ids of their READMEs, and what their code says
+about Hedera. All data is invented."""
 
 from __future__ import annotations
 
@@ -7,12 +8,22 @@ import re
 import psycopg
 import pytest
 
-from fakes import PROJECT_PAGE, project_page
+from fakes import ARCHIVE_COMMIT, PROJECT_PAGE, project_page
+from hackathon_memory.collect import github_code
+from hackathon_memory.collect.github_code import CodeRead
 from hackathon_memory.collect.github_readmes import BLOCKED, FOUND, NONE, Readme
 from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.projects import IN_THE_README, ON_THE_PAGE, ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.parse.ethglobal_page import read_project_page
+from hackathon_memory.parse.hedera_code import (
+    IMPORT_NAME,
+    MENTION_NAME,
+    MIRROR_NODE,
+    UNREADABLE,
+    CodeScan,
+    Seen,
+)
 from hackathon_memory.parse.hedera_ids import FoundId
 
 pytestmark = pytest.mark.integration
@@ -141,6 +152,15 @@ def test_what_github_answered_about_a_readme_is_written(database: str) -> None:
         "INSERT INTO repositories (url, readme_status, readme_fetched_at, readme_sha256) "
         "VALUES ('https://github.com/a/b', 'lost', now(), repeat('c', 64))",
         "INSERT INTO repositories (url, team_lines_cut) VALUES ('https://github.com/a/b', -1)",
+        "INSERT INTO repositories (url, archive_status) VALUES ('https://github.com/a/b', 'read')",
+        "INSERT INTO repositories (url, archive_status, archive_read_at) "
+        "VALUES ('https://github.com/a/b', 'partial', now())",
+        "INSERT INTO repositories (url, archive_status, archive_read_at, archive_partial) "
+        "VALUES ('https://github.com/a/b', 'read', now(), 'cut')",
+        "INSERT INTO repositories (url, archive_commit) VALUES ('https://github.com/a/b', 'main')",
+        "INSERT INTO hedera_in_code VALUES (1, 'guess', 'x', 1, ARRAY['a.ts'])",
+        "INSERT INTO hedera_in_code VALUES (1, 'package', 'x', 0, ARRAY['a.ts'])",
+        "INSERT INTO hedera_in_code VALUES (1, 'package', 'x', 1, ARRAY[]::text[])",
     ],
 )
 def test_the_table_refuses_a_value_that_makes_no_sense(database: str, change: str) -> None:
@@ -222,4 +242,71 @@ def test_the_table_of_repositories_has_no_column_for_a_person(database: str) -> 
     # A count of what was taken out names nobody: it is a number.
     about_people = {name: kind for name, kind in columns if person.search(name)}
     assert about_people == {"team_lines_cut": "integer"}
-    assert len(columns) == 17
+    assert len(columns) == 22
+    found = rows(
+        database,
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'hedera_in_code'",
+    )
+    assert sorted(name for (name,) in found) == [
+        "examples", "files", "kind", "name", "repository_id"]  # fmt: skip
+
+
+# --------------------------------------------------------------------- what the code says
+
+
+def code_read(status: str = github_code.READ, **changes: object) -> CodeRead:
+    """An INVENTED reading of the archive of a repository."""
+    scan = CodeScan(
+        files=40, commit=ARCHIVE_COMMIT,
+        packages={"@hashgraph/sdk": ["package.json", "web/package.json"]},
+        features={"Consensus Service (topics)": Seen(3, ["src/topic.ts", "src/a.ts", "src/b.ts"])},
+        signs={MIRROR_NODE: Seen(1, ["src/mirror.ts"])},
+        imports=Seen(4, ["src/topic.ts", "src/a.ts", "src/b.ts", "src/c.ts"]),
+        mentions=Seen(6, ["package.json", "src/topic.ts", "src/a.ts", "src/b.ts", "src/c.ts",
+                          "src/mirror.ts"]),
+    )  # fmt: skip
+    for name, value in changes.items():
+        setattr(scan, name, value)
+    whole = status in (github_code.READ, github_code.PARTIAL)
+    return CodeRead(status, scan if whole else None, "2026-10-21T20:00:00Z")
+
+
+def test_what_the_code_says_about_hedera_is_written_and_replaced(database: str) -> None:
+    ids = three_projects(database)
+    store = RepositoryStore(database)
+    store.link({ids[PROJECT_PAGE]: PEBBLE, ids[SECOND_PAGE]: QUARTZ})
+    store.save_code(PEBBLE, code_read())
+    store.save_code(QUARTZ, code_read(github_code.GONE))
+    store.save_code("https://github.com/sample-org/linked-by-nobody", code_read())
+    assert rows(
+        database,
+        "SELECT url, archive_status, archive_commit, archive_files, archive_partial "
+        "FROM repositories ORDER BY url",
+    ) == [
+        (PEBBLE, "read", ARCHIVE_COMMIT, 40, None),
+        (QUARTZ, "gone", None, None, None),
+    ]
+    assert rows(
+        database, "SELECT kind, name, files, examples FROM hedera_in_code ORDER BY kind, name"
+    ) == [
+        ("feature", "Consensus Service (topics)", 3, ["src/topic.ts", "src/a.ts", "src/b.ts"]),
+        ("import", IMPORT_NAME, 4, ["src/topic.ts", "src/a.ts", "src/b.ts", "src/c.ts"]),
+        (
+            "mention",
+            MENTION_NAME,
+            6,
+            ["package.json", "src/topic.ts", "src/a.ts", "src/b.ts", "src/c.ts", "src/mirror.ts"],
+        ),
+        ("package", "@hashgraph/sdk", 2, ["package.json", "web/package.json"]),
+        ("sign", MIRROR_NODE, 1, ["src/mirror.ts"]),
+    ]
+
+    # A newer reading of the same repository replaces what the older one found.
+    newer = code_read(github_code.PARTIAL, partial=UNREADABLE, features={}, signs={},
+                      imports=Seen(), mentions=Seen())  # fmt: skip
+    store.save_code(PEBBLE, newer)
+    assert rows(database, "SELECT kind, name FROM hedera_in_code") == [
+        ("package", "@hashgraph/sdk")]  # fmt: skip
+    assert rows(
+        database, "SELECT archive_status, archive_partial FROM repositories WHERE url = %s", PEBBLE
+    ) == [("partial", UNREADABLE)]

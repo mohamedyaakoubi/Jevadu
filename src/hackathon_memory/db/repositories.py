@@ -1,7 +1,8 @@
 """Where the repositories of the projects' code are kept (design 7.3, migration 0007).
 
 A project names its code with a link. The repository of that link gets one row here, shared by
-every project that names it. The row says what GitHub answered about the README.
+every project that names it. The row says what GitHub answered about the README and about the
+repository, and what the reading of its archive found (hedera_in_code, migration 0014).
 
 The Hedera ids of a README are kept for each project, in hedera_ids (ProjectStore).
 """
@@ -12,6 +13,7 @@ from collections.abc import Mapping
 
 import psycopg
 
+from hackathon_memory.collect.github_code import CodeRead
 from hackathon_memory.collect.github_facts import RepositoryFacts
 from hackathon_memory.collect.github_readmes import Readme
 from hackathon_memory.db.projects import IN_THE_README
@@ -114,6 +116,37 @@ class RepositoryStore:
                     url,
                 ),
             )
+
+    def save_code(self, url: str, read: CodeRead) -> None:
+        """Write what the code of a repository says about Hedera, in one transaction: the state
+        of the reading, and one row for each thing found, in place of an older reading's."""
+        scan = read.scan
+        with psycopg.connect(self._conninfo) as conn:
+            row = conn.execute(
+                "UPDATE repositories SET archive_status = %s, archive_read_at = %s::timestamptz, "
+                "archive_commit = %s, archive_files = %s, archive_partial = %s "
+                "WHERE url = %s RETURNING id",
+                (
+                    read.status,
+                    read.fetched_at,
+                    scan.commit if scan else None,
+                    scan.files if scan else None,
+                    scan.partial if scan else None,
+                    url,
+                ),
+            ).fetchone()
+            if row is None:
+                return  # no project links this repository
+            conn.execute("DELETE FROM hedera_in_code WHERE repository_id = %s", row)
+            with conn.cursor() as cursor:
+                cursor.executemany(
+                    "INSERT INTO hedera_in_code (repository_id, kind, name, files, examples) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    [
+                        (row[0], one.kind, one.name, one.files, list(one.examples))
+                        for one in (scan.found() if scan else [])
+                    ],
+                )
 
     def counts(self) -> dict[str, int]:
         """How many repositories there are, and how many of each answer about the README."""
