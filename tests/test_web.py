@@ -14,7 +14,7 @@ import psycopg
 import pytest
 
 from checkfakes import REGISTER, REPO, TOPIC, RegisterWrites, found_code, nodes
-from fakes import project_page
+from fakes import ARCHIVE_COMMIT, project_page
 from hackathon_memory.collect.polite import FetchResult
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.projects import ProjectStore
@@ -280,6 +280,42 @@ def test_the_card_of_a_project_names_the_projects_linked_to_it(site) -> None:  #
     assert "Linked projects" in page.text and f'hx-get="/project/{pebble}/panel"' in page.text
     shared = client.get("/", params={"open": str(cedar)})  # opened from a link that was shared
     assert "Linked projects" in shared.text and f'hx-get="/project/{pebble}/panel"' in shared.text
+
+
+def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: ANN001
+    """What the code says about Hedera (design 7.3): a line for each kind of thing found, each
+    thing with its files, linked at the commit that was read; code that was not read says so."""
+    from hackathon_memory.collect.github_code import CodeRead
+    from hackathon_memory.collect.github_facts import RepositoryFacts
+    from hackathon_memory.db.repositories import RepositoryStore
+    from hackathon_memory.parse.hedera_code import MIRROR_NODE, CodeScan, Seen
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    store = RepositoryStore(database)
+    store.link({pebble: REPO})
+    store.save_facts(REPO, RepositoryFacts("found", datetime(2026, 3, 6, tzinfo=UTC), None,
+                                           False, False, "TypeScript", REPO, "c" * 64,
+                                           "2026-10-21T20:00:00Z"))  # fmt: skip
+    unread = client.get(f"/project/{pebble}/panel").text
+    assert "Hedera in the code" in unread and "has not been read for Hedera yet" in unread
+    scan = CodeScan(files=40, commit=ARCHIVE_COMMIT,
+                    packages={"@hashgraph/sdk": ["package.json"]},
+                    features={"Consensus Service (topics)": Seen(12, [f"src/t{n}.ts"
+                                                                     for n in range(10)])},
+                    signs={MIRROR_NODE: Seen(1, ["src/mirror ledger.ts"])})  # fmt: skip
+    store.save_code(REPO, CodeRead("read", scan, "2026-10-21T20:00:00Z"))
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split("Hedera in the code", 1)[1].split("</section>", 1)[0]
+    assert "Read 21 October 2026 at commit" in block and "40 files of the project" in block
+    assert "Hedera packages" in block and "@hashgraph/sdk &middot; 1 file<" in block
+    assert "Consensus Service (topics) &middot; 12 files" in block and "and 2 more" in block
+    assert f'href="{REPO}/blob/{ARCHIVE_COMMIT}/src/mirror%20ledger.ts"' in block
+    assert "Files that import a Hedera library" not in block  # nothing of that kind
+    store.save_code(REPO, CodeRead("read", CodeScan(files=3, commit=ARCHIVE_COMMIT),
+                                   "2026-10-21T20:00:00Z"))  # fmt: skip
+    nothing = client.get(f"/project/{pebble}/panel").text
+    assert "No Hedera package, import, service call, sign or mention in this code." in nothing
 
 
 def test_the_live_demo_has_a_button_at_the_head_of_the_card(site) -> None:  # noqa: ANN001
@@ -578,7 +614,11 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert "Seen before" in part.text and "Same repository." in part.text
     assert "Most similar past projects" in part.text and "Cedar Post" in part.text
     assert model_calls(fake, before) == 0  # the closest projects need an embedding only
-    assert len(client.github_site.seen) == 3  # the facts, the README and the version, once
+    # The facts, the README, the version and the code (two requests for its archive), once.
+    assert len(client.github_site.seen) == 5
+    code = part.text.split("Hedera in the code", 1)[1].split("</section>", 1)[0]
+    assert "Consensus Service (topics) &middot; 1 file" in code
+    assert f'href="{REPO}/blob/{ARCHIVE_COMMIT}/src/topic.ts"' in code
     assert 'Commit checked: <span class="id">7260ea729063</span>' in part.text
     assert "the latest on main" in part.text  # the branch, by its name
     day = r"\d{1,2} [A-Z][a-z]+ \d{4}"
@@ -586,7 +626,7 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
                      r"\(README\.md\) and the latest commit\.", part.text)  # fmt: skip
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
-    assert len(client.github_site.seen) == 3  # GitHub was not asked again
+    assert len(client.github_site.seen) == 5  # GitHub was not asked again
 
 
 def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) -> None:  # noqa: ANN001

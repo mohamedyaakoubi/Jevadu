@@ -99,6 +99,11 @@
 <p>The repository{{ parts.ref("repository") }} linked from the page, with its creation date and its last push, from GitHub.</p>
 {% endcall %}
 
+{% call tip("hedera-code", "Hedera in the code") %}
+<p>We read every file of the project's own code once, from the archive of its default branch on GitHub{{ parts.ref("repository") }}, and keep only what we find, with no AI: the Hedera packages that its package files name, the Hedera services that it calls (by the class names of Hedera's SDKs{{ parts.ref("hedera") }}, such as TopicCreateTransaction), other signs such as Hedera's JSON-RPC relay, a Hedera chain ID, a Hedera network of viem, wagmi or Hardhat, Hedera's system contracts or the mirror node{{ parts.ref("mirror") }}, the files that import a Hedera library, and the files that only name Hedera. Each file opens on GitHub as it was read.</p>
+<p>Folders of other people's code, such as node_modules, are skipped, and .env files are never opened. This shows what the code names, not whether it runs, and it cannot see Hedera used from another repository.</p>
+{% endcall %}
+
 {% call tip("page", "From the project page") %}
 <p>The team's own text, copied verbatim from the project page as it was on the day it was saved. Not edited by AI.</p>
 {% endcall %}

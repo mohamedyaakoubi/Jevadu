@@ -12,11 +12,11 @@ from pathlib import Path
 import psycopg
 import pytest
 
-from checkfakes import COMMIT, NOW, README, REPO, TOPIC, found_code, github, nodes
+from checkfakes import COMMIT, DOWNLOAD, NOW, README, REPO, TOPIC, found_code, github, nodes
 from fakes import Reply, StandInMirror, project_page
 from hackathon_memory.check import submission
 from hackathon_memory.check.submission import EventDays
-from hackathon_memory.collect.github import readme_address
+from hackathon_memory.collect.github import archive_address, readme_address
 from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
 from hackathon_memory.collect.rawstore import RawStore
@@ -136,9 +136,14 @@ def test_the_check_asks_github_once_and_judges_the_ids_of_the_readme(
     client, site = found_code(tmp_path)
     mirrors = nodes()
     result = run(database, tmp_path, client, mirrors)
-    assert site.urls == [facts_address(REPO), readme_address(REPO), commits_address(REPO)]
+    assert site.urls == [facts_address(REPO), readme_address(REPO), commits_address(REPO),
+                         archive_address(REPO), DOWNLOAD]  # fmt: skip
     assert result.version is not None and result.version.sha == COMMIT
     assert all(request.headers["From"] == "owner@example.test" for request in site.seen)
+    code = result.hedera_code
+    assert code is not None and code.status == "read" and code.saved and code.scan is not None
+    assert code.scan.packages == {"@hashgraph/sdk": ["package.json"]}
+    assert sorted(code.scan.features) == ["Consensus Service (topics)"]
     assert result.code is not None and result.code.language == "TypeScript"
     assert result.readme is not None and "Our topic on testnet" in result.readme_text
     assert [(one.found.entity_id, one.network, one.status) for one in result.ids] == [
@@ -152,7 +157,8 @@ def test_the_check_asks_github_once_and_judges_the_ids_of_the_readme(
     assert [one.by for one in result.seen] == ["repository"]
     asked_before = len(mirrors["testnet"].asked)
     again = run(database, tmp_path, client, mirrors)  # a second check asks nobody again
-    assert len(site.seen) == 3 and again.proof == "proof_found"
+    assert len(site.seen) == 5 and again.proof == "proof_found"
+    assert again.hedera_code == code  # the saved reading
     assert len(mirrors["testnet"].asked) == asked_before  # the ledger's answer is in the table
 
 
@@ -188,8 +194,8 @@ def test_a_repository_that_github_does_not_have_is_said_and_no_readme_is_asked(
     gone = json.dumps({"message": "Not Found", "status": "404"}).encode()
     client, site = github(tmp_path, {facts_address(REPO): Reply(404, gone)})
     result = run(database, tmp_path, client)
-    assert site.urls == [facts_address(REPO)]
-    assert result.problems == [submission.NO_SUCH_CODE]
+    assert site.urls == [facts_address(REPO)]  # no README, no version and no code are asked
+    assert result.problems == [submission.NO_SUCH_CODE] and result.hedera_code is None
     assert result.ids == [] and result.proof == "no_id_given" and result.life.status == "unknown"
 
 

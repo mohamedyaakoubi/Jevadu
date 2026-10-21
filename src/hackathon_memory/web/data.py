@@ -4,8 +4,9 @@ A card has three sources, and the page keeps them apart:
 
 * the page, copied word for word by the parser: the name, the short line, the texts, the links,
   the event and the prize;
-* the code host and the ledger, read by code: the repository, its dates, each Hedera ID and what
-  the mirror node said about it, the proof status and the life status;
+* the code host and the ledger, read by code: the repository, its dates, what its code says
+  about Hedera, each Hedera ID and what the mirror node said about it, the proof status and the
+  life status;
 * the model: the fields of the card of the instructions in use, each with its label and the
   quotes that the program found in the page.
 """
@@ -26,6 +27,7 @@ from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
 from hackathon_memory.search.engine import LANGUAGE, Hit
 from hackathon_memory.search.listing import ResultCard
+from hackathon_memory.web.code_reading import CodeView, view_of_repository
 
 FIELD_TITLES = {
     "what_it_does": "What it does",
@@ -124,6 +126,7 @@ class ProjectCard:
     language: str | None
     card: ModelCard | None
     event_link: str | None = None  # the page of the event (event_page)
+    code_reading: CodeView | None = None  # what the code says about Hedera (design 7.3)
 
 
 def first_sentence(text: str) -> str:
@@ -201,6 +204,8 @@ def project_card(
             "AND instructions_version = %s",
             (project_id, model, version),
         ).fetchone()
+        repository = found[0].repository
+        code_reading = view_of_repository(conn, repository) if repository else None
     card = None
     if row is not None:
         fields, made_at = row
@@ -211,7 +216,7 @@ def project_card(
         ))  # fmt: skip
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
                        collected_at(raw_dir, found[0].page_url), language, card,
-                       event_page(site, slug, found[0].page_url))  # fmt: skip
+                       event_page(site, slug, found[0].page_url), code_reading)  # fmt: skip
 
 
 def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:

@@ -79,6 +79,7 @@
           <p class="text-secondary">The page links no repository.</p>
           {% endif %}
           {% if facts.life %}<p class="hm-small">Activity: {{ facts.life.status }}, {{ facts.life.why }}{% if facts.life.last_sign %}; last sign {{ facts.life.last_sign | day }}{% endif %}.</p>{% endif %}
+          {% if facts.repository and facts.code_status == "found" %}{{ parts.hedera_code(card.code_reading) }}{% endif %}
         </div>
       </section>
     </div>

@@ -57,7 +57,15 @@ from hackathon_memory.search import counts as counting
 from hackathon_memory.search import engine, listing, rerank, seen
 from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
-from hackathon_memory.web import charts, data, evidence, hackathons, insights, references
+from hackathon_memory.web import (
+    charts,
+    code_reading,
+    data,
+    evidence,
+    hackathons,
+    insights,
+    references,
+)
 
 HERE = Path(__file__).parent
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
@@ -667,6 +675,7 @@ def create_app(
                 offers.append(offer)
         return render(request, name, result=result, closest=closest, closest_note=note,
                       seen_before=seen_before, register=view, register_offers=offers,
+                      hedera_code=code_reading.view_of_read(repository, result.hedera_code),
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
 
     @app.post("/register", response_class=HTMLResponse)

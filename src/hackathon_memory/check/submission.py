@@ -14,6 +14,8 @@ Programs read everything here, and no model writes anything:
   event (check/proof.py).
 * The life rule (check/life.py) reads the last push of the code and the last activity of the
   submission's own IDs: those that no project with other code names.
+* What the code says about Hedera (design 7.3, collect/github_code.py): the saved reading of the
+  repository's archive, or one made now within the limits of a check (50 MB, 30 seconds).
 * "Seen before" (design 8.4, search/seen.py): the projects of the collection with the same
   repository, or with the same Hedera ID on the same network that the ledger found, unless the
   ID is a shared service.
@@ -34,7 +36,8 @@ from hackathon_memory.check import asking
 from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.life import Life, life_of
 from hackathon_memory.check.proof import NO_ID_GIVEN, ORDER, Window, best, judge, window_of
-from hackathon_memory.collect.github import repository_of
+from hackathon_memory.collect.github import GitHubClient, repository_of
+from hackathon_memory.collect.github_code import CodeRead, read_code_now
 from hackathon_memory.collect.github_commits import Version, fetch_versions, saved_version
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
 from hackathon_memory.collect.github_facts import RepositoryFacts, fetch_facts, saved_facts
@@ -109,6 +112,7 @@ class SubmissionCheck:
     code: RepositoryFacts | None = None
     readme: Readme | None = None
     version: Version | None = None  # the newest commit, which a registration names
+    hedera_code: CodeRead | None = None  # what the code says about Hedera
     ids: list[IdResult] = field(default_factory=list)
     ids_left_out: int = 0
     proof: str = NO_ID_GIVEN
@@ -242,7 +246,7 @@ def check_submission(
     repository: str,
     event: EventDays | None,
     *,
-    client: PoliteClient | None,
+    client: GitHubClient | None,
     store: RawStore,
     collector: str,
     mirrors: Mapping[str, MirrorNode],
@@ -258,6 +262,9 @@ def check_submission(
     check.problems.extend(asked)
     if check.code is not None and check.code.status != CODE_FOUND:
         check.problems.append(NO_SUCH_CODE if check.code.status != "blocked" else BLOCKED_CODE)
+    elif check.code is not None:
+        check.hedera_code, trouble = read_code_now(client, store, repository, collector=collector)
+        check.problems.extend([trouble] if trouble else [])
     found = find_ids(check.readme_text)
     check.ids_left_out = max(0, len(found) - MAX_IDS)
     window = event.window if event is not None else None

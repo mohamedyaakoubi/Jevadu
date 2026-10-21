@@ -253,9 +253,11 @@
   function checking() {
     return '<div class="project check-progress" role="status"><h2 class="project-title">Checking the submission</h2>' +
       '<ol><li>GitHub: the dates of the code and its README.</li>' +
+      '<li>The code: read for Hedera, unless it was read before.</li>' +
       '<li>The Hedera ledger: each ID that the README names.</li>' +
       '<li>The collection: the same code or IDs, and the closest past projects.</li></ol>' +
-      '<p class="hm-small">This takes up to about half a minute. No model writes anything.</p></div>';
+      '<p class="hm-small">This takes up to about a minute when the code was never read before. ' +
+      'No model writes anything.</p></div>';
   }
   function showViewer() {
     var dialog = viewer();
@@ -452,8 +454,9 @@
   var NO_ANSWER = "The server did not answer. Check that it is running and that you are " +
     "connected, then try again.";
   var WENT_WRONG = "Something went wrong on the server, so this cannot be shown. Try again in a minute.";
-  // The longest wait of a request is about half a minute (a check, or a comparison), so the page
-  // stops waiting after 90 seconds: "timeout" in the htmx-config of the page's head.
+  // The longest wait of a request is about a minute (a check that reads the code of a repository
+  // for the first time, at most 30 seconds of it for the code), so the page stops waiting after 90
+  // seconds: "timeout" in the htmx-config of the page's head.
   var TOO_SLOW = "The server did not answer within 90 seconds, so the page stopped waiting. " +
     "Try again in a minute.";
   var CHECK_FAILED = "The comparison with the README could not be generated just now. " +

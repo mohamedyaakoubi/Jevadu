@@ -45,6 +45,44 @@
 </li>
 {%- endmacro %}
 
+{# What the code says about Hedera (design 7.3), on a card and in a check: `view` is a CodeView
+   of web/code_reading.py, or none when the code was not read. #}
+{% macro hedera_code(view) -%}
+<div class="hm-code-reading">
+  <h4>Hedera in the code{{ info("hedera-code", "Hedera in the code") }}</h4>
+  {% if view is none %}
+  <p class="text-secondary">The code has not been read for Hedera yet.</p>
+  {% elif view.status in ("gone", "blocked") %}
+  <p class="text-secondary">{{ "GitHub no longer has this code" if view.status == "gone" else "GitHub blocks this repository" }}, so it could not be read.</p>
+  {% else %}
+  <p class="hm-small">Read {{ view.read_at | day }}{% if view.commit %} at commit <span class="id">{{ view.commit[:7] }}</span>{% endif %}{% if view.files is not none %}: {{ view.files }} file{{ "s" if view.files != 1 }} of the project's own code{% endif %}.{% if view.partial %} {{ view.partial }}{% endif %}</p>
+  {% if view.found %}
+  <ul class="hm-code-list">
+    {% for title, kind in (("Hedera packages", "package"), ("Hedera services the code calls", "feature"), ("Other signs of Hedera", "sign"), ("Files that import a Hedera library", "import"), ("Files that name Hedera, Hashgraph or Hiero", "mention")) %}
+    {% set lines = view.of(kind) %}
+    {% if lines %}
+    <li><span class="hm-code-kind">{{ title }}</span>
+      {% for one in lines %}
+      <details class="hm-code-files">
+        <summary>{% if kind not in ("import", "mention") %}{{ one.name }} &middot; {% endif %}{{ one.files }} file{{ "s" if one.files != 1 }}</summary>
+        <ul class="hm-link-list">
+          {% for path, link in one.examples %}<li>{% if link %}<a href="{{ link }}" rel="noopener" target="_blank">{{ path }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ path }}{% endif %}</li>{% endfor %}
+          {% if one.files > one.examples | length %}<li class="hm-small">and {{ one.files - one.examples | length }} more</li>{% endif %}
+        </ul>
+      </details>
+      {% endfor %}
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+  {% if view.only_mentions %}<p class="hm-small">Only mentions: no Hedera package, import, service call or other sign.</p>{% endif %}
+  {% else %}
+  <p class="text-secondary">No Hedera package, import, service call, sign or mention in this code.</p>
+  {% endif %}
+  {% endif %}
+</div>
+{%- endmacro %}
+
 {# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
 {% macro link_reason(by) -%}
 {% if by == "repository" %}Same repository.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}

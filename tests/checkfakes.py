@@ -11,8 +11,13 @@ from pathlib import Path
 
 from pydantic import SecretStr
 
-from fakes import FakeSite, FakeTime, Reply, StandInMirror, session_for
-from hackathon_memory.collect.github import GitHubClient, allowed, readme_address
+from fakes import FakeSite, FakeTime, Reply, StandInMirror, archive, session_for
+from hackathon_memory.collect.github import (
+    GitHubClient,
+    allowed,
+    archive_address,
+    readme_address,
+)
 from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
 from hackathon_memory.collect.polite import CollectorIdentity, RequestCount
@@ -83,11 +88,21 @@ def github(tmp_path: Path, pages: dict[str, Reply]) -> tuple[GitHubClient, FakeS
     return client, site
 
 
+DOWNLOAD = "https://codeload.github.com/sample-org/pebble-pay/legacy.tar.gz/refs/heads/main"
+CODE_FILES = {
+    "package.json": b'{"dependencies": {"@hashgraph/sdk": "^2"}}',
+    "src/topic.ts": b'import { TopicMessageSubmitTransaction } from "@hashgraph/sdk";\n',
+}
+
+
 def found_code(tmp_path: Path, text: str = README) -> tuple[GitHubClient, FakeSite]:
-    """GitHub knows the repository REPO, with a README that names the topic."""
+    """GitHub knows the repository REPO, with a README that names the topic, and code that
+    calls the Consensus Service."""
     return github(tmp_path, {facts_address(REPO): Reply(200, facts_answer()),
                              readme_address(REPO): Reply(200, readme_answer(text)),
-                             commits_address(REPO): Reply(200, commits_answer())})  # fmt: skip
+                             commits_address(REPO): Reply(200, commits_answer()),
+                             archive_address(REPO): Reply(302, b"", {"Location": DOWNLOAD}),
+                             DOWNLOAD: Reply(200, archive(CODE_FILES))})  # fmt: skip
 
 
 def nodes() -> dict[str, StandInMirror]:
