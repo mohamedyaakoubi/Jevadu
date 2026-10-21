@@ -2,7 +2,7 @@
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
 
-> **State on 20 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the three tests of quality have run. A website runs on one laptop: the search, the card of each project, insights and charts of every list, the check of a submission and the register on Hedera. The register is built and tested, and its topic on the test network is not created yet. See "What works today" below.
+> **State on 21 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the three tests of quality have run. A website runs on one laptop: the search, the card of each project, insights and charts of every list, the check of a submission and the register on Hedera. The register is open: its topic [`0.0.11106500`](https://hashscan.io/testnet/topic/0.0.11106500) on the test network has no admin key, and no registration is written in it yet. See "What works today" below.
 >
 > **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The pages stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
@@ -34,7 +34,7 @@ Hedera has run at least 12 big hackathons since 2018, with more than 2,100 proje
 ## Where Hedera is used
 
 - **Reading.** The public ledger is the ground truth for every claim a project makes about Hedera.
-- **Writing.** A public register on a Hedera topic. A team registers a fingerprint of its own submission, after it adds a line that the tool gives to its README, and gets a timestamp that nobody can change. If the same fingerprint appears again at another event, the tool says "seen before".
+- **Writing.** A public register on a Hedera topic. A team registers a fingerprint of its own submission, after it adds a line that the tool gives to its README, and gets a timestamp that nobody can change. If the same fingerprint appears again at another event, the tool says "seen before". The register's topic is [`0.0.11106500`](https://hashscan.io/testnet/topic/0.0.11106500) on the test network, created on 21 October 2026.
 
 ## What the AI may and may not do
 
@@ -87,7 +87,7 @@ A box beside the idea checks one submission from its GitHub link and, if wanted,
 
 It is not online, and its screens have not passed their two reviews yet.
 
-What does not exist yet: the topic of the register on the test network (the code is built and tested; one command creates the topic, see below), and the other facts of the code (the number of changes, the contributors, a Hedera library in the package files).
+What does not exist yet: a first registration in the register (it needs a team's public repository that carries its line in the README), and the other facts of the code (the number of changes, the contributors, a Hedera library in the package files).
 
 ## Run it
 

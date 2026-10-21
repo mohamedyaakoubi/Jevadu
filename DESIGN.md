@@ -615,7 +615,7 @@ If the same fingerprint appears again later, at any event, the tool says "seen b
 - `account` is the SHA-256 of the team's Hedera account, and only when the team gives one.
 - `event` names the event by its site and the short name in its address, or by its first and its last day when the collection does not hold it (`days/2026-10-01/2026-10-20`).
 - About 250 bytes. A record above 384 bytes, or one that is not this form, is refused before anything is sent. A code is written once for one event, and a registration without a known version of the code is refused.
-- The topic is created once with `python -m hackathon_memory.hedera.registry open`, which then checks on the mirror node that it has no admin key and the tool's key as its submit key. Until it exists, the page says that the register is not open.
+- The topic is created once with `python -m hackathon_memory.hedera.registry open`, which then checks on the mirror node that it has no admin key and the tool's key as its submit key. Until it exists, the page says that the register is not open. **Created on 21 October 2026:** topic `0.0.11106500` on the test network; the mirror node confirmed that it has no admin key and the tool's key as its submit key.
 - The records are read back from the mirror node page by page, with the filter `sequencenumber=gte:`. On 16 October 2026 the test network's node answered `gt:0` with no message and `gte:1` with the first one.
 
 ### 9.4 What the register proves, and what it does not
