@@ -341,6 +341,10 @@ def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
     assert "No Hedera ID on the page or in the README" in text
     assert "as of 10 October 2026" in text  # the day it was saved from its site
     assert "compare-section" not in text  # no idea on its own page, so no comparison
+    # The title is a level 1 heading here, so a level 2 stands above the sections of level 3.
+    hidden = '<h2 class="visually-hidden">The details of the project</h2>'
+    assert hidden in text
+    assert hidden not in client.get(f"/project/{ids['Pebble Pay']}/panel").text  # the title: h2
 
 
 def test_a_project_without_a_model_card_says_so(site) -> None:  # noqa: ANN001
@@ -627,6 +631,8 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
     assert len(client.github_site.seen) == 5  # GitHub was not asked again
+    hidden = '<h2 class="visually-hidden">What the check found</h2>'
+    assert hidden in page.text and hidden not in part.text
 
 
 def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) -> None:  # noqa: ANN001

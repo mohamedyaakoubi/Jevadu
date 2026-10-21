@@ -29,6 +29,8 @@
       {% if not as_page %}<a class="btn btn-sm btn-ghost-secondary" href="/project/{{ pid }}">Open as a page</a>{% endif %}
     </p>
   </header>
+  {# On a page of its own the title is a level 1 heading, so the sections need a level 2 above them. #}
+  {% if as_page %}<h2 class="visually-hidden">The details of the project</h2>{% endif %}
 
   <div class="project-cols">
     <div class="project-col project-facts">
