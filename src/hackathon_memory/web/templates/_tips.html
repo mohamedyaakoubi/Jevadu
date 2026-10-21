@@ -125,8 +125,9 @@
 {% call tip("check", "Check a submission") %}
 <p>For judges, or for a team before it submits. Enter the GitHub repository, and the hackathon if you want the dates checked.</p>
 <ul>
-  <li>The check asks GitHub's API for the repository and its README: two requests, one after the other, with the name of this site.</li>
+  <li>The check asks GitHub's API for the repository, its README, its newest commit and the archive of its code, one request after the other, with the name of this site. What was read before is not asked again.</li>
   <li>It finds the Hedera IDs in the README, looks each one up on the public mirror node{{ parts.ref("mirror") }}, and checks the dates against the hackathon.</li>
+  <li>It reads the code for Hedera: its packages, its imports and its calls to Hedera services. A repository that was never read takes a few seconds, at most 30.</li>
   <li>It shows whether the same repository or ID appeared at an earlier event, and the most similar past projects.</li>
 </ul>
 <p>Facts only: no AI-generated text. You can then register the submission on Hedera{{ parts.ref("topic") }}.</p>

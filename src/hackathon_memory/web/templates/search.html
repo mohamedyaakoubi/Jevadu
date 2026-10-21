@@ -128,7 +128,7 @@
 <section class="card hm-check" aria-labelledby="check-title">
   <form id="check" class="card-body" method="get" action="/check" hx-get="/check" hx-target="#viewer-body" hx-swap="innerHTML" data-open-check>
     <h2 class="hm-check-title" id="check-title">Check a submission{{ parts.info("check", "checking a submission") }}</h2>
-    <p class="hm-check-text">Paste a GitHub repository. The check reads its README and commit dates, looks up its Hedera IDs on the ledger, and finds the most similar past projects. Facts only: no AI-generated text.</p>
+    <p class="hm-check-text">Paste a GitHub repository. The check reads its README, its commit dates and its code, looks up its Hedera IDs on the ledger, and finds the most similar past projects. Facts only: no AI-generated text.</p>
     <label class="form-label" for="check-repo">GitHub repository</label>
     <input class="form-control" id="check-repo" name="repo" placeholder="github.com/owner/project" autocomplete="off" spellcheck="false" required>
     <div class="hm-idea-label hm-check-label"><label class="form-label" for="check-event">Hackathon <span class="text-secondary">(optional)</span></label>{{ parts.info("hackathon", "the hackathon of a submission") }}</div>
