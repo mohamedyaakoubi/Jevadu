@@ -206,53 +206,73 @@ class GitHubClient(PoliteClient):
         the run, too many requests starts the cooldown, anything else fails. A download that
         broke off on the way counts as an error in a row, like a network error."""
         with self._lock:
-            self._check_allowed(url)
-            errors = self._errors_in_a_row
-            raw = self._request_once(url)
-            stamp = self.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-            if raw.status not in _REDIRECT_STATUSES:
-                content_type = raw.headers.get("Content-Type", "")
-                return FetchResult(url, url, raw.status, raw.body, content_type, stamp), None
-            # The redirect is half of the exchange: it clears no error in a row, so that
-            # downloads that keep breaking off stop the run.
-            self._errors_in_a_row = errors
-            location = str(raw.headers.get("Location", ""))
-            target = urlsplit(location)
-            if target.scheme != "https" or target.netloc != ARCHIVE_HOST:
-                raise StopCollecting(
-                    f"GitHub sent the archive to {target.netloc or 'no address'}, not to "
-                    f"{ARCHIVE_HOST}. Nothing is downloaded."
-                )
-            self._check_may_send()
-            self._wait_turn()
-            self.requests_made += 1
-            if self.count is not None:
-                self.count.add_one()
-            headers = {"User-Agent": self.identity.user_agent, "From": self.identity.contact}
-            try:
-                response = self.session.get(location, headers=headers, timeout=self.timeout,
-                                            allow_redirects=False, stream=True)  # fmt: skip
-            except requests.RequestException as error:
+            answer, location = self._archive_address(url)
+            if location is None:
+                return answer, None
+            result, content_type = self._download(location, read, max_bytes, seconds)
+            return FetchResult(url, location, 200, b"", content_type, answer.fetched_at), result
+
+    def _archive_address(self, url: str) -> tuple[FetchResult, str | None]:
+        """Ask the API where the archive of a repository is. Returns the API's answer, with the
+        address of the archive, or with None when the answer is not a redirect."""
+        self._check_allowed(url)
+        errors = self._errors_in_a_row
+        raw = self._request_once(url)
+        stamp = self.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        answer = FetchResult(url, url, raw.status, raw.body, raw.headers.get("Content-Type", ""),
+                             stamp)  # fmt: skip
+        if raw.status not in _REDIRECT_STATUSES:
+            return answer, None
+        # The redirect is half of the exchange: it clears no error in a row, so that downloads
+        # that keep breaking off stop the run.
+        self._errors_in_a_row = errors
+        location = str(raw.headers.get("Location", ""))
+        target = urlsplit(location)
+        if target.scheme != "https" or target.netloc != ARCHIVE_HOST:
+            raise StopCollecting(
+                f"GitHub sent the archive to {target.netloc or 'no address'}, not to "
+                f"{ARCHIVE_HOST}. Nothing is downloaded."
+            )
+        return answer, location
+
+    def _download(
+        self,
+        location: str,
+        read: Callable[[LimitedStream], T],
+        max_bytes: int | None,
+        seconds: float | None,
+    ) -> tuple[T, str]:
+        """Download an archive from GitHub's archive host as a stream and hand it to `read`.
+        Returns what `read` gave, with the type of the answer."""
+        self._check_may_send()
+        self._wait_turn()
+        self.requests_made += 1
+        if self.count is not None:
+            self.count.add_one()
+        headers = {"User-Agent": self.identity.user_agent, "From": self.identity.contact}
+        try:
+            response = self.session.get(location, headers=headers, timeout=self.timeout,
+                                        allow_redirects=False, stream=True)  # fmt: skip
+        except requests.RequestException as error:
+            self._last_end = self.clock()
+            self._note_error(f"network error {type(error).__name__}")
+            raise FetchFailed(f"network error {type(error).__name__}") from None
+        try:
+            if response.status_code != 200:  # a no, too many requests, or an error
                 self._last_end = self.clock()
-                self._note_error(f"network error {type(error).__name__}")
-                raise FetchFailed(f"network error {type(error).__name__}") from None
-            try:
-                if response.status_code != 200:  # a no, too many requests, or an error
-                    self._last_end = self.clock()
-                    self._judge(RawAnswer(response.status_code, response.headers, b""))
-                    self._failed(f"status {response.status_code} for the archive")
-                stream = LimitedStream(_raw_reader(response), max_bytes=max_bytes,
-                                       seconds=seconds, clock=self.clock)  # fmt: skip
-                result = read(stream)
-            finally:
-                response.close()
-                self._last_end = self.clock()
-            if stream.broken is not None:
-                self._note_error(f"the download broke off ({stream.broken})")
-            else:
-                self._errors_in_a_row = 0
-            content_type = response.headers.get("Content-Type", "")
-            return FetchResult(url, location, 200, b"", content_type, stamp), result
+                self._judge(RawAnswer(response.status_code, response.headers, b""))
+                self._failed(f"status {response.status_code} for the archive")
+            stream = LimitedStream(_raw_reader(response), max_bytes=max_bytes, seconds=seconds,
+                                   clock=self.clock)  # fmt: skip
+            result = read(stream)
+        finally:
+            response.close()
+            self._last_end = self.clock()
+        if stream.broken is not None:
+            self._note_error(f"the download broke off ({stream.broken})")
+        else:
+            self._errors_in_a_row = 0
+        return result, response.headers.get("Content-Type", "")
 
     def _note_hour(self, headers: CaseInsensitiveDict) -> None:
         left = str(headers.get("x-ratelimit-remaining", ""))
