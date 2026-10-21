@@ -211,6 +211,10 @@ These rules are code, each with a test. ETHGlobal was asked before any program r
 
 This is an entry for the FSS Campus Edition of the Hedera Cross Campus Challenge 2026. It is built by one person, Mohamed Yaakoubi.
 
+The line below lets this repository be registered for that event in the tool's own public register on Hedera. Only someone who can change the repository can add it, so it shows that the registration is the maintainer's own:
+
+`hackathon-memory: ACJWI4OF`
+
 ## Licence
 
 Copyright 2026 Mohamed Yaakoubi.
