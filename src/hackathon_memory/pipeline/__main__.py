@@ -8,12 +8,15 @@
     python -m hackathon_memory.pipeline readmes --no-requests    read the saved ones only
     python -m hackathon_memory.pipeline code               the facts of each repository, in
                                                            the same way (same options)
+    python -m hackathon_memory.pipeline hedera_code        where Hedera stands in the code of
+                                                           each repository, read from its
+                                                           archive (same options)
     python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
-    python -m hackathon_memory.pipeline all                parse, readmes, code, check and
-                                                           embed, in this order
+    python -m hackathon_memory.pipeline all                parse, readmes, code, hedera_code,
+                                                           check and embed, in this order
     python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json
                                                            the cards of the LLM for the pages
                                                            of a set (it costs money)
@@ -24,12 +27,13 @@
 "parse" sends no request: it works on the pages that are saved, and on the winner entries that a
 person copied by hand into data/by-hand (design 4.6). It also writes the last day of
 each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
-rule needs it and no page gives it (design 7.2). "readmes" and "code" ask GitHub's API, which the
-maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait lets it wait
-for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a public API made
-for programs, and no site (design rule 17). "embed" calls Google's embedding model through the
-meter and its budget (design 11.4). "cards" calls the REWRITE layer of Gemini, through the meter
-too, for the pages of a set only: it is not part of "all" (design 6.2, open question Q29).
+rule needs it and no page gives it (design 7.2). "readmes", "code" and "hedera_code" ask GitHub's
+API, which the maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait
+lets them wait for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a
+public API made for programs, and no site (design rule 17). "embed" calls Google's embedding
+model through the meter and its budget (design 11.4). "cards" calls the REWRITE layer of Gemini,
+through the meter too, for the pages of a set only: it is not part of "all" (design 6.2, open
+question Q29).
 
 A step prints numbers. For a page or an id that it could not handle it prints the address or
 the id and the rule that failed. It never prints text of a page, and never the connection text
@@ -52,6 +56,7 @@ from hackathon_memory.check import proof
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.ethglobal_site import SITE
+from hackathon_memory.collect.github_code import fetch_code
 from hackathon_memory.collect.github_facts import fetch_facts
 from hackathon_memory.collect.github_once import AnswersRun
 from hackathon_memory.collect.github_readmes import fetch_readmes
@@ -68,7 +73,7 @@ from hackathon_memory.finops.meter import metered_client
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
 from hackathon_memory.llm.client import GoogleSetupError
 from hackathon_memory.parse import event_ends, event_years
-from hackathon_memory.pipeline import check_ids, code, embed, parse_pages, readmes
+from hackathon_memory.pipeline import check_ids, code, embed, hedera_code, parse_pages, readmes
 from hackathon_memory.read import cards as card_step
 from hackathon_memory.read import restore
 from hackathon_memory.read.sets import SetError, pages_of
@@ -78,6 +83,7 @@ USAGE = (
     "usage: python -m hackathon_memory.pipeline parse [--limit N]\n"
     "       python -m hackathon_memory.pipeline readmes [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline code [--repos N | --no-requests] [--wait]\n"
+    "       python -m hackathon_memory.pipeline hedera_code [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline check [--max-age-days N]\n"
     "       python -m hackathon_memory.pipeline embed [--limit N]\n"
     "       python -m hackathon_memory.pipeline all [the options of the steps]\n"
@@ -98,7 +104,10 @@ STATUS_WORDS = {
 
 # The whole path, in its order (design 14.3: one command processes the projects).
 ALL = "all"
-ALL_STEPS = (parse_pages.STEP, readmes.STEP, code.STEP, check_ids.STEP, embed.STEP)
+ALL_STEPS = (
+    parse_pages.STEP, readmes.STEP, code.STEP, hedera_code.STEP, check_ids.STEP, embed.STEP
+)  # fmt: skip
+GITHUB_STEPS = (readmes.STEP, code.STEP, hedera_code.STEP)  # the steps that ask GitHub
 
 
 class _Quiet(argparse.ArgumentParser):
@@ -121,7 +130,7 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     every = arguments.step == ALL  # the options of every step go with it
     is_parse = every or arguments.step == parse_pages.STEP
     is_check = every or arguments.step == check_ids.STEP
-    is_readmes = every or arguments.step in (readmes.STEP, code.STEP)  # the steps of GitHub
+    is_readmes = every or arguments.step in GITHUB_STEPS
     is_embed = every or arguments.step == embed.STEP
     is_cards = arguments.step == card_step.STEP
     sources = [arguments.set_file, arguments.export_file, arguments.restore_file]
@@ -140,9 +149,9 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
     if arguments.repos is not None and (not is_readmes or arguments.repos < 1):
-        raise ValueError("--repos goes with readmes or code, and must be 1 or more")
+        raise ValueError("--repos goes with readmes, code or hedera_code, and must be 1 or more")
     if (arguments.no_requests or arguments.wait) and not is_readmes:
-        raise ValueError("--no-requests and --wait go with readmes or code")
+        raise ValueError("--no-requests and --wait go with readmes, code or hedera_code")
     if arguments.no_requests and (arguments.repos is not None or arguments.wait):
         raise ValueError("--no-requests sends nothing, so --repos and --wait do not go with it")
     return arguments
@@ -289,6 +298,11 @@ def _run_step(
             code.read_code(
                 RepositoryStore(conninfo), RawStore(github.raw_dir(settings)), run, fetch=fetch
             )
+        elif step == hedera_code.STEP:
+            fetch, note = _github_fetch(settings, arguments, run, fetch_code)
+            hedera_code.read_hedera_code(
+                RepositoryStore(conninfo), RawStore(github.raw_dir(settings)), run, fetch=fetch
+            )
         elif step == card_step.STEP and arguments.export_file:
             run.counts["cards_written"] = restore.export_cards(
                 conninfo, Path(arguments.export_file)
@@ -341,6 +355,9 @@ def _run_step(
         lines += _problem_lines(run, "Stopped or not done, and why:")
     elif step == code.STEP:
         lines = code.code_lines(run) + ([note] if note else [])
+        lines += _problem_lines(run, "Stopped or not done, and why:")
+    elif step == hedera_code.STEP:
+        lines = hedera_code.hedera_code_lines(run) + ([note] if note else [])
         lines += _problem_lines(run, "Stopped or not done, and why:")
     elif step == embed.STEP:
         lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
