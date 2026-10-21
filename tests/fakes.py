@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import tarfile
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -103,6 +104,26 @@ def session_for(site: FakeSite) -> requests.Session:
     session.mount("https://", site)
     session.mount("http://", site)
     return session
+
+
+# ------------------------------------------------------------------ an invented archive
+
+ARCHIVE_TOP = "sample-org-pebble-pay-1a2b3c4"  # the first folder of an archive of GitHub
+
+
+def archive(files: dict[str, bytes], top: str = ARCHIVE_TOP) -> bytes:
+    """An INVENTED .tar.gz archive of a repository: these files under the first folder, after a
+    global header, as GitHub makes it."""
+    data = io.BytesIO()
+    with tarfile.open(fileobj=data, mode="w:gz") as tar:
+        header = tarfile.TarInfo("pax_global_header")
+        header.type = tarfile.XGLTYPE
+        tar.addfile(header)
+        for path, body in files.items():
+            info = tarfile.TarInfo(f"{top}/{path}")
+            info.size = len(body)
+            tar.addfile(info, io.BytesIO(body))
+    return data.getvalue()
 
 
 # ------------------------------------------------------------------ an invented showcase list
