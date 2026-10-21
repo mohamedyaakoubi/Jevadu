@@ -1,4 +1,0 @@
-#!/bin/sh
-# Local guard (constraints 19 and 20). This hook is not versioned and is never pushed.
-PY=./.venv/Scripts/python.exe; [ -x "$PY" ] || PY=python
-exec "$PY" "$(dirname "$0")/check_public.py" staged

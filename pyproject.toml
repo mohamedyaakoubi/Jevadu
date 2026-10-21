@@ -59,8 +59,6 @@ markers = [
 line-length = 100
 target-version = "py311"
 src = ["src", "."]
-# The scripts of the working notes are a record of how each step was done, kept as they ran.
-extend-exclude = ["backlog"]
 
 [tool.ruff.lint]
 # E, F: errors. I: import order. B: likely bugs. UP: old syntax.
