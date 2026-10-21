@@ -11,6 +11,7 @@ from fakes import ARCHIVE_COMMIT, archive
 from hackathon_memory.parse import hedera_code as hc
 from hackathon_memory.parse.hedera_code import (
     CHAIN_ID,
+    EVM_NETWORK,
     MIRROR_NODE,
     RELAY,
     SYSTEM_CONTRACTS,
@@ -131,6 +132,50 @@ def test_an_archive_with_no_commit_in_its_header_names_none() -> None:
     assert scan_archive(LimitedStream(io.BytesIO(body).read)).commit is None
     odd = archive({"src/a.ts": b"let a = 1;\n"}, commit="not a commit")
     assert scan_archive(LimitedStream(io.BytesIO(odd).read)).commit is None
+
+
+def test_what_was_found_is_listed_kind_after_kind() -> None:
+    files = {
+        f"app{n}/package.json": b'{"dependencies": {"@hashgraph/sdk": "2"}}' for n in range(12)
+    }
+    files["src/topic.py"] = b"from hiero_sdk_python import TopicCreateTransaction\n"
+    found = scanned(files).found()
+    assert [(one.kind, one.name, one.files) for one in found] == [
+        (hc.PACKAGE, "@hashgraph/sdk", 12),
+        (hc.FEATURE, "Consensus Service (topics)", 1),
+        (hc.IMPORT, hc.IMPORT_NAME, 1),
+        (hc.MENTION, hc.MENTION_NAME, 13),
+    ]
+    assert len(found[0].examples) == hc.EXAMPLES  # the count is whole, the examples are not
+    assert found[2].examples == ("src/topic.py",)
+
+
+def test_a_hedera_network_taken_from_an_evm_tool_is_a_sign() -> None:
+    scan = scanned({
+        "src/wagmi.ts": b'import {\n  mainnet,\n  hederaTestnet,\n} from "viem/chains";\n',
+        "src/third.ts": b"export const chain = defineChain(296);\n",
+        "hardhat.config.js": b"networks: { hedera_testnet: { url: process.env.RPC_URL } }\n",
+        "foundry.toml": b'[rpc_endpoints]\nhedera-testnet = "https://rpc.example.test"\n',
+        "src/plain.ts": b'import { mainnet } from "viem/chains";\nconst hedera = { a: 1 };\n',
+        "config/app.json": b'{"chainId": "0x128"}',
+    })  # fmt: skip
+    assert sorted(scan.signs[EVM_NETWORK].examples) == [
+        "foundry.toml", "hardhat.config.js", "src/third.ts", "src/wagmi.ts"]  # fmt: skip
+    assert scan.signs[CHAIN_ID].examples == ["config/app.json"]
+    assert scan.uses_hedera and scan.packages == {} and scan.imports.files == 0
+
+
+def test_a_mention_is_the_weakest_sign_and_shows_where_to_look() -> None:
+    scan = scanned({
+        "src/app.tsx": b"<p>Built on Hedera</p>",
+        "src/tools.ts": b"// the tools of hiero-ledger",
+        "src/glyph.ts": b"const hieroglyph = 1;",
+        "README.md": b"Hedera, Hedera, Hedera",
+    })  # fmt: skip
+    assert sorted(scan.mentions.examples) == ["src/app.tsx", "src/tools.ts"]
+    assert not scan.uses_hedera  # a mention is not a use
+    assert [one.kind for one in scan.found()] == [hc.MENTION]
+    assert CodeScan.from_json(scan.to_json()) == scan
 
 
 def test_a_class_name_counts_only_with_a_hedera_library() -> None:

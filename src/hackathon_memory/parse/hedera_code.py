@@ -12,7 +12,12 @@ limit on how many. What is kept is what the plain text matching found, with no A
   Hedera's SDKs, which are the same in every language (TopicCreateTransaction and the like);
 * **imports:** the source files that import a Hedera library;
 * **signs:** Hedera's JSON-RPC relay (Hashio) or its chain IDs in the code or the settings of an
-  EVM project, Hedera's system contracts in Solidity, and the mirror node read by the code.
+  EVM project, a Hedera network taken from an EVM tool (viem, wagmi, thirdweb, or a network of
+  Hardhat or Foundry named after Hedera), Hedera's system contracts in Solidity, and the mirror
+  node read by the code;
+* **mentions:** the files that name Hedera, Hashgraph or Hiero at all, in code, settings or
+  comments. The weakest sign, kept so that a person sees where to look when nothing else was
+  found.
 
 It says what the code names. It does not run the code, and it cannot tell whether a line is ever
 executed. Folders of other people's code (node_modules, vendor) and generated files are left
@@ -33,7 +38,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 
-FORMAT = 1
+FORMAT = 2  # 2 (21 October 2026): the Hedera networks of EVM tools, and the mentions
 EXAMPLES = 10  # the files kept as examples for each thing found; the count is always complete
 MAX_FILE_BYTES = 1_000_000  # a larger file is a bundle or data, not code that a team wrote
 
@@ -123,12 +128,26 @@ FEATURES: dict[str, re.Pattern[str]] = {
 
 RELAY = "Hedera JSON-RPC relay (Hashio)"
 CHAIN_ID = "Hedera chain ID in EVM settings"
+EVM_NETWORK = "Hedera network of an EVM tool"
 SYSTEM_CONTRACTS = "Hedera system contracts in Solidity"
 MIRROR_NODE = "Mirror node read by the code"
 
 _RELAY = re.compile(r"hashio\.io", re.IGNORECASE)
 # 295, 296 and 297 are the chain IDs of mainnet, testnet and previewnet (0x127 to 0x129).
-_CHAIN_ID = re.compile(r"chain[_-]?id[\"']?\s*[:=]\s*(?:0x12[789]|29[567])\b", re.IGNORECASE)
+_CHAIN_ID = re.compile(r"chain[_-]?id[\"']?\s*[:=]\s*[\"']?(?:0x12[789]|29[567])\b", re.IGNORECASE)
+# A Hedera network taken from an EVM tool: the chains "hedera", "hederaTestnet" and
+# "hederaPreviewnet" of viem and wagmi, a chain of thirdweb made from a Hedera chain ID, and a
+# network named after Hedera in the settings of Hardhat, Truffle or Foundry.
+_EVM_CHAINS = re.compile(
+    r"import\s*\{[^}]{0,3000}?\bhedera(?:Testnet|Previewnet)?\b[^}]{0,3000}?\}\s*from\s*"
+    r"[\"'](?:viem/chains|wagmi/chains|@wagmi/core/chains)[\"']"
+    r"|\bdefineChain\(\s*(?:29[567]|0x12[789])\s*\)"
+)
+_EVM_SETTINGS = re.compile(
+    r"[\"']?\bhedera(?:[_-]?(?:testnet|mainnet|previewnet|local))?[\"']?\s*[:=]", re.IGNORECASE
+)
+_EVM_SETTINGS_FILES = ("hardhat.config.", "truffle-config.", "truffle.", "foundry.toml")
+_MENTION = re.compile(r"hedera|hashgraph|\bhiero(?:\b|[-_])", re.IGNORECASE)  # not hieroglyph
 _SYSTEM_CONTRACTS = re.compile(
     r"\bI?HederaTokenService\b|\bHederaResponseCodes\b|\bIPrngSystemContract\b|"
     r"\bIExchangeRate\b|address\(0x16[789]\)|0x0{37}16[789]\b"
@@ -315,8 +334,25 @@ class Seen:
             self.examples.append(path)
 
 
+# The kinds of things found, as the table hedera_in_code names them (migration 0014).
+PACKAGE, FEATURE, SIGN, IMPORT, MENTION = "package", "feature", "sign", "import", "mention"
+IMPORT_NAME = "a Hedera library"
+MENTION_NAME = "the word Hedera, Hashgraph or Hiero"
+
+
+@dataclass(frozen=True)
+class Found:
+    """One thing found in the code: its kind, its name, in how many files, and the first ones."""
+
+    kind: str
+    name: str
+    files: int
+    examples: tuple[str, ...]
+
+
 @dataclass
 class CodeScan:
+    format: int = FORMAT  # the version of the rules that made this reading
     files: int = 0  # files of the project's own code that were read
     commit: str | None = None  # the commit that the archive was made from, from its header
     archive_bytes: int = 0
@@ -328,10 +364,26 @@ class CodeScan:
     features: dict[str, Seen] = field(default_factory=dict)
     signs: dict[str, Seen] = field(default_factory=dict)
     imports: Seen = field(default_factory=Seen)
+    mentions: Seen = field(default_factory=Seen)  # files that name Hedera at all
 
     @property
     def uses_hedera(self) -> bool:
+        """A package, an import, a call or a sign: more than a mention."""
         return bool(self.packages or self.features or self.signs or self.imports.files)
+
+    def found(self) -> list[Found]:
+        """What was found, one item for each thing: the packages, the features, the signs, the
+        files that import a Hedera library and the files that mention it, in this order."""
+        items = [Found(PACKAGE, name, len(files), tuple(files[:EXAMPLES]))
+                 for name, files in sorted(self.packages.items())]  # fmt: skip
+        for kind, things in ((FEATURE, self.features), (SIGN, self.signs)):
+            items += [Found(kind, name, one.files, tuple(one.examples))
+                      for name, one in sorted(things.items())]  # fmt: skip
+        for kind, name, one in ((IMPORT, IMPORT_NAME, self.imports),
+                                (MENTION, MENTION_NAME, self.mentions)):  # fmt: skip
+            if one.files:
+                items.append(Found(kind, name, one.files, tuple(one.examples)))
+        return items
 
     def to_json(self) -> bytes:
         def seen(found: dict[str, Seen]) -> dict:
@@ -347,6 +399,7 @@ class CodeScan:
             "unreadable": self.unreadable, "features": seen(self.features),
             "signs": seen(self.signs),
             "imports": {"files": self.imports.files, "examples": self.imports.examples},
+            "mentions": {"files": self.mentions.files, "examples": self.mentions.examples},
         }  # fmt: skip
         return json.dumps(record, ensure_ascii=False, sort_keys=True).encode("utf-8")
 
@@ -358,14 +411,16 @@ class CodeScan:
             return {name: Seen(one["files"], list(one["examples"])) for name, one in found.items()}
 
         imports = record.get("imports") or {}
+        mentions = record.get("mentions") or {}
         return cls(
-            files=record["files"], commit=record.get("commit"),
+            format=record.get("format", 1), files=record["files"], commit=record.get("commit"),
             archive_bytes=record["archive_bytes"],
             archive_sha256=record.get("archive_sha256", ""), partial=record.get("partial"),
             packages=record.get("packages") or {}, dependencies=record.get("dependencies") or {},
             unreadable=record.get("unreadable") or [], features=seen(record.get("features") or {}),
             signs=seen(record.get("signs") or {}),
             imports=Seen(imports.get("files", 0), list(imports.get("examples", []))),
+            mentions=Seen(mentions.get("files", 0), list(mentions.get("examples", []))),
         )  # fmt: skip
 
 
@@ -496,10 +551,15 @@ def read_file(scan: CodeScan, path: str, data: bytes, calls: list[_Calls]) -> No
         signs.add(RELAY)
     if _CHAIN_ID.search(text):
         signs.add(CHAIN_ID)
+    settings = name.lower().startswith(_EVM_SETTINGS_FILES)
+    if _EVM_CHAINS.search(text) or (settings and _EVM_SETTINGS.search(text)):
+        signs.add(EVM_NETWORK)
     if _MIRROR.search(text):
         signs.add(MIRROR_NODE)
     for sign in sorted(signs):
         scan.signs.setdefault(sign, Seen()).add(path)
+    if _MENTION.search(text):
+        scan.mentions.add(path)
 
 
 def finish(scan: CodeScan, calls: list[_Calls]) -> None:
