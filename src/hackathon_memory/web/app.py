@@ -57,7 +57,7 @@ from hackathon_memory.search import counts as counting
 from hackathon_memory.search import engine, listing, rerank, seen
 from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
-from hackathon_memory.web import charts, data, evidence, hackathons, references
+from hackathon_memory.web import charts, data, evidence, hackathons, insights, references
 
 HERE = Path(__file__).parent
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
@@ -348,15 +348,20 @@ def create_app(
         wanted = set(ids)
         return [row for row in rows if row.project_id in wanted]
 
-    def charts_of(conninfo: str, ids: list[int] | None) -> tuple[charts.Charts, list]:
-        """The charts of the projects of `ids` (every project when None), and those of them that
-        are linked across events, by name (design 12.1, S5)."""
-        built = charts.build(counting.tally(facts_of(conninfo, ids)), data.event_pages(conninfo))
+    def charts_of(
+        conninfo: str, ids: list[int] | None
+    ) -> tuple[charts.Charts, list, insights.Insights]:
+        """The charts of the projects of `ids` (every project when None), those of them that are
+        linked across events, by name, and the insights of the same list (design 12.1, S5)."""
+        found = counting.tally(facts_of(conninfo, ids))
+        built = charts.build(found, data.event_pages(conninfo))
         groups = seen.came_back(conninfo)
         if ids is not None:
             wanted = set(ids)
             groups = [group for group in groups if wanted.intersection(group)]
-        return built, data.members(conninfo, groups[:20])
+        members = data.members(conninfo, groups[:20])
+        prize = {row.project_id: row.prize for row in project_facts(conninfo)}
+        return built, members, insights.build(found, members, prize)
 
     def results_of(conninfo: str, ids: list[int], idea: str, words: bool) -> list[tuple]:
         """The card facts, the sentence, the marked sentence and the words found, of each id."""
@@ -490,9 +495,9 @@ def create_app(
             if not idea:
                 total = len(only) if only is not None else every.projects
                 if view == CHARTS:
-                    built, groups = charts_of(conninfo, only)
+                    built, groups, said = charts_of(conninfo, only)
                     return render(request, "search.html", asked=False, results=[], total=total,
-                                  charts=built, came_back=groups, offer=every,
+                                  charts=built, came_back=groups, insights=said, offer=every,
                                   panel_card=panel_card, **shown)  # fmt: skip
                 ids, total = data.browse(conninfo, only, offset=(page_number - 1) * PAGE_SIZE,
                                          limit=PAGE_SIZE)  # fmt: skip
@@ -511,9 +516,9 @@ def create_app(
             ordered = how in (rerank.KEPT, rerank.ASKED)
             none_close = bool(only) and not ranking  # the filters match, but none is close
             if view == CHARTS:
-                built, groups = charts_of(conninfo, ranking)
+                built, groups, said = charts_of(conninfo, ranking)
                 return render(request, "search.html", asked=True, results=[], total=len(ranking),
-                              charts=built, came_back=groups, offer=offer,
+                              charts=built, came_back=groups, insights=said, offer=offer,
                               nothing_matches=only == [], none_close=none_close,
                               panel_card=panel_card,
                               **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip

@@ -231,6 +231,10 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-charts > .hm-chart { flex: 1 1 26rem; min-width: 0; }
 .hm-chart { margin: 0; }
 .hm-chart.hm-wide { margin-top: 1rem; }
+.hm-insights { margin: 0 0 1rem; }
+.hm-insight-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; }
+/* a link inside a sentence is underlined, not told apart by its colour only (WCAG 1.4.1) */
+.hm-insight-list a { text-decoration: underline; text-underline-offset: 2px; }
 .hm-charts-note + .hm-chart.hm-wide { margin: 0.5rem 0 1rem; } /* the linked projects, first */
 .hm-chart-title { display: flex; align-items: center; font-size: 1rem; font-weight: 700; margin: 0 0 0.25rem; }
 .hm-chart-note { color: var(--tblr-secondary); font-size: 0.8125rem; margin: 0 0 0.75rem; }

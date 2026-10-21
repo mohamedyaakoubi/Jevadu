@@ -906,6 +906,33 @@ def test_the_charts_count_the_list_on_the_screen(site) -> None:  # noqa: ANN001
     assert model_calls(fake, before) == 0  # charts call no model that writes
 
 
+def test_the_insights_name_linked_projects_that_won_again(site) -> None:  # noqa: ANN001
+    """Two projects with the same code won a Hedera prize at two events: the insights say so,
+    with a link to each; the same projects without the prizes give no such sentence."""
+    from hackathon_memory.db.repositories import RepositoryStore
+
+    client, fake, ids, database = site
+    with psycopg.connect(database) as conn:
+        (later,) = conn.execute(
+            "INSERT INTO events (site, slug, name) VALUES ('ethglobal.com', 'later', 'Later') "
+            "RETURNING id"
+        ).fetchone()
+        conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (later, ids["Cedar Post"]))
+    RepositoryStore(database).link({ids["Pebble Pay"]: REPO, ids["Cedar Post"]: REPO})
+    page = client.get("/", params={"view": "charts"})
+    assert "Won again." not in page.text  # linked, but neither won a Hedera prize
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET prize_state = 'hedera_prize' WHERE id = ANY(%s)",
+                     ([ids["Pebble Pay"], ids["Cedar Post"]],))  # fmt: skip
+    before = len(fake.requests)
+    page = client.make().get("/", params={"view": "charts"})  # the facts are read again
+    box = page.text.split('id="chart-insights"', 1)[1].split("</section>", 1)[0]
+    assert "Won again." in box and "each won a Hedera prize, at 2 events." in box
+    assert f'hx-get="/project/{ids["Pebble Pay"]}/panel"' in box
+    assert f'hx-get="/project/{ids["Cedar Post"]}/panel"' in box
+    assert len(fake.requests) == before  # counted from the tables, with no model
+
+
 def test_a_share_is_shown_only_with_twenty_projects_behind_it() -> None:
     from hackathon_memory.search.counts import Tally
     from hackathon_memory.web.charts import build

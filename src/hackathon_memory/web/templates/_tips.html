@@ -161,4 +161,13 @@
 <p>Gemini 3.8 Flash{{ parts.ref("gemini") }} reads this README and the summaries of the most similar past projects, and writes what each one shares with it and how it differs. It does not judge any project, and it never calls anything a copy.</p>
 <p>It costs less than one cent, and the answer is cached for one day, so the same check does not call Gemini again.</p>
 {% endcall %}
+
+{% call tip("insights", "Insights") %}
+<p>A few facts in sentences, counted live from the same list as the charts. Each one names its numbers, and none of them predicts, scores or ranks a project. A sentence appears only when the list holds enough projects for it.</p>
+<ul>
+  <li><b>Won again:</b> linked projects (the same repository, or the same Hedera ID confirmed by the ledger) that each won a Hedera prize, at more than one event. A link says only that.</li>
+  <li><b>Categories with the most Hedera prizes:</b> the categories are chosen by Gemini 3.1 Pro from each page, so an entry from a winners' list has none.</li>
+  <li><b>Still worked on after the event:</b> active or quiet, among the projects whose activity is known 90 days after their event; each group needs at least 20 such projects.</li>
+</ul>
+{% endcall %}
 </div>
