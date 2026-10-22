@@ -1049,7 +1049,7 @@ def test_the_insights_come_in_four_tabs(site) -> None:  # noqa: ANN001
     the other; each part holds its own blocks."""
     client, _, _, _ = site
     page = client.get("/", params={"view": "charts"}).text
-    assert '<div class="nav nav-tabs hm-tablist" role="tablist"' in page and "hidden>" in page
+    assert '<div class="btn-group hm-tablist" role="tablist"' in page and "hidden>" in page
     parts = page.split('<section class="hm-tabpanel" id="panel-')[1:]
     panels = {part.split('"', 1)[0]: part for part in parts}
     assert list(panels) == ["overview", "services", "winners", "events"]

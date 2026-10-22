@@ -179,10 +179,10 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-step-off { visibility: hidden; }
 .hm-switches { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
 .hm-switch { display: inline-flex; align-items: center; }
-.hm-switch .btn.active,
+.hm-switch .btn.active, .hm-tablist .btn.active,
 .hm-way .btn-check:checked + .btn, .hm-theme .btn-check:checked + .btn { background: var(--tblr-primary); border-color: var(--tblr-primary); color: var(--tblr-primary-fg, #fff); }
 /* In the dark theme a chosen switch is a tint, not a bright block. */
-[data-bs-theme="dark"] .hm-switch .btn.active,
+[data-bs-theme="dark"] .hm-switch .btn.active, [data-bs-theme="dark"] .hm-tablist .btn.active,
 [data-bs-theme="dark"] .hm-way .btn-check:checked + .btn, [data-bs-theme="dark"] .hm-theme .btn-check:checked + .btn {
   background: color-mix(in oklab, var(--tblr-primary) 26%, var(--tblr-bg-surface));
   border-color: color-mix(in oklab, var(--tblr-primary) 65%, transparent); color: var(--tblr-heading-color); }
@@ -235,12 +235,11 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-insight-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; }
 /* a link inside a sentence is underlined, not told apart by its colour only (WCAG 1.4.1) */
 .hm-insight-list a { text-decoration: underline; text-underline-offset: 2px; }
-/* the tabs of the insights (design 12.1, S5): one part at a time; without the script, one part
-   under the other */
-.hm-tablist { margin-bottom: 1rem; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
-/* Tabler's own colour of a tab that is not chosen is too faint on the dark theme (axe, 4.5:1) */
-.hm-tablist .nav-link { white-space: nowrap; color: var(--tblr-secondary); }
-.hm-tablist .nav-link.active, .hm-tablist .nav-link:hover { color: var(--tblr-body-color); }
+/* the tabs of the insights (design 12.1, S5): one part at a time, in the colours of the switch
+   between cards and insights, the chosen tab filled; without the script, one part under the
+   other */
+.hm-tablist { display: flex; width: fit-content; max-width: 100%; margin-bottom: 1rem; overflow-x: auto; }
+.hm-tablist .btn { white-space: nowrap; }
 .hm-tabpanel + .hm-tabpanel { margin-top: 1.5rem; }
 .hm-tabpanel > .hm-chart.hm-wide:first-child { margin: 0 0 1rem; } /* the linked projects, first */
 .hm-tabpanel .hm-insights { margin: 1rem 0 0; }
