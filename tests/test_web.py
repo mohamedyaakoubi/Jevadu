@@ -1181,6 +1181,27 @@ def test_a_failed_comparison_says_so_and_the_results_stay(site, chromium) -> Non
 
 
 @pytest.mark.browser
+def test_a_click_that_replaces_the_page_does_not_move_it(site, chromium) -> None:  # noqa: ANN001
+    """A clicked link keeps the focus, and the browser's scroll anchoring followed it down while
+    htmx put the new page above the old one: "Clear" and an example sent the page to the bottom
+    (23 October 2026)."""
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 700, "height": 500})
+    page.goto(SEARCH)
+    page.wait_for_selector("li.result")
+    page.evaluate(
+        "document.addEventListener('mousedown', () => { window.hmAt = scrollY; }, true);"
+        "document.addEventListener('htmx:afterSettle', () => { window.hmDone = true; })"
+    )
+    for link in ("[data-clear-search]", "p.try a"):
+        page.evaluate("window.hmDone = false")
+        page.locator(link).first.click()
+        page.wait_for_function("window.hmDone")
+        assert page.evaluate("Math.round(scrollY) === Math.round(window.hmAt)"), link
+    page.context.close()
+
+
+@pytest.mark.browser
 def test_quick_results_come_while_typing_and_ask_no_model(site, chromium) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     page = served(chromium, client, viewport={"width": 1440, "height": 900})

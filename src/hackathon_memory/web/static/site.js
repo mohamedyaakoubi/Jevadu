@@ -577,6 +577,14 @@
   document.addEventListener("htmx:beforeRequest", function () {
     document.querySelectorAll(".hm-failed").forEach(function (line) { line.remove(); });
   });
+  // A clicked link or button keeps the focus, and the browser's scroll anchoring follows the
+  // focused element: while htmx put the new part above the old one, the page went down with the
+  // old link, to the bottom ("Clear" and the examples, 23 October 2026). So the focus leaves a
+  // link or a button of the part that is replaced; a box that is being typed in keeps it.
+  document.addEventListener("htmx:beforeSwap", function (event) {
+    var active = document.activeElement, target = event.detail.target;
+    if (active && target && target.contains(active) && active.matches("a, button")) active.blur();
+  });
   // On a phone, after the button or Enter, the results come into view (not while typing).
   var NARROW = window.matchMedia("(max-width: 760px)");
   var bringResults = false;
