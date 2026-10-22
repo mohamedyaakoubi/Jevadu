@@ -1,0 +1,1316 @@
+{
+ "test": "test3",
+ "made_on": "2026-10-22",
+ "pages_checked": 50,
+ "pages": 50,
+ "numbers": {
+  "found": {
+   "share": 1.0,
+   "range": [
+    1.0,
+    1.0
+   ],
+   "count": 156,
+   "of": 156
+  },
+  "invented": {
+   "share": 0.0488,
+   "range": [
+    0.012,
+    0.0877
+   ],
+   "count": 8,
+   "of": 164
+  },
+  "status": {
+   "share": 0.9487,
+   "range": [
+    0.8921,
+    0.9867
+   ],
+   "count": 148,
+   "of": 156
+  }
+ },
+ "pass_marks": {
+  "found": 0.95,
+  "invented": 0.02,
+  "status": 0.9
+ },
+ "passes": {
+  "found": true,
+  "invented": false,
+  "status": true
+ },
+ "planted": {
+  "added": 3,
+  "counted_as_missed": 3
+ },
+ "per_page": [
+  {
+   "page": "https://ethglobal.com/showcase/you-have-been-served-0ejqd",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.9225885",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hanvil-i4sqq",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10497245",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10497252",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10497255",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789204637-167233288",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": [
+    {
+     "where": "readme",
+     "id": "0.0.1033",
+     "tool": "dates_do_not_fit"
+    }
+   ]
+  },
+  {
+   "page": "https://ethglobal.com/showcase/zikibols-zfsag",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.9213391",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10418801",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10418801-1788882136-867281572",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10418801-1789223023-415706643",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10421774",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10421775",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10423725",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10502915",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9212226",
+     "hand": "dates_do_not_fit",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9213391",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/datachain-iuv0y",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.7121902",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7121903",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7121905",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/nova-m49pn",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.8504799",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.8498893",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.8504799",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/carrentic-ingep",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.10478278",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10478278",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/swarmproof-9yxyf",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.10417469",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10119346",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10119346-1788849233-623260124",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10119346-1789227625-717751015",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10417469",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10417474",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1788849225-803231622",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789227620-971159841",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/covenant-kxv95",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.10510015",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10510015",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.4729347",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.4729347-1789294162-014610030",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.6503308",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789247241-557205364",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/pixport-zxhkp",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.9742957",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "page",
+     "id": "0.0.9742958",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9742864",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9742957",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9742958",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9743531",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": [
+    {
+     "where": "readme",
+     "id": "0.0.9743558",
+     "tool": "proof_found"
+    }
+   ]
+  },
+  {
+   "page": "https://ethglobal.com/showcase/aetheros-ipzx7",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.2917554",
+     "hand": "another_kind",
+     "tool": "dates_do_not_fit"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/x402-work-receipts-69zvd",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.10226839",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10365982",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10365984",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10426298",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789130259-977921983",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789130270-259648782",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/thenar-n0ma1",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.10519262",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "page",
+     "id": "0.0.10520394",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10518775",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10518776",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10519262",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10520394",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789279979-058986056",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789281472-024056054",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789282116-389653271",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789290611-109538307",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789296779-408785255",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9212226",
+     "hand": "dates_do_not_fit",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9213391",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9842030",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9842030-1789282023-896089542",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/covenant-6j7sn",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.9734777",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "page",
+     "id": "0.0.9734808",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.9734777",
+     "hand": "proof_found",
+     "tool": "dates_do_not_fit"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bridle-w8ao2",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.10474223",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10444198",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10445587",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10474223",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x5442a862d2b11709045be15015368c7dd6b9cfd8",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/receipt-woetu",
+   "ids": [
+    {
+     "where": "page",
+     "id": "0.0.10485798",
+     "hand": "proof_found",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "page",
+     "id": "0.0.10495465",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10485798",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10495465",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789256036-789077402",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789256075-451504628",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789256104-779124963",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x3483b3761ebe3c2fc2eb3efe8215a7cf90634071",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/alive402-ezcr5",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10522345",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.429274",
+     "hand": "proof_found",
+     "tool": "another_kind"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.6499107",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789301497-214020816",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.6917342",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.6917343",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/neltrix-dkqxs",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/yourturn-concierge-6pm36",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.8504405",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.8504405-1789139309-785362819",
+     "hand": "dates_do_not_fit",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.8505698",
+     "hand": "dates_do_not_fit",
+     "tool": "dates_do_not_fit"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/syndicatelend-dd17h",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10457020",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10459660",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10459663",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10459666",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10459721",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10460134",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10520474",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10520523",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x33687ebc6c3f8a89dbe60adc3e631149da6e0690",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": [
+    {
+     "where": "readme",
+     "id": "0.0.10460165",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10460221",
+     "tool": "proof_found"
+    }
+   ]
+  },
+  {
+   "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.6084394",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.6092626",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/executor-8f6xa",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10423643",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10423647",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/held-iti6y",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10491999",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10491999-1789311316-678160340",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10495061",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10495064",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x75f1eb3700aecc1429c8e99ed124af7e3ec6ebb0",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": [
+    {
+     "where": "readme",
+     "id": "0.0.10495601",
+     "tool": "proof_found"
+    }
+   ]
+  },
+  {
+   "page": "https://ethglobal.com/showcase/betai-zpy9e",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.7100616",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/squash-4x5ep",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10450391",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10450391-1789253509-329841529",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10452145",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10452163",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789008230-889484170",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/bond-desk-1jn36",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0x0100526434c821d0df24f6cc60352f830f8b4504",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x1dff1d5458d6a6f6af46014de76474dc3170c31b",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x378f45197809358b10d4f4fabc1f9aad6bb9b53e",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x56260e6cf630043421c1469ee511e66c3ee95505",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x59bc155eb6c6c415fe43255af66ecf0523c92b4a",
+     "hand": "dates_do_not_fit",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "readme",
+     "id": "0x82db4a2ba9859816d60e3d3ce2f6f1e29818faf7",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0x9e393461e165e9975a0a74f7fc378e6c342104b1",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0xd1f118a40f3b02883d35909ef2517e7edd78379d",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0xd6752ffc596c8f9d4f5d530246e5698ec65a983f",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0xeb363f5aed5d2a94b41ebf0876bd36864255c956",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0xf175d5b081d8a5187bdb5b7fa6f621efe9c6f40d",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0xf712daabff190b34fd6c870761ac4efa54e821b1",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": [
+    {
+     "where": "readme",
+     "id": "0.0.10482928",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10482965",
+     "tool": "another_kind"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10498485",
+     "tool": "proof_found"
+    }
+   ]
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-5dppt",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10440535",
+     "hand": "proof_found",
+     "tool": "another_kind"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10440940",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.429274",
+     "hand": "proof_found",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "another_kind"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/tessera-d89rk",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10367762",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7326076",
+     "hand": "dates_do_not_fit",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7399100",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/market-minds-ok0qp",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0x001bf4fafe6b4ba7091d5e6d2b4ba0671882de31",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/alt-agent-bt6pb",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.429274",
+     "hand": "proof_found",
+     "tool": "dates_do_not_fit"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.456858",
+     "hand": "dates_do_not_fit",
+     "tool": "dates_do_not_fit"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/hardpull-zak21",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10525131",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/roll-call-7rtg5",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10392885",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10498870",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.7162784-1789210131-728434226",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/stealthscape-ybnrx",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.4812588",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/voxel-bench-nvug0",
+   "ids": [
+    {
+     "where": "readme",
+     "id": "0.0.10432214",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    },
+    {
+     "where": "readme",
+     "id": "0.0.10432254",
+     "hand": "proof_found",
+     "tool": "proof_found"
+    }
+   ],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/dry-nwpcs",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mass-multiplayer-ai-nrz22",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/havefun-d-fm3ie",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/x402-health-oracle-adbgm",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/futarfi-p2e2u",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/freeride-rd324",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/money-3-0-twittbar-kmzs1",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/rawmarkets-mmjj7",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/safe-wire-foucc",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/jessmac-5wcf1",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/soulz-4s6np",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/mandatee-7o675",
+   "ids": [],
+   "only_the_tool": []
+  },
+  {
+   "page": "https://ethglobal.com/showcase/rwa-nexus-bridge-4j3gx",
+   "ids": [],
+   "only_the_tool": []
+  }
+ ]
+}
