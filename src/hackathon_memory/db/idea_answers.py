@@ -2,9 +2,10 @@
 
 The key is the fingerprint of the idea, never the idea: the order of its closest projects for one
 set of filters, and its comparison with each project for the texts of that project that the model
-read. Like the embedding of the idea (db/embeddings.py), a row lives one day. An exact cache: an
-answer is given back only for exactly the same idea, filters, model, level and instructions, so it
-can never speak about another idea (decided on 11 October 2026: no cache by similar meaning).
+read. Like the embedding of the idea (db/embeddings.py), a row lives one day, and the rows of an
+example idea of the search screen are kept for good (example_ideas.py). An exact cache: an answer
+is given back only for exactly the same idea, filters, model, level and instructions, so it can
+never speak about another idea (decided on 11 October 2026: no cache by similar meaning).
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from datetime import UTC, datetime
 
 import psycopg
 
-from hackathon_memory.db.embeddings import IDEA_LIFETIME
+from hackathon_memory.db.embeddings import IDEA_LIFETIME, KEPT_IDEAS, kept_since
 
 
 @dataclass(frozen=True)
@@ -39,8 +40,9 @@ class AnswerStore:
 
     def order(self, idea_sha256: str, scope: str, model: str, level: str, version: str,
               now: datetime | None = None) -> KeptOrder | None:  # fmt: skip
-        """The order that the model gave less than a day ago, or None."""
-        since = (now or datetime.now(UTC)) - IDEA_LIFETIME
+        """The order that the model gave less than a day ago, or at any time for an example idea,
+        or None."""
+        since = kept_since(idea_sha256, now)
         with psycopg.connect(self._conninfo) as conn:
             row = conn.execute(
                 "SELECT pool, ordered FROM idea_orders WHERE idea_sha256 = %s AND scope = %s "
@@ -71,10 +73,11 @@ class AnswerStore:
         now: datetime | None = None,
     ) -> dict[int, KeptComparison]:
         """For each project of `inputs` (its id and the fingerprint of the texts that the model
-        would read), the comparison made less than a day ago for exactly those texts."""
+        would read), the comparison made for exactly those texts less than a day ago, or at any
+        time for an example idea."""
         if not inputs:
             return {}
-        since = (now or datetime.now(UTC)) - IDEA_LIFETIME
+        since = kept_since(idea_sha256, now)
         ids = list(inputs)
         with psycopg.connect(self._conninfo) as conn:
             rows = conn.execute(
@@ -111,11 +114,13 @@ class AnswerStore:
                 )  # fmt: skip
 
     def forget_old(self, now: datetime | None = None) -> int:
-        """Delete the answers about ideas typed a day ago or more. Returns how many rows."""
-        before = (now or datetime.now(UTC)) - IDEA_LIFETIME
+        """Delete the answers about ideas typed a day ago or more, never those about the example
+        ideas. Returns how many rows."""
+        values = ((now or datetime.now(UTC)) - IDEA_LIFETIME, list(KEPT_IDEAS))
+        old = "made_at <= %s AND NOT idea_sha256 = ANY(%s)"
         with psycopg.connect(self._conninfo) as conn:
-            orders = conn.execute("DELETE FROM idea_orders WHERE made_at <= %s", (before,))
-            compared = conn.execute("DELETE FROM idea_comparisons WHERE made_at <= %s", (before,))
+            orders = conn.execute(f"DELETE FROM idea_orders WHERE {old}", values)  # noqa: S608
+            compared = conn.execute(f"DELETE FROM idea_comparisons WHERE {old}", values)  # noqa: S608
             return orders.rowcount + compared.rowcount
 
 

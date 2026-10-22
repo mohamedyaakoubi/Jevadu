@@ -12,7 +12,9 @@ import pytest
 
 from fakes import project_page
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
+from hackathon_memory.db.idea_answers import AnswerStore, KeptComparison, KeptOrder
 from hackathon_memory.db.projects import ProjectStore
+from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.llm.embeddings import SEARCH_MODEL
 from hackathon_memory.parse.ethglobal_page import read_project_page
 from hackathon_memory.search import engine, listing
@@ -107,6 +109,36 @@ def test_an_idea_of_yesterday_is_forgotten(database: str) -> None:
     assert store.idea(idea_fingerprint("an old idea"), SEARCH_MODEL, later) is not None
     assert store.forget_old_ideas(old + timedelta(hours=24)) == 1
     assert store.idea(idea_fingerprint("an old idea"), SEARCH_MODEL, later) is None
+
+
+def test_the_embedding_of_an_example_idea_is_kept_for_good(database: str) -> None:
+    store = EmbeddingStore(database)
+    old = datetime(2026, 10, 10, 9, tzinfo=UTC)
+    example, typed = idea_fingerprint(EXAMPLE_IDEAS[0]), idea_fingerprint("an old idea")
+    for sha256 in (example, typed):
+        store.save_idea(sha256, SEARCH_MODEL, vector_for("vendor"), old)
+    a_year_later = old + timedelta(days=365)
+    assert store.forget_old_ideas(a_year_later) == 1  # the typed idea only
+    assert store.idea(example, SEARCH_MODEL, a_year_later) is not None
+    assert store.idea(typed, SEARCH_MODEL, a_year_later) is None
+
+
+def test_the_answers_about_an_example_idea_are_kept_for_good(database: str) -> None:
+    store, project = AnswerStore(database), next(iter(ids_of(database).values()))
+    old = datetime(2026, 10, 10, 9, tzinfo=UTC)
+    example, typed = idea_fingerprint(EXAMPLE_IDEAS[1]), idea_fingerprint("an old idea")
+    order, texts = KeptOrder([project], [project]), "b" * 64
+    one = KeptComparison("Both pay a vendor.", "This one adds a ledger.", ["short_line"])
+    for sha256 in (example, typed):
+        store.save_order(sha256, "", SEARCH_MODEL, "LOW", "v1", order, old)
+        store.save_comparisons(sha256, {project: (texts, one)}, SEARCH_MODEL, "LOW", "v1", old)
+    later = old + timedelta(days=365)
+    assert store.forget_old(later) == 2  # the order and the comparison of the typed idea
+    assert store.order(example, "", SEARCH_MODEL, "LOW", "v1", later) == order
+    found = store.comparisons(example, {project: texts}, SEARCH_MODEL, "LOW", "v1", later)
+    assert found == {project: one}
+    assert store.order(typed, "", SEARCH_MODEL, "LOW", "v1", later) is None
+    assert store.comparisons(typed, {project: texts}, SEARCH_MODEL, "LOW", "v1", later) == {}
 
 
 # --------------------------------------------------------------------- the listing

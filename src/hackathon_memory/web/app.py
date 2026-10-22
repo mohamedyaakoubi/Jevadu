@@ -46,6 +46,7 @@ from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
+from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.hedera import listed, registry
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode, hashscan_topic
@@ -95,8 +96,7 @@ SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 CHARTS = "charts"
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
                 "proof": "the Hedera proof", "life": "the life"}  # fmt: skip
-EXAMPLES = ("limits on what an AI agent may spend", "tracking coffee from the farm to the cup",
-            "a ticket market without scalpers")  # fmt: skip
+EXAMPLES = EXAMPLE_IDEAS  # what the search learns about them is kept for good
 PROOF_SHORT = {
     "proof_found": "found",
     "window_not_known": "event end not known yet",
