@@ -134,11 +134,18 @@
   // and those with a Hedera prize. The same numbers stand in a list for screen readers.
   // Chart.js gives the labels of a horizontal chart at most half of its width; a longer label
   // is cut at the left edge (seen on 18 October 2026), so it breaks into lines here.
+  // A label in lines of 22 characters at most. It breaks at spaces, and a long name with none,
+  // such as a package name, after a "/" or a "-".
   function lines(label) {
-    var words = String(label).split(" "), out = [], line = "";
+    var words = [], out = [], line = "";
+    String(label).split(" ").forEach(function (word) {
+      if (word.length <= 22) words.push(word);
+      else words.push.apply(words, word.match(/[^\/-]+[\/-]?|[\/-]/g));
+    });
     words.forEach(function (word) {
-      if (line && (line + " " + word).length > 22) { out.push(line); line = word; }
-      else line = line ? line + " " + word : word;
+      var joined = line + (line && !/[\/-]$/.test(line) ? " " : "") + word;
+      if (line && joined.length > 22) { out.push(line); line = word; }
+      else line = joined;
     });
     if (line) out.push(line);
     return out.length > 1 ? out : out[0];
