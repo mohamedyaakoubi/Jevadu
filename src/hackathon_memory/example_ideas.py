@@ -9,5 +9,5 @@ on an example never waits for Google and costs nothing. A typed idea is kept for
 EXAMPLE_IDEAS = (
     "limits on what an AI agent may spend",
     "tracking coffee from the farm to the cup",
-    "a ticket market without scalpers",
+    "resell appointments I cannot attend",
 )
