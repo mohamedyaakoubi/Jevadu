@@ -112,14 +112,20 @@ def find_ids(*texts: str) -> list[FoundId]:
 def transaction_id(match: re.Match[str]) -> str | None:
     """A transaction as the mirror node asks for it, from a match of _TRANSACTION. In the form
     with a dot, the digits after the dot are the start of the nanoseconds."""
-    account = int(match.group(1))
-    if account < FIRST_USER_NUMBER:
+    account = match.group(1)
+    if not _of_a_project(account):
         return None
     if match.group(2) is not None:
         seconds, nanos = match.group(2), match.group(3).ljust(9, "0")
     else:
         seconds, nanos = match.group(4), match.group(5)
     return f"0.0.{account}-{int(seconds)}-{int(nanos)}"
+
+
+def _of_a_project(number: str) -> bool:
+    """Whether the number after "0.0." can name a thing of a project. The numbers below 1001
+    belong to the network itself."""
+    return int(number) >= FIRST_USER_NUMBER
 
 
 def _mentions(text: str) -> list[FoundId]:
@@ -133,7 +139,7 @@ def _mentions(text: str) -> list[FoundId]:
         inner = _ID.match(target)
         if _EVM_ADDRESS.match(target):
             entity = target.lower()
-        elif inner and int(inner.group(1)) >= FIRST_USER_NUMBER:
+        elif inner and _of_a_project(inner.group(1)):
             entity = f"0.0.{inner.group(1)}"
         else:
             continue
@@ -159,7 +165,7 @@ def _mentions(text: str) -> list[FoundId]:
     spans = [match.span() for match in ids]
     for match in ids:
         start, end = match.span()
-        if int(match.group(1)) < FIRST_USER_NUMBER:
+        if not _of_a_project(match.group(1)):
             continue  # a number of the network itself, or a version number
         if any(left <= start < right for left, right in links):
             continue  # the link has already said it, and said it exactly
