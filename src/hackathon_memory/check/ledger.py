@@ -215,12 +215,17 @@ def _schedule(mirror: MirrorNode, entity_id: str) -> dict | None:
         return None
     made = _time(schedule.get("consensus_timestamp"))
     ran = _time(schedule.get("executed_timestamp"))
+    deleted = schedule.get("deleted") is True
     return {
         "ledger_id": schedule.get("schedule_id"),
         "created_at": made,
-        "deleted": schedule.get("deleted") is True,
+        "deleted": deleted,
         "first_activity_at": made,
         "last_activity_at": ran or made,
+        # Deleted before it ran: empty, like a deleted contract. The mirror node also says
+        # "deleted" of a schedule that ran at its time, and one that expired without running was
+        # still made and signed (both seen on 22 October 2026): neither is empty.
+        "empty": deleted and ran is None,
         "details": {"executed": ran is not None},
     }
 

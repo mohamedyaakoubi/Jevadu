@@ -433,7 +433,7 @@ The window of an event runs from 30 days before it started to 14 days after it e
 |---|---|
 | Proof found | The ID exists. Its kind fits how the page describes it. It was created or active inside the window. |
 | Found, but the dates do not fit | The ID exists, but nothing happened on it inside the window. |
-| Found, but empty | A topic with no message, a token never issued, or a deleted contract. |
+| Found, but empty | A topic with no message, a token never issued, a deleted contract, a failed transaction, or a schedule deleted before it ran. |
 | Not found | The ID does not exist on the network. |
 | Cannot be checked | The ID is on the test network and older than its last reset (1 February 2024). |
 | No ID given | The page and the README give no Hedera ID. |

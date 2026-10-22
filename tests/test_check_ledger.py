@@ -276,8 +276,21 @@ def test_a_scheduled_transaction_that_never_ran_was_last_active_when_it_was_made
     mirror = StandInMirror(schedule={"0.0.9743551": schedule(executed_timestamp=None)})
     facts = facts_of(mirror, "0.0.9743551")  # no word: the four other kinds are asked first
     assert facts.kind == SCHEDULE and facts.last_activity_at == when(MADE)
-    assert facts.details == {"executed": False}
+    assert facts.details == {"executed": False} and not facts.empty  # it expired: still made
     assert [kind for kind, _ in mirror.asked] == [TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE]
+
+
+@pytest.mark.parametrize(
+    ("ran", "deleted", "empty"),
+    [(LAST, False, False), (LAST, True, False), (None, False, False), (None, True, True)],
+)
+def test_a_scheduled_transaction_is_empty_only_when_deleted_before_it_ran(
+    ran: str | None, deleted: bool, empty: bool
+) -> None:
+    """The mirror node says "deleted" also of a schedule that ran at its time (22 October 2026)."""
+    answer = schedule(executed_timestamp=ran, deleted=deleted)
+    facts = facts_of(StandInMirror(schedule={"0.0.9743551": answer}), "0.0.9743551", SCHEDULE)
+    assert facts.empty is empty
 
 
 def test_an_error_of_the_node_goes_on_to_the_caller() -> None:
