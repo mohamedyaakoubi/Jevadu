@@ -222,7 +222,7 @@ This is an entry for the FSS Campus Edition of the Hedera Cross Campus Challenge
 
 The line below lets this repository be registered for that event in the tool's own public register on Hedera. Only someone who can change the repository can add it, so it shows that the registration is the maintainer's own:
 
-`jevadu: ACJWI4OF`
+`jevadu: 5PZVM227`
 
 ## Licence and credits
 

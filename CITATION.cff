@@ -6,7 +6,7 @@ abstract: "Jevadu shows the past Hedera hackathon projects closest to an idea, e
 authors:
   - family-names: "Yaakoubi"
     given-names: "Mohamed"
-repository-code: "https://github.com/mohamedyaakoubi/hackathon-memory"
+repository-code: "https://github.com/mohamedyaakoubi/jevadu"
 license: Apache-2.0
 keywords:
   - Hedera
