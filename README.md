@@ -50,7 +50,7 @@ Two hackathon projects search past projects too. [ETHSearch](https://github.com/
 
 We found nothing like this for Hedera. Jevadu keeps the projects tied to Hedera, and adds what the ledger and the code say about each one.
 
-Many tools score hackathon submissions with AI. This tool does not score.
+Many tools score hackathon submissions with AI. DoraHacks' Hackathon AI, for example, gives each submission a score and feedback against the organiser's criteria, can approve every submission that reaches a score the organiser sets, and ranks the approved projects of each track, with its reasons, as a guide for the human judges ([its own article](https://dorahacks.io/blog/guides/hackathon-ai/)). Jevadu does not score: it puts the facts side by side, and people judge.
 
 ## What works today
 
