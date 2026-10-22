@@ -41,7 +41,7 @@ RECORDS = [
         "name": "Cedar Post",
         "event": "Sample Hedera Hackathon 2025",
         "result_as_published": "Local winner",
-        "description_as_published": "Logs every parcel on the topic 0.0.3456789 on testnet.",
+        "description_as_published": "Logs every parcel on the topic 0.0.3456781 on testnet.",
         "source_url": "https://organiser.example.test/winners",
     },
 ]
@@ -80,7 +80,7 @@ def test_each_record_becomes_a_winner_entry(tmp_path: Path) -> None:
     assert page.parser == PARSER_VERSION
     # An organiser that is not named is Hedera, and a published result stands for the place.
     assert cedar.page.prizes[0].line == "Hedera - Local winner"
-    assert [(i.entity_id, i.network) for i in cedar.page.hedera_ids] == [("0.0.3456789", "testnet")]
+    assert [(i.entity_id, i.network) for i in cedar.page.hedera_ids] == [("0.0.3456781", "testnet")]
 
 
 def test_a_changed_record_gets_another_fingerprint(tmp_path: Path) -> None:

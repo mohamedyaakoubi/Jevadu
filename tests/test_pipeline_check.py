@@ -44,8 +44,8 @@ def database(empty_database: str) -> str:
     migrate(empty_database)
     projects = ProjectStore(empty_database)
     first = project_page(
-        description="<p>The log is the topic 0.0.3456789.</p>",
-        made="<p>The coin is the token 0.0.2345678 on the test network.</p>",
+        description="<p>The log is the topic 0.0.3456781.</p>",
+        made="<p>The coin is the token 0.0.2345671 on the test network.</p>",
     )
     projects.save(read_project_page(first, PROJECT_PAGE), "a" * 64)
     second = project_page(name="Quartz Notes", slug="quartz-notes", short_id="q3w4e")
@@ -54,7 +54,7 @@ def database(empty_database: str) -> str:
         name="Cedar Lens",
         slug="cedar-lens",
         short_id="k9l8m",
-        made='<p><a href="https://hashscan.io/testnet/account/0.0.5678901">Our account</a></p>',
+        made='<p><a href="https://hashscan.io/testnet/account/0.0.5678902">Our account</a></p>',
     )
     projects.save(read_project_page(third, THIRD_PAGE), "c" * 64)
     with psycopg.connect(empty_database) as conn:
@@ -67,29 +67,29 @@ def nodes() -> dict[str, StandInMirror]:
     is an old account, as it happens with real numbers."""
     test = StandInMirror(
         "testnet",
-        topic={"0.0.3456789": {"topic_id": "0.0.3456789", "created_timestamp": DURING}},
+        topic={"0.0.3456781": {"topic_id": "0.0.3456781", "created_timestamp": DURING}},
         token={
-            "0.0.2345678": {
-                "token_id": "0.0.2345678",
+            "0.0.2345671": {
+                "token_id": "0.0.2345671",
                 "total_supply": "1000",
                 "created_timestamp": DURING,
                 "modified_timestamp": DURING,
             }
         },
-        account={"0.0.5678901": {"account": "0.0.5678901", "created_timestamp": LONG_BEFORE}},
+        account={"0.0.5678902": {"account": "0.0.5678902", "created_timestamp": LONG_BEFORE}},
     )
-    test.lists[("messages", "0.0.3456789")] = [
+    test.lists[("messages", "0.0.3456781")] = [
         {"sequence_number": 1, "consensus_timestamp": DURING},
         {"sequence_number": 49, "consensus_timestamp": DURING},
     ]
-    test.lists[("transactions", "0.0.5678901")] = [
+    test.lists[("transactions", "0.0.5678902")] = [
         {"consensus_timestamp": LONG_BEFORE},
         {"consensus_timestamp": DURING},
         {"consensus_timestamp": LONG_AFTER},
     ]
     main_network = StandInMirror(
         "mainnet",
-        account={"0.0.3456789": {"account": "0.0.3456789", "created_timestamp": LONG_BEFORE}},
+        account={"0.0.3456781": {"account": "0.0.3456781", "created_timestamp": LONG_BEFORE}},
     )
     return {"testnet": test, "mainnet": main_network}
 
@@ -122,12 +122,12 @@ def test_each_id_is_judged_on_the_network_of_its_page_or_on_both(database: str) 
     run = run_step(database, mirrors)
     assert results(database) == [
         # The account was made long before, and used before, inside and after the window.
-        ("cedar-lens-k9l8m", "0.0.5678901", "testnet", "proof_found"),
-        ("pebble-pay-x1y2z", "0.0.2345678", "testnet", "proof_found"),
+        ("cedar-lens-k9l8m", "0.0.5678902", "testnet", "proof_found"),
+        ("pebble-pay-x1y2z", "0.0.2345671", "testnet", "proof_found"),
         # The page names no network for the topic, so both are asked. The same number is an
         # old account on the main network.
-        ("pebble-pay-x1y2z", "0.0.3456789", "mainnet", "another_kind"),
-        ("pebble-pay-x1y2z", "0.0.3456789", "testnet", "proof_found"),
+        ("pebble-pay-x1y2z", "0.0.3456781", "mainnet", "another_kind"),
+        ("pebble-pay-x1y2z", "0.0.3456781", "testnet", "proof_found"),
     ]
     assert project_statuses(database) == {
         "pebble-pay-x1y2z": "proof_found",
@@ -141,7 +141,7 @@ def test_each_id_is_judged_on_the_network_of_its_page_or_on_both(database: str) 
     assert counts["looks_inside_a_window"] == 1  # the account
     assert counts["requests"] == sum(mirror.requests_made for mirror in mirrors.values()) > 0
     # The token names the test network, so the main network was never asked about it.
-    assert all("0.0.2345678" not in asked for asked in mirrors["mainnet"].asked)
+    assert all("0.0.2345671" not in asked for asked in mirrors["mainnet"].asked)
 
 
 def test_a_second_run_asks_the_node_nothing(database: str) -> None:
@@ -171,7 +171,7 @@ def test_without_the_end_of_the_event_the_dates_wait_and_nothing_is_asked_twice(
         conn.execute("UPDATE events SET ends_on = NULL")
     run_step(database, nodes())
     assert project_statuses(database)["pebble-pay-x1y2z"] == "window_not_known"
-    assert ("pebble-pay-x1y2z", "0.0.3456789", "mainnet", "another_kind") in results(database)
+    assert ("pebble-pay-x1y2z", "0.0.3456781", "mainnet", "another_kind") in results(database)
 
     with psycopg.connect(database) as conn:
         conn.execute("UPDATE events SET ends_on = '2026-03-08'")  # the end is typed in
@@ -186,7 +186,7 @@ def test_without_the_end_of_the_event_the_dates_wait_and_nothing_is_asked_twice(
 
 def test_an_old_account_that_was_not_used_at_the_event_is_not_proof(database: str) -> None:
     mirrors = nodes()
-    mirrors["testnet"].lists[("transactions", "0.0.5678901")] = [
+    mirrors["testnet"].lists[("transactions", "0.0.5678902")] = [
         {"consensus_timestamp": LONG_BEFORE},
         {"consensus_timestamp": LONG_AFTER},
     ]
@@ -196,10 +196,10 @@ def test_an_old_account_that_was_not_used_at_the_event_is_not_proof(database: st
 
 def test_an_id_that_is_nothing_on_any_network_is_not_found(database: str) -> None:
     mirrors = nodes()
-    del mirrors["testnet"].things["topic"]["0.0.3456789"]
-    del mirrors["mainnet"].things["account"]["0.0.3456789"]
+    del mirrors["testnet"].things["topic"]["0.0.3456781"]
+    del mirrors["mainnet"].things["account"]["0.0.3456781"]
     run_step(database, mirrors)
-    assert ("pebble-pay-x1y2z", "0.0.3456789", "testnet", "not_found") in results(database)
+    assert ("pebble-pay-x1y2z", "0.0.3456781", "testnet", "not_found") in results(database)
     assert project_statuses(database)["pebble-pay-x1y2z"] == "proof_found"  # the token still is
     again = run_step(database, nodes(), at=NOW + timedelta(days=1))
     assert again.counts["answers_from_the_node"] == 0  # "not found" was kept as an answer
@@ -224,13 +224,13 @@ class FailsOn(StandInMirror):
 
 def test_an_error_of_the_node_is_named_and_the_other_projects_are_checked(database: str) -> None:
     good = nodes()
-    failing = FailsOn("0.0.2345678", **good["testnet"].things)
+    failing = FailsOn("0.0.2345671", **good["testnet"].things)
     failing.lists = good["testnet"].lists
     run = run_step(database, {"testnet": failing, "mainnet": good["mainnet"]})
     assert run.problems == [
         {
-            "what": "0.0.2345678 on testnet",
-            "rule": "mirror node answered 503 for /tokens/0.0.2345678",
+            "what": "0.0.2345671 on testnet",
+            "rule": "mirror node answered 503 for /tokens/0.0.2345671",
         }
     ]
     assert run.counts["projects_not_finished"] == 1
@@ -312,10 +312,10 @@ def test_the_command_names_each_id_it_could_not_check_and_ends_with_an_error(
     assert main(["check"], settings_for(database), away()) == 1  # type: ignore[arg-type]
     said = capsys.readouterr().out
     assert "Not checked, with what went wrong:" in said
-    assert "  0.0.3456789 on testnet: mirror node answered 503 for /topics/0.0.3456789" in said
-    assert "  0.0.3456789 on mainnet: mirror node answered 503 for /topics/0.0.3456789" in said
-    assert "  0.0.2345678 on testnet: mirror node answered 503 for /tokens/0.0.2345678" in said
-    assert "  0.0.5678901 on testnet: mirror node answered 503 for /contracts/0.0.5678901" in said
+    assert "  0.0.3456781 on testnet: mirror node answered 503 for /topics/0.0.3456781" in said
+    assert "  0.0.3456781 on mainnet: mirror node answered 503 for /topics/0.0.3456781" in said
+    assert "  0.0.2345671 on testnet: mirror node answered 503 for /tokens/0.0.2345671" in said
+    assert "  0.0.5678902 on testnet: mirror node answered 503 for /contracts/0.0.5678902" in said
     assert "      2  not finished: see below" in said
     assert "      1  no id given" in said
     (row,) = last_runs(database, STEP)

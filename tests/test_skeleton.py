@@ -18,7 +18,7 @@ def test_no_person_and_no_page_text_in_the_output(name: str) -> None:
     text = skeleton(sample(name))
     for person in PEOPLE:
         assert person not in text
-    for page_text in ("Zed Widget", "Mango Ledger", "0.0.1234567", "fruit stall", "Best use of"):
+    for page_text in ("Zed Widget", "Mango Ledger", "0.0.1234561", "fruit stall", "Best use of"):
         assert page_text not in text
 
 

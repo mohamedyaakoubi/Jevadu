@@ -24,7 +24,7 @@ Pay a street vendor with a coin on Hedera.
 
 ## Features
 
-- A buyer signs one payment on the testnet topic 0.0.3456789.
+- A buyer signs one payment on the testnet topic 0.0.3456781.
 
 ## Team
 
@@ -60,7 +60,7 @@ def test_the_part_about_the_team_is_cut_out_with_its_inner_parts() -> None:
     assert done.team_lines_cut == 11  # from "## Team" to the line before "## Installation"
     assert done.ids_in_the_cut == 0
     # What is around it stays word for word.
-    assert "## Features\n\n- A buyer signs one payment on the testnet topic 0.0.3456789." in (
+    assert "## Features\n\n- A buyer signs one payment on the testnet topic 0.0.3456781." in (
         done.text
     )
     assert "## Installation\n\n```bash\nnpm install @sample-scope/sdk\n" in done.text
@@ -125,10 +125,10 @@ def test_a_part_about_the_team_ends_at_a_title_that_names_a_part_of_the_project(
 
 
 def test_a_hedera_id_in_a_part_that_is_cut_is_counted_and_not_kept() -> None:
-    text = "# Pebble\n\n## Team\n\nQuill runs the account 0.0.1234567 and the topic 0.0.7654321.\n"
+    text = "# Pebble\n\n## Team\n\nQuill runs the account 0.0.1234561 and the topic 0.0.7654329.\n"
     done = hide_in_markdown(text)
     assert done.ids_in_the_cut == 2
-    assert "0.0.1234567" not in done.text
+    assert "0.0.1234561" not in done.text
 
 
 def test_two_parts_about_the_team_are_two() -> None:
@@ -167,7 +167,7 @@ def test_a_link_to_a_profile_goes_with_its_words() -> None:
 def test_a_link_to_code_or_to_a_page_stays() -> None:
     text = (
         "See [the code](https://github.com/sample-org/pebble-pay) and "
-        "[the topic](https://hashscan.io/testnet/topic/0.0.3456789)."
+        "[the topic](https://hashscan.io/testnet/topic/0.0.3456781)."
     )
     assert hide_in_markdown(text).text == text
 

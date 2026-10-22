@@ -73,7 +73,7 @@ def readme(status: str = FOUND, **taken_out: int) -> Readme:
     )
 
 
-def an_id(entity: str = "0.0.3456789", network: str | None = "testnet") -> FoundId:
+def an_id(entity: str = "0.0.3456781", network: str | None = "testnet") -> FoundId:
     return FoundId(entity, network, "topic", f"our topic {entity} on {network}", False)
 
 
@@ -187,15 +187,15 @@ def test_the_ids_of_a_readme_are_kept_next_to_those_of_the_page(database: str) -
     pebble = ids[PROJECT_PAGE]
     with psycopg.connect(database) as conn:
         conn.execute("UPDATE projects SET proof_status = 'no_id_given' WHERE id = %s", (pebble,))
-    assert projects.save_readme_ids(pebble, [an_id(), an_id("0.0.4567890", None)]) is True
+    assert projects.save_readme_ids(pebble, [an_id(), an_id("0.0.4567891", None)]) is True
     assert rows(
         database,
         "SELECT entity_id, network, said_kind, found_in FROM hedera_ids "
         "WHERE project_id = %s ORDER BY id",
         pebble,
     ) == [
-        ("0.0.3456789", "testnet", "topic", IN_THE_README),
-        ("0.0.4567890", None, "topic", IN_THE_README),
+        ("0.0.3456781", "testnet", "topic", IN_THE_README),
+        ("0.0.4567891", None, "topic", IN_THE_README),
     ]
     assert rows(database, "SELECT proof_status FROM projects WHERE id = %s", pebble) == [(None,)]
 
@@ -219,16 +219,16 @@ def test_new_ids_replace_the_old_ones_and_the_ids_of_the_page_stay(database: str
     ids = three_projects(database)
     projects = ProjectStore(database)
     page = read_project_page(
-        project_page(made="<p>The topic 0.0.2345678 on testnet.</p>"), PROJECT_PAGE
+        project_page(made="<p>The topic 0.0.2345671 on testnet.</p>"), PROJECT_PAGE
     )
     projects.save(page, "e" * 64)
     pebble = ids[PROJECT_PAGE]
     projects.save_readme_ids(pebble, [an_id()])
-    assert projects.save_readme_ids(pebble, [an_id("0.0.5678901")]) is True
+    assert projects.save_readme_ids(pebble, [an_id("0.0.5678902")]) is True
     assert projects.save_readme_ids(pebble, []) is True
     assert rows(
         database, "SELECT entity_id, found_in FROM hedera_ids WHERE project_id = %s", pebble
-    ) == [("0.0.2345678", ON_THE_PAGE)]
+    ) == [("0.0.2345671", ON_THE_PAGE)]
 
 
 def test_the_table_of_repositories_has_no_column_for_a_person(database: str) -> None:

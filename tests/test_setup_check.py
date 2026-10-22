@@ -52,7 +52,7 @@ def test_a_full_setup_is_all_ok(tmp_path: Path) -> None:
     lines = by_what(
         lines_for(
             tmp_path,
-            hedera_operator_id="0.0.1234",
+            hedera_operator_id="0.0.1235",
             hedera_operator_key=ECDSA_DER + os.urandom(32).hex(),
             github_token="token-value",
             google_cloud_project="a-project",
@@ -82,7 +82,7 @@ def test_no_value_is_ever_printed(tmp_path: Path) -> None:
     text = render(
         lines_for(
             tmp_path,
-            hedera_operator_id="0.0.1234",
+            hedera_operator_id="0.0.1235",
             hedera_operator_key=key,
             github_token=CANARY,
             google_cloud_project=CANARY + "-project",

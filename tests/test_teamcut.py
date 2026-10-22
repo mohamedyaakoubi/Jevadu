@@ -33,7 +33,7 @@ def test_the_team_block_goes_and_the_project_text_stays() -> None:
     text = output.decode("utf-8")
     for name in NAMES:
         assert name not in text
-    for kept in ("Zed Widget", "0.0.1234567", "How it's Made", "github.com/sample-org/zed-widget"):
+    for kept in ("Zed Widget", "0.0.1234561", "How it's Made", "github.com/sample-org/zed-widget"):
         assert kept in text
 
 

@@ -26,12 +26,12 @@ UNTIL = datetime(2026, 3, 22, 23, 59, tzinfo=UTC)
 SECOND_PAGE = "https://ethglobal.com/showcase/quartz-notes-q3w4e"
 
 TOPIC_FACTS = LedgerFacts(
-    entity_id="0.0.3456789",
+    entity_id="0.0.3456781",
     network="testnet",
     asked_at=ASKED,
     found=True,
     kind=TOPIC,
-    ledger_id="0.0.3456789",
+    ledger_id="0.0.3456781",
     created_at=MADE,
     deleted=False,
     first_activity_at=MADE,
@@ -40,7 +40,7 @@ TOPIC_FACTS = LedgerFacts(
     empty=False,
     details={},
 )
-NOT_THERE = LedgerFacts("0.0.3456789", "mainnet", ASKED, found=False)
+NOT_THERE = LedgerFacts("0.0.3456781", "mainnet", ASKED, found=False)
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def with_projects(database: str) -> str:
     """Two projects: one whose page gives two ids, and one whose page gives none."""
     projects = ProjectStore(database)
     first = project_page(
-        description="<p>The log is the topic 0.0.3456789. The coin is 0.0.2345678.</p>",
+        description="<p>The log is the topic 0.0.3456781. The coin is 0.0.2345671.</p>",
         made="<p>Both live on the test network.</p>",
     )
     projects.save(read_project_page(first, PROJECT_PAGE), "a" * 64)
@@ -73,49 +73,49 @@ def rows(database: str, query: str, *values: object) -> list[tuple]:
 
 def test_the_facts_of_an_id_come_back_as_they_were_kept(database: str) -> None:
     store = LedgerStore(database)
-    assert store.facts("0.0.3456789", "testnet") is None
+    assert store.facts("0.0.3456781", "testnet") is None
     token = replace(
         TOPIC_FACTS,
-        entity_id="0.0.2345678",
+        entity_id="0.0.2345671",
         kind="token",
-        ledger_id="0.0.2345678",
+        ledger_id="0.0.2345671",
         activity_count=None,
         details={"type": "FUNGIBLE_COMMON", "total_supply": "1000000", "name": "Pebble"},
     )
     store.save_facts(TOPIC_FACTS)
     store.save_facts(token)
-    assert store.facts("0.0.3456789", "testnet") == TOPIC_FACTS
-    assert store.facts("0.0.2345678", "testnet") == token
-    assert store.facts("0.0.3456789", "mainnet") is None  # another network, another thing
+    assert store.facts("0.0.3456781", "testnet") == TOPIC_FACTS
+    assert store.facts("0.0.2345671", "testnet") == token
+    assert store.facts("0.0.3456781", "mainnet") is None  # another network, another thing
 
 
 def test_not_found_is_an_answer_that_is_kept_too(database: str) -> None:
     store = LedgerStore(database)
     store.save_facts(NOT_THERE)
-    assert store.facts("0.0.3456789", "mainnet") == NOT_THERE
+    assert store.facts("0.0.3456781", "mainnet") == NOT_THERE
 
 
 def test_a_newer_answer_replaces_the_older_one(database: str) -> None:
     store = LedgerStore(database)
     store.save_facts(TOPIC_FACTS)
-    store.save_use("0.0.3456789", "testnet", SINCE, UNTIL, True, ASKED)
+    store.save_use("0.0.3456781", "testnet", SINCE, UNTIL, True, ASKED)
     later = replace(TOPIC_FACTS, asked_at=datetime(2026, 10, 18, tzinfo=UTC), activity_count=60)
     store.save_facts(later)
-    assert store.facts("0.0.3456789", "testnet") == later
+    assert store.facts("0.0.3456781", "testnet") == later
     assert rows(database, "SELECT count(*) FROM ledger_facts") == [(1,)]
     # What was asked about the older state is gone with it.
-    assert store.use("0.0.3456789", "testnet", SINCE, UNTIL) is None
+    assert store.use("0.0.3456781", "testnet", SINCE, UNTIL) is None
 
 
 def test_the_use_inside_a_window_is_kept_for_that_window(database: str) -> None:
     store = LedgerStore(database)
     store.save_facts(TOPIC_FACTS)
-    assert store.use("0.0.3456789", "testnet", SINCE, UNTIL) is None  # never asked
-    store.save_use("0.0.3456789", "testnet", SINCE, UNTIL, False, ASKED)
-    assert store.use("0.0.3456789", "testnet", SINCE, UNTIL) is False
-    store.save_use("0.0.3456789", "testnet", SINCE, UNTIL, True, ASKED)  # asked again
-    assert store.use("0.0.3456789", "testnet", SINCE, UNTIL) is True
-    assert store.use("0.0.3456789", "testnet", SINCE, datetime(2026, 4, 1, tzinfo=UTC)) is None
+    assert store.use("0.0.3456781", "testnet", SINCE, UNTIL) is None  # never asked
+    store.save_use("0.0.3456781", "testnet", SINCE, UNTIL, False, ASKED)
+    assert store.use("0.0.3456781", "testnet", SINCE, UNTIL) is False
+    store.save_use("0.0.3456781", "testnet", SINCE, UNTIL, True, ASKED)  # asked again
+    assert store.use("0.0.3456781", "testnet", SINCE, UNTIL) is True
+    assert store.use("0.0.3456781", "testnet", SINCE, datetime(2026, 4, 1, tzinfo=UTC)) is None
 
 
 @pytest.mark.parametrize(
@@ -144,8 +144,8 @@ def test_every_id_of_every_project_is_given_with_its_event(with_projects: str) -
         conn.execute("UPDATE events SET ends_on = '2026-03-08'")
     ids = LedgerStore(with_projects).ids_to_check()
     assert [(i.entity_id, i.network, i.said_kind) for i in ids] == [
-        ("0.0.3456789", None, TOPIC),
-        ("0.0.2345678", None, None),
+        ("0.0.3456781", None, TOPIC),
+        ("0.0.2345671", None, None),
     ]
     assert all(isinstance(i, IdToCheck) and i.project_id == ids[0].project_id for i in ids)
     assert ids[0].event_starts_at == datetime(2026, 3, 6, 16, 0, tzinfo=UTC)
@@ -175,10 +175,10 @@ def test_the_results_of_a_project_are_kept_and_replaced(with_projects: str) -> N
         "SELECT h.entity_id, c.network, c.status FROM id_checks c "
         "JOIN hedera_ids h ON h.id = c.hedera_id ORDER BY 1, 2",
     ) == [
-        ("0.0.2345678", "mainnet", "not_found"),
-        ("0.0.2345678", "testnet", "not_found"),
-        ("0.0.3456789", "mainnet", "another_kind"),
-        ("0.0.3456789", "testnet", PROOF_FOUND),
+        ("0.0.2345671", "mainnet", "not_found"),
+        ("0.0.2345671", "testnet", "not_found"),
+        ("0.0.3456781", "mainnet", "another_kind"),
+        ("0.0.3456781", "testnet", PROOF_FOUND),
     ]
     assert store.proof_counts() == {PROOF_FOUND: 1, "not_checked": 1}
 

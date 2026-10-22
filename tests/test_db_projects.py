@@ -59,9 +59,9 @@ def everything(database: str) -> dict[str, list[tuple]]:
 FULL = {
     "prizes": [won(), won("Other Sponsor", OTHER_ID, track="Best use", kind="track")],
     "description": (
-        "<p>The coin is the token 0.0.2345678 on the test network.</p><ul><li>one</li></ul>"
+        "<p>The coin is the token 0.0.2345671 on the test network.</p><ul><li>one</li></ul>"
     ),
-    "made": '<p>See <a href="https://hashscan.io/testnet/topic/0.0.3456789">the log</a>.</p>',
+    "made": '<p>See <a href="https://hashscan.io/testnet/topic/0.0.3456781">the log</a>.</p>',
 }
 
 
@@ -114,11 +114,11 @@ def test_a_project_is_saved_with_all_that_the_parser_read(database: str) -> None
             1,
             "description",
             "Project Description",
-            "The coin is the token 0.0.2345678 on the test network.\none",
+            "The coin is the token 0.0.2345671 on the test network.\none",
             [
                 {
                     "kind": "paragraph",
-                    "text": "The coin is the token 0.0.2345678 on the test network.",
+                    "text": "The coin is the token 0.0.2345671 on the test network.",
                     "level": 0,
                 },
                 {"kind": "item", "text": "one", "level": 1},
@@ -137,8 +137,8 @@ def test_a_project_is_saved_with_all_that_the_parser_read(database: str) -> None
         "SELECT entity_id, network, said_kind, found_in, in_hashscan_link FROM hedera_ids "
         "ORDER BY id",
     ) == [
-        ("0.0.2345678", "testnet", "token", "page", False),
-        ("0.0.3456789", "testnet", "topic", "page", True),
+        ("0.0.2345671", "testnet", "token", "page", False),
+        ("0.0.3456781", "testnet", "topic", "page", True),
     ]
 
 
@@ -214,12 +214,12 @@ def test_an_id_found_in_a_readme_stays_when_the_page_is_parsed_again(database: s
         conn.execute(
             "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
             "words_around, in_hashscan_link) "
-            "SELECT id, '0.0.4567890', NULL, NULL, 'readme', 'the id 0.0.4567890', false "
+            "SELECT id, '0.0.4567891', NULL, NULL, 'readme', 'the id 0.0.4567891', false "
             "FROM projects"
         )
     store.save(parsed(), SHA_B)  # the page no longer names an id
     assert rows(database, "SELECT entity_id, found_in FROM hedera_ids") == [
-        ("0.0.4567890", "readme")
+        ("0.0.4567891", "readme")
     ]
 
 
@@ -294,7 +294,7 @@ def test_the_same_id_is_kept_once_for_a_project_also_with_no_network(database: s
     insert = (
         "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
         "words_around, in_hashscan_link) "
-        "SELECT id, '0.0.4567890', NULL, NULL, 'readme', 'words', false FROM projects"
+        "SELECT id, '0.0.4567891', NULL, NULL, 'readme', 'words', false FROM projects"
     )
     with psycopg.connect(database) as conn:
         conn.execute(insert)

@@ -24,13 +24,13 @@ from hackathon_memory.collect.polite import CollectorIdentity, RequestCount
 from hackathon_memory.hedera.register import MessageSubmitted
 
 REPO = "https://github.com/sample-org/pebble-pay"
-REGISTER = "0.0.7654321"  # the invented topic of the register
+REGISTER = "0.0.7654329"  # the invented topic of the register
 NOW = datetime(2026, 10, 11, 2, 0, tzinfo=UTC)
 DURING = "1772884800.000000001"  # 7 March 2026, inside the window of the invented event
-TOPIC = "0.0.3456789"
+TOPIC = "0.0.3456781"
 COMMIT = "7260ea7290637399c6ac181ed893a567144d96eb"  # an invented commit ID
 README = (
-    "# Pebble Pay\n\nA vendor takes a coin. Our topic on testnet: 0.0.3456789.\n\n"
+    "# Pebble Pay\n\nA vendor takes a coin. Our topic on testnet: 0.0.3456781.\n\n"
     "![logo](https://cdn.example.test/logo.png)\n\n```\nnpm install\n```\n"
     "See [the demo](https://demo.example.test) at <b>night</b>.\n"
 )

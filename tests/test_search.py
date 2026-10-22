@@ -135,13 +135,13 @@ def test_the_listing_shows_what_the_mirror_node_said(database: str) -> None:
     with psycopg.connect(database) as conn:
         hedera_id = conn.execute(
             "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
-            "words_around, in_hashscan_link) VALUES (%s, '0.0.3456789', 'testnet', 'topic', "
+            "words_around, in_hashscan_link) VALUES (%s, '0.0.3456781', 'testnet', 'topic', "
             "'readme', 'our topic', false) RETURNING id",
             (pebble,),
         ).fetchone()[0]
         conn.execute(
             "INSERT INTO ledger_facts (entity_id, network, asked_at, found, kind, created_at, "
-            "last_activity_at) VALUES ('0.0.3456789', 'testnet', '2026-10-11T20:00:00Z', true, "
+            "last_activity_at) VALUES ('0.0.3456781', 'testnet', '2026-10-11T20:00:00Z', true, "
             "'topic', '2026-03-05T10:00:00Z', '2026-03-07T12:00:00Z')"
         )
         conn.execute(
@@ -154,11 +154,11 @@ def test_the_listing_shows_what_the_mirror_node_said(database: str) -> None:
     text = "\n".join(listing.lines([card]))
     assert "Hedera proof: proof found." in text
     assert (
-        "0.0.3456789 on testnet, from the README: topic, created 2026-03-05, last activity "
+        "0.0.3456781 on testnet, from the README: topic, created 2026-03-05, last activity "
         "2026-03-07. proof found (asked 2026-10-11)"
     ) in text
     quiet = "\n".join(listing.lines([card], names=False))
-    assert "0.0.3456789" not in quiet
+    assert "0.0.3456781" not in quiet
     assert "ids asked of the mirror node: 1, with 1 answer(s) kept" in quiet
 
 
@@ -262,7 +262,7 @@ def test_the_dates_of_the_code_make_a_project_active(database: str) -> None:
 
 def test_the_ledger_activity_of_an_id_of_its_own_counts(database: str) -> None:
     pebble = ids_of(database)["Pebble Pay"]
-    give_an_id(database, pebble, "0.0.3456789", "2026-09-01T10:00:00Z")
+    give_an_id(database, pebble, "0.0.3456781", "2026-09-01T10:00:00Z")
     end_the_event(database, "2026-03-08")
     assert life_line(database, pebble).startswith("   life: active (")
 
@@ -270,8 +270,8 @@ def test_the_ledger_activity_of_an_id_of_its_own_counts(database: str) -> None:
 def test_an_id_that_projects_with_other_code_name_is_not_a_sign(database: str) -> None:
     ids = ids_of(database)
     # A shared service: two projects with different code name the same busy token.
-    give_an_id(database, ids["Pebble Pay"], "0.0.4567890", "2026-10-10T10:00:00Z")
-    give_an_id(database, ids["Cedar Post"], "0.0.4567890", "2026-10-10T10:00:00Z")
+    give_an_id(database, ids["Pebble Pay"], "0.0.4567891", "2026-10-10T10:00:00Z")
+    give_an_id(database, ids["Cedar Post"], "0.0.4567891", "2026-10-10T10:00:00Z")
     end_the_event(database, "2026-03-08")  # so that a sign would make it active
     assert life_line(database, ids["Pebble Pay"]) == (
         "   life: unknown (no date of the code and no activity of its own ids)."
@@ -280,7 +280,7 @@ def test_an_id_that_projects_with_other_code_name_is_not_a_sign(database: str) -
 
 def test_the_work_of_a_recent_event_is_too_early_to_tell(database: str) -> None:
     pebble = ids_of(database)["Pebble Pay"]
-    give_an_id(database, pebble, "0.0.3456789", "2026-09-30T10:00:00Z")
+    give_an_id(database, pebble, "0.0.3456781", "2026-09-30T10:00:00Z")
     end_the_event(database, "2026-09-16")
     assert life_line(database, pebble) == (
         "   life: too early to tell (the event ended less than 90 days ago, nothing later than "
@@ -290,7 +290,7 @@ def test_the_work_of_a_recent_event_is_too_early_to_tell(database: str) -> None:
 
 def test_with_no_end_of_the_event_no_sign_can_be_judged(database: str) -> None:
     pebble = ids_of(database)["Pebble Pay"]
-    give_an_id(database, pebble, "0.0.3456789", "2026-10-01T10:00:00Z")
+    give_an_id(database, pebble, "0.0.3456781", "2026-10-01T10:00:00Z")
     assert life_line(database, pebble) == (
         "   life: unknown (the end of the event is not known, last sign 2026-10-01)."
     )

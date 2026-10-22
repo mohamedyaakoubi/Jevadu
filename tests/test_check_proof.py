@@ -39,7 +39,7 @@ LONG_AFTER = datetime(2026, 8, 1, tzinfo=UTC)
 def thing(kind: str | None = TOPIC, *, network: str = "testnet", **facts: object) -> LedgerFacts:
     values: dict = {"created_at": DURING, "first_activity_at": DURING, "last_activity_at": DURING}
     return LedgerFacts(
-        "0.0.3456789",
+        "0.0.3456781",
         network,
         ASKED,
         found=kind is not None,

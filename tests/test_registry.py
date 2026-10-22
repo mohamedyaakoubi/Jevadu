@@ -20,8 +20,8 @@ from hackathon_memory.settings import Settings
 
 REPO = "https://github.com/sample-org/pebble-pay"
 COMMIT = "7260ea7290637399c6ac181ed893a567144d96eb"
-TOPIC = "0.0.7654321"
-OPERATOR = "0.0.1234567"
+TOPIC = "0.0.7654329"
+OPERATOR = "0.0.1234561"
 
 
 class RegisterMirror:
@@ -85,7 +85,7 @@ def test_the_record_holds_the_event_and_fingerprints_only() -> None:
                                    "commit": COMMIT}  # fmt: skip
     assert b"github" not in payload and b"sample-org" not in payload  # no link in clear text
     assert len(payload) < registry.MAX_RECORD
-    account = registry.account_fingerprint("0.0.4567890")
+    account = registry.account_fingerprint("0.0.4567891")
     days = registry.days_key(date(2026, 10, 1), date(2026, 10, 20))
     full = json.loads(registry.record(days, code, COMMIT, account))
     assert full == {"v": 2, "event": "days/2026-10-01/2026-10-20", "code": code,
@@ -108,7 +108,7 @@ def test_anything_but_the_fixed_form_is_refused(event: str, code: str) -> None:
 
 
 def test_a_typed_account_is_kept_only_in_its_form() -> None:
-    assert registry.account_of(" 0.0.4567890 ") == "0.0.4567890"
+    assert registry.account_of(" 0.0.4567891 ") == "0.0.4567891"
     assert registry.account_of("my account") is None and registry.account_of("0.0.0") is None
 
 
@@ -140,7 +140,7 @@ def test_a_registration_is_written_once_and_read_back() -> None:
     def write(data: bytes) -> MessageSubmitted:
         written.append(data)
         message = mirror.add(data)
-        return MessageSubmitted(TOPIC, message["sequence_number"], "0.0.1234567@1.2", "ab")
+        return MessageSubmitted(TOPIC, message["sequence_number"], "0.0.1234561@1.2", "ab")
 
     found = registry.register_submission(write, mirror, TOPIC, payload)
     assert written == [payload] and found.sequence_number == 1
@@ -153,7 +153,7 @@ def test_another_record_read_back_is_a_failure() -> None:
 
     def write(data: bytes) -> MessageSubmitted:
         mirror.add(registry.record("ethglobal.com/other", registry.code_fingerprint(REPO), COMMIT))
-        return MessageSubmitted(TOPIC, 1, "0.0.1234567@1.2", "ab")
+        return MessageSubmitted(TOPIC, 1, "0.0.1234561@1.2", "ab")
 
     with pytest.raises(RegisterError):
         registry.register_submission(write, mirror, TOPIC, payload)
@@ -169,7 +169,7 @@ def test_the_register_opens_with_no_admin_key_and_our_submit_key() -> None:
 
     def create(client: object, submit_key: object, *, auto_renew: bool) -> TopicCreated:
         made.append({"submit_key": submit_key.to_string_raw(), "auto_renew": auto_renew})
-        return TopicCreated(TOPIC, "0.0.1234567@1.2", auto_renew)
+        return TopicCreated(TOPIC, "0.0.1234561@1.2", auto_renew)
 
     topic = registry.open_register(settings_with(key), mirror, new_client=lambda *_: object(),
                                    create_topic=create)  # fmt: skip

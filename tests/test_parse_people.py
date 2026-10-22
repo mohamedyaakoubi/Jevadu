@@ -111,7 +111,7 @@ def test_a_link_to_a_profile_is_hidden(text: str, shown: str) -> None:
         "The code is at https://github.com/sample-org/pebble-pay.",
         "Watch https://youtu.be/abc123 and https://www.youtube.com/watch?v=abc123.",
         "Files are on box.com/pebble and on dropbox.com/pebble.",  # not x.com
-        "The log: https://hashscan.io/testnet/topic/0.0.3456789",
+        "The log: https://hashscan.io/testnet/topic/0.0.3456781",
         "Docs at https://docs.example.test/x.com/page",  # the site is not x.com
         "Files at https://files.dropbox.com/pebble and max.com/pebble.",  # nor are these
         "We post on x.com and on t.me every week.",  # the name of a site names nobody

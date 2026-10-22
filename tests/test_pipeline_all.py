@@ -55,7 +55,7 @@ def settings(empty_database: str, tmp_path: Path) -> Settings:
     pages = RawStore(tmp_path / "raw" / "ethglobal.com")
     save_page(pages, "pebble-pay", CODE)
     save_page(pages, "cedar-lens", None)
-    save_readme(RawStore(raw_dir(settings)), "# Pebble\n\nOur topic on testnet: 0.0.3456789.\n")
+    save_readme(RawStore(raw_dir(settings)), "# Pebble\n\nOur topic on testnet: 0.0.3456781.\n")
     return settings
 
 

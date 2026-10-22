@@ -7,11 +7,11 @@ from evals.test3.sheet import caught
 
 def test_the_net_catches_ids_transactions_addresses_and_links() -> None:
     address = "0x" + "a" * 40
-    text = (f"Topic 0.0.12345 and the transfer 0.0.6000-1700000000-123, see "
-            f"https://hashscan.io/testnet/topic/0.0.12345 and the contract {address}.")  # fmt: skip
+    text = (f"Topic 0.0.12346 and the transfer 0.0.6000-1700000000-123, see "
+            f"https://hashscan.io/testnet/topic/0.0.12346 and the contract {address}.")  # fmt: skip
     strings = [one["string"] for one in caught(text)]
-    assert "0.0.12345" in strings and "0.0.6000-1700000000-123" in strings
-    assert "https://hashscan.io/testnet/topic/0.0.12345" in strings and address in strings
+    assert "0.0.12346" in strings and "0.0.6000-1700000000-123" in strings
+    assert "https://hashscan.io/testnet/topic/0.0.12346" in strings and address in strings
     assert all("Topic" in one["around"] for one in caught(text)[:1])  # with the words around
 
 
@@ -33,7 +33,7 @@ def test_an_id_has_one_spelling_and_the_best_status_counts() -> None:
     from evals.test3.run import best, key
 
     assert key(" 0.0.6000@1700000000.123 ") == "0.0.6000-1700000000-123000000"
-    assert key("0xAbC") == "0xabc" and key("0.0.12345") == "0.0.12345"
+    assert key("0xAbC") == "0xabc" and key("0.0.12346") == "0.0.12346"
     # One transaction in its three spellings: after a dash the nanoseconds are a whole number.
     spellings = ["0.0.7@1789279979.058986056", "0.0.7-1789279979-058986056"]
     spellings.append("0.0.7-1789279979-58986056")

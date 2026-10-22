@@ -72,7 +72,7 @@ def test_a_look_reads_two_pages_and_prints_the_shape_of_one() -> None:
 def test_a_look_shows_no_page_text() -> None:
     report = make(pages())[0].run()
     text = "\n".join(report.lines)
-    for page_text in ("Pebble Pay lets", "0.0.2345678", "Try it"):
+    for page_text in ("Pebble Pay lets", "0.0.2345671", "Try it"):
         assert page_text not in text
     assert CONTACT not in text  # the address is only sent to the site
 
