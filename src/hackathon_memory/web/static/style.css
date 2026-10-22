@@ -235,7 +235,15 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-insight-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; }
 /* a link inside a sentence is underlined, not told apart by its colour only (WCAG 1.4.1) */
 .hm-insight-list a { text-decoration: underline; text-underline-offset: 2px; }
-.hm-charts-note + .hm-chart.hm-wide { margin: 0.5rem 0 1rem; } /* the linked projects, first */
+/* the tabs of the insights (design 12.1, S5): one part at a time; without the script, one part
+   under the other */
+.hm-tablist { margin-bottom: 1rem; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+/* Tabler's own colour of a tab that is not chosen is too faint on the dark theme (axe, 4.5:1) */
+.hm-tablist .nav-link { white-space: nowrap; color: var(--tblr-secondary); }
+.hm-tablist .nav-link.active, .hm-tablist .nav-link:hover { color: var(--tblr-body-color); }
+.hm-tabpanel + .hm-tabpanel { margin-top: 1.5rem; }
+.hm-tabpanel > .hm-chart.hm-wide:first-child { margin: 0 0 1rem; } /* the linked projects, first */
+.hm-tabpanel .hm-insights { margin: 1rem 0 0; }
 .hm-chart-title { display: flex; align-items: center; font-size: 1rem; font-weight: 700; margin: 0 0 0.25rem; }
 .hm-chart-note { color: var(--tblr-secondary); font-size: 0.8125rem; margin: 0 0 0.75rem; }
 .hm-chart-canvas { position: relative; width: 100%; }

@@ -1,29 +1,12 @@
 {# The charts of the list on the screen (design 12.1, S5): counts of facts read now from the
-   tables (web/charts.py), for a search or for the collection with its filters. #}
+   tables (web/charts.py), for a search or for the collection with its filters. They sit in four
+   tabs, so that no tab holds more than four blocks; without the page's script the tabs show one
+   under the other. #}
 {% import "_parts.html" as parts %}
 {% if not charts or not charts.projects %}
 <div class="empty"><p class="empty-title">No project to count</p><p class="empty-subtitle text-secondary">Remove a filter, or search with other words.</p></div>
 {% else %}
 <p class="hm-charts-note">Live counts for {{ "{:,}".format(charts.projects) }} project{{ "s" if charts.projects != 1 }}{% if asked %}, the closest to your idea{% endif %}. A percentage appears only when at least 20 projects stand behind it.</p>
-{% if insights %}
-<section class="card hm-chart hm-wide hm-insights" aria-labelledby="chart-insights">
-  <div class="card-body">
-    <h3 class="hm-chart-title" id="chart-insights">Insights{{ parts.info("insights", "the insights") }}</h3>
-    <ul class="hm-insight-list">
-    {% for one in insights.won_again %}
-      <li><b>Won again.</b> {% for member in one.winners %}<a href="/?open={{ member.project_id }}" data-open-viewer="{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML">{{ member.name }}</a> <span class="text-secondary">({{ member.event }})</span>{% if loop.revindex > 2 %}, {% elif loop.revindex == 2 %} and {% endif %}{% endfor %} each won a Hedera prize, at {{ one.events }} events. They share a repository or a Hedera ID.</li>
-    {% endfor %}
-    {% if insights.top_themes %}
-      <li><b>Categories with the most Hedera prizes.</b> {% for theme, share in insights.top_themes %}{{ theme }}: {{ share.part }} of {{ share.whole }} projects{% if share.percent is not none %} ({{ share.percent }}%){% endif %}{{ "; " if not loop.last else "." }}{% endfor %} Counted among the {{ "{:,}".format(insights.with_theme) }} projects with a category.</li>
-    {% endif %}
-    {% if insights.worked_on_won %}
-      {% set won = insights.worked_on_won %}{% set other = insights.worked_on_other %}
-      <li><b>Still worked on after the event.</b> {{ won.part }} of {{ won.whole }} Hedera prize winners ({{ won.percent }}%), and {{ other.part }} of {{ other.whole }} projects without a Hedera prize ({{ other.percent }}%), among the projects whose activity is known 90 days after their event.</li>
-    {% endif %}
-    </ul>
-  </div>
-</section>
-{% endif %}
 {% set linked_section %}
 <section class="card hm-chart hm-wide" aria-labelledby="chart-linked">
   <div class="card-body">
@@ -41,26 +24,76 @@
   </div>
 </section>
 {% endset %}
-{% if came_back %}{{ linked_section }}{% endif %}
-<div class="hm-charts">
-  {% for one in charts.charts %}{{ parts.chart(one) }}{% endfor %}
-</div>
-
-<section class="card hm-chart hm-wide" aria-labelledby="chart-event-table">
-  <div class="card-body">
-    <h3 class="hm-chart-title" id="chart-event-table">Projects and Hedera prizes by event{{ parts.info("event", "an event") }}</h3>
-    <p class="hm-chart-note">Each name links to the event's page. For the older ETHGlobal events, the showcase lists almost only prize winners, so these counts are not a share of all the teams there.</p>
-    <div class="table-responsive" tabindex="0" role="region" aria-label="The table of the events, which scrolls sideways">
-      <table class="table table-vcenter card-table">
-        <thead><tr><th scope="col">Event</th><th scope="col">Year</th><th scope="col">Projects</th><th scope="col">With a Hedera prize</th></tr></thead>
-        <tbody>
-        {% for row in charts.events %}
-          <tr><td>{% if row.link %}<a href="{{ row.link }}" target="_blank" rel="noopener">{{ row.name }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ row.name }}{% endif %}</td><td>{{ row.year }}</td><td>{{ row.projects }}</td><td>{{ row.winners }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
+<div class="hm-tabs" data-tabs>
+  <div class="nav nav-tabs hm-tablist" role="tablist" aria-label="Parts of the insights" hidden>
+    {% for key, words in (("overview", "Overview"), ("services", "Hedera services"), ("winners", "Winners"), ("events", "Events")) %}
+    <button class="nav-link{% if loop.first %} active{% endif %}" type="button" role="tab" id="tab-{{ key }}" data-tab="{{ key }}" aria-controls="panel-{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}"{% if not loop.first %} tabindex="-1"{% endif %}>{{ words }}</button>
+    {% endfor %}
   </div>
-</section>
-{% if not came_back %}{{ linked_section }}{% endif %}
+
+  <section class="hm-tabpanel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+    {% if came_back %}{{ linked_section }}{% endif %}
+    <div class="hm-charts">
+      {{ parts.chart(charts.chart("proof")) }}
+      {{ parts.chart(charts.chart("life")) }}
+    </div>
+    {% if not came_back %}{{ linked_section }}{% endif %}
+  </section>
+
+  <section class="hm-tabpanel" id="panel-services" role="tabpanel" aria-labelledby="tab-services">
+    <div class="hm-charts">
+      {{ parts.chart(charts.chart("code_services")) }}
+      {{ parts.chart(charts.chart("code_packages")) }}
+      {{ parts.chart(charts.chart("services")) }}
+    </div>
+  </section>
+
+  <section class="hm-tabpanel" id="panel-winners" role="tabpanel" aria-labelledby="tab-winners">
+    <div class="hm-charts">
+      {{ parts.comparison(charts.winners_use) }}
+    </div>
+    {% if insights %}
+    <section class="card hm-chart hm-wide hm-insights" aria-labelledby="chart-insights">
+      <div class="card-body">
+        <h3 class="hm-chart-title" id="chart-insights">Insights{{ parts.info("insights", "the insights") }}</h3>
+        <ul class="hm-insight-list">
+        {% for one in insights.won_again %}
+          <li><b>Won again.</b> {% for member in one.winners %}<a href="/?open={{ member.project_id }}" data-open-viewer="{{ member.project_id }}" hx-get="/project/{{ member.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML">{{ member.name }}</a> <span class="text-secondary">({{ member.event }})</span>{% if loop.revindex > 2 %}, {% elif loop.revindex == 2 %} and {% endif %}{% endfor %} each won a Hedera prize, at {{ one.events }} events. They share a repository or a Hedera ID.</li>
+        {% endfor %}
+        {% if insights.top_themes %}
+          <li><b>Categories with the most Hedera prizes.</b> {% for theme, share in insights.top_themes %}{{ theme }}: {{ share.part }} of {{ share.whole }} projects{% if share.percent is not none %} ({{ share.percent }}%){% endif %}{{ "; " if not loop.last else "." }}{% endfor %} Counted among the {{ "{:,}".format(insights.with_theme) }} projects with a category.</li>
+        {% endif %}
+        {% if insights.worked_on_won %}
+          {% set won = insights.worked_on_won %}{% set other = insights.worked_on_other %}
+          <li><b>Still worked on after the event.</b> {{ won.part }} of {{ won.whole }} Hedera prize winners ({{ won.percent }}%), and {{ other.part }} of {{ other.whole }} projects without a Hedera prize ({{ other.percent }}%), among the projects whose activity is known 90 days after their event.</li>
+        {% endif %}
+        </ul>
+      </div>
+    </section>
+    {% endif %}
+  </section>
+
+  <section class="hm-tabpanel" id="panel-events" role="tabpanel" aria-labelledby="tab-events">
+    <div class="hm-charts">
+      {{ parts.chart(charts.chart("themes")) }}
+      {{ parts.chart(charts.chart("events")) }}
+    </div>
+    <section class="card hm-chart hm-wide" aria-labelledby="chart-event-table">
+      <div class="card-body">
+        <h3 class="hm-chart-title" id="chart-event-table">Projects and Hedera prizes by event{{ parts.info("event", "an event") }}</h3>
+        <p class="hm-chart-note">Each name links to the event's page. For the older ETHGlobal events, the showcase lists almost only prize winners, so these counts are not a share of all the teams there.</p>
+        <div class="table-responsive" tabindex="0" role="region" aria-label="The table of the events, which scrolls sideways">
+          <table class="table table-vcenter card-table">
+            <thead><tr><th scope="col">Event</th><th scope="col">Year</th><th scope="col">Projects</th><th scope="col">With a Hedera prize</th></tr></thead>
+            <tbody>
+            {% for row in charts.events %}
+              <tr><td>{% if row.link %}<a href="{{ row.link }}" target="_blank" rel="noopener">{{ row.name }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ row.name }}{% endif %}</td><td>{{ row.year }}</td><td>{{ row.projects }}</td><td>{{ row.winners }}</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </section>
+</div>
 {% endif %}

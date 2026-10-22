@@ -152,26 +152,91 @@
     window.Chart.defaults.color = style.color;
     window.Chart.defaults.font.family = style.fontFamily;
     (root || document).querySelectorAll("canvas[data-chart]").forEach(function (canvas) {
-      if (canvas.dataset.drawn) return;
+      // A chart on a hidden tab has no size yet: it is drawn when its tab is shown.
+      if (canvas.dataset.drawn || canvas.closest("[hidden]")) return;
       canvas.dataset.drawn = "1";
       var numbers = JSON.parse(canvas.getAttribute("data-chart"));
+      var colours = { all: all, won: won };
+      // A comparison gives its own series of shares; the other charts give two counts.
+      var series = numbers.series || [
+        { label: "Projects", data: numbers.all, color: "all" },
+        { label: "With a Hedera prize", data: numbers.won, color: "won" }
+      ];
+      var unit = numbers.unit || "";
       new window.Chart(canvas, {
         type: "bar",
         data: {
           labels: numbers.labels,
-          datasets: [
-            { label: "Projects", data: numbers.all, backgroundColor: all, borderRadius: 3, barPercentage: 0.9 },
-            { label: "With a Hedera prize", data: numbers.won, backgroundColor: won, borderRadius: 3, barPercentage: 0.9 }
-          ]
+          datasets: series.map(function (one) {
+            return { label: one.label, data: one.data, backgroundColor: colours[one.color] || all, borderRadius: 3, barPercentage: 0.9 };
+          })
         },
         options: {
           indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false,
-          plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } },
-          scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { ticks: { autoSkip: false, callback: function (value) { return lines(this.getLabelForValue(value)); } } } }
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 12 } },
+            tooltip: { callbacks: { label: function (item) { return item.dataset.label + ": " + item.formattedValue + unit; } } }
+          },
+          scales: {
+            x: unit ? { beginAtZero: true, max: 100, ticks: { callback: function (value) { return value + unit; } } }
+                    : { beginAtZero: true, ticks: { precision: 0 } },
+            y: { ticks: { autoSkip: false, callback: function (value) { return lines(this.getLabelForValue(value)); } } }
+          }
         }
       });
     });
   }
+
+  // ---------------------------------------------------------------- the tabs of the insights
+  // Without this file the four parts show one under the other. With it, one part shows at a
+  // time, the arrow keys move between the tabs, and the tab chosen stays for the visit.
+  function showTab(tabs, key, focus) {
+    var shown = null;
+    tabs.querySelectorAll("[role=tab]").forEach(function (tab) {
+      var on = tab.getAttribute("data-tab") === key;
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+      tab.classList.toggle("active", on);
+      tab.tabIndex = on ? 0 : -1;
+      if (on && focus) tab.focus();
+      var panel = $(tab.getAttribute("aria-controls"));
+      if (panel) panel.hidden = !on;
+      if (on) shown = panel;
+    });
+    if (shown) drawCharts(shown);
+    var session = store("sessionStorage");
+    if (session) session.setItem("hm-tab", key);
+  }
+  function setUpTabs(root) {
+    (root || document).querySelectorAll("[data-tabs]").forEach(function (tabs) {
+      if (tabs.dataset.ready) return;
+      tabs.dataset.ready = "1";
+      var list = tabs.querySelector("[role=tablist]");
+      if (list) list.hidden = false;
+      var keys = Array.prototype.map.call(tabs.querySelectorAll("[role=tab]"), function (tab) {
+        return tab.getAttribute("data-tab");
+      });
+      var session = store("sessionStorage");
+      var kept = session && session.getItem("hm-tab");
+      showTab(tabs, keys.indexOf(kept) >= 0 ? kept : keys[0], false);
+    });
+  }
+  document.addEventListener("click", function (event) {
+    var tab = event.target.closest("[data-tabs] [role=tab]");
+    if (tab) showTab(tab.closest("[data-tabs]"), tab.getAttribute("data-tab"), false);
+  });
+  document.addEventListener("keydown", function (event) {
+    var tab = event.target.closest && event.target.closest("[data-tabs] [role=tab]");
+    if (!tab) return;
+    var all = Array.prototype.slice.call(tab.closest("[role=tablist]").querySelectorAll("[role=tab]"));
+    var at = all.indexOf(tab), next = null;
+    if (event.key === "ArrowRight") next = all[(at + 1) % all.length];
+    else if (event.key === "ArrowLeft") next = all[(at + all.length - 1) % all.length];
+    else if (event.key === "Home") next = all[0];
+    else if (event.key === "End") next = all[all.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    showTab(tab.closest("[data-tabs]"), next.getAttribute("data-tab"), true);
+  });
 
   // ---------------------------------------------------------------- the (i) and its text
   var home = null; // where the texts live when no window is open
@@ -516,6 +581,7 @@
   document.addEventListener("htmx:afterSettle", function (event) {
     var target = event.detail.target;
     if (!target) return;
+    setUpTabs(document);
     drawCharts(document); // an outerHTML swap leaves the old element in the event
     if (target.id !== "workspace" && target.id !== "main") return;
     showCount();
@@ -525,7 +591,11 @@
     }
     bringResults = false;
   });
-  document.addEventListener("htmx:historyRestore", function () { drawCharts(document); showCount(); });
+  document.addEventListener("htmx:historyRestore", function () {
+    setUpTabs(document);
+    drawCharts(document);
+    showCount();
+  });
   document.addEventListener("htmx:afterRequest", function (event) {
     var elt = event.detail.elt;
     if (elt && (elt.id === "ai-button" || elt.hasAttribute("data-asks-gemini")) && !event.detail.successful) {
@@ -539,6 +609,7 @@
     var themes = document.querySelector("[data-theme-switch]");
     if (themes) themes.hidden = false; // it needs this script, so it is hidden without it
     showCount();
+    setUpTabs(document);
     drawCharts(document);
     remember(window.location.href);
     var dialog = viewer();

@@ -4,8 +4,11 @@ The charts of the website count the projects of the list on the screen, a search
 collection, and the overview job counts each event (evals/overview.py); both count here, in the
 same way. Only facts read by programs are counted (design rule 2): the prize and the kind of entry
 from the pages, the result of the proof rule, the life of the project, the kinds of Hedera ID
-that the ledger confirms, and the category of a card, which is a reading with evidence. Nothing
-ranks or predicts.
+that the ledger confirms, what the reading of the code found, and the category of a card, which
+is a reading with evidence. Nothing ranks or predicts.
+
+What the code shows is counted among the projects whose code was read, and nowhere else: a
+project with no repository, or one that could not be read, is not a project that uses nothing.
 """
 
 from __future__ import annotations
@@ -38,6 +41,12 @@ class Tally:
     themes_won: Counter = field(default_factory=Counter)
     events: Counter = field(default_factory=Counter)  # projects of each event, by its number
     events_won: Counter = field(default_factory=Counter)
+    code_read: int = 0  # the projects whose code was read
+    code_read_won: int = 0
+    code_services: Counter = field(default_factory=Counter)  # projects whose code calls each one
+    code_services_won: Counter = field(default_factory=Counter)
+    code_packages: Counter = field(default_factory=Counter)  # projects whose code names each one
+    code_packages_won: Counter = field(default_factory=Counter)
 
 
 def tally(rows: Iterable[Facts]) -> Tally:
@@ -63,4 +72,12 @@ def tally(rows: Iterable[Facts]) -> Tally:
             found.services_won.update(row.kinds)
             if row.category:
                 found.themes_won[row.category] += 1
+        if row.code_read:
+            found.code_read += 1
+            found.code_services.update(row.code_services)
+            found.code_packages.update(row.code_packages)
+            if won:
+                found.code_read_won += 1
+                found.code_services_won.update(row.code_services)
+                found.code_packages_won.update(row.code_packages)
     return found

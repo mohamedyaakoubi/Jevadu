@@ -30,6 +30,23 @@ def test_the_tally_counts_all_projects_and_those_with_a_hedera_prize() -> None:
     assert found.events_won == {"7": 1, "8": 1, "9": 0}
 
 
+def test_what_the_code_shows_is_counted_among_the_projects_whose_code_was_read() -> None:
+    rows = [
+        Facts(1, "7", "Event A", "2026", "", "proof_found", "active", prize="hedera_prize",
+              code_read=True, code_services=("Token Service",),
+              code_packages=("@hashgraph/sdk",)),
+        Facts(2, "7", "Event A", "2026", "", "no_id_given", "stopped", code_read=True,
+              code_services=("Token Service", "Consensus Service (topics)")),
+        Facts(3, "7", "Event A", "2026", "", "no_id_given", "stopped", code_read=True),
+        Facts(4, "7", "Event A", "2026", "", "no_id_given", "unknown"),  # no code to read
+    ]  # fmt: skip
+    found = tally(rows)
+    assert (found.code_read, found.code_read_won) == (3, 1)
+    assert found.code_services == {"Token Service": 2, "Consensus Service (topics)": 1}
+    assert found.code_services_won == {"Token Service": 1}
+    assert found.code_packages == {"@hashgraph/sdk": 1} == found.code_packages_won
+
+
 def test_an_empty_list_counts_nothing() -> None:
     found = tally([])
     assert (found.projects, found.winners) == (0, 0) and not found.events

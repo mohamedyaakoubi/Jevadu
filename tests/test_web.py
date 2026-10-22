@@ -1022,6 +1022,45 @@ def test_a_share_is_shown_only_with_twenty_projects_behind_it() -> None:
     assert '"labels": ["Proof found", "No ID given"]' in chart.data()
 
 
+def test_what_winners_use_is_compared_only_with_twenty_projects_on_each_side() -> None:
+    """Two shares of the projects whose code was read: with a Hedera prize, and without."""
+    from collections import Counter
+
+    from hackathon_memory.search.counts import Tally
+    from hackathon_memory.web.charts import build
+
+    def compared(won: int, read: int) -> object:
+        services = Counter({"Token Service": 30, "File Service": 6})
+        services_won = Counter({"Token Service": 10, "File Service": 4})
+        found = Tally(projects=read, code_read=read, code_read_won=won, code_services=services,
+                      code_services_won=services_won)  # fmt: skip
+        return build(found, {}).winners_use
+
+    too_few = compared(won=19, read=100)
+    assert too_few.pairs == () and "each side needs 20" in too_few.note
+    both = compared(won=20, read=100)
+    assert [(p.words, p.won_share, p.other_share) for p in both.pairs] == [
+        ("Token Service", 50, 25), ("File Service", 20, 2)]  # fmt: skip
+    assert "not why they won" in both.note and '"unit": "%"' in both.data()
+
+
+def test_the_insights_come_in_four_tabs(site) -> None:  # noqa: ANN001
+    """Without the page's script, the tab bar stays hidden and the four parts show one under
+    the other; each part holds its own blocks."""
+    client, _, _, _ = site
+    page = client.get("/", params={"view": "charts"}).text
+    assert '<div class="nav nav-tabs hm-tablist" role="tablist"' in page and "hidden>" in page
+    parts = page.split('<section class="hm-tabpanel" id="panel-')[1:]
+    panels = {part.split('"', 1)[0]: part for part in parts}
+    assert list(panels) == ["overview", "services", "winners", "events"]
+    assert 'id="chart-proof"' in panels["overview"] and 'id="chart-life"' in panels["overview"]
+    assert 'id="chart-code_services"' in panels["services"]
+    assert 'id="chart-code_packages"' in panels["services"]
+    assert 'id="chart-services"' in panels["services"]
+    assert 'id="chart-winners_use"' in panels["winners"]
+    assert 'id="chart-event-table"' in panels["events"] and 'id="chart-themes"' in panels["events"]
+
+
 # ------------------------------------------------- smaller parts
 
 
@@ -1220,6 +1259,31 @@ def test_the_theme_switch_holds_its_choice_and_redraws_the_charts(site, chromium
     page.locator("label[for='theme-auto']").click()
     assert page.evaluate(theme) == "light"  # the computer's
     assert page.evaluate("localStorage.getItem('hm-theme')") is None
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_the_tabs_of_the_insights_show_one_part_at_a_time(site, chromium) -> None:  # noqa: ANN001
+    """One part shows at a time, the arrow keys move between the tabs, a chart is drawn when its
+    tab is shown, and the tab chosen stays for the visit."""
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1440, "height": 900},
+                  reduced_motion="reduce")  # fmt: skip
+    page.goto("http://site.test/?view=charts")
+    page.wait_for_selector("#tab-overview[aria-selected='true']")
+    assert page.locator("#panel-overview").is_visible()
+    assert page.locator("#panel-events").is_hidden()
+    page.locator("#tab-events").click()
+    assert page.locator("#panel-events").is_visible()
+    assert page.locator("#panel-overview").is_hidden()
+    drawn = "Chart.getChart(document.querySelector('#panel-events canvas[data-chart]'))"
+    page.wait_for_function(f"{drawn} && {drawn}.width > 0")
+    page.keyboard.press("ArrowLeft")
+    assert page.evaluate("document.activeElement.id") == "tab-winners"
+    assert page.locator("#panel-winners").is_visible() and page.locator("#panel-events").is_hidden()
+    page.reload()
+    page.wait_for_selector("#tab-winners[aria-selected='true']")
+    assert page.locator("#panel-winners").is_visible()
     page.context.close()
 
 

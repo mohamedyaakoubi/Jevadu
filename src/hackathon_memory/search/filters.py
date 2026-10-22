@@ -24,7 +24,8 @@ from hackathon_memory.read.quotes import KEPT
 from hackathon_memory.search import listing, seen
 
 NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
-KINDS = ("account", "topic", "token", "contract")  # the kinds of Hedera ID that the charts count
+# The kinds of Hedera ID that the charts count.
+KINDS = ("account", "topic", "token", "contract", "schedule")
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
 PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
 PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
@@ -47,9 +48,10 @@ class Filters:
 
 @dataclass(frozen=True)
 class Facts:
-    """The five facts of one project that the filters look at, and three more that the charts
-    count: its prize, its kind of entry, and the kinds of its Hedera IDs that the ledger
-    confirms."""
+    """The five facts of one project that the filters look at, and more that the charts count:
+    its prize, its kind of entry, the kinds of its Hedera IDs that the ledger confirms, and what
+    the reading of its code found (design 7.3): the Hedera services it calls and the Hedera
+    packages it names."""
 
     project_id: int
     event: str
@@ -61,6 +63,9 @@ class Facts:
     prize: str = "no_prize"
     entry_kind: str = "full_card"
     kinds: tuple[str, ...] = ()
+    code_read: bool = False  # the code of its repository was read, whole or in part
+    code_services: tuple[str, ...] = ()
+    code_packages: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -89,7 +94,8 @@ class Choices:
 def facts(conninfo: str, *, model: str, version: str, now: datetime | None = None) -> list[Facts]:
     """The facts of every project. The category is the one kept on the project's card of
     this model and these instructions; a project without such a card has none. The kinds are
-    those of its IDs that the ledger found as the kind the project gave (search/seen.py)."""
+    those of its IDs that the ledger found as the kind the project gave (search/seen.py). The
+    services and the packages are those that the reading of its code found."""
     now = now or datetime.now(UTC)
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
@@ -99,22 +105,29 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
             "(SELECT coalesce(array_agg(DISTINCT f.kind ORDER BY f.kind), '{}') "
             " FROM hedera_ids h JOIN id_checks ic ON ic.hedera_id = h.id AND ic.status = ANY(%s) "
             " JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = ic.network "
-            " WHERE h.project_id = p.id AND f.kind = ANY(%s)) "
+            " WHERE h.project_id = p.id AND f.kind = ANY(%s)), "
+            "coalesce(r.archive_status IN ('read', 'partial'), false), "
+            "(SELECT coalesce(array_agg(hc.name ORDER BY hc.name), '{}') FROM hedera_in_code hc "
+            " WHERE hc.repository_id = r.id AND hc.kind = 'feature'), "
+            "(SELECT coalesce(array_agg(hc.name ORDER BY hc.name), '{}') FROM hedera_in_code hc "
+            " WHERE hc.repository_id = r.id AND hc.kind = 'package') "
             "FROM projects p JOIN events e ON e.id = p.event_id "
+            "LEFT JOIN repositories r ON r.id = p.repository_id "
             "LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
             "AND c.instructions_version = %s ORDER BY p.id",
             (list(seen.CONFIRMED), list(KINDS), model, version),
         ).fetchall()
         signs = listing.signs_of_life(conn, [row[0] for row in rows])
     found = []
-    for project_id, event_id, event_name, year, proof, category, prize, entry, kinds in rows:
+    for (project_id, event_id, event_name, year, proof, category, prize, entry, kinds, code_read,
+         services, packages) in rows:  # fmt: skip
         end, _, _, last_push, last_activity = signs[project_id]
         life = life_of(event_end=end, last_push=last_push, last_ledger_activity=last_activity,
                        now=now)  # fmt: skip
         kept = category and category.get("state") == KEPT and category.get("value")
         found.append(Facts(project_id, str(event_id), event_name, str(year) if year else "",
                            kept or "", proof or NOT_CHECKED, life.status, prize, entry,
-                           tuple(kinds)))  # fmt: skip
+                           tuple(kinds), code_read, tuple(services), tuple(packages)))  # fmt: skip
     return found
 
 

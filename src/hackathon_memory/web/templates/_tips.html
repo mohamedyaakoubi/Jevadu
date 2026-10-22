@@ -48,6 +48,21 @@
 
 {% call tip("charts", "Insights and charts") %}
 <p>Counts for the projects of the current list: the closest to your idea, or the whole collection with your filters. Computed live from the database, never by AI. A percentage appears only when at least 20 projects stand behind it.</p>
+<p>Four tabs: <b>Overview</b> (proof, activity, linked projects), <b>Hedera services</b> (what the code and the ledger show), <b>Winners</b> (what projects with a Hedera prize use, next to the others) and <b>Events</b>.</p>
+{% endcall %}
+
+{% call tip("code-services", "Hedera services in the code") %}
+<p>The projects whose code calls each Hedera service, found in the reading of their code by the class names of Hedera's SDKs{{ parts.ref("sdk") }}, such as TopicCreateTransaction for the Consensus Service{{ parts.ref("topic") }}. No AI.</p>
+<p>Only the projects whose code was read are counted: a project with no repository is not a project that uses nothing. A project can count in several rows.</p>
+{% endcall %}
+
+{% call tip("code-packages", "Hedera SDKs and libraries in the code") %}
+<p>The Hedera packages that the package files of the code name: the SDKs{{ parts.ref("sdk") }}, such as @hashgraph/sdk and @hiero-ledger/sdk, and other libraries, such as the Hedera Agent Kit or WalletConnect for Hedera. The ten named most often, among the projects whose code was read.</p>
+{% endcall %}
+
+{% call tip("winners-use", "What winners use, next to the others") %}
+<p>For each Hedera service, the share of the projects with a Hedera prize whose code calls it, next to the same share for the projects without one. Both groups count only the projects whose code was read, and each needs at least 20.</p>
+<p>This puts facts side by side. It shows what winners used, not why they won, and it says nothing about a single project.</p>
 {% endcall %}
 
 {% call tip("order", "Order") %}

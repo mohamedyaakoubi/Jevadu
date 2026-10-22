@@ -142,3 +142,18 @@
   </div>
 </section>
 {%- endmacro %}
+
+{# Two shares side by side (web/charts.py, Comparison): bars appear only when each group holds
+   20 projects; otherwise the note says why. #}
+{% macro comparison(one) -%}
+<section class="card hm-chart" aria-labelledby="chart-{{ one.key }}">
+  <div class="card-body">
+    <h3 class="hm-chart-title" id="chart-{{ one.key }}">{{ one.title }}{% if one.tip %}{{ info(one.tip, one.title | lower) }}{% endif %}</h3>
+    <p class="hm-chart-note">{{ one.note }}</p>
+    {% if one.pairs %}
+    <div class="hm-chart-canvas" style="height: {{ 44 + 34 * (one.pairs | length) }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
+    <ul class="visually-hidden">{% for pair in one.pairs %}<li>{{ pair.words }}: {{ pair.won }} of {{ pair.won_of }} with a Hedera prize ({{ pair.won_share }}%), {{ pair.other }} of {{ pair.other_of }} without ({{ pair.other_share }}%)</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+</section>
+{%- endmacro %}
