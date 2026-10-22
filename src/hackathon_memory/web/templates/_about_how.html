@@ -17,9 +17,9 @@
   </ol>
 
   <h3 id="modes">Search modes compared</h3>
-  <p>Each mode ran on the cases of Test 2: pairs of past projects with the same idea, and ideas written by a person for a known project. A good mode puts the known project in its top 10.</p>
+  <p>Each mode ran on the cases of Test 2, where the right answer was known beforehand: {% if test2 %}{{ test2.numbers.pairs.known }} pairs of past projects with the same idea, and {{ test2.numbers.ideas.known }} ideas written by a person for a project they had in mind{% else %}pairs of past projects with the same idea, and ideas written by a person for a known project{% endif %}. For each case the tool searched, and the test looked whether the known project came back in the first 10 results. {% if modes and modes[0].known %}“{{ modes[0].found }} of {{ modes[0].known }}” means that it did in {{ modes[0].found }} of the {{ modes[0].known }} cases. {% endif %}The range shows how far that share could move with other test cases of the same kind.</p>
   <div class="table-wrap" tabindex="0" role="region" aria-label="The table of the search modes, which scrolls sideways"><table>
-    <thead><tr><th scope="col">Mode</th><th scope="col">Known projects in the top 10</th><th scope="col">Time per search</th><th scope="col">Cost per search</th></tr></thead>
+    <thead><tr><th scope="col">Mode</th><th scope="col">Known project in the first 10 results</th><th scope="col">Time per search</th><th scope="col">Cost per search</th></tr></thead>
     <tbody>
     {% for mode in modes %}
       <tr><td><b>{{ mode.label }}</b><br><span class="where">{{ mode.words }}{% if mode.why_not %} {{ mode.why_not }}{% endif %}</span></td>
