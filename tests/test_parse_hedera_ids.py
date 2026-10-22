@@ -72,6 +72,28 @@ def test_a_number_whose_digits_count_up_or_down_is_an_example(text: str) -> None
     assert find_ids(text) == []
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The local node gave us the accounts 0.0.1002, 0.0.1003 and 0.0.1031.",
+        "Our script asks the local node about 0.0.1012.",
+        "The local network wrote the transfer 0.0.1004@1700000000.5.",
+        "https://hashscan.io/testnet/account/0.0.1022",
+    ],
+)
+def test_the_default_accounts_of_a_local_network_are_not_ids(text: str) -> None:
+    """A local Hedera network gives its default accounts the numbers 0.0.1002 to 0.0.1031
+    (hiero-local-node's README, read on 22 October 2026)."""
+    assert find_ids(text) == []
+
+
+def test_the_numbers_next_to_the_local_default_accounts_are_ids() -> None:
+    assert ids("The account 0.0.1001, and the topic 0.0.1032.") == [
+        ("0.0.1001", None, ACCOUNT),
+        ("0.0.1032", None, TOPIC),
+    ]
+
+
 def test_a_number_that_counts_only_in_part_is_an_id() -> None:
     assert ids("The token 0.0.1235 and the topic 0.0.123451.") == [
         ("0.0.1235", None, TOKEN),

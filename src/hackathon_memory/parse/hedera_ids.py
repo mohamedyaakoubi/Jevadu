@@ -1,6 +1,6 @@
 """Find Hedera ids in a text, with the words around each one (design 6.1 and 7.1).
 
-An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for four reasons.
+An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for five reasons.
 
 * A version number has the same shape ("0.0.3", "v0.0.12"). The numbers up to 1000 belong to the
   network itself, so no project owns one of them. Such a number is never given as an id.
@@ -9,6 +9,11 @@ An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for four re
   collection, every such number is an example (read on 22 October 2026), and some of them are
   real things of somebody else on the ledger, which the check took for proof. Such a number is
   not given as an id either.
+* A local Hedera network, which a team runs on its own computer, gives its default accounts the
+  numbers 0.0.1002 to 0.0.1031. On the public networks these numbers were given out long before
+  any event (in 2019 on mainnet, on the day testnet was last emptied), so a text that names one
+  speaks of a local network, which the ledger does not know. Such a number is not given as an
+  id, and neither is a transaction that it paid.
 * The same number is a different thing on each network, so an id is kept with its network. A
   link to HashScan names the network exactly. Words do it less surely, and a wrong network is
   worse than none: the ledger would be asked about another thing. So the network is taken from
@@ -46,6 +51,10 @@ TRANSACTION = "transaction"
 FIRST_USER_NUMBER = 1001
 # A number that counts (1234, 54321) is an example from four digits on.
 _SHORTEST_COUNT = 4
+# The default accounts of a local Hedera network: "Default is 10 per type", 0.0.1002 to 0.0.1011
+# (ECDSA), 0.0.1012 to 0.0.1021 (ECDSA with an alias) and 0.0.1022 to 0.0.1031 (ED25519).
+# Source: the README of hiero-ledger/hiero-local-node, read on 22 October 2026.
+LOCAL_DEFAULT_ACCOUNTS = range(1002, 1032)
 
 # How far from an id the name of a network is looked for, in characters: on its own line, and
 # in the text before that line.
@@ -132,8 +141,11 @@ def transaction_id(match: re.Match[str]) -> str | None:
 
 def _of_a_project(number: str) -> bool:
     """Whether the number after "0.0." can name a thing of a project. The numbers below 1001
-    belong to the network itself, and a number whose digits count is an example."""
-    return int(number) >= FIRST_USER_NUMBER and not _counts(number)
+    belong to the network itself, a default account of a local network is not on the ledger,
+    and a number whose digits count is an example."""
+    value = int(number)
+    local = value in LOCAL_DEFAULT_ACCOUNTS
+    return value >= FIRST_USER_NUMBER and not local and not _counts(number)
 
 
 def _counts(digits: str) -> bool:
