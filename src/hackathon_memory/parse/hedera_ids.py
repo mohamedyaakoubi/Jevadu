@@ -19,10 +19,11 @@ An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for five re
   worse than none: the ledger would be asked about another thing. So the network is taken from
   words only when the words near the id name one network and no other. When they name none, or
   two, the network stays open and both are asked later.
-* The words near an id often say what it is: an account, a token, a topic, a contract or a
-  schedule (a scheduled transaction, which HashScan shows at /schedule/). The word just before the
-  id on its line counts ("Topic ID: 0.0.12345"). If there is none, the word just after it counts
-  ("0.0.12345 (topic)"). A word on the far side of another id does not.
+* The words near an id often say what it is: an account, a token, a topic or a contract. The
+  word just before the id on its line counts ("Topic ID: 0.0.12345"). If there is none, the word
+  just after it counts ("0.0.12345 (topic)"). A word on the far side of another id does not. A
+  schedule (a scheduled transaction, which HashScan shows at /schedule/) is named only by a link
+  or by "schedule" right before the id: the word has other meanings, such as a fee schedule.
 
 An address of the EVM kind (0x and 40 letters) is kept only when a HashScan link names it. The
 same address can live on any other chain, so a bare one is not taken for Hedera.
@@ -77,10 +78,15 @@ _KIND_WORDS = {
     TOKEN: r"(?<![a-z])(?:token|nfts?(?![a-z])|hts(?![a-z]))",
     TOPIC: r"(?<![a-z])(?:topic|hcs(?![a-z]))",
     CONTRACT: r"(?<![a-z])contract",
-    SCHEDULE: r"(?<![a-z])schedule",
 }
 _KIND = re.compile(
     "|".join(f"(?P<{kind}>{words})" for kind, words in _KIND_WORDS.items()), re.IGNORECASE
+)
+# "Schedule" names the kind only right before the id ("schedule `0.0.123`", "Schedule ID: 0.0.123"),
+# and never as a fee schedule. Measured on the collection on 22 October 2026: a "schedule" a few
+# words away named a token's fee schedule once, and a schedule that an account signs once.
+_SCHEDULE_RIGHT_BEFORE = re.compile(
+    r"(?<![a-z])(?<!fee[ _-])schedule(?:[ _-]?id)?[\s:=`'\"(\[|]*\Z", re.IGNORECASE
 )
 # A link to HashScan: the network, what the thing is, and its id or address.
 _HASHSCAN = re.compile(
@@ -231,11 +237,14 @@ def _said_network(text: str, start: int, end: int) -> str | None:
 
 
 def _said_kind(text: str, start: int, end: int, others: list[tuple[int, int]]) -> str | None:
-    """What the word next to the id says it is: the last word before it on its line, or else the
-    first word after it. A word that another id separates from this id is not counted."""
+    """What the word next to the id says it is: "schedule" right before it, or else the last word
+    before it on its line, or else the first word after it. A word that another id separates from
+    this id is not counted."""
     line_start, line_end = _line(text, start, end)
     last_id_before = max((right for _, right in others if right <= start), default=0)
     left = max(line_start, start - _KIND_REACH, last_id_before)
+    if _SCHEDULE_RIGHT_BEFORE.search(text, left, start):
+        return SCHEDULE
     before = list(_KIND.finditer(text, left, start))
     if before:
         return before[-1].lastgroup

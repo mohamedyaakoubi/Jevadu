@@ -192,6 +192,20 @@ def test_the_word_next_to_an_id_says_what_it_is(text: str, kind: str | None) -> 
     assert ids(text) == [("0.0.2345671", None, kind)]
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Our coin is new.\n(0.0.2345671) has a fee schedule on each payment.",
+        "A wallet signs the schedule with 0.0.2345671.",
+        "The fee schedule 0.0.2345671 is set.",
+    ],
+)
+def test_schedule_names_the_kind_only_right_before_the_id(text: str) -> None:
+    """A fee schedule, and a schedule that an account signs, are not scheduled transactions
+    (seen on 22 October 2026)."""
+    assert ids(text)[0][2] != SCHEDULE
+
+
 def test_the_word_before_an_id_counts_and_not_the_word_before_the_next_id() -> None:
     assert ids("Token ID: 0.0.1111111, Topic ID: 0.0.2222222, account 0.0.3333333") == [
         ("0.0.1111111", None, TOKEN),

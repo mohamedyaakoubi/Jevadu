@@ -54,7 +54,7 @@ from hackathon_memory.parse.project import (
 )
 
 # Stored with every parsed page. A change of this word means: read every saved page again.
-PARSER_VERSION = "ethglobal-page-12"  # examples, local accounts and schedules (22 October 2026)
+PARSER_VERSION = "ethglobal-page-13"  # "schedule" only right before an id (22 October 2026)
 
 DESCRIPTION = "description"
 HOW_ITS_MADE = "how_its_made"

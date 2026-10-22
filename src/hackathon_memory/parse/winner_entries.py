@@ -38,7 +38,7 @@ from hackathon_memory.parse.project import (
     Section,
 )
 
-PARSER_VERSION = "winner-entries-3"  # examples, local accounts and schedules (22 October 2026)
+PARSER_VERSION = "winner-entries-4"  # "schedule" only right before an id (22 October 2026)
 SUFFIX = ".entries.json"
 AS_PUBLISHED = "as_published"  # the kind of the one text of a winner entry
 _REQUIRED = ("name", "event", "source_url", "description_as_published")
