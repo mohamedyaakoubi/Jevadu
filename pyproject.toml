@@ -9,7 +9,7 @@ description = "A memory of Hedera hackathon projects, checked against the public
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Mohamed Yaakoubi" }]
 # Versions were read from PyPI on 9 October 2026.
 # hiero-sdk-python is labelled "pre-alpha" by its authors, so it is pinned exactly.

@@ -224,10 +224,22 @@ The line below lets this repository be registered for that event in the tool's o
 
 `jevadu: ACJWI4OF`
 
-## Licence
+## Licence and credits
 
 Copyright 2026 Mohamed Yaakoubi.
 
-The code and the documents of this repository are under the Apache License, Version 2.0. The full text is in [`LICENSE`](LICENSE).
+The code and the documents of this repository are under the Apache License, Version 2.0, with its text unchanged. The full text is in [`LICENSE`](LICENSE), and the credit that travels with the code is in [`NOTICE`](NOTICE).
+
+**If you copy or change Jevadu and share it,** the licence asks four things (its section 4): give a copy of the licence, mark the files that you changed, keep the copyright notices, and keep the credit of `NOTICE` in your copy. The licence gives no right to use the name Jevadu for another product (its section 6), so a changed copy should take a name of its own; it may say that it is based on Jevadu.
+
+**Please credit the work you build on,** as Jevadu credits the work below. A line such as "Based on Jevadu by Mohamed Yaakoubi", with a link to this repository, is enough. GitHub's button "Cite this repository" gives a citation, from [`CITATION.cff`](CITATION.cff).
+
+**Jevadu is built on the work of others:**
+
+- htmx (0BSD), Tabler (MIT, built on Bootstrap, MIT), Chart.js (MIT), and the fonts IBM Plex Sans and Atkinson Hyperlegible Mono (SIL Open Font License 1.1). Their files and their licences are in `src/hackathon_memory/web/static/vendor/`.
+- axe-core (MPL 2.0), which the tests use to check the pages for accessibility. Its file and its licence are in `tests/assets/`.
+- The Python libraries named in `pyproject.toml`, each under its own licence, among them the Hiero SDK for Python.
+- Hedera's public mirror node and HashScan, for every fact of the ledger, and Google's Gemini models, for the cards and the search.
+- The projects themselves. Their pages and their code belong to their teams, and every card links to the page it comes from. Where the data comes from is said at the top of this README.
 
 The licence does not cover the pages of other people's projects that the tool reads. Those belong to their authors, and they are not stored in this repository.
