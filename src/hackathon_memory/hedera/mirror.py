@@ -15,6 +15,9 @@ the answers were read from the real test network, on 9 October 2026 and again on
 * token:         {"token_id", "type": "FUNGIBLE_COMMON" | "NON_FUNGIBLE_UNIQUE", "total_supply",
                   "created_timestamp", "modified_timestamp", "deleted", "name", "symbol", ...}
 * contract:      {"contract_id", "created_timestamp", "deleted", "evm_address", "bytecode", ...}
+* schedule:      {"schedule_id", "consensus_timestamp" (made), "executed_timestamp" (null until
+                  it runs), "creator_account_id", "payer_account_id", "deleted", ...}. Read on
+                  22 October 2026.
 
 A time is a text of seconds and nanoseconds: "1791566671.807617381".
 
@@ -194,6 +197,10 @@ class MirrorNode:
     def contract(self, contract: str) -> dict | None:
         """A contract, by its id or by its EVM address."""
         return self._get(f"/contracts/{self._entity_or_address(contract)}")
+
+    def schedule(self, schedule_id: str) -> dict | None:
+        """A scheduled transaction: a transaction that runs later, once enough keys signed it."""
+        return self._get(f"/schedules/{self._entity(schedule_id)}")
 
     def transaction(self, transaction_id: str) -> dict | None:
         """One transaction, by its ID "0.0.12345-1700000000-123456789": the list "transactions",

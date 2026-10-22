@@ -736,6 +736,31 @@ def test_a_transaction_named_on_a_page_is_shown_as_one_action(site) -> None:  # 
     assert f'href="https://hashscan.io/testnet/transaction/{tx}"' in part.text
 
 
+def test_a_scheduled_transaction_is_shown_in_plain_words(site) -> None:  # noqa: ANN001
+    """HashScan shows a schedule at /schedule/, and the window names it in words."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    client, _, ids, database = site
+    made, ran = datetime(2026, 3, 7, 12, tzinfo=UTC), datetime(2026, 3, 9, 12, tzinfo=UTC)
+    LedgerStore(database).save_facts(LedgerFacts(
+        "0.0.9743551", "testnet", datetime(2026, 10, 22, tzinfo=UTC), found=True,
+        kind="schedule", ledger_id="0.0.9743551", created_at=made, first_activity_at=made,
+        last_activity_at=ran, details={"executed": True},
+    ))  # fmt: skip
+    pebble = ids["Pebble Pay"]
+    with psycopg.connect(database) as conn:
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, '0.0.9743551', 'testnet', 'schedule', "
+            "'readme', 'invented', true) RETURNING id", (pebble,)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    part = client.get(f"/project/{ids['Pebble Pay']}/panel")
+    assert "Scheduled transaction, created 7 March 2026, last activity 9 March 2026." in part.text
+    assert 'href="https://hashscan.io/testnet/schedule/0.0.9743551"' in part.text
+
+
 def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     """The tool is a memory, not a live view: with no hackathon, the facts are shown with their
     own dates and not judged, and the register asks for one (design 12.1, S3)."""

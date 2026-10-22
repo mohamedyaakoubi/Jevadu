@@ -89,6 +89,15 @@ def test_the_facts_of_an_id_come_back_as_they_were_kept(database: str) -> None:
     assert store.facts("0.0.3456781", "mainnet") is None  # another network, another thing
 
 
+def test_a_scheduled_transaction_is_kept_as_one(database: str) -> None:
+    store = LedgerStore(database)
+    schedule = replace(TOPIC_FACTS, entity_id="0.0.9743551", kind="schedule",
+                       ledger_id="0.0.9743551", activity_count=None, empty=None,
+                       details={"executed": True})  # fmt: skip
+    store.save_facts(schedule)
+    assert store.facts("0.0.9743551", "testnet") == schedule
+
+
 def test_not_found_is_an_answer_that_is_kept_too(database: str) -> None:
     store = LedgerStore(database)
     store.save_facts(NOT_THERE)

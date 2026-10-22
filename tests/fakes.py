@@ -435,6 +435,9 @@ class StandInMirror:
     def account(self, entity: str) -> dict | None:
         return self._one("account", entity)
 
+    def schedule(self, entity: str) -> dict | None:
+        return self._one("schedule", entity)
+
     def transaction(self, entity: str) -> dict | None:
         """The answer of /transactions/{id}: a list, the parent first, or nothing."""
         found = self._one("transaction", entity)

@@ -873,6 +873,7 @@ def create_app(
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
         "ACTION_WORDS": data.ACTION_WORDS,
+        "KIND_WORDS": data.KIND_WORDS,
         "hashscan_topic": hashscan_topic,
         "hackathon_groups": lambda collected: hackathons.groups(
             collected, listed.LISTED, datetime.now(UTC).date()

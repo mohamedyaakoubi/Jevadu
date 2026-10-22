@@ -25,7 +25,14 @@ from hackathon_memory.check.proof import (
     needs_a_look_inside,
     window_of,
 )
-from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC, TRANSACTION
+from hackathon_memory.parse.hedera_ids import (
+    ACCOUNT,
+    CONTRACT,
+    SCHEDULE,
+    TOKEN,
+    TOPIC,
+    TRANSACTION,
+)
 
 START = datetime(2026, 3, 6, 16, 0, tzinfo=UTC)  # the event starts on a Friday afternoon
 END = date(2026, 3, 8)  # and ends on the Sunday
@@ -83,6 +90,10 @@ def test_an_event_with_no_start_or_no_end_has_no_window() -> None:
         (TOPIC, CONTRACT, False),
         (TOKEN, ACCOUNT, False),
         (ACCOUNT, TOPIC, False),
+        (SCHEDULE, SCHEDULE, True),
+        (None, SCHEDULE, True),
+        (ACCOUNT, SCHEDULE, False),
+        (SCHEDULE, ACCOUNT, False),
     ],
 )
 def test_which_kinds_a_word_of_the_page_can_mean(said: str | None, kind: str, fits: bool) -> None:

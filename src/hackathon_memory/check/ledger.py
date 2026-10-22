@@ -18,6 +18,9 @@ What "happened on it" means depends on the kind, because the node shows differen
 * a transaction: the one action itself, its kind (a transfer, the creation of a token, a message
   to a topic) and the moment the network agreed on it. "Empty" means that it failed: the network
   wrote it down, but the action did not happen.
+* a scheduled transaction: when it was made, and when it ran, if it ran. It is asked after the
+  four kinds above, unless the page calls it a schedule (22 October 2026: seven of them, named
+  in HashScan links to /schedule/, were "not found" before).
 
 Of an answer only a few named fields are kept. The code of a contract is big and not needed, and
 a memo, a key or the text of a message is nothing that the check uses.
@@ -30,9 +33,16 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from hackathon_memory.hedera.mirror import MirrorNode, when
-from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC, TRANSACTION
+from hackathon_memory.parse.hedera_ids import (
+    ACCOUNT,
+    CONTRACT,
+    SCHEDULE,
+    TOKEN,
+    TOPIC,
+    TRANSACTION,
+)
 
-KINDS = (TOKEN, TOPIC, CONTRACT, ACCOUNT)  # the order in which the kinds are asked
+KINDS = (TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE)  # the order in which the kinds are asked
 
 
 @dataclass(frozen=True)
@@ -71,7 +81,7 @@ def kinds_to_ask(entity_id: str, said_kind: str | None) -> tuple[str, ...]:
     if entity_id.startswith("0x"):
         return (CONTRACT, ACCOUNT)
     if said_kind == ACCOUNT:
-        return (CONTRACT, ACCOUNT, TOKEN, TOPIC)
+        return (CONTRACT, ACCOUNT, TOKEN, TOPIC, SCHEDULE)
     if said_kind in KINDS:
         return (said_kind, *(kind for kind in KINDS if kind != said_kind))
     return KINDS
@@ -87,7 +97,7 @@ def read_facts(
     """Ask the network of `mirror` about one id. A MirrorError goes on to the caller."""
     asked_at = now()
     readers = {TOKEN: _token, TOPIC: _topic, CONTRACT: _contract, ACCOUNT: _account,
-               TRANSACTION: _transaction}  # fmt: skip
+               TRANSACTION: _transaction, SCHEDULE: _schedule}  # fmt: skip
     for kind in kinds_to_ask(entity_id, said_kind):
         facts = readers[kind](mirror, entity_id)
         if facts is not None:
@@ -196,6 +206,22 @@ def _transaction(mirror: MirrorNode, entity_id: str) -> dict | None:
             for key in ("name", "result", "entity_id")
             if parent.get(key) is not None
         },  # fmt: skip
+    }
+
+
+def _schedule(mirror: MirrorNode, entity_id: str) -> dict | None:
+    schedule = mirror.schedule(entity_id)
+    if schedule is None:
+        return None
+    made = _time(schedule.get("consensus_timestamp"))
+    ran = _time(schedule.get("executed_timestamp"))
+    return {
+        "ledger_id": schedule.get("schedule_id"),
+        "created_at": made,
+        "deleted": schedule.get("deleted") is True,
+        "first_activity_at": made,
+        "last_activity_at": ran or made,
+        "details": {"executed": ran is not None},
     }
 
 

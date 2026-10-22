@@ -59,7 +59,7 @@
             <li class="id-row">
               <p class="id-name">{% if link %}<a class="id" href="{{ link }}" rel="noopener" target="_blank">{{ line.entity_id }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>{% else %}<span class="id">{{ line.entity_id }}</span>{% endif %} <span class="badge bg-secondary-lt">{{ line.network }}</span></p>
               {% if line.kind == "transaction" %}<p>Transaction: {{ ACTION_WORDS.get(line.action, (line.action or "an action") | lower) }}{% if line.created_at %}, {{ line.created_at | day }}{% endif %}{% if line.outcome and line.outcome != "SUCCESS" %}; failed ({{ line.outcome }}){% endif %}.</p>
-              {% else %}<p>{{ (line.kind or "nothing") | capitalize }}{% if line.created_at %}, created {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}.</p>{% endif %}
+              {% else %}<p>{{ KIND_WORDS.get(line.kind, line.kind or "nothing") | capitalize }}{% if line.created_at %}, created {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}.</p>{% endif %}
               <p class="hm-small">{{ STATUS_WORDS.get(line.status, line.status) | capitalize }} &middot; {{ "in the README" if line.found_in == "readme" else "on the page" }} &middot; checked {{ line.asked_at | day if line.asked_at else "not yet" }}</p>
             </li>
           {% endfor %}

@@ -40,7 +40,9 @@ FIELD_TITLES = {
 }
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\n+")
 # HashScan has a page for each of these kinds; a number of another kind, or not found, gets none.
-HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transaction"})
+HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transaction", "schedule"})
+# A kind of ID in the words of a person, where they differ from the name of the kind.
+KIND_WORDS = {"schedule": "scheduled transaction"}
 # The kinds of action of a transaction that the mirror node names, in plain words. Another kind is
 # shown as the node writes it.
 ACTION_WORDS = {

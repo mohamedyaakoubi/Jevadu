@@ -19,9 +19,10 @@ An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for five re
   worse than none: the ledger would be asked about another thing. So the network is taken from
   words only when the words near the id name one network and no other. When they name none, or
   two, the network stays open and both are asked later.
-* The words near an id often say what it is: an account, a token, a topic or a contract. The
-  word just before the id on its line counts ("Topic ID: 0.0.12345"). If there is none, the word
-  just after it counts ("0.0.12345 (topic)"). A word on the far side of another id does not.
+* The words near an id often say what it is: an account, a token, a topic, a contract or a
+  schedule (a scheduled transaction, which HashScan shows at /schedule/). The word just before the
+  id on its line counts ("Topic ID: 0.0.12345"). If there is none, the word just after it counts
+  ("0.0.12345 (topic)"). A word on the far side of another id does not.
 
 An address of the EVM kind (0x and 40 letters) is kept only when a HashScan link names it. The
 same address can live on any other chain, so a bare one is not taken for Hedera.
@@ -48,6 +49,7 @@ from itertools import pairwise
 NETWORKS = ("mainnet", "testnet", "previewnet")
 ACCOUNT, TOKEN, TOPIC, CONTRACT = "account", "token", "topic", "contract"
 TRANSACTION = "transaction"
+SCHEDULE = "schedule"  # a scheduled transaction
 FIRST_USER_NUMBER = 1001
 # A number that counts (1234, 54321) is an example from four digits on.
 _SHORTEST_COUNT = 4
@@ -75,6 +77,7 @@ _KIND_WORDS = {
     TOKEN: r"(?<![a-z])(?:token|nfts?(?![a-z])|hts(?![a-z]))",
     TOPIC: r"(?<![a-z])(?:topic|hcs(?![a-z]))",
     CONTRACT: r"(?<![a-z])contract",
+    SCHEDULE: r"(?<![a-z])schedule",
 }
 _KIND = re.compile(
     "|".join(f"(?P<{kind}>{words})" for kind, words in _KIND_WORDS.items()), re.IGNORECASE
@@ -82,7 +85,7 @@ _KIND = re.compile(
 # A link to HashScan: the network, what the thing is, and its id or address.
 _HASHSCAN = re.compile(
     r"hashscan\.io/(mainnet|testnet|previewnet)/"
-    r"(account|token|topic|contract|transaction|address)/"
+    r"(account|token|topic|contract|transaction|address|schedule)/"
     r"([0-9A-Za-z.@_-]+)",
     re.IGNORECASE,
 )
@@ -101,6 +104,7 @@ _HASHSCAN_KINDS = {
     "contract": CONTRACT,
     "transaction": ACCOUNT,
     "address": None,
+    "schedule": SCHEDULE,
 }
 
 

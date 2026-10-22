@@ -235,6 +235,15 @@ def test_a_token_and_a_contract_are_read_and_an_address_serves_as_an_id() -> Non
     assert mirror.requests_made == len(site.seen) == 5
 
 
+def test_a_scheduled_transaction_is_read() -> None:
+    answer = {"schedule_id": "0.0.7777", "consensus_timestamp": "1785016492.973922171",
+              "executed_timestamp": None, "deleted": False}  # fmt: skip
+    mirror, site, _ = node({f"{BASE}/schedules/0.0.7777": reply(answer)})
+    assert mirror.schedule("0.0.7777")["schedule_id"] == "0.0.7777"
+    assert mirror.schedule("0.0.9") is None
+    assert len(site.seen) == 2
+
+
 def test_an_address_is_not_an_id_of_a_token_or_a_topic() -> None:
     mirror, site, _ = node({})
     for ask in (mirror.token, mirror.topic):

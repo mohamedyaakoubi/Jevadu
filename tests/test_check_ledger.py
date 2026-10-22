@@ -17,7 +17,14 @@ from hackathon_memory.check.ledger import (
     was_used_inside,
 )
 from hackathon_memory.hedera.mirror import MirrorError, when
-from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC, TRANSACTION
+from hackathon_memory.parse.hedera_ids import (
+    ACCOUNT,
+    CONTRACT,
+    SCHEDULE,
+    TOKEN,
+    TOPIC,
+    TRANSACTION,
+)
 
 NOW = datetime(2026, 10, 11, 2, 0, tzinfo=UTC)
 ADDRESS = "0x00000000000000000000000000000000002345ab"
@@ -35,10 +42,12 @@ def facts_of(mirror: StandInMirror, entity: str, said_kind: str | None = None) -
 
 
 def test_the_kind_that_the_page_names_is_asked_first() -> None:
-    assert kinds_to_ask("0.0.2345671", None) == (TOKEN, TOPIC, CONTRACT, ACCOUNT)
-    assert kinds_to_ask("0.0.2345671", TOPIC) == (TOPIC, TOKEN, CONTRACT, ACCOUNT)
-    assert kinds_to_ask("0.0.2345671", CONTRACT) == (CONTRACT, TOKEN, TOPIC, ACCOUNT)
-    assert kinds_to_ask("0.0.2345671", "something else") == (TOKEN, TOPIC, CONTRACT, ACCOUNT)
+    assert kinds_to_ask("0.0.2345671", None) == (TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE)
+    assert kinds_to_ask("0.0.2345671", TOPIC) == (TOPIC, TOKEN, CONTRACT, ACCOUNT, SCHEDULE)
+    assert kinds_to_ask("0.0.2345671", CONTRACT) == (CONTRACT, TOKEN, TOPIC, ACCOUNT, SCHEDULE)
+    assert kinds_to_ask("0.0.2345671", SCHEDULE) == (SCHEDULE, TOKEN, TOPIC, CONTRACT, ACCOUNT)
+    assert kinds_to_ask("0.0.2345671", "something else") == (
+        TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE)  # fmt: skip
 
 
 def test_a_transaction_id_is_asked_only_as_a_transaction() -> None:
@@ -85,8 +94,8 @@ def test_a_failed_transaction_is_empty_and_an_unknown_one_is_not_found() -> None
 
 def test_a_contract_is_always_asked_before_an_account() -> None:
     # A contract also answers as an account, so "account" must come after "contract".
-    assert kinds_to_ask("0.0.2345671", ACCOUNT) == (CONTRACT, ACCOUNT, TOKEN, TOPIC)
-    for said in (None, TOKEN, TOPIC, CONTRACT, ACCOUNT):
+    assert kinds_to_ask("0.0.2345671", ACCOUNT) == (CONTRACT, ACCOUNT, TOKEN, TOPIC, SCHEDULE)
+    for said in (None, TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE):
         order = kinds_to_ask("0.0.2345671", said)
         assert order.index(CONTRACT) < order.index(ACCOUNT)
     assert kinds_to_ask(ADDRESS, TOKEN) == (CONTRACT, ACCOUNT)
@@ -245,7 +254,30 @@ def test_an_id_that_is_nothing_on_the_network_is_not_found() -> None:
     mirror = StandInMirror()
     facts = facts_of(mirror, "0.0.9999999")
     assert facts == LedgerFacts("0.0.9999999", "testnet", NOW, found=False)
-    assert [kind for kind, _ in mirror.asked] == [TOKEN, TOPIC, CONTRACT, ACCOUNT]
+    assert [kind for kind, _ in mirror.asked] == [TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE]
+
+
+def schedule(**changes: object) -> dict:
+    """The answer of /schedules/{id}, in the shape of the test network (22 October 2026)."""
+    return {"schedule_id": "0.0.9743551", "consensus_timestamp": MADE,
+            "executed_timestamp": LAST, "creator_account_id": "0.0.9742861",
+            "deleted": False, "memo": "an invented memo", **changes}  # fmt: skip
+
+
+def test_a_scheduled_transaction_was_made_and_then_ran() -> None:
+    mirror = StandInMirror(schedule={"0.0.9743551": schedule()})
+    facts = facts_of(mirror, "0.0.9743551", SCHEDULE)
+    assert (facts.kind, facts.ledger_id, facts.created_at) == (SCHEDULE, "0.0.9743551", when(MADE))
+    assert (facts.first_activity_at, facts.last_activity_at) == (when(MADE), when(LAST))
+    assert facts.details == {"executed": True} and mirror.asked == [(SCHEDULE, "0.0.9743551")]
+
+
+def test_a_scheduled_transaction_that_never_ran_was_last_active_when_it_was_made() -> None:
+    mirror = StandInMirror(schedule={"0.0.9743551": schedule(executed_timestamp=None)})
+    facts = facts_of(mirror, "0.0.9743551")  # no word: the four other kinds are asked first
+    assert facts.kind == SCHEDULE and facts.last_activity_at == when(MADE)
+    assert facts.details == {"executed": False}
+    assert [kind for kind, _ in mirror.asked] == [TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE]
 
 
 def test_an_error_of_the_node_goes_on_to_the_caller() -> None:
