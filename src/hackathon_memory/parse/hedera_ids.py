@@ -1,9 +1,14 @@
 """Find Hedera ids in a text, with the words around each one (design 6.1 and 7.1).
 
-An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for three reasons.
+An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for four reasons.
 
 * A version number has the same shape ("0.0.3", "v0.0.12"). The numbers up to 1000 belong to the
   network itself, so no project owns one of them. Such a number is never given as an id.
+* A number whose digits count up or down, such as 0.0.12345 or 0.0.54321, shows how an id looks:
+  a value to replace in the steps of a setup, or the form of an id in a sentence. In the
+  collection, every such number is an example (read on 22 October 2026), and some of them are
+  real things of somebody else on the ledger, which the check took for proof. Such a number is
+  not given as an id either.
 * The same number is a different thing on each network, so an id is kept with its network. A
   link to HashScan names the network exactly. Words do it less surely, and a wrong network is
   worse than none: the ledger would be asked about another thing. So the network is taken from
@@ -33,11 +38,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from itertools import pairwise
 
 NETWORKS = ("mainnet", "testnet", "previewnet")
 ACCOUNT, TOKEN, TOPIC, CONTRACT = "account", "token", "topic", "contract"
 TRANSACTION = "transaction"
 FIRST_USER_NUMBER = 1001
+# A number that counts (1234, 54321) is an example from four digits on.
+_SHORTEST_COUNT = 4
 
 # How far from an id the name of a network is looked for, in characters: on its own line, and
 # in the text before that line.
@@ -124,8 +132,14 @@ def transaction_id(match: re.Match[str]) -> str | None:
 
 def _of_a_project(number: str) -> bool:
     """Whether the number after "0.0." can name a thing of a project. The numbers below 1001
-    belong to the network itself."""
-    return int(number) >= FIRST_USER_NUMBER
+    belong to the network itself, and a number whose digits count is an example."""
+    return int(number) >= FIRST_USER_NUMBER and not _counts(number)
+
+
+def _counts(digits: str) -> bool:
+    """True when the digits go up by one, or down by one, all the way: 1234, 98765, 67890."""
+    steps = {(int(after) - int(before)) % 10 for before, after in pairwise(digits)}
+    return len(digits) >= _SHORTEST_COUNT and steps in ({1}, {9})
 
 
 def _mentions(text: str) -> list[FoundId]:

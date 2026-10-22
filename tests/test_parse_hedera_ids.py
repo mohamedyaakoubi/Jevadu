@@ -56,6 +56,29 @@ def test_a_version_a_number_of_the_network_or_a_bare_address_is_not_an_id(text: 
     assert find_ids(text) == []
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Set HEDERA_OPERATOR_ID=0.0.12345 in the file .env.",
+        "An account ID looks like 0.0.1234.",
+        "An example payer, 0.0.123456789@1700000000.1, sends it.",
+        "The merchant 0.0.54321 and the buyer 0.0.67890 are examples.",
+        "A file such as 0.0.98765 holds it.",
+        "https://hashscan.io/testnet/account/0.0.123456",
+    ],
+)
+def test_a_number_whose_digits_count_up_or_down_is_an_example(text: str) -> None:
+    """In the collection, every such number is an example (22 October 2026)."""
+    assert find_ids(text) == []
+
+
+def test_a_number_that_counts_only_in_part_is_an_id() -> None:
+    assert ids("The token 0.0.1235 and the topic 0.0.123451.") == [
+        ("0.0.1235", None, TOKEN),
+        ("0.0.123451", None, TOPIC),
+    ]
+
+
 def test_the_first_number_that_a_user_can_own_is_an_id() -> None:
     assert ids(f"Our account is 0.0.{FIRST_USER_NUMBER}.") == [
         (f"0.0.{FIRST_USER_NUMBER}", None, ACCOUNT)
