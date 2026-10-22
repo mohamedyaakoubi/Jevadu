@@ -1,6 +1,6 @@
 # Test 3: how the Hedera IDs of a page are checked by hand
 
-This guideline says how a person checks, by hand, which Hedera IDs a project page and the README of its code name, and what the ledger says about each one (design 13.4). It was written on 18 October 2026, before any page was checked, and it does not change once the checking starts.
+This guideline says how a person checks, by hand, which Hedera IDs a project page and the README of its code name, and what the ledger says about each one (design 13.4). It was written on 18 October 2026, before any page was checked, and it does not change once the checking starts, with one exception: the addition of 22 October 2026 about schedules, made after the second run (the last section).
 
 ## What is measured, and the pass marks
 
@@ -70,3 +70,15 @@ Three IDs that stand in no text are added to the hand answers of three pages. Th
 ## What the test does not show
 
 It does not show that an ID belongs to the team that names it: a team can paste the ID of somebody else. It does not show that a project is good. The proof rule reads the ledger of today: an ID that was deleted after the event may read otherwise than it did then.
+
+## Added on 22 October 2026, after the second run: schedules
+
+The first check, on 18 October, left out every scheduled transaction, because the list of kinds above does not name it, and its notes called that a limit of this guideline. A scheduled transaction (a "schedule") is a thing on the ledger with its own ID, `0.0.N`: a project makes it so that a transaction runs later, at a time or when enough keys have signed. HashScan shows it at `/schedule/`. The tool learned to read schedules on 22 October 2026, so under the first list, each schedule that it found counted as invented.
+
+On 22 October 2026, after the second run, the maintainer decided that a schedule counts as an ID of the project, by these rules:
+
+- its kind word is "schedule", by the rule of the kind above ("Schedule: 0.0.N"), or a HashScan link with `/schedule/` names it. A "fee schedule" is the list of fees of a token, not a schedule;
+- it is empty when it was deleted before it ran, like a deleted contract. The mirror node also says "deleted" of a schedule that ran at its time: that one ran, so it is not empty. A schedule that expired without running was still made, so it is not empty either;
+- its dates are the day it was made and the day it ran.
+
+The pass marks did not move. To keep the check fair, all 50 pages were read again for schedules, and not only for the ones that the tool found: every HashScan link with `/schedule/`, and every ID a few words before or after the word "schedule". This found 7 schedules on 4 pages. The report gives the numbers under both lists.

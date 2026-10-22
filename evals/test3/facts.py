@@ -31,7 +31,8 @@ NODES = {
     "mainnet": "https://mainnet-public.mirrornode.hedera.com/api/v1",
 }
 PAUSE = 0.3  # seconds between two requests
-KINDS = ("topics", "tokens", "contracts", "accounts")  # a contract has an account: asked first
+# A contract has an account: asked first. Schedules were added on 22 October 2026 (guideline.md).
+KINDS = ("topics", "tokens", "contracts", "accounts", "schedules")
 
 
 def moment(value: object) -> str | None:
@@ -48,12 +49,15 @@ def summary(kind: str, thing: dict, first: dict | None, last: dict | None) -> di
     # "timestamp" (the mirror node's answers, read on 18 October 2026).
     times = [moment(one.get("consensus_timestamp") or one.get("timestamp"))
              for one in (first, last) if one]  # fmt: skip
+    if kind == "schedules":  # a schedule acts once: when it runs ("executed_timestamp")
+        times = [moment(thing.get("executed_timestamp"))] if thing.get("executed_timestamp") else []
     empty = {
         "topics": first is None,
         "tokens": str(thing.get("total_supply", "1")) == "0",
         "contracts": bool(thing.get("deleted")),
         "accounts": bool(thing.get("deleted")),
         "transactions": thing.get("result") != "SUCCESS",
+        "schedules": bool(thing.get("deleted")) and not thing.get("executed_timestamp"),
     }[kind]
     return {"kind": kind.rstrip("s"), "made": made, "first_activity": times[0] if times else made,
             "last_activity": times[-1] if times else made, "empty": empty,

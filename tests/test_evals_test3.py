@@ -106,3 +106,20 @@ def test_the_activity_of_a_contract_comes_from_the_time_of_its_calls() -> None:
     found = ask_one(answers.get, "0.0.7007")
     assert found["kind"] == "contract" and found["made"] == "2026-03-01"
     assert (found["first_activity"], found["last_activity"]) == ("2026-03-07", "2026-03-09")
+
+
+def test_a_schedule_acts_when_it_runs_and_is_empty_if_deleted_before() -> None:
+    """A schedule is asked after the four other kinds (guideline, 22 October 2026). The mirror
+    node can say "deleted" of a schedule that ran at its time: it ran, so it is not empty."""
+    from evals.test3.facts import ask_one
+
+    answers = {"schedules/0.0.8008": {"consensus_timestamp": stamp(2026, 3, 6), "deleted": True,
+                                      "executed_timestamp": stamp(2026, 3, 7)}}  # fmt: skip
+    found = ask_one(answers.get, "0.0.8008")
+    assert found["kind"] == "schedule" and found["made"] == "2026-03-06" and not found["empty"]
+    assert (found["first_activity"], found["last_activity"]) == ("2026-03-07", "2026-03-07")
+    expired = {"schedules/0.0.8008": {"consensus_timestamp": stamp(2026, 3, 6), "deleted": False}}
+    found = ask_one(expired.get, "0.0.8008")
+    assert not found["empty"] and found["last_activity"] == "2026-03-06"
+    cancelled = {"schedules/0.0.8008": {"consensus_timestamp": stamp(2026, 3, 6), "deleted": True}}
+    assert ask_one(cancelled.get, "0.0.8008")["empty"]
