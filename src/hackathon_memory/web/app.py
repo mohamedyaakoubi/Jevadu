@@ -282,7 +282,7 @@ def create_app(
     are made when first needed, with the promises of collect/github.py. `register_writer` writes
     one record to the register (hedera/registry.py); by default it is made when first needed."""
     settings = settings or Settings()
-    app = FastAPI(title="Hackathon Memory", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None

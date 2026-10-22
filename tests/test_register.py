@@ -74,7 +74,7 @@ def test_the_topic_has_no_admin_key_and_one_submit_key() -> None:
     body = body_of(transaction)
     assert not body.HasField("adminKey")  # nobody can delete the register or change its rules
     assert body.HasField("submitKey")  # only the tool's account can post
-    assert body.memo == "Hackathon Memory register"
+    assert body.memo == "Jevadu register"
 
 
 def test_no_other_key_is_set() -> None:

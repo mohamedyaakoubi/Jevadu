@@ -1,6 +1,8 @@
-# Hackathon Memory
+# Jevadu
 
 One place that knows every project sent to a Hedera hackathon: what it claimed, what really happened, and whether it is still alive.
+
+Jevadu is not affiliated with, sponsored, or endorsed by Hedera Hashgraph, LLC.
 
 > **State on 21 October 2026:** The proofs of Gate A passed, and so did Gate B, the first full path from a saved page to a search. Every project of the allowed sources is collected, parsed and checked on the ledger. The cards written by the model and the three tests of quality have run. A website runs on one laptop: the search, the card of each project, insights and charts of every list, the check of a submission and the register on Hedera. The register is open: its topic [`0.0.11106500`](https://hashscan.io/testnet/topic/0.0.11106500) on the test network has no admin key, and no registration is written in it yet. See "What works today" below.
 >
@@ -216,7 +218,7 @@ This is an entry for the FSS Campus Edition of the Hedera Cross Campus Challenge
 
 The line below lets this repository be registered for that event in the tool's own public register on Hedera. Only someone who can change the repository can add it, so it shows that the registration is the maintainer's own:
 
-`hackathon-memory: ACJWI4OF`
+`jevadu: ACJWI4OF`
 
 ## Licence
 

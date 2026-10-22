@@ -102,7 +102,7 @@ def readme_line(event: str, code: str) -> str:
     agrees to the record. It is made from the event and the fingerprint of the link, so it serves
     for this pair only."""
     digest = hashlib.sha256(f"{event}|{code}".encode()).digest()
-    return f"hackathon-memory: {base64.b32encode(digest).decode()[:8]}"
+    return f"jevadu: {base64.b32encode(digest).decode()[:8]}"
 
 
 def carries_line(text: str, line: str) -> bool:

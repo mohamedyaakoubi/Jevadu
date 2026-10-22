@@ -1,4 +1,4 @@
-# Hackathon Memory: the design
+# Jevadu: the design
 
 This document explains what the tool is, how it is built, and why. The code and the tests point to its sections by number, for example "design 5.7" or "design section 11.6". So the numbers are fixed: a new section is added at the end, never in the middle.
 
@@ -607,7 +607,7 @@ A **topic** is a public message list on Hedera. Nobody can edit or delete a mess
 
 If the same fingerprint appears again later, at any event, the tool says "seen before" and shows the first date.
 
-**Who writes (18 October 2026).** A registration is the team's own. Before the button, the page gives a line made from the link and the event, such as `hackathon-memory: 7K2F9QXD`. The team adds it to the README of its repository, and the button reads the README on GitHub again and writes only when the line is there. Only who can change the repository can add it, so a stranger cannot register a team's code, and the line says that the team agrees to the record. Judges and organisers only read. The projects of the collection are never registered: they are not the tool's to register.
+**Who writes (18 October 2026).** A registration is the team's own. Before the button, the page gives a line made from the link and the event, such as `jevadu: 7K2F9QXD`. The team adds it to the README of its repository, and the button reads the README on GitHub again and writes only when the line is there. Only who can change the repository can add it, so a stranger cannot register a team's code, and the line says that the team agrees to the record. Judges and organisers only read. The projects of the collection are never registered: they are not the tool's to register.
 
 **A hackathon of the list (18 October 2026).** A registration names a hackathon of a list: an event of the collection, or one added by hand from its organiser's announcement. The first one added is the FSS Campus Edition of the Hedera Cross Campus Challenge 2026. Its registration opened on 10 August 2026, and that is its first day. Its submission opened on 19 October 2026 and closes on 7 November 2026, its last day. A name or days typed by each team would differ from team to team. Days typed in serve the check only, which writes nothing.
 

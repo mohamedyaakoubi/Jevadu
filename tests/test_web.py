@@ -586,7 +586,7 @@ def with_line(client, check_text: str) -> str:  # noqa: ANN001
     from fakes import Reply
     from hackathon_memory.collect.github import readme_address
 
-    line = re.search(r"hackathon-memory: [A-Z2-7]{8}", check_text).group(0)
+    line = re.search(r"jevadu: [A-Z2-7]{8}", check_text).group(0)
     readme = readme_answer(f"{README}\n\n{line}\n")
     client.github_site.pages[readme_address(REPO)] = Reply(200, readme)
     return line

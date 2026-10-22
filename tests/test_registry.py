@@ -207,7 +207,7 @@ def test_the_line_of_a_readme_serves_for_one_code_and_one_event() -> None:
     code = "a" * 64
     line = registry.readme_line("ethglobal.com/prague", code)
     assert line == registry.readme_line("ethglobal.com/prague", code)  # the same each time
-    assert re.fullmatch(r"hackathon-memory: [A-Z2-7]{8}", line)
+    assert re.fullmatch(r"jevadu: [A-Z2-7]{8}", line)
     assert line != registry.readme_line("ethglobal.com/cannes2026", code)
     assert line != registry.readme_line("ethglobal.com/prague", "b" * 64)
 
@@ -216,6 +216,6 @@ def test_a_readme_carries_the_line_with_any_spaces_and_case() -> None:
     line = registry.readme_line("ethglobal.com/prague", "a" * 64)
     mark = line.split(": ")[1]
     assert registry.carries_line(f"# Our project\n\n{line}\n", line)
-    assert registry.carries_line(f"`hackathon-memory :{mark.lower()}`", line)
+    assert registry.carries_line(f"`jevadu :{mark.lower()}`", line)
     assert not registry.carries_line("# Our project, with no line", line)
-    assert not registry.carries_line(f"hackathon-memory: {mark}X", line)  # a longer mark
+    assert not registry.carries_line(f"jevadu: {mark}X", line)  # a longer mark
