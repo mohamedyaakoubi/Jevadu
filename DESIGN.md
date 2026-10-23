@@ -525,6 +525,8 @@ The ledger shows only the IDs that a page gives, and a team can use a service th
 
 A card shows the ledger story only when the project has an own ID whose kind fits. While the history of such an ID is not read yet, the card says so.
 
+**Why no chart.** On the collection of 23 October 2026 (`evals/results/20261023T032718Z-ledger-signal.json`, its part `on_the_screen`), 250 of the 254 projects with a history have transactions in the time of the table, and only 11 have transactions of their own things before that time and 6 after it. A timeline would show one bar for nearly every card, so the time is told in words. The same file counts the sentences: a service that the page names and its IDs do not show, on 80 cards (the 77 of S3, and 3 whose transactions of that service fall only outside the time); a service that its IDs show and the page does not name, on 70; and every named service shown, on 135.
+
 ---
 
 ## 8. Step 5: Link and search
