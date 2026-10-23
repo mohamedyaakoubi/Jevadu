@@ -146,3 +146,15 @@ def test_the_story_of_a_project_reads_its_own_ids_and_the_days_of_its_event(
         (CONSENSUS, ("HCS",), 2)
     ]
     assert story.all_named_seen and story.before is not None and story.before.count == 0
+
+
+def test_the_own_ids_to_time_are_those_read_on_their_network(database: str) -> None:
+    from evals.history_times import own_ids
+
+    assert own_ids(database) == {}  # nothing read yet
+    HistoryStore(database).save(
+        "0.0.3456781", "testnet", TOPIC, History({ONE: CONSENSUS}, False), ASKED
+    )
+    with psycopg.connect(database) as conn:
+        (first,) = conn.execute("SELECT min(id) FROM projects").fetchone()
+    assert own_ids(database) == {first: [("testnet", "0.0.3456781", TOPIC, MADE)]}
