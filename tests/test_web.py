@@ -33,6 +33,7 @@ ON_PEBBLE = "A street vendor takes a coin."
 VENDOR = "help a street vendor get paid with a coin"
 PAYMENTS = "Payments and remittance"
 HX = {"HX-Request": "true"}
+WORDS_IN_BRACKETS = r'<span class="hm-keep">\((.*?)\)</span>'  # a bracket stays with its word
 
 
 def field(label: str, value: object, quotes: list[str], state: str = "kept") -> dict:
@@ -379,8 +380,9 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
     assert "&ldquo;HCS&rdquo;" in rows[0][1] and ">1</td>" in rows[0][1]
     assert "&ldquo;Hedera token&rdquo;" in rows[1][1] and ">0</td>" in rows[1][1]
     assert "Its code was not read, so the table leaves it out." in block
-    named = re.search(r"<li>The page names the Token Service \((.*?)\), and its IDs show no Token "
-                      r"Service transactions in that time\.</li>", block, re.DOTALL)  # fmt: skip
+    named = re.search(r"<li>The page names the Token Service " + WORDS_IN_BRACKETS + r", and its "
+                      r"IDs show no Token Service transactions in that time\.</li>", block,
+                      re.DOTALL)  # fmt: skip
     assert named and 'data-said-word="hedera token"' in named.group(1)
     assert 'data-said-word="hcs"' in rows[0][1]  # each word of the page is a button
     tagline = part.split("<h4>Tagline</h4>", 1)[1].split("</p>", 1)[0]
@@ -745,8 +747,10 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
     block = part.split("Hedera services: README, code and ledger", 1)[1].split("</section>", 1)[0]
     assert '<th scope="col">README</th>' in block and 'data-said-in="in the README"' in part
     assert "from 4 February 2026 to 7 April 2026, the event and 30 days on each side" in block
-    said = r"<li>The README names the Token Service \((.*?)\), and its IDs show no Token Service "
-    named = re.search(said + r"transactions in that time\.</li>", block, re.DOTALL)
+    said = (
+        r"<li>The README names the Token Service " + WORDS_IN_BRACKETS + r", and its IDs show no "
+    )
+    named = re.search(said + r"Token Service transactions in that time\.</li>", block, re.DOTALL)
     assert named and 'data-said-word="hts"' in named.group(1)
     assert "Where the README names them (2 lines)" in block
     assert '<mark class="hm-said" data-said="tokens" data-word="hts">HTS</mark>' in block
