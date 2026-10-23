@@ -13,6 +13,8 @@
                                                            archive (same options)
     python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
+    python -m hackathon_memory.pipeline history            the history of each own Hedera id on
+                                                           the ledger, read once (--limit N)
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
     python -m hackathon_memory.pipeline all                parse, readmes, code, hedera_code,
@@ -30,7 +32,8 @@ each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, b
 rule needs it and no page gives it (design 7.2). "readmes", "code" and "hedera_code" ask GitHub's
 API, which the maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait
 lets them wait for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a
-public API made for programs, and no site (design rule 17). "embed" calls Google's embedding
+public API made for programs, and no site (design rule 17); so does "history", which is not part
+of "all" (evals/ledger_story). "embed" calls Google's embedding
 model through the meter and its budget (design 11.4). "cards" calls the REWRITE layer of Gemini,
 through the meter too, for the pages of a set only: it is not part of "all" (design 6.2, open
 question Q29).
@@ -64,6 +67,7 @@ from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.cards import CardStore
 from hackathon_memory.db.embeddings import EmbeddingStore
+from hackathon_memory.db.history import HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
@@ -73,7 +77,15 @@ from hackathon_memory.finops.meter import metered_client
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorNode
 from hackathon_memory.llm.client import GoogleSetupError
 from hackathon_memory.parse import event_ends, event_years
-from hackathon_memory.pipeline import check_ids, code, embed, hedera_code, parse_pages, readmes
+from hackathon_memory.pipeline import (
+    check_ids,
+    code,
+    embed,
+    hedera_code,
+    history,
+    parse_pages,
+    readmes,
+)
 from hackathon_memory.read import cards as card_step
 from hackathon_memory.read import restore
 from hackathon_memory.read.sets import SetError, pages_of
@@ -117,7 +129,7 @@ class _Quiet(argparse.ArgumentParser):
 
 def _arguments(argv: list[str]) -> argparse.Namespace:
     parser = _Quiet(prog="python -m hackathon_memory.pipeline", add_help=False)
-    parser.add_argument("step", choices=[*ALL_STEPS, card_step.STEP, ALL])
+    parser.add_argument("step", choices=[*ALL_STEPS, card_step.STEP, history.STEP, ALL])
     parser.add_argument("--limit", type=int)
     parser.add_argument("--max-age-days", type=float)
     parser.add_argument("--repos", type=int)
@@ -143,9 +155,9 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         )
     if arguments.limit is not None and (arguments.export_file or arguments.restore_file):
         raise ValueError("--limit goes with --set, not with --export or --restore")
-    limited = is_parse or is_embed or is_cards
+    limited = is_parse or is_embed or is_cards or arguments.step == history.STEP
     if arguments.limit is not None and (not limited or arguments.limit < 1):
-        raise ValueError("--limit goes with parse, embed or cards, and must be 1 or more")
+        raise ValueError("--limit goes with parse, embed, cards or history, and must be 1 or more")
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
     if arguments.repos is not None and (not is_readmes or arguments.repos < 1):
@@ -335,6 +347,9 @@ def _run_step(
                 model=settings.gemini_embedding_model,
                 limit=arguments.limit,
             )
+        elif step == history.STEP:
+            mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
+            history.read_histories(HistoryStore(conninfo), mirrors, run, limit=arguments.limit)
         else:
             mirrors = services.mirrors
             if mirrors is None:
@@ -367,6 +382,8 @@ def _run_step(
         lines = restore.restore_lines(run) + _problem_lines(run, "Not put back, and why:")
     elif step == card_step.STEP:
         lines = card_step.cards_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
+    elif step == history.STEP:
+        lines = history.history_lines(run) + _problem_lines(run, "Not read, and why:")
     else:
         lines = check_lines(run)
     return run, lines

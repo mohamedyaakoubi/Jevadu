@@ -11,6 +11,7 @@ import requests
 
 from fakes import FakeSite, FakeTime, Reply, session_for
 from hackathon_memory.hedera.mirror import (
+    MAX_LINKS,
     MIN_GAP_SECONDS,
     MIRROR_URLS,
     PAUSES_SECONDS,
@@ -386,3 +387,62 @@ def test_two_requests_in_a_row_keep_a_gap() -> None:
     fake_time.sleep(5)  # time passes by itself
     mirror.topic("0.0.5555")
     assert fake_time.sleeps == [MIN_GAP_SECONDS, 5]  # no wait was added
+
+
+# --------------------------------------------------------------------- a whole history
+
+HISTORY = "/transactions?account.id=0.0.1235&limit=100&order=asc"
+
+
+def history_row(stamp: str) -> dict:
+    return {"consensus_timestamp": stamp, "name": "CRYPTOTRANSFER"}
+
+
+def test_a_whole_history_follows_its_links_through_the_empty_pages() -> None:
+    first, second = history_row("1775400511.000000001"), history_row("1781400511.000000001")
+    hop_1 = HISTORY + "&timestamp=gt:1775400511.000000001"
+    hop_2 = HISTORY + "&timestamp=gt:1780584511.000000001"
+    mirror, site, _ = node(
+        {
+            BASE + HISTORY: transactions_page([first], "/api/v1" + hop_1),
+            BASE + hop_1: transactions_page([], "/api/v1" + hop_2),
+            BASE + hop_2: transactions_page([second], None),
+        }
+    )
+    assert mirror.account_history("0.0.1235", max_rows=2000) == ([first, second], False)
+    assert site.urls == [BASE + HISTORY, BASE + hop_1, BASE + hop_2]
+
+
+def test_a_whole_history_stops_at_the_limit_and_says_that_it_was_cut() -> None:
+    rows = [history_row(f"17754005{n:02d}.000000001") for n in range(3)]
+    mirror, site, _ = node({BASE + HISTORY: transactions_page(rows, "/api/v1" + HISTORY + "&x")})
+    assert mirror.account_history("0.0.1235", max_rows=2) == (rows[:2], True)
+    assert len(site.seen) == 1  # the link after the limit is not followed
+
+
+def test_a_history_of_empty_pages_that_never_ends_is_cut() -> None:
+    mirror, site, _ = node({BASE + HISTORY: transactions_page([], "/api/v1" + HISTORY)})
+    assert mirror.account_history("0.0.1235", max_rows=10) == ([], True)
+    assert len(site.seen) == MAX_LINKS + 1
+
+
+def test_the_histories_of_a_topic_a_contract_and_nfts_are_asked_from_the_start() -> None:
+    message, call, minted = (
+        {"consensus_timestamp": "1.1"},
+        {"timestamp": "2.2"},
+        {"created_timestamp": "3.3"},
+    )
+    topic = f"{BASE}/topics/0.0.5555/messages?limit=100&order=asc"
+    contract = f"{BASE}/contracts/{ADDRESS}/results?limit=100&order=asc"
+    nfts = f"{BASE}/tokens/0.0.7777/nfts?limit=100&order=asc"
+    mirror, site, _ = node(
+        {
+            topic: reply({"messages": [message], "links": {"next": None}}),
+            contract: reply({"results": [call], "links": {"next": None}}),
+            nfts: reply({"nfts": [minted], "links": {"next": None}}),
+        }
+    )
+    assert mirror.topic_history("0.0.5555", max_rows=10) == ([message], False)
+    assert mirror.contract_history(ADDRESS, max_rows=10) == ([call], False)
+    assert mirror.nft_history("0.0.7777", max_rows=10) == ([minted], False)
+    assert site.urls == [topic, contract, nfts]

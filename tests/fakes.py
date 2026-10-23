@@ -486,6 +486,25 @@ class StandInMirror:
     ) -> list[dict]:
         return self._end("transactions", entity, newest_first, since, until)
 
+    # Whole histories, oldest first, in self.lists[(what, id)] with what = "transactions",
+    # "messages", "calls" or "nfts". Cut when the list reaches max_rows, as MirrorNode._all.
+    def _history(self, what: str, entity: str, max_rows: int) -> tuple[list[dict], bool]:
+        self.asked.append((what, entity, "history"))
+        found = self.lists.get((what, entity), [])
+        return found[:max_rows], len(found) >= max_rows
+
+    def account_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
+        return self._history("transactions", entity, max_rows)
+
+    def topic_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
+        return self._history("messages", entity, max_rows)
+
+    def contract_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
+        return self._history("calls", entity, max_rows)
+
+    def nft_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
+        return self._history("nfts", entity, max_rows)
+
     # The messages of the register's topic, in self.lists[("register", topic)].
     def topic_messages_from(self, topic_id: str, first: int, *, limit: int = 100) -> list[dict]:
         self.asked.append(("register", topic_id, first))
