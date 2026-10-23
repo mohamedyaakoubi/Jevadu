@@ -352,7 +352,8 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
     client, _, ids, database = site
     pebble = ids["Pebble Pay"]
     title = "Hedera services: page, code and ledger"
-    assert title not in client.get(f"/project/{pebble}/panel").text
+    plain = client.get(f"/project/{pebble}/panel").text
+    assert title not in plain and "hm-said" not in plain  # no story: the page's texts stay plain
     own_id(database, pebble, "0.0.4511", "topic")
     own_id(database, pebble, "0.0.4512", "account")
     with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
@@ -378,14 +379,28 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
     assert "&ldquo;HCS&rdquo;" in rows[0][1] and ">1</td>" in rows[0][1]
     assert "&ldquo;Hedera token&rdquo;" in rows[1][1] and ">0</td>" in rows[1][1]
     assert "Its code was not read, so the table leaves it out." in block
-    assert ("The page names the Token Service, and its IDs show no Token Service transactions in "
-            "that time.") in block  # fmt: skip
+    named = re.search(r"<li>The page names the Token Service \((.*?)\), and its IDs show no Token "
+                      r"Service transactions in that time\.</li>", block, re.DOTALL)  # fmt: skip
+    assert named and 'data-said-word="hedera token"' in named.group(1)
+    assert 'data-said-word="hcs"' in rows[0][1]  # each word of the page is a button
+    tagline = part.split("<h4>Tagline</h4>", 1)[1].split("</p>", 1)[0]
+    assert '<mark class="hm-said" data-said="consensus" data-word="hcs">HCS</mark>' in tagline
     assert ("Its IDs show 3 smart contract transactions in that time, and the page does not name "
             "smart contracts.") in block  # fmt: skip
     assert "<dt>Before that time</dt><dd>none</dd>" in block
     # after that time: the topic's message counts, and the account's transfer does not
     assert "<dd>1 Consensus Service transaction, the last on 1 June 2026</dd>" in block
     assert "Read from the mirror node on 23 October 2026: 2 of its IDs" in block
+
+
+def test_the_places_of_the_page_are_marked_and_the_rest_stays_text() -> None:
+    from hackathon_memory.web.data import said
+
+    assert str(said('<b>HCS</b> & "hts"')) == (
+        '&lt;b&gt;<mark class="hm-said" data-said="consensus" data-word="hcs">HCS</mark>&lt;/b&gt; '
+        '&amp; &#34;<mark class="hm-said" data-said="tokens" data-word="hts">hts</mark>&#34;'
+    )
+    assert str(said("No service here.")) == "No service here."
 
 
 def test_the_live_demo_has_a_button_at_the_head_of_the_card(site) -> None:  # noqa: ANN001
@@ -1306,6 +1321,43 @@ def test_a_project_opens_in_a_window_over_the_list_and_back_closes_it(site, chro
     page.keyboard.press("Escape")
     page.wait_for_function("!document.getElementById('viewer').open")
     assert "open=" not in page.url
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_word_of_the_page_marks_each_place_where_the_page_says_it(site, chromium) -> None:  # noqa: ANN001
+    """The words of the page in the ledger story are buttons (design 7.5): a press marks every
+    place where the page's texts say the word and brings the first into view; the next press, or
+    a press on a marked place, goes on to the next one."""
+    from hackathon_memory.check.history import CONSENSUS, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4511", "topic")
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+        conn.execute("UPDATE projects SET short_line = %s WHERE id = %s",
+                     ("Paid with HTS, and HTS again.", pebble))  # fmt: skip
+    message = {stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 1): CONSENSUS}
+    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(message, False),
+                                datetime(2026, 10, 23, tzinfo=UTC))  # fmt: skip
+    page = served(chromium, client, viewport={"width": 1440, "height": 900},
+                  reduced_motion="reduce")  # fmt: skip
+    page.goto(f"http://site.test/project/{pebble}")
+    word = page.locator(".hm-story [data-said-word='hts']")
+    marks = page.locator("mark.hm-said[data-word='hts']")
+    status = page.locator(".hm-said-status")
+    assert marks.count() == 2 and "is-shown" not in (marks.nth(0).get_attribute("class") or "")
+    word.click()
+    assert "is-current" in marks.nth(0).get_attribute("class")
+    assert "is-shown" in marks.nth(1).get_attribute("class")
+    assert "place 1 of 2" in status.inner_text()
+    word.click()
+    assert "is-current" in marks.nth(1).get_attribute("class")
+    assert "place 2 of 2" in status.inner_text()
+    marks.nth(1).click()  # a marked place goes on to the next one, here back to the first
+    assert "is-current" in marks.nth(0).get_attribute("class")
     page.context.close()
 
 

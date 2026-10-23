@@ -857,6 +857,8 @@ def create_app(
     templates.env.filters["day"] = day
     templates.env.filters["moment"] = moment
     templates.env.filters["iso_day"] = iso_day
+    templates.env.filters["said"] = data.said
+    templates.env.filters["casefold"] = str.casefold
     templates.env.globals |= {
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,

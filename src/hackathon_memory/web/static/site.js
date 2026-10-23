@@ -307,6 +307,49 @@
   });
   window.addEventListener("resize", hideTip);
 
+  // ---------------------------------------------------------------- where the page says a word
+  // A word of the page in the ledger story is a button (design 7.5): it marks each place where the
+  // page's texts on the card say it, and brings the next one into view at each press, as a search
+  // of the page would.
+  var LESS_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-said-word]");
+    var shown = button ? null : event.target.closest("mark.hm-said.is-shown");
+    if (shown) { // a marked place in the text: the word that marked it goes on to the next place
+      var home = shown.closest(".project");
+      button = home ? home.querySelector("[data-said-word][data-at]") : null;
+    }
+    var card = button ? button.closest(".project") : null;
+    if (!card) return;
+    var word = button.getAttribute("data-said-word");
+    var marks = Array.prototype.filter.call(card.querySelectorAll("mark.hm-said"), function (mark) {
+      return mark.getAttribute("data-word") === word;
+    });
+    card.querySelectorAll("mark.hm-said.is-shown").forEach(function (mark) {
+      mark.classList.remove("is-shown", "is-current");
+      mark.removeAttribute("title");
+    });
+    card.querySelectorAll("[data-said-word][data-at]").forEach(function (other) {
+      if (other !== button) other.removeAttribute("data-at");
+    });
+    if (!marks.length) return;
+    var at = button.getAttribute("data-at");
+    var next = at === null ? 0 : (Number(at) + 1) % marks.length;
+    button.setAttribute("data-at", String(next));
+    marks.forEach(function (mark) {
+      mark.classList.add("is-shown");
+      if (marks.length > 1) mark.title = "Next place";
+    });
+    marks[next].classList.add("is-current");
+    marks[next].scrollIntoView({ block: "center", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
+    var status = card.querySelector(".hm-said-status");
+    if (status) {
+      status.textContent = "“" + marks[next].textContent + "” on the page: place " +
+        (next + 1) + " of " + marks.length + "." +
+        (marks.length > 1 ? " Press the word again, or a marked place, for the next one." : "");
+    }
+  });
+
   // ---------------------------------------------------------------- the window of a project
   var viewer = function () { return $("viewer"); };
   var pushed = false; // the window added an entry to the history, so "back" closes it

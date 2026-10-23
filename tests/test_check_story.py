@@ -22,8 +22,10 @@ from hackathon_memory.check.story import (
     OwnId,
     Story,
     merged,
+    name_patterns,
     named_services,
     on_its_network,
+    places_in,
     services_in_code,
     story_of,
     words_found,
@@ -91,6 +93,14 @@ def test_the_words_of_the_page_are_shown_as_it_writes_them_each_once() -> None:
     assert words_found("A JWT token and an NFT.") == {}
 
 
+def test_each_place_where_the_page_names_a_service_is_found_in_order() -> None:
+    text = "HCS first. Then hts, and the HCS topic ID."
+    assert places_in(text) == [(0, 3, CONSENSUS), (16, 19, TOKENS), (29, 32, CONSENSUS),
+                               (33, 41, CONSENSUS)]  # fmt: skip
+    overlapping = name_patterns({"a": ("smart contract",), "b": ("contract ID",)})
+    assert places_in("a smart contract ID", overlapping) == [(2, 16, "a")]  # the first one counts
+
+
 def test_every_name_of_the_code_reading_that_shows_a_service_exists() -> None:
     signs = {RELAY, CHAIN_ID, EVM_NETWORK, SYSTEM_CONTRACTS}
     assert set(CODE_SERVICES) <= set(FEATURES) | signs  # a renamed class list goes red here
@@ -126,6 +136,11 @@ def test_the_table_counts_every_id_in_the_time_around_the_event() -> None:
     assert rows == [(CONSENSUS, ("HCS",), True, 2, True), (TOKENS, (), True, 0, True),
                     (HBAR, (), False, 1, False)]  # fmt: skip
     assert story.code_read
+
+
+def test_the_table_counts_the_places_of_each_word_of_the_page() -> None:
+    story = a_story(Event(DURING, CONSENSUS, False), words="HCS logs it.\nhcs again; the topic ID.")
+    assert [(line.words, line.places) for line in story.lines] == [(("HCS", "topic ID"), (2, 1))]
 
 
 def test_a_named_service_with_no_transaction_in_that_time_stands_out() -> None:

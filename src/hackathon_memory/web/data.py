@@ -24,7 +24,7 @@ import psycopg
 from markupsafe import Markup, escape
 
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
-from hackathon_memory.check.story import Story, services_in_code
+from hackathon_memory.check.story import Story, places_in, services_in_code
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.history import story_of_project
 from hackathon_memory.read.quotes import FIELDS, KEPT
@@ -251,6 +251,21 @@ def project_card(
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
                        collected_at(raw_dir, found[0].page_url), language, card,
                        event_page(site, slug, found[0].page_url), code_reading, story)  # fmt: skip
+
+
+def said(text: str) -> Markup:
+    """A text of the page with each place that names a Hedera service marked (design 7.5). The
+    buttons of the ledger story show the marks of one word; until then they look like text."""
+    parts: list[Markup] = []
+    at = 0
+    for start, end, service in places_in(text):
+        word = text[start:end]
+        parts.append(escape(text[at:start]))
+        parts.append(Markup('<mark class="hm-said" data-said="{}" data-word="{}">{}</mark>')
+                     .format(service, word.casefold(), word))  # fmt: skip
+        at = end
+    parts.append(escape(text[at:]))
+    return Markup("").join(parts)
 
 
 def services_of(view: CodeView | None) -> frozenset[str] | None:

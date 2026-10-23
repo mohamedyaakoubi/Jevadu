@@ -109,11 +109,11 @@
         <div class="card-body">
           <h3 id="page-{{ pid }}-title">From the project page{{ parts.info("page", "the texts of the page") }}</h3>
           <p class="hm-small">Copied verbatim from <a href="{{ facts.page_url }}" rel="noopener" target="_blank">the project page<span class="visually-hidden"> (opens in a new tab)</span></a>{% if card.collected_at %} as of {{ card.collected_at | day }}{% endif %}. Not edited by AI.</p>
-          {% if card.short_line %}<h4>Tagline</h4><p>{{ card.short_line }}</p>{% endif %}
+          {% if card.short_line %}<h4>Tagline</h4><p>{{ card.short_line | said if card.story else card.short_line }}</p>{% endif %}
           {% for prize in card.prizes %}<p class="hm-small">Prize: {{ prize.sponsor }}{% if prize.track %}, {{ prize.track }}{% endif %}{% if prize.award %}, {{ prize.award }}{% endif %}</p>{% endfor %}
           {% for section in card.sections %}
           <h4>{{ section.title or "Text" }}</h4>
-          <div class="hm-text">{{ section.body }}</div>
+          <div class="hm-text">{{ section.body | said if card.story else section.body }}</div>
           {% else %}
           <p class="text-secondary">The page has no description.</p>
           {% endfor %}

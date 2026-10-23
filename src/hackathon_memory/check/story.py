@@ -101,6 +101,21 @@ def words_found(text: str, names: dict[str, re.Pattern] = NAMES) -> dict[str, tu
     return found
 
 
+def places_in(text: str, names: dict[str, re.Pattern] = NAMES) -> list[tuple[int, int, str]]:
+    """Every place where the text names a service: (start, end, service), in the order of the
+    text. Two places never overlap: where they would, the one that starts first counts."""
+    found = sorted(
+        (match.start(), match.end(), service)
+        for service, pattern in names.items()
+        for match in pattern.finditer(text)
+    )
+    kept: list[tuple[int, int, str]] = []
+    for place in found:
+        if not kept or place[0] >= kept[-1][1]:
+            kept.append(place)
+    return kept
+
+
 def services_in_code(found: Iterable[tuple[str, str]]) -> frozenset[str]:
     """The services that a reading of the code shows, from what it found: (kind, name) pairs."""
     return frozenset(
@@ -151,6 +166,7 @@ class ServiceLine:
     words: tuple[str, ...]  # the words of the page that name it, as the page writes them
     in_code: bool  # the code calls it; False also when the code was not read
     count: int  # the transactions of the project's IDs in the time of the table
+    places: tuple[int, ...] = ()  # for each word, how many places of the page say it
 
     @property
     def compared(self) -> bool:
@@ -238,12 +254,14 @@ def story_of(
     inside = [e for e in events if span is None or span[0] <= e.at <= span[1]]
     counts = Counter(event.service for event in inside)
     named = words_found(words)
+    per_word = Counter(words[start:end].casefold() for start, end, _ in places_in(words))
     code = in_code or frozenset()
     lines = tuple(
-        ServiceLine(service, named.get(service, ()), service in code, counts[service])
+        ServiceLine(service, named.get(service, ()), service in code, counts[service],
+                    tuple(per_word[word.casefold()] for word in named.get(service, ())))
         for service in SERVICES
         if service in named or service in code or counts[service]
-    )
+    )  # fmt: skip
     named_not_seen = tuple(service for service in WORDS if service in named and not counts[service])
     seen_not_named = tuple(
         (service, counts[service])
