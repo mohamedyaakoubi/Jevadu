@@ -121,6 +121,16 @@
 <p>The ledger shows only the IDs that the page gives, and a team can use a service through an ID that it never names. A difference is a fact to look at, not a fault.</p>
 {% endcall %}
 
+{% call tip("story-readme", "Hedera services: README, code and ledger") %}
+<p>The same comparison as on the card of a project, for the submission:</p>
+<ul>
+  <li><b>README:</b> the words of its README that name a Hedera service, such as &ldquo;HCS&rdquo; for the Consensus Service{{ parts.ref("topic") }} or &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}. Each word is a button: it marks where the README says it, in the lines under the table.</li>
+  <li><b>Code:</b> whether its code calls the service, from the reading of the code below. A package alone never counts, and &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
+  <li><b>Ledger:</b> the transactions of the README's IDs whose kind fits, read from a mirror node{{ parts.ref("mirror") }} during the check and kept for 7 days: in the time of the hackathon and 30 days on each side, or every transaction when no hackathon is chosen.</li>
+</ul>
+<p>The ledger shows only the IDs that the README gives, and a team can use a service through an ID that it never names. A difference is a fact to look at, not a fault.</p>
+{% endcall %}
+
 {% call tip("code", "Code") %}
 <p>The repository{{ parts.ref("repository") }} linked from the page, with its creation date and its last push, from GitHub.</p>
 {% endcall %}

@@ -33,6 +33,7 @@
       </section>
       {% endif %}
 
+      {% if result.story %}{{ parts.ledger_story(result.story, "check", source="README", source_title="README", own="those of the README whose kind fits it, without a shared service", no_days=("No hackathon was chosen, so every transaction counts." if no_dates else "The days of the hackathon are not known yet, so every transaction counts."), tip="story-readme", lines=readme_lines) }}{% endif %}
       <section class="card project-section ledger-section" aria-labelledby="check-ledger-title">
         <div class="card-body">
           <h3 id="check-ledger-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>

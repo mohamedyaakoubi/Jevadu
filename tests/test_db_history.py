@@ -158,3 +158,16 @@ def test_the_own_ids_to_time_are_those_read_on_their_network(database: str) -> N
     with psycopg.connect(database) as conn:
         (first,) = conn.execute("SELECT min(id) FROM projects").fetchone()
     assert own_ids(database) == {first: [("testnet", "0.0.3456781", TOPIC, MADE)]}
+
+
+def test_a_kept_history_is_given_back_only_when_it_is_young_enough(database: str) -> None:
+    store = HistoryStore(database)
+    assert store.saved("0.0.3456781", "testnet", since=ASKED) is None
+    store.save("0.0.3456781", "testnet", TOPIC, History({ONE: CONSENSUS}, True), ASKED)
+    assert store.saved("0.0.3456781", "testnet", since=ASKED) == (
+        History({ONE: CONSENSUS}, True),
+        ASKED,
+    )
+    later = datetime(2026, 10, 24, tzinfo=UTC)
+    assert store.saved("0.0.3456781", "testnet", since=later) is None  # too old by then
+    assert store.saved("0.0.3456781", "mainnet", since=ASKED) is None  # another network

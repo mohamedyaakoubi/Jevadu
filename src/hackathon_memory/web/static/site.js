@@ -341,6 +341,8 @@
       if (marks.length > 1) mark.title = "Next place";
     });
     marks[next].classList.add("is-current");
+    var box = marks[next].closest("details"); // the lines of a README, shown when asked for
+    if (box) box.open = true;
     marks[next].scrollIntoView({ block: "center", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
     var status = card.querySelector(".hm-said-status");
     var story = button.closest("[data-said-in]");

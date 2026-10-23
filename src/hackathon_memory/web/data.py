@@ -269,6 +269,12 @@ def said(text: str) -> Markup:
     return Markup("").join(parts)
 
 
+def said_lines(text: str) -> list[str]:
+    """The lines of a text that the page does not show, such as a README, that name a Hedera
+    service, in their order (design 7.5): every place of the ledger story's words is in them."""
+    return [line.strip() for line in text.splitlines() if places_in(line)]
+
+
 def services_of(view: CodeView | None) -> frozenset[str] | None:
     """The Hedera services that a reading of the code calls (design 7.5); None when the code was
     not read, or could not be read."""

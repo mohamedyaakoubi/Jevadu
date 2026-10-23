@@ -720,6 +720,42 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert hidden in page.text and hidden not in part.text
 
 
+def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(site) -> None:  # noqa: ANN001
+    """The ledger story in a check (design 7.5, "In a check"): the README in the place of the
+    page, its lines that name a service under the table, and the history of each own ID read
+    once and taken from the table by a second check."""
+    from checkfakes import README, readme_answer
+    from fakes import Reply
+    from hackathon_memory.collect.github import readme_address
+
+    client, _, _, database = site
+    event = checkable(database)
+    text = f"{README}\nEvery sale is a message on HCS.\nPayouts use HTS, and HCS again.\n"
+    client.github_site.pages[readme_address(REPO)] = Reply(200, readme_answer(text))
+    asked = {"repo": REPO, "event": event}
+    part = client.get("/check", params=asked, headers=HX).text
+    block = part.split("Hedera services: README, code and ledger", 1)[1].split("</section>", 1)[0]
+    assert '<th scope="col">README</th>' in block and 'data-said-in="in the README"' in part
+    assert "from 4 February 2026 to 7 April 2026, the event and 30 days on each side" in block
+    said = r"<li>The README names the Token Service \((.*?)\), and its IDs show no Token Service "
+    named = re.search(said + r"transactions in that time\.</li>", block, re.DOTALL)
+    assert named and 'data-said-word="hts"' in named.group(1)
+    assert "Where the README names them (2 lines)" in block
+    assert '<mark class="hm-said" data-said="tokens" data-word="hts">HTS</mark>' in block
+    assert "those of the README whose kind fits it, without a shared service" in block
+    with psycopg.connect(database) as conn:
+        first = conn.execute("SELECT asked_at FROM ledger_histories WHERE entity_id = %s",
+                             (TOPIC,)).fetchall()  # fmt: skip
+    assert len(first) == 1  # read once, and kept
+    client.get("/check", params=asked, headers=HX)
+    with psycopg.connect(database) as conn:
+        again = conn.execute("SELECT asked_at FROM ledger_histories WHERE entity_id = %s",
+                             (TOPIC,)).fetchall()  # fmt: skip
+    assert again == first  # the second check took it from the table
+    none = client.get("/check", params={"repo": REPO}, headers=HX).text  # no hackathon
+    assert "No hackathon was chosen, so every transaction counts." in none
+
+
 def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) -> None:  # noqa: ANN001
     """Only the named button calls Gemini; its answers fill the places of the check, which have
     their own ids, and the button gives way to a line that says who wrote them."""

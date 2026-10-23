@@ -19,6 +19,9 @@ Programs read everything here, and no model writes anything:
 * "Seen before" (design 8.4, search/seen.py): the projects of the collection with the same
   repository, or with the same Hedera ID on the same network that the ledger found, unless the
   ID is a shared service.
+* The ledger story (design 7.5): the history of the README's own IDs whose kind fits, read from
+  the mirror node and kept, so that a second check within MAX_AGE reads it from the table, set
+  side by side with the README's words and what the code calls.
 
 At most MAX_IDS IDs are asked about, the first ones of the README: each one takes up to eight
 questions of the mirror node, and a person waits for the answer.
@@ -33,9 +36,26 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
 
 from hackathon_memory.check import asking
+from hackathon_memory.check.history import read_history
 from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.life import Life, life_of
-from hackathon_memory.check.proof import NO_ID_GIVEN, ORDER, Window, best, judge, window_of
+from hackathon_memory.check.proof import (
+    NO_ID_GIVEN,
+    ORDER,
+    WINDOW_NOT_KNOWN,
+    Window,
+    best,
+    judge,
+    window_of,
+)
+from hackathon_memory.check.story import (
+    OwnId,
+    Story,
+    merged,
+    services_in_code,
+    set_up_in_code,
+    story_of,
+)
 from hackathon_memory.collect.github import GitHubClient, repository_of
 from hackathon_memory.collect.github_code import CodeRead, read_code_now
 from hackathon_memory.collect.github_commits import Version, fetch_versions, saved_version
@@ -46,16 +66,20 @@ from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
 from hackathon_memory.collect.github_readmes import Readme, fetch_readmes, saved_readme
 from hackathon_memory.collect.polite import PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.history import KINDS_THAT_FIT, HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.hedera import registry
 from hackathon_memory.hedera.mirror import MirrorError, MirrorNode
-from hackathon_memory.parse.hedera_ids import FoundId, find_ids
+from hackathon_memory.parse.hedera_ids import ACCOUNT, FoundId, find_ids
 from hackathon_memory.search import seen
 
 MAX_IDS = 5
 NETWORKS_WHEN_OPEN = ("testnet", "mainnet")  # as the step of the pipeline asks
 MAX_AGE = timedelta(days=7)  # an answer of the node younger than this is taken from the table
 NOT_ASKED = "not_asked"  # no network could be asked about the ID just now
+# The IDs of the ledger story: their kind fits the README. Without a hackathon, the dates of an
+# ID are not judged, and its kind may still fit.
+STORY_STATUSES = (*KINDS_THAT_FIT, WINDOW_NOT_KNOWN)
 LONGEST_TEXT = 4000  # the characters of the README that the search by meaning reads, as an idea
 
 GITHUB_AWAY = "GitHub did not answer. Try again in a moment."
@@ -119,6 +143,7 @@ class SubmissionCheck:
     life: Life | None = None
     seen: list[SeenBefore] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
+    story: Story | None = None  # the ledger story of its own IDs (design 7.5), or None
 
     @property
     def readme_text(self) -> str:
@@ -231,6 +256,64 @@ def judge_ids(
     return results
 
 
+def histories(
+    ids: list[IdResult],
+    mirrors: Mapping[str, MirrorNode],
+    store: HistoryStore,
+    *,
+    now: Callable[[], datetime],
+    counts: Counter[str] | None = None,
+) -> tuple[list[OwnId], list[tuple[str, datetime, str, bool]]]:
+    """The own IDs of a README whose kind fits, each on the network of its status, and the
+    events of their histories: kept ones younger than MAX_AGE, or read now and kept. An ID that
+    a project with other code names, or a shared service, is not the team's own (design 8.4)."""
+    counts = Counter() if counts is None else counts
+    own: list[OwnId] = []
+    events: list[tuple[str, datetime, str, bool]] = []
+    for one in ids:
+        if (one.status not in STORY_STATUSES or one.network is None or one.facts is None
+                or one.shared or one.named_elsewhere):  # fmt: skip
+            continue
+        entity, network, kind = one.found.entity_id, one.network, one.facts.kind
+        kept = store.saved(entity, network, since=now() - MAX_AGE)
+        if kept is None:
+            mirror = mirrors.get(network)
+            try:
+                if mirror is None:
+                    raise MirrorError(f"no mirror node for {network}")
+                read = read_history(mirror, one.facts.ledger_id or entity, kind or "",
+                                    made_at=one.facts.created_at)  # fmt: skip
+            except MirrorError:
+                counts["histories_not_read"] += 1
+                own.append(OwnId(entity, network, kind, None))
+                continue
+            kept = read, now()
+            store.save(entity, network, kind or "", read, kept[1])
+            counts["histories_read_now"] += 1
+        else:
+            counts["histories_from_the_table"] += 1
+        history, asked_at = kept
+        own.append(OwnId(entity, network, kind, asked_at, history.cut))
+        events += [(stamp, datetime.fromtimestamp(float(stamp), tz=UTC), service, kind == ACCOUNT)
+                   for stamp, service in history.events.items()]  # fmt: skip
+    return own, events
+
+
+def story_of_check(check: SubmissionCheck, own: list[OwnId], events: list[tuple]) -> Story | None:
+    """The ledger story of a checked submission: its README in the place of the page, and the
+    days of its hackathon when one is given. None when the README names no own ID that fits."""
+    if not own:
+        return None
+    scan = check.hedera_code.scan if check.hedera_code is not None else None
+    found = [(one.kind, one.name) for one in scan.found()] if scan is not None else None
+    event = check.event
+    return story_of(own, merged(events), check.readme_text,
+                    services_in_code(found) if found is not None else None,
+                    starts_at=event.starts_at if event is not None else None,
+                    ends_on=event.ends_on if event is not None else None,
+                    set_up=set_up_in_code(found or []))  # fmt: skip
+
+
 def readme_words(text: str) -> str:
     """The words of a README for the search by meaning: no code, no images, no addresses, no
     HTML, and at most LONGEST_TEXT characters."""
@@ -294,4 +377,6 @@ def check_submission(
         for pid in projects:
             if all(one.project_id != pid for one in check.seen):
                 check.seen.append(SeenBefore(pid, key))
+    own, events = histories(check.ids, mirrors, HistoryStore(conninfo), now=now)
+    check.story = story_of_check(check, own, events)
     return check

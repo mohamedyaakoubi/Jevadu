@@ -677,6 +677,7 @@ def create_app(
         return render(request, name, result=result, closest=closest, closest_note=note,
                       seen_before=seen_before, register=view, register_offers=offers,
                       hedera_code=code_reading.view_of_read(repository, result.hedera_code),
+                      readme_lines=data.said_lines(result.readme_text) if result.story else [],
                       asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
 
     @app.post("/register", response_class=HTMLResponse)

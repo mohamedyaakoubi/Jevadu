@@ -57,6 +57,25 @@ class HistoryStore:
             ).fetchall()
         return [IdToRead(*row) for row in rows]
 
+    def saved(
+        self, entity_id: str, network: str, *, since: datetime
+    ) -> tuple[History, datetime] | None:
+        """The history of an ID that was read at `since` or later, with the moment it was read;
+        None when it was not read since then."""
+        with psycopg.connect(self._conninfo) as conn:
+            row = conn.execute(
+                "SELECT asked_at, cut FROM ledger_histories WHERE entity_id = %s AND network = %s "
+                "AND asked_at >= %s",
+                (entity_id, network, since),
+            ).fetchone()
+            if row is None:
+                return None
+            events = conn.execute(
+                "SELECT stamp, service FROM ledger_events WHERE entity_id = %s AND network = %s",
+                (entity_id, network),
+            ).fetchall()
+        return History(dict(events), row[1]), row[0]
+
     def save(
         self, entity_id: str, network: str, kind: str, history: History, asked_at: datetime
     ) -> None:

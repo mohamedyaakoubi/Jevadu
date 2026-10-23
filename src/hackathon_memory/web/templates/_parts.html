@@ -108,8 +108,9 @@
 {# The ledger story of a project (design 7.5): for each Hedera service, the words of its page,
    its code and the transactions of its own IDs side by side; then what stands out, and the time
    before and after, in words. `story` is a Story of check/story.py; `source` names the text whose
-   words it compares (the page, or the README of a check) and `own` which IDs it reads. #}
-{% macro ledger_story(story, pid, source="page", source_title="Page", own="those that no other project names and whose kind fits the page", no_days="The days of the event are not known.", tip="story") -%}
+   words it compares (the page, or the README of a check) and `own` which IDs it reads; `lines`
+   are the lines of a text that the card does not show, such as a README, that name a service. #}
+{% macro ledger_story(story, pid, source="page", source_title="Page", own="those that no other project names and whose kind fits the page", no_days="The days of the event are not known.", tip="story", lines=none) -%}
 <section class="card project-section story-section" aria-labelledby="story-{{ pid }}-title" data-said-in="{{ "in the " if source == "README" else "on the " }}{{ source }}">
   <div class="card-body">
     <h3 id="story-{{ pid }}-title">Hedera services: {{ source }}, code and ledger{{ info(tip, "Hedera services: " ~ source ~ ", code and ledger") }}</h3>
@@ -143,6 +144,12 @@
       {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{{ within }}.</li>{% endif %}
     </ul>
     {% if story.named_not_seen %}<p class="hm-small">The ledger shows only the IDs that the {{ source }} gives. A team can use a service through an ID that it never names.</p>{% endif %}
+    {% endif %}
+    {% if lines %}
+    <details class="hm-said-lines">
+      <summary>Where the {{ source }} names them ({{ lines | length }} line{{ "s" if lines | length != 1 }})</summary>
+      <ul class="hm-said-text">{% for line in lines %}<li>{{ line | said }}</li>{% endfor %}</ul>
+    </details>
     {% endif %}
     <p class="hm-small hm-said-status" aria-live="polite"></p>
     {% if story.starts_on %}

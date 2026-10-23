@@ -362,6 +362,10 @@ mark.hm-said.is-shown { background: color-mix(in oklab, var(--tblr-primary) 24%,
 [data-bs-theme="dark"] mark.hm-said.is-shown { background: color-mix(in oklab, var(--tblr-primary) 36%, transparent); }
 mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset: 1px; }
 .hm-said-status:empty { margin: 0; }
+.hm-said-lines { margin: 0.25rem 0 0.5rem; font-size: 0.875rem; }
+.hm-said-lines summary { cursor: pointer; padding-block: 0.25rem; }
+.hm-said-text { padding-left: 1.1rem; margin: 0.25rem 0 0; overflow-wrap: anywhere; }
+.hm-said-text li + li { margin-top: 0.25rem; }
 .id-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
 .id-row { padding-bottom: 0.75rem; border-bottom: 1px solid var(--tblr-border-color); }
 .id-row:last-child { padding-bottom: 0; border-bottom: 0; }
