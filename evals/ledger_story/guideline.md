@@ -1,6 +1,6 @@
 # The ledger story, first measure: does the ledger show what the card hides?
 
-This guideline was written on 23 October 2026, before any history was read. It does not change once the reading starts.
+This guideline was written on 23 October 2026, before any history was read. It does not change once the reading starts. It was made stricter once, the same day and still before any reading: the old history of an account does not count as activity of the project (the signals S1, S2, S4 and S5).
 
 ## The question
 
@@ -47,11 +47,11 @@ The words are strict on purpose. A token or an NFT can also live in a smart cont
 
 Each signal is a fact about a project that the card of today does not show.
 
-- **S1, active before.** One of the project's IDs has the status "proof found", and its own IDs were active earlier than 30 days before the first day of the event, where the window of the proof rule begins (design 7.2).
-- **S2, mostly before.** More than half of the project's events happened earlier than that.
-- **S3, named but not done.** The page names a service, and the ledger holds no event of that service.
-- **S4, done but not named.** The ledger holds at least 3 events of a service, and the page does not name it.
-- **S5, came back.** The ledger holds events later than 30 days after the last day of the event, the line of the life rule (design 7.4). The card already shows a life status, so S5 is reported but does not count for the decision.
+- **S1, active before.** One of the project's IDs has the status "proof found", and one of its own topics, tokens, contracts, schedules or transactions has an event earlier than 30 days before the first day of the event, where the window of the proof rule begins (design 7.2). The old history of an account does not count here: a builder often keeps one account for years, across projects, and its old events say nothing about this project.
+- **S2, mostly before.** More than half of the events of those same IDs happened earlier than that.
+- **S3, named but not done.** The page names a service, and the ledger holds no event of that service, at any time.
+- **S4, done but not named.** From the start of the window on, the ledger holds at least 3 events of a service, and the page does not name it. Earlier events do not count, for the same reason as in S1.
+- **S5, came back.** Events of the IDs of S1 later than 30 days after the last day of the event, the line of the life rule (design 7.4). The card already shows a life status, so S5 is reported but does not count for the decision.
 
 ## The decision, fixed before the reading
 
