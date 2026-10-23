@@ -427,6 +427,8 @@ For each ID the **mirror node** is asked: what kind of thing is it (account, top
 
 **Built on 22 October 2026: a scheduled transaction.** A project can make a transaction that runs later, at a set time or once enough keys have signed it. Hedera keeps it as a **schedule**, with its own ID, and HashScan shows it at `/schedule/`. A schedule is now its own kind of Hedera ID. A HashScan link to it names it, and so does the word "schedule" right before the ID, but never a "fee schedule", which is the list of fees of a token: a first version that took the word anywhere near an ID gave one token a wrong status on the pages of Test 3. The mirror node says when the schedule was made and when it ran, and the proof rule judges it by these two days. A schedule deleted before it ran counts as empty, like a deleted contract. The mirror node also says "deleted" of a schedule that ran at its time, and that one is not empty; a schedule that expired without running was still made, and is not empty either. On the 50 pages of Test 3 there are 7 schedules, on 4 pages (section 13.4).
 
+**Built on 23 October 2026: the history of an ID.** The step `history` reads once, from the mirror node, every event of each own ID whose kind fits its page: the transactions of an account (from the day it was made), the messages of a topic, the calls of a contract, a token and each NFT minted, a schedule, a transaction. Each event keeps its moment and its Hedera service, at most 2,000 for one ID; a history that the limit cuts says so. An ID that several projects name is left out, as a shared service may be (section 8.4). It feeds the ledger story (section 13.8).
+
 ### 7.2 The proof rule
 
 An ID that exists proves almost nothing: nearly every small number exists on Hedera as something. So the rule looks at the kind of thing and at the dates.
@@ -966,6 +968,12 @@ No outside standard gives these numbers. A pass mark is a decision about how muc
 ### 13.7 What the tests cannot prove
 
 They cannot prove that every card is right. They give a measured error rate on a fair sample, an automatic check on all cards, and a way for any user to see the source.
+
+### 13.8 The ledger story, first measure
+
+- **The question:** before the ledger story is built (the activity of each project on the ledger over time, by Hedera service, next to what its page names and what its code calls), does it show a judge facts that the card of today hides, often enough to be worth building?
+- **The rules:** written before any history was read (`evals/ledger_story/guideline.md`): five signals, and the decision: worth building if at least 20% of the projects show S1 (active before the window), S3 (a service named that none of its IDs shows) or S4 (a service its IDs show that the page never names).
+- **Run on 23 October 2026** (`evals/results/20261023T023136Z-ledger-signal.json`, report `evals/ledger_story/report-2026-10.md`): 254 projects, 1,021 own IDs on their own network, 64,078 events. 135 projects (53.1%, range 46.9% to 59.1%) show at least one of the counted signals, so the ledger story is worth building. The disagreement is mostly about services: 77 projects name a service that none of their IDs shows, and 70 show a service that their page never names; 10 were active before the window. A check with looser words gives 74.8%.
 
 ---
 
