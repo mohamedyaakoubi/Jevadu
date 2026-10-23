@@ -1,0 +1,20 @@
+{# The steps of a check that runs (design 12.1, S3), asked for again about twice a second: each
+   step with its state as the server reports it, and one bar that moves with the time that each
+   step usually takes. `view` is a JobView of web/checks.py. The bar and the steps keep their ids,
+   so that htmx moves them from their old place to the new one; a turning mark starts where the
+   running step stands. The step to read out comes as its own part, into the line that a screen
+   reader follows. #}
+<div id="check-steps" class="hm-check-steps" hx-get="/check/progress?job={{ view.id }}" hx-trigger="load delay:450ms" hx-swap="outerHTML">
+  <div class="hm-progress" aria-hidden="true"><span id="check-bar" class="hm-progress-bar" style="width: {{ view.percent }}%"></span></div>
+  <ol class="hm-steps">
+    {% for step in view.steps %}
+    <li id="check-step-{{ step.key }}" class="hm-step is-{{ step.state }}"{% if step.state == "running" %} aria-current="step"{% endif %}>
+      <span class="hm-step-mark" aria-hidden="true"{% if step.state == "running" %} style="animation-delay: -{{ step.elapsed_ms }}ms"{% endif %}></span>
+      <span class="hm-step-name">{{ step.label }}</span>
+      <span class="hm-step-state">{{ step.words }}</span>
+      {% if step.state == "running" and step_notes.get(step.key) %}<span class="hm-step-note">{{ step_notes[step.key] }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+{% if view.say %}<p id="check-said" hx-swap-oob="innerHTML">{{ view.say }}.</p>{% endif %}

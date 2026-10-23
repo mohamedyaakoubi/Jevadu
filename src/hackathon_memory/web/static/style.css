@@ -385,8 +385,32 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 /* a project named in a line of text is a link that is not told by its colour alone */
 .check-result .hm-link-list a, .linked-section .hm-link-list a, .hm-close-name a { text-decoration: underline; text-underline-offset: 2px; }
 .check-result .project-title { overflow-wrap: anywhere; }
-.check-progress ol { padding-left: 1.2rem; margin: 0.75rem 0; }
-.check-progress li { margin-bottom: 0.375rem; }
+/* the steps of a check while it runs: one bar that moves with the usual time of each step, and
+   a mark for each step that says its state with its words beside it (design 12.1, S3) */
+.hm-check-steps { margin: 1rem 0 0.75rem; max-width: 46rem; }
+.hm-progress { height: 6px; border-radius: 3px; background: var(--tblr-border-color); overflow: hidden; margin: 0 0 1.125rem; }
+.hm-progress-bar { display: block; height: 100%; background: var(--tblr-primary); transition: width 450ms linear; }
+.hm-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
+.hm-step { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto; column-gap: 0.75rem; row-gap: 0.125rem; align-items: start; }
+.hm-step-mark { grid-row: 1; width: 1.125rem; height: 1.125rem; margin-top: 0.125rem; border-radius: 50%; border: 2px solid var(--tblr-border-color); box-sizing: border-box; }
+.hm-step-name { grid-column: 2; }
+.hm-step-state { grid-column: 3; font-size: 0.8125rem; color: var(--tblr-secondary); white-space: nowrap; }
+.hm-step-note { grid-column: 2 / span 2; font-size: 0.8125rem; color: var(--tblr-secondary); }
+.hm-step.is-waiting .hm-step-name { color: var(--tblr-secondary); }
+.hm-step.is-running .hm-step-name { font-weight: 600; }
+.hm-step.is-running .hm-step-mark { border-color: var(--tblr-primary); border-right-color: transparent; animation: hm-turn 0.9s linear infinite; }
+.hm-step.is-done .hm-step-mark, .hm-step.is-saved .hm-step-mark { border-color: var(--tblr-primary); background: var(--tblr-primary); }
+.hm-step.is-done .hm-step-mark::after, .hm-step.is-saved .hm-step-mark::after { content: ""; display: block; width: 0.3125rem; height: 0.5625rem; margin: 0.125rem auto 0; border: solid var(--tblr-bg-surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.hm-step.is-skipped .hm-step-mark { border-style: dashed; }
+@keyframes hm-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .hm-step.is-running .hm-step-mark { animation: none; border-right-color: var(--tblr-primary); }
+  .hm-progress-bar { transition: none; }
+}
+@media (max-width: 575.98px) {
+  .hm-step { grid-template-columns: 1.25rem minmax(0, 1fr); }
+  .hm-step-state, .hm-step-note { grid-column: 2; }
+}
 .hm-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
 .hm-section-head h3 { margin: 0; }
 .hm-come-back { margin: 1rem 0 0; color: var(--tblr-secondary); }

@@ -57,7 +57,7 @@ from hackathon_memory.check.story import (
     story_of,
 )
 from hackathon_memory.collect.github import GitHubClient, repository_of
-from hackathon_memory.collect.github_code import CodeRead, read_code_now
+from hackathon_memory.collect.github_code import CodeRead, read_code_now, saved_code
 from hackathon_memory.collect.github_commits import Version, fetch_versions, saved_version
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
 from hackathon_memory.collect.github_facts import RepositoryFacts, fetch_facts, saved_facts
@@ -77,6 +77,10 @@ MAX_IDS = 5
 NETWORKS_WHEN_OPEN = ("testnet", "mainnet")  # as the step of the pipeline asks
 MAX_AGE = timedelta(days=7)  # an answer of the node younger than this is taken from the table
 NOT_ASKED = "not_asked"  # no network could be asked about the ID just now
+# The steps of a check, as it reports them while it runs (web/checks.py), and their states:
+# SAVED is done at once from what the tool kept, SKIPPED is a step with nothing to read.
+GITHUB, CODE, LEDGER, HISTORY = "github", "code", "ledger", "history"
+RUNNING, DONE, SAVED, SKIPPED = "running", "done", "saved", "skipped"
 # The IDs of the ledger story: their kind fits the README. Without a hackathon, the dates of an
 # ID are not judged, and its kind may still fit.
 STORY_STATUSES = (*KINDS_THAT_FIT, WINDOW_NOT_KNOWN)
@@ -335,23 +339,40 @@ def check_submission(
     mirrors: Mapping[str, MirrorNode],
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     problems: list[str] | None = None,
+    progress: Callable[[str, str], None] = lambda step, state: None,
 ) -> SubmissionCheck:
     """Check the repository, for the hackathon when one is given: without one, the dates of the
     IDs and of the code are shown and not judged. `problems` holds what the caller already knows
-    went wrong, such as a GitHub that may not be asked now."""
+    went wrong, such as a GitHub that may not be asked now. `progress` hears each step start and
+    end, with its state."""
     check = SubmissionCheck(repository, event, problems=list(problems or []))
+    progress(GITHUB, RUNNING)
+    kept = [saved_facts(store, repository), saved_readme(store, repository),
+            saved_version(store, repository)]  # fmt: skip
     check.code, check.readme, check.version, asked = read_code(client, store, repository,
                                                                collector=collector)  # fmt: skip
+    progress(GITHUB, SAVED if all(one is not None for one in kept) else DONE)
     check.problems.extend(asked)
     if check.code is not None and check.code.status != CODE_FOUND:
         check.problems.append(NO_SUCH_CODE if check.code.status != "blocked" else BLOCKED_CODE)
+        progress(CODE, SKIPPED)
     elif check.code is not None:
+        progress(CODE, RUNNING)
+        read_before = saved_code(store, repository) is not None
         check.hedera_code, trouble = read_code_now(client, store, repository, collector=collector)
         check.problems.extend([trouble] if trouble else [])
+        progress(CODE, SAVED if read_before else DONE)
+    else:
+        progress(CODE, SKIPPED)
     found = find_ids(check.readme_text)
     check.ids_left_out = max(0, len(found) - MAX_IDS)
     window = event.window if event is not None else None
-    judged = judge_ids(found[:MAX_IDS], window, mirrors, LedgerStore(conninfo), now=now)
+    progress(LEDGER, RUNNING if found else SKIPPED)
+    asked_node: Counter[str] = Counter()
+    judged = judge_ids(found[:MAX_IDS], window, mirrors, LedgerStore(conninfo), now=now,
+                       counts=asked_node)  # fmt: skip
+    if found:
+        progress(LEDGER, DONE if asked_node["answers_from_the_node"] else SAVED)
     keys = [f"{one.network}:{one.found.entity_id}" for one in judged
             if one.network and one.status in seen.CONFIRMED]  # fmt: skip
     known = seen.submission_matches(conninfo, repository, keys)
@@ -377,6 +398,9 @@ def check_submission(
         for pid in projects:
             if all(one.project_id != pid for one in check.seen):
                 check.seen.append(SeenBefore(pid, key))
-    own, events = histories(check.ids, mirrors, HistoryStore(conninfo), now=now)
+    progress(HISTORY, RUNNING)
+    read: Counter[str] = Counter()
+    own, events = histories(check.ids, mirrors, HistoryStore(conninfo), now=now, counts=read)
+    progress(HISTORY, SKIPPED if not own else DONE if read["histories_read_now"] else SAVED)
     check.story = story_of_check(check, own, events)
     return check

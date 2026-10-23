@@ -677,6 +677,14 @@ def with_line(client, check_text: str) -> str:  # noqa: ANN001
     return line
 
 
+def answer_of(client, steps):  # noqa: ANN001, ANN201
+    """The answer of a check that runs while its window shows its steps: waits for it, then asks
+    for it as the page does."""
+    job = re.search(r"/check/progress\?job=([\w-]+)", steps.text).group(1)
+    client.app.state.check_jobs.get(job).done.result(30)
+    return client.get("/check/progress", params={"job": job}, headers=HX)
+
+
 def checkable(database: str) -> str:
     """Pebble Pay keeps the code of the submission, and the event's end is typed in. Returns the
     number of the event, as the form sends it."""
@@ -756,6 +764,29 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
     assert "No hackathon was chosen, so every transaction counts." in none
 
 
+def test_a_check_asked_by_the_script_shows_its_steps_until_the_answer(site) -> None:  # noqa: ANN001
+    """The page's script asks with progress=1: the check runs in a thread of its own, the window
+    shows its steps, and the next ask gives the answer in place of the whole window (design 12.1,
+    S3). Without the script, the page waits for the answer as before."""
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": REPO, "event": event, "progress": "1"}
+    first = client.get("/check", params=asked, headers=HX)
+    assert first.status_code == 200 and 'id="check-steps"' in first.text
+    assert '<h2 id="viewer-title"' in first.text and 'id="check-said"' in first.text
+    assert first.text.count('class="hm-step ') == 5
+    answer = answer_of(client, first)
+    assert answer.headers["HX-Retarget"] == "#viewer-body"
+    assert (
+        "Proof: found" in answer.text and "Hedera services: README, code and ledger" in answer.text
+    )
+    job = re.search(r"/check/progress\?job=([\w-]+)", first.text).group(1)
+    lost = client.get("/check/progress", params={"job": job}, headers=HX)  # taken already
+    assert lost.status_code == 404 and "This check is no longer kept" in lost.text
+    page = client.get("/check", params=asked)  # without the script: a page of its own
+    assert page.status_code == 200 and "Proof: found" in page.text
+
+
 def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) -> None:  # noqa: ANN001
     """Only the named button calls Gemini; its answers fill the places of the check, which have
     their own ids, and the button gives way to a line that says who wrote them."""
@@ -810,9 +841,9 @@ def test_with_no_hackathon_the_check_offers_the_one_of_the_same_code(site) -> No
     event = checkable(database)
     part = client.get("/check", params={"repo": REPO}, headers=HX)
     assert "Register it for that hackathon?" in part.text
-    offer = re.search(r'hx-get="(/check\?repo=[^"]+&amp;event=(\d+))"', part.text)
+    offer = re.search(r'hx-get="(/check\?repo=[^"]+&amp;event=(\d+)&amp;progress=1)"', part.text)
     assert offer is not None and offer.group(2) == event
-    again = client.get(offer.group(1).replace("&amp;", "&"), headers=HX)
+    again = answer_of(client, client.get(offer.group(1).replace("&amp;", "&"), headers=HX))
     assert again.status_code == 200 and "Register on Hedera testnet" in again.text
 
 
@@ -904,6 +935,26 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     refused = client.post("/register", data=form, headers=HX)
     assert refused.status_code == 400 and "Registering needs a hackathon" in refused.text
     assert client.writes.written == []
+
+
+@pytest.mark.browser
+def test_the_window_shows_the_steps_of_a_check_and_then_its_answer(site, chromium) -> None:  # noqa: ANN001
+    """While a check runs, the window shows its five steps and the bar; the answer then takes
+    the place of the whole window, with its title in focus (design 12.1, S3)."""
+    client, _, _, database = site
+    checkable(database)
+    page = served(chromium, client, reduced_motion="reduce")
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] #check-steps")
+    assert page.locator("#check-steps .hm-step").count() == 5
+    assert page.locator("#check-bar").count() == 1
+    page.wait_for_selector("#viewer[open] .check-result")
+    assert page.locator("#check-steps").count() == 0
+    assert page.evaluate("document.activeElement.id") == "viewer-title"
+    assert "Hedera services: README, code and ledger" in page.locator("#viewer-body").inner_text()
+    page.context.close()
 
 
 @pytest.mark.browser

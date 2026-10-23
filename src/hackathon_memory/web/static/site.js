@@ -368,15 +368,11 @@
       '<span class="bone title"></span><span class="bone"></span><span class="bone"></span>' +
       '<span class="bone short"></span></div>';
   }
-  // While a submission is checked: what the programs do, in order (design 12.1, S3).
+  // While a submission is checked: the moment before the server shows its steps (design 12.1,
+  // S3, and the steps in _check_steps.html).
   function checking() {
     return '<div class="project check-progress" role="status"><h2 class="project-title">Checking the submission</h2>' +
-      '<ol><li>GitHub: the dates of the code and its README.</li>' +
-      '<li>The code: read for Hedera, unless it was read before.</li>' +
-      '<li>The Hedera ledger: each ID that the README names.</li>' +
-      '<li>The collection: the same code or IDs, and the closest past projects.</li></ol>' +
-      '<p class="hm-small">This takes up to about a minute when the code was never read before. ' +
-      'No model writes anything.</p></div>';
+      '<p class="hm-small">Starting the check.</p></div>';
   }
   function showViewer() {
     var dialog = viewer();
@@ -594,6 +590,7 @@
       });
       return;
     }
+    if (target && target.id === "check-steps") target = $("viewer-body"); // a check that runs
     if (!target || !document.body.contains(target)) return;
     if (target.id === "viewer-body" || target.id === "sheet-body") {
       var name = target.id === "viewer-body" ? "viewer-title" : "sheet-title";

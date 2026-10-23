@@ -1,0 +1,10 @@
+{# The waiting state of the check of a submission (design 12.1, S3): what runs, in order, while
+   the check runs in the server; its steps are asked for again until the answer takes their
+   place in the window. #}
+<div class="project check-progress">
+  <h2 id="viewer-title" class="project-title" tabindex="-1">Checking the submission</h2>
+  <p class="project-meta">{{ repository | replace("https://github.com/", "github.com/") }}{% if event_name %} &middot; {{ event_name }}{% endif %}</p>
+  {% include "_check_steps.html" %}
+  <p id="check-said" class="visually-hidden" aria-live="polite"></p>
+  <p class="hm-small">No model writes anything. What the tool read before comes from its own tables, so a second check of the same code is faster.</p>
+</div>

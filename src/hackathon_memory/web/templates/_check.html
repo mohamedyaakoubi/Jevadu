@@ -24,7 +24,7 @@
           <h3 id="register-title">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
           {% if no_dates and register_offers %}
           <p>This repository is already in the collection for {% for _, event_name in register_offers %}{{ event_name }}{% if not loop.last %}, {% endif %}{% endfor %}. Register it for that hackathon?</p>
-          <div class="hm-offers">{% for event_id, event_name in register_offers %}<button type="button" class="btn btn-sm btn-primary" data-check-again hx-get="/check?repo={{ result.repository | urlencode }}&amp;event={{ event_id }}" hx-target="#viewer-body" hx-swap="innerHTML">Yes, check it for {{ event_name }}</button>{% endfor %}</div>
+          <div class="hm-offers">{% for event_id, event_name in register_offers %}<button type="button" class="btn btn-sm btn-primary" data-check-again hx-get="/check?repo={{ result.repository | urlencode }}&amp;event={{ event_id }}&amp;progress=1" hx-target="#viewer-body" hx-swap="innerHTML">Yes, check it for {{ event_name }}</button>{% endfor %}</div>
           <p class="hm-small mt-2">For another hackathon, pick it in the check form.</p>
           {% else %}
           <p class="text-secondary">{% if no_dates %}Registering needs a hackathon. Run the check again with its hackathon selected.{% else %}Registering needs a hackathon from the list, so that every team of one hackathon names it the same way. Custom dates can be checked, but not registered.{% endif %}</p>

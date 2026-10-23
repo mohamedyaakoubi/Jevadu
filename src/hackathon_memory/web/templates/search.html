@@ -126,7 +126,7 @@
 </form>
 
 <section class="card hm-check" aria-labelledby="check-title">
-  <form id="check" class="card-body" method="get" action="/check" hx-get="/check" hx-target="#viewer-body" hx-swap="innerHTML" data-open-check>
+  <form id="check" class="card-body" method="get" action="/check" hx-get="/check" hx-vals='{"progress": "1"}' hx-target="#viewer-body" hx-swap="innerHTML" data-open-check>
     <h2 class="hm-check-title" id="check-title">Check a submission{{ parts.info("check", "checking a submission") }}</h2>
     <p class="hm-check-text">Paste a GitHub repository. The check reads its README, its commit dates and its code, looks up its Hedera IDs on the ledger, and finds the most similar past projects. Facts only: no AI-generated text.</p>
     <label class="form-label" for="check-repo">GitHub repository</label>

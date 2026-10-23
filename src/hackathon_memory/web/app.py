@@ -61,6 +61,7 @@ from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
 from hackathon_memory.web import (
     charts,
+    checks,
     code_reading,
     data,
     evidence,
@@ -136,6 +137,10 @@ UNKNOWN_SHEET = "Page not found. Close this window."
 NOT_A_REPOSITORY = (
     "This is not a GitHub repository link. Paste one such as github.com/owner/project, "
     "then try again."
+)
+CHECK_LOST = (
+    "This check is no longer kept, for example because the server restarted. Check the "
+    "submission again."
 )
 NO_EVENT = "That hackathon is not in the list. Pick one from the list, or none, and try again."
 NO_DAYS = (
@@ -286,6 +291,8 @@ def create_app(
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
+    jobs = checks.CheckJobs()  # the checks that run while their page waits
+    app.state.check_jobs = jobs
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
                                "github": github_client, "mirrors": mirrors,
@@ -635,20 +642,27 @@ def create_app(
         return results_of(conninfo, ids, "", False), None
 
     def check_answer(
-        conninfo: str, repository: str, days: submission.EventDays | None, asked: dict[str, str]
+        conninfo: str,
+        repository: str,
+        days: submission.EventDays | None,
+        asked: dict[str, str],
+        progress: checks.Progress = lambda step, state: None,
     ) -> tuple[int, dict[str, Any]]:
-        """What the page of a check shows: its status, and the values of its template."""
+        """What the page of a check shows: its status, and the values of its template.
+        `progress` hears each step start and end (web/checks.py)."""
         try:
             asker, why = github_or_why()
             result = submission.check_submission(
                 conninfo, repository, days, client=asker,
                 store=RawStore(github.raw_dir(settings)),
                 collector=f"{settings.collector_name.strip()}/{__version__}",
-                mirrors=mirror_nodes(), problems=[why] if why else [],
+                mirrors=mirror_nodes(), problems=[why] if why else [], progress=progress,
             )  # fmt: skip
+            progress(checks.COLLECTION, checks.RUNNING)
             closest, note = closest_to(conninfo, result)
             groups = [[one.project_id] for one in result.seen]
             members = [group[0] for group in data.members(conninfo, groups)]
+            progress(checks.COLLECTION, checks.DONE)
         except (SettingsError, psycopg.OperationalError):
             return 503, {"problem": DATABASE_DOWN}
         found = result.code is not None and result.code.status == CODE_FOUND
@@ -674,10 +688,17 @@ def create_app(
 
     @app.get("/check", response_class=HTMLResponse)
     def check(
-        request: Request, repo: str = "", event: str = "", starts: str = "", ends: str = ""
+        request: Request,
+        repo: str = "",
+        event: str = "",
+        starts: str = "",
+        ends: str = "",
+        progress: str = "",
     ) -> HTMLResponse:
         """S3: the check of one submission (design 12.1), in the window over the page, or as a
-        page of its own without JavaScript. Programs read every fact; no model writes."""
+        page of its own without JavaScript. Programs read every fact; no model writes. Asked by
+        the page's script with progress=1, it runs in a thread of its own, and the window shows
+        its steps until the answer is there (/check/progress)."""
         name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
         repository = submission.repository_link(repo[:300])
         if repository is None:
@@ -690,8 +711,33 @@ def create_app(
         if wrong:
             return render(request, name, 400, problem=wrong)
         asked = {"event": event, "starts": starts, "ends": ends}
+        if name == "_check.html" and progress == "1":
+            job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report))
+            return render(request, "_check_progress.html", view=jobs.view(job, announce=False),
+                          repository=repository, event_name=days.name if days else None,
+                          step_notes=evidence.check_notes())  # fmt: skip
         status, shown = check_answer(conninfo, repository, days, asked)
         return render(request, name, status, **shown)
+
+    @app.get("/check/progress", response_class=HTMLResponse)
+    def check_progress(request: Request, job: str = "") -> HTMLResponse:
+        """The steps of a check that runs, or its answer in their place once it is there."""
+        running = jobs.get(job[:40])
+        if running is None:
+            return in_window(render(request, "_check.html", 404, problem=CHECK_LOST))
+        if running.answer is None:
+            return render(request, "_check_steps.html", view=jobs.view(running),
+                          step_notes=evidence.check_notes())  # fmt: skip
+        jobs.forget(running.id)
+        status, shown = running.answer
+        return in_window(render(request, "_check.html", status, **(shown or
+                                {"problem": SERVER_FAILED})))  # fmt: skip
+
+    def in_window(response: HTMLResponse) -> HTMLResponse:
+        """The answer takes the place of the whole window, not only of the steps."""
+        response.headers["HX-Retarget"] = "#viewer-body"
+        response.headers["HX-Reswap"] = "innerHTML"
+        return response
 
     @app.post("/register", response_class=HTMLResponse)
     async def register_page(request: Request) -> HTMLResponse:
