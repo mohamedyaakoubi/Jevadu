@@ -62,10 +62,13 @@ def recorded_run(conninfo: str, step: str) -> Iterator[Run]:
         counts = dict(run.counts)
         if run.problems_left_out:
             counts["problems_left_out"] = run.problems_left_out
+        # The clock of the database can step back when its machine sets its time again (the
+        # Docker machine of this laptop did, by 0.65 s, on 23 October 2026): a run never ends
+        # before it started.
         with psycopg.connect(conninfo, autocommit=True) as conn:
             conn.execute(
-                "UPDATE runs SET finished_at = now(), ok = %s, counts = %s, problems = %s "
-                "WHERE id = %s",
+                "UPDATE runs SET finished_at = greatest(now(), started_at), ok = %s, "
+                "counts = %s, problems = %s WHERE id = %s",
                 (ok, Jsonb(counts), Jsonb(run.problems), run.id),
             )
 
