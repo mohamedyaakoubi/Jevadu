@@ -24,7 +24,7 @@ import psycopg
 from markupsafe import Markup, escape
 
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
-from hackathon_memory.check.story import Story, places_in, services_in_code
+from hackathon_memory.check.story import Story, places_in, services_in_code, set_up_in_code
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.history import story_of_project
 from hackathon_memory.read.quotes import FIELDS, KEPT
@@ -239,7 +239,8 @@ def project_card(
         repository = found[0].repository
         code_reading = view_of_repository(conn, repository) if repository else None
         words = "\n".join([short_line, *(one.body for one in sections)])
-        story = story_of_project(conn, project_id, words=words, in_code=services_of(code_reading))
+        story = story_of_project(conn, project_id, words=words, in_code=services_of(code_reading),
+                                 set_up=set_up_of(code_reading))  # fmt: skip
     card = None
     if row is not None:
         fields, made_at = row
@@ -269,11 +270,18 @@ def said(text: str) -> Markup:
 
 
 def services_of(view: CodeView | None) -> frozenset[str] | None:
-    """The Hedera services that a reading of the code shows (design 7.5); None when the code was
+    """The Hedera services that a reading of the code calls (design 7.5); None when the code was
     not read, or could not be read."""
     if view is None or view.status in ("gone", "blocked"):
         return None
     return services_in_code((one.kind, one.name) for one in view.found)
+
+
+def set_up_of(view: CodeView | None) -> frozenset[str]:
+    """The services that a reading of the code only sets up for: an EVM project (design 7.5)."""
+    if view is None or view.status in ("gone", "blocked"):
+        return frozenset()
+    return set_up_in_code((one.kind, one.name) for one in view.found)
 
 
 def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:

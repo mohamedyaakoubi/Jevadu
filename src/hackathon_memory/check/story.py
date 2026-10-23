@@ -60,20 +60,20 @@ def name_patterns(words: dict[str, tuple[str, ...]]) -> dict[str, re.Pattern]:
 
 
 NAMES = name_patterns(WORDS)
-# What the reading of the code finds (design 7.3), by the service that it shows. The signs of an
-# EVM project on Hedera, such as its relay or its chain ID, show smart contracts.
+# What the reading of the code finds (design 7.3), by the service that it calls: an SDK class in
+# a source file, or Solidity that calls Hedera's system contracts.
 CODE_SERVICES = {
     "Consensus Service (topics)": CONSENSUS,
     "Token Service": TOKENS,
     "Smart contracts": CONTRACTS,
-    RELAY: CONTRACTS,
-    CHAIN_ID: CONTRACTS,
-    EVM_NETWORK: CONTRACTS,
     SYSTEM_CONTRACTS: CONTRACTS,
     "Scheduled transactions": SCHEDULED,
     "File Service": FILES,
     "Accounts and HBAR transfers": HBAR,
 }
+# The signs of an EVM project that points its tools at Hedera: how most Solidity projects reach
+# it, but not a call by itself. The table says "EVM setup" for smart contracts.
+EVM_SETUP = frozenset({RELAY, CHAIN_ID, EVM_NETWORK})
 
 
 @dataclass(frozen=True)
@@ -117,12 +117,18 @@ def places_in(text: str, names: dict[str, re.Pattern] = NAMES) -> list[tuple[int
 
 
 def services_in_code(found: Iterable[tuple[str, str]]) -> frozenset[str]:
-    """The services that a reading of the code shows, from what it found: (kind, name) pairs."""
+    """The services that a reading of the code calls, from what it found: (kind, name) pairs."""
     return frozenset(
         CODE_SERVICES[name]
         for kind, name in found
         if kind in (FEATURE, SIGN) and name in CODE_SERVICES
     )
+
+
+def set_up_in_code(found: Iterable[tuple[str, str]]) -> frozenset[str]:
+    """Smart contracts, when a reading of the code shows an EVM project set up for Hedera."""
+    return frozenset({CONTRACTS}) if any(kind == SIGN and name in EVM_SETUP
+                                         for kind, name in found) else frozenset()  # fmt: skip
 
 
 def on_its_network(rows: Sequence[tuple]) -> list[tuple]:
@@ -167,6 +173,7 @@ class ServiceLine:
     in_code: bool  # the code calls it; False also when the code was not read
     count: int  # the transactions of the project's IDs in the time of the table
     places: tuple[int, ...] = ()  # for each word, how many places of the page say it
+    set_up: bool = False  # no call, but an EVM project set up for Hedera (smart contracts only)
 
     @property
     def compared(self) -> bool:
@@ -242,10 +249,12 @@ def story_of(
     *,
     starts_at: datetime | None,
     ends_on: date | None,
+    set_up: frozenset[str] = frozenset(),
 ) -> Story:
     """The ledger story of one project. `ids` are its own IDs on their network, `events` the
     transactions of those that were read, each moment once (merged), `words` the page's own
-    words, and `in_code` the services that its code calls, None when the code was not read.
+    words, `in_code` the services that its code calls, None when the code was not read, and
+    `set_up` the services that it only sets up for (set_up_in_code).
 
     The table counts the transactions of every ID in the time around the event. Before and after
     that time, only the project's own things count, not its accounts: an account is often kept
@@ -258,9 +267,10 @@ def story_of(
     code = in_code or frozenset()
     lines = tuple(
         ServiceLine(service, named.get(service, ()), service in code, counts[service],
-                    tuple(per_word[word.casefold()] for word in named.get(service, ())))
+                    tuple(per_word[word.casefold()] for word in named.get(service, ())),
+                    service in set_up and service not in code)
         for service in SERVICES
-        if service in named or service in code or counts[service]
+        if service in named or service in code or service in set_up or counts[service]
     )  # fmt: skip
     named_not_seen = tuple(service for service in WORDS if service in named and not counts[service])
     seen_not_named = tuple(

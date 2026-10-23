@@ -125,7 +125,7 @@
         <tr>
           <th scope="row">{{ SERVICE_NAMES[line.service] }}</th>
           <td>{% if not line.compared %}<span class="text-secondary">not compared</span>{% elif line.words %}{{ said_words(line, listed=true) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
-          {% if story.code_read %}<td>{% if line.in_code %}yes{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
+          {% if story.code_read %}<td>{% if line.in_code %}yes{% elif line.set_up %}EVM setup{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
           <td class="text-end">{{ "{:,}".format(line.count) }}</td>
         </tr>
       {% endfor %}

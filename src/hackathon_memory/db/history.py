@@ -81,11 +81,17 @@ class HistoryStore:
 
 
 def story_of_project(
-    conn: psycopg.Connection, project_id: int, *, words: str, in_code: frozenset[str] | None
+    conn: psycopg.Connection,
+    project_id: int,
+    *,
+    words: str,
+    in_code: frozenset[str] | None,
+    set_up: frozenset[str] = frozenset(),
 ) -> Story | None:
     """The ledger story of one project (design 7.5), from its own IDs whose kind fits, each on
     its network, and the events of those whose history was read; None when it has no such ID.
-    `words` are the page's own words, `in_code` the services that its code calls."""
+    `words` are the page's own words, `in_code` the services that its code calls, and `set_up`
+    those that it only sets up for."""
     rows = conn.execute(
         OWN  # noqa: S608  (fixed text)
         + "SELECT DISTINCT h.project_id, h.entity_id, c.network, c.status, "
@@ -118,4 +124,4 @@ def story_of_project(
         (project_id,),
     ).fetchone() or (None, None)
     return story_of(tuple(ids.values()), merged(seen), words, in_code,
-                    starts_at=starts_at, ends_on=ends_on)  # fmt: skip
+                    starts_at=starts_at, ends_on=ends_on, set_up=set_up)  # fmt: skip

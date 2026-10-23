@@ -27,6 +27,7 @@ from hackathon_memory.check.story import (
     on_its_network,
     places_in,
     services_in_code,
+    set_up_in_code,
     story_of,
     words_found,
 )
@@ -54,6 +55,7 @@ LONG_AFTER = datetime(2026, 11, 1, tzinfo=UTC)
 LATER = datetime(2026, 12, 24, tzinfo=UTC)
 JUNE = datetime(2026, 6, 2, tzinfo=UTC)
 ASKED = datetime(2026, 10, 23, 2, 0, tzinfo=UTC)
+NONE: frozenset[str] = frozenset()
 TOPIC_ID = OwnId("0.0.4511", "testnet", TOPIC, ASKED)
 ACCOUNT_ID = OwnId("0.0.4512", "testnet", ACCOUNT, ASKED)
 
@@ -107,20 +109,30 @@ def test_every_name_of_the_code_reading_that_shows_a_service_exists() -> None:
     assert set(CODE_SERVICES.values()) == {CONSENSUS, TOKENS, CONTRACTS, SCHEDULED, FILES, HBAR}
 
 
-def test_the_code_shows_a_service_by_its_calls_and_contracts_by_the_signs_of_an_evm_project() -> (
-    None
-):
+def test_the_code_calls_a_service_by_its_classes_and_only_sets_up_an_evm_project() -> None:
     found = [(FEATURE, "Token Service"), (SIGN, RELAY), (SIGN, MIRROR_NODE),
              (PACKAGE, "@hashgraph/sdk"), (IMPORT, "a Hedera library"),
              (MENTION, "the word Hedera"), (FEATURE, "Random numbers")]  # fmt: skip
-    assert services_in_code(found) == {TOKENS, CONTRACTS}
-    assert services_in_code([]) == frozenset()
+    assert services_in_code(found) == {TOKENS}  # a package or the relay is not a call
+    assert set_up_in_code(found) == {CONTRACTS}
+    solidity = [(SIGN, SYSTEM_CONTRACTS), (SIGN, CHAIN_ID)]  # a contract that calls Hedera
+    assert services_in_code(solidity) == {CONTRACTS}
+    assert services_in_code([]) == set_up_in_code([]) == frozenset()
+
+
+def test_an_evm_setup_shows_only_where_the_code_makes_no_call() -> None:
+    set_up = a_story(set_up=frozenset({CONTRACTS}))
+    assert [(line.service, line.in_code, line.set_up) for line in set_up.lines] == [
+        (CONTRACTS, False, True)
+    ]
+    both = a_story(code=frozenset({CONTRACTS}), set_up=frozenset({CONTRACTS}))
+    assert [(line.in_code, line.set_up) for line in both.lines] == [(True, False)]
 
 
 def a_story(*events: Event, words: str = "", code: frozenset[str] | None = frozenset(),
             ids: tuple[OwnId, ...] = (TOPIC_ID, ACCOUNT_ID), starts_at: datetime | None = STARTS,
-            ends_on: date | None = ENDS) -> Story:  # fmt: skip
-    return story_of(ids, events, words, code, starts_at=starts_at, ends_on=ends_on)
+            ends_on: date | None = ENDS, set_up: frozenset[str] = NONE) -> Story:  # fmt: skip
+    return story_of(ids, events, words, code, starts_at=starts_at, ends_on=ends_on, set_up=set_up)
 
 
 def test_the_table_counts_every_id_in_the_time_around_the_event() -> None:
