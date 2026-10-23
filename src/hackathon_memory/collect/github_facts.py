@@ -96,6 +96,14 @@ class RepositoryFacts:
     sha256: str
     fetched_at: str
     default_branch: str | None = None  # the branch that GitHub opens first, such as main
+    description: str | None = None  # the team's own words on GitHub, words about people hidden
+
+
+def _words(value: object) -> str | None:
+    """A description as GitHub gives it, with its spaces made plain; None when there is none."""
+    if not isinstance(value, str):
+        return None
+    return " ".join(value.split()) or None
 
 
 def _moment(value: object) -> datetime | None:
@@ -123,6 +131,7 @@ def read_facts(saved: SavedPage) -> RepositoryFacts:
             sha256=meta["sha256"],
             fetched_at=meta["fetched_at"],
             default_branch=branch if isinstance(branch, str) and branch else None,
+            description=_words(kept.get("description")),
         )
     return RepositoryFacts(
         status=BLOCKED if status in (403, 451) else GONE,
