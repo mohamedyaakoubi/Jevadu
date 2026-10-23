@@ -5,8 +5,9 @@ A card has three sources, and the page keeps them apart:
 * the page, copied word for word by the parser: the name, the short line, the texts, the links,
   the event and the prize;
 * the code host and the ledger, read by code: the repository, its dates, what its code says
-  about Hedera, each Hedera ID and what the mirror node said about it, the proof status and the
-  life status;
+  about Hedera, each Hedera ID and what the mirror node said about it, the proof status, the
+  life status, and the ledger story, which sets the services of the page, the code and the
+  ledger side by side;
 * the model: the fields of the card of the instructions in use, each with its label and the
   quotes that the program found in the page.
 """
@@ -22,7 +23,10 @@ from pathlib import Path
 import psycopg
 from markupsafe import Markup, escape
 
+from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
+from hackathon_memory.check.story import Story, services_in_code
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.history import story_of_project
 from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
 from hackathon_memory.search.engine import LANGUAGE, Hit
@@ -60,6 +64,31 @@ ACTION_WORDS = {
     "ATOMICBATCH": "atomic batch of transactions",  # 3 of the 223 transactions, 18 October 2026
 }
 NETWORKS = frozenset({"mainnet", "testnet", "previewnet"})
+# The Hedera services of the ledger story (design 7.5), in the words of the card: the name of a
+# row, as "Hedera in the code" names the service; the service in a sentence; its transactions.
+SERVICE_NAMES = {
+    CONSENSUS: "Consensus Service (topics)",
+    TOKENS: "Token Service",
+    CONTRACTS: "Smart contracts",
+    SCHEDULED: "Scheduled transactions",
+    FILES: "File Service",
+    HBAR: "Accounts and HBAR transfers",
+}
+SERVICE_SUBJECTS = {
+    CONSENSUS: "the Consensus Service",
+    TOKENS: "the Token Service",
+    CONTRACTS: "smart contracts",
+    SCHEDULED: "scheduled transactions",
+    FILES: "the File Service",
+}
+SERVICE_TRANSACTIONS = {  # plural; the singular drops the last letter
+    CONSENSUS: "Consensus Service transactions",
+    TOKENS: "Token Service transactions",
+    CONTRACTS: "smart contract transactions",
+    SCHEDULED: "scheduled transactions",
+    FILES: "File Service transactions",
+    HBAR: "HBAR and account transactions",
+}
 
 
 def hashscan(network: str | None, kind: str | None, entity_id: str) -> str | None:
@@ -129,6 +158,7 @@ class ProjectCard:
     card: ModelCard | None
     event_link: str | None = None  # the page of the event (event_page)
     code_reading: CodeView | None = None  # what the code says about Hedera (design 7.3)
+    story: Story | None = None  # the ledger story (design 7.5), or None when it has none
 
 
 def first_sentence(text: str) -> str:
@@ -208,6 +238,8 @@ def project_card(
         ).fetchone()
         repository = found[0].repository
         code_reading = view_of_repository(conn, repository) if repository else None
+        words = "\n".join([short_line, *(one.body for one in sections)])
+        story = story_of_project(conn, project_id, words=words, in_code=services_of(code_reading))
     card = None
     if row is not None:
         fields, made_at = row
@@ -218,7 +250,15 @@ def project_card(
         ))  # fmt: skip
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
                        collected_at(raw_dir, found[0].page_url), language, card,
-                       event_page(site, slug, found[0].page_url), code_reading)  # fmt: skip
+                       event_page(site, slug, found[0].page_url), code_reading, story)  # fmt: skip
+
+
+def services_of(view: CodeView | None) -> frozenset[str] | None:
+    """The Hedera services that a reading of the code shows (design 7.5); None when the code was
+    not read, or could not be read."""
+    if view is None or view.status in ("gone", "blocked"):
+        return None
+    return services_in_code((one.kind, one.name) for one in view.found)
 
 
 def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:

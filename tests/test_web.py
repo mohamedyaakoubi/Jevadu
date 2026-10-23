@@ -318,6 +318,76 @@ def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: 
     assert "No Hedera package, import, service call, sign or mention in this code." in nothing
 
 
+def own_id(database: str, project_id: int, entity: str, kind: str) -> None:
+    """An invented ID that one project names, found by the ledger as the kind that its page
+    says, with the status "proof found" on the test network."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    LedgerStore(database).save_facts(LedgerFacts(
+        entity, "testnet", datetime(2026, 10, 22, tzinfo=UTC), found=True, kind=kind,
+        ledger_id=entity, created_at=datetime(2026, 3, 6, 18, tzinfo=UTC),
+    ))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, %s, 'testnet', %s, 'page', 'invented', "
+            "true) RETURNING id", (project_id, entity, kind)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+
+
+def stamp(moment: datetime, number: int) -> str:
+    """A moment of consensus as the mirror node writes it: seconds.nanoseconds."""
+    return f"{int(moment.timestamp())}.{number:09d}"
+
+
+def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: ANN001
+    """The ledger story (design 7.5): the services of the page, the code and the ledger side by
+    side, the facts that stand out, the time before and after, and what was read and when. A
+    project with no own ID of a fitting kind shows none of it."""
+    from hackathon_memory.check.history import CONSENSUS, CONTRACTS, HBAR, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    title = "Hedera services: page, code and ledger"
+    assert title not in client.get(f"/project/{pebble}/panel").text
+    own_id(database, pebble, "0.0.4511", "topic")
+    own_id(database, pebble, "0.0.4512", "account")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+        line = "Each sale is a message on HCS, paid in a Hedera token."
+        conn.execute("UPDATE projects SET short_line = %s WHERE id = %s", (line, pebble))
+    waiting = client.get(f"/project/{pebble}/panel").text
+    assert "The history of its own Hedera IDs has not been read yet." in waiting
+    sale, later = datetime(2026, 3, 7, 12, tzinfo=UTC), datetime(2026, 6, 1, 9, tzinfo=UTC)
+    asked = datetime(2026, 10, 23, 2, tzinfo=UTC)
+    store = HistoryStore(database)
+    messages = {stamp(sale, 1): CONSENSUS, stamp(later, 2): CONSENSUS}
+    store.save("0.0.4511", "testnet", "topic", History(messages, False), asked)
+    calls = {stamp(sale, 10 + n): CONTRACTS for n in range(3)}
+    store.save("0.0.4512", "testnet", "account",
+               History({**calls, stamp(later, 20): HBAR}, False), asked)  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split(title, 1)[1].split("</section>", 1)[0]
+    assert "from 4 February 2026 to 7 April 2026, the event and 30 days on each side" in block
+    rows = re.findall(r"<tr>\s*<th scope=\"row\">([^<]+)</th>(.*?)</tr>", block, re.DOTALL)
+    assert [name for name, _ in rows] == ["Consensus Service (topics)", "Token Service",
+                                          "Smart contracts"]  # fmt: skip
+    assert "&ldquo;HCS&rdquo;" in rows[0][1] and ">1</td>" in rows[0][1]
+    assert "&ldquo;Hedera token&rdquo;" in rows[1][1] and ">0</td>" in rows[1][1]
+    assert "Its code was not read, so the table leaves it out." in block
+    assert ("The page names the Token Service, and its IDs show no Token Service transactions in "
+            "that time.") in block  # fmt: skip
+    assert ("Its IDs show 3 smart contract transactions in that time, and the page does not name "
+            "smart contracts.") in block  # fmt: skip
+    assert "<dt>Before that time</dt><dd>none</dd>" in block
+    # after that time: the topic's message counts, and the account's transfer does not
+    assert "<dd>1 Consensus Service transaction, the last on 1 June 2026</dd>" in block
+    assert "Read from the mirror node on 23 October 2026: 2 of its IDs" in block
+
+
 def test_the_live_demo_has_a_button_at_the_head_of_the_card(site) -> None:  # noqa: ANN001
     client, _, ids, _ = site
     part = client.get(f"/project/{ids['Pebble Pay']}/panel")

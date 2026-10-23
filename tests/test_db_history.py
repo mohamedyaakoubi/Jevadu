@@ -3,7 +3,7 @@ Everything is invented."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import psycopg
 import pytest
@@ -12,7 +12,7 @@ from fakes import PROJECT_PAGE, project_page
 from hackathon_memory.check.history import CONSENSUS, TOKENS, History
 from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.proof import ANOTHER_KIND, PROOF_FOUND
-from hackathon_memory.db.history import HistoryStore, IdToRead
+from hackathon_memory.db.history import HistoryStore, IdToRead, story_of_project
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.projects import ProjectStore
@@ -114,3 +114,35 @@ def test_the_command_reads_the_histories_and_says_how_many(
         capsys.readouterr().out
     )
     assert main(["history", "--max-age-days", "1"], settings) == 2  # an option of check only
+
+
+def test_the_story_of_a_project_reads_its_own_ids_and_the_days_of_its_event(
+    database: str,
+) -> None:
+    """The ledger story of a card (design 7.5): the own IDs whose kind fits, what was read of
+    them and when, and the time around its event."""
+    with psycopg.connect(database) as conn:
+        first, second = (pid for (pid,) in conn.execute("SELECT id FROM projects ORDER BY id"))
+        conn.execute(  # the events of the history happen on 28 May 2026
+            "UPDATE events SET starts_at = %s, ends_on = %s",
+            (datetime(2026, 5, 27, 9, 0, tzinfo=UTC), date(2026, 5, 29)),
+        )
+        waiting = story_of_project(conn, first, words="Our HCS topic.", in_code=None)
+        nothing = story_of_project(conn, second, words="We pay with HTS.", in_code=None)
+    assert nothing is None  # its one ID, the coin, is named by two projects
+    assert waiting is not None and waiting.not_read == 1 and not waiting.read
+    HistoryStore(database).save(
+        "0.0.3456781", "testnet", TOPIC, History({ONE: CONSENSUS, TWO: CONSENSUS}, True), ASKED
+    )
+    with psycopg.connect(database) as conn:
+        story = story_of_project(conn, first, words="Our HCS topic.", in_code=frozenset())
+    assert story is not None
+    assert [(one.entity_id, one.kind, one.cut) for one in story.read] == [
+        ("0.0.3456781", TOPIC, True)
+    ]
+    assert story.read_on == (ASKED.date(), ASKED.date())
+    assert (story.starts_on, story.ends_on) == (date(2026, 4, 27), date(2026, 6, 28))
+    assert [(line.service, line.words, line.count) for line in story.lines] == [
+        (CONSENSUS, ("HCS",), 2)
+    ]
+    assert story.all_named_seen and story.before is not None and story.before.count == 0

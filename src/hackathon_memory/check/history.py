@@ -1,4 +1,4 @@
-"""The history of a Hedera ID on the ledger, for the ledger story (evals/ledger_story).
+"""The history of a Hedera ID on the ledger, for the ledger story (check/story.py).
 
 An event is one moment of consensus, with the Hedera service that it belongs to. The mirror node
 gives the history by the kind of the ID: the transactions of an account, the messages of a topic,
@@ -6,7 +6,8 @@ the calls of a contract, the moment a token was made and the moment of each NFT 
 a schedule was made and ran, and the moment of a transaction. One ID gives at most MAX_EVENTS
 events, and a history that the limit cut says so.
 
-This module only reads. It judges nothing: the measures of evals/ledger_story count the events.
+This module only reads. It judges nothing: the card (check/story.py) and the measures of
+evals/ledger_story count the events.
 """
 
 from __future__ import annotations

@@ -35,6 +35,7 @@ from starlette.concurrency import run_in_threadpool
 
 from hackathon_memory import __version__
 from hackathon_memory.check import submission
+from hackathon_memory.check.history import MAX_EVENTS
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
@@ -874,6 +875,10 @@ def create_app(
         "hashscan": data.hashscan,
         "ACTION_WORDS": data.ACTION_WORDS,
         "KIND_WORDS": data.KIND_WORDS,
+        "SERVICE_NAMES": data.SERVICE_NAMES,
+        "SERVICE_SUBJECTS": data.SERVICE_SUBJECTS,
+        "SERVICE_TRANSACTIONS": data.SERVICE_TRANSACTIONS,
+        "MAX_EVENTS": MAX_EVENTS,
         "hashscan_topic": hashscan_topic,
         "hackathon_groups": lambda collected: hackathons.groups(
             collected, listed.LISTED, datetime.now(UTC).date()

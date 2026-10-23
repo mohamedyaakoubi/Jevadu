@@ -15,6 +15,8 @@ import psycopg
 
 from hackathon_memory.check.history import History
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
+from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of
+from hackathon_memory.parse.hedera_ids import ACCOUNT
 
 KINDS_THAT_FIT = (PROOF_FOUND, DATES_DO_NOT_FIT, FOUND_BUT_EMPTY)
 # The own IDs, as the first part of a query that joins `own` (design 8.4).
@@ -76,3 +78,44 @@ class HistoryStore:
                     [(entity_id, network, stamp, datetime.fromtimestamp(float(stamp), tz=UTC),
                       service) for stamp, service in history.events.items()],
                 )  # fmt: skip
+
+
+def story_of_project(
+    conn: psycopg.Connection, project_id: int, *, words: str, in_code: frozenset[str] | None
+) -> Story | None:
+    """The ledger story of one project (design 7.5), from its own IDs whose kind fits, each on
+    its network, and the events of those whose history was read; None when it has no such ID.
+    `words` are the page's own words, `in_code` the services that its code calls."""
+    rows = conn.execute(
+        OWN  # noqa: S608  (fixed text)
+        + "SELECT DISTINCT h.project_id, h.entity_id, c.network, c.status, "
+        "coalesce(r.kind, f.kind), r.asked_at, coalesce(r.cut, false) "
+        "FROM hedera_ids h JOIN own USING (entity_id) "
+        "JOIN id_checks c ON c.hedera_id = h.id "
+        "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "
+        "LEFT JOIN ledger_histories r ON r.entity_id = h.entity_id AND r.network = c.network "
+        "WHERE h.project_id = %s AND c.status = ANY(%s)",
+        (project_id, list(KINDS_THAT_FIT)),
+    ).fetchall()
+    if not rows:
+        return None
+    ids: dict[tuple[str, str], OwnId] = {}
+    for _, entity, network, _, kind, asked_at, cut in on_its_network(rows):
+        ids.setdefault((entity, network), OwnId(entity, network, kind, asked_at, cut))
+    read = [one.entity_id for one in ids.values() if one.asked_at is not None]
+    seen: list[tuple[str, datetime, str, bool]] = []
+    for entity, network, stamp, at, service in conn.execute(
+        "SELECT entity_id, network, stamp, at, service FROM ledger_events "
+        "WHERE entity_id = ANY(%s)",
+        (read,),
+    ):
+        one = ids.get((entity, network))
+        if one is not None and one.asked_at is not None:
+            seen.append((stamp, at, service, one.kind == ACCOUNT))
+    starts_at, ends_on = conn.execute(
+        "SELECT e.starts_at, e.ends_on FROM projects p JOIN events e ON e.id = p.event_id "
+        "WHERE p.id = %s",
+        (project_id,),
+    ).fetchone() or (None, None)
+    return story_of(tuple(ids.values()), merged(seen), words, in_code,
+                    starts_at=starts_at, ends_on=ends_on)  # fmt: skip

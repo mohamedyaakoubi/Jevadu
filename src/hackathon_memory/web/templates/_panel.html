@@ -48,6 +48,7 @@
         </div>
       </section>
       {% endif %}
+      {% if card.story %}{{ parts.ledger_story(card.story, pid) }}{% endif %}
       <section class="card project-section ledger-section" aria-labelledby="ledger-{{ pid }}-title">
         <div class="card-body">
           <h3 id="ledger-{{ pid }}-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>
