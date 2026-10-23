@@ -634,21 +634,11 @@ def create_app(
         ids = [pid for pid in ranking if pid not in known][:CLOSEST]
         return results_of(conninfo, ids, "", False), None
 
-    @app.get("/check", response_class=HTMLResponse)
-    def check(
-        request: Request, repo: str = "", event: str = "", starts: str = "", ends: str = ""
-    ) -> HTMLResponse:
-        """S3: the check of one submission (design 12.1), in the window over the page, or as a
-        page of its own without JavaScript. Programs read every fact; no model writes."""
-        name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
-        repository = submission.repository_link(repo[:300])
-        if repository is None:
-            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+    def check_answer(
+        conninfo: str, repository: str, days: submission.EventDays | None, asked: dict[str, str]
+    ) -> tuple[int, dict[str, Any]]:
+        """What the page of a check shows: its status, and the values of its template."""
         try:
-            conninfo = database()
-            days, wrong = event_days(conninfo, event, starts, ends)
-            if wrong:
-                return render(request, name, 400, problem=wrong)
             asker, why = github_or_why()
             result = submission.check_submission(
                 conninfo, repository, days, client=asker,
@@ -660,7 +650,7 @@ def create_app(
             groups = [[one.project_id] for one in result.seen]
             members = [group[0] for group in data.members(conninfo, groups)]
         except (SettingsError, psycopg.OperationalError):
-            return render(request, name, 503, problem=DATABASE_DOWN)
+            return 503, {"problem": DATABASE_DOWN}
         found = result.code is not None and result.code.status == CODE_FOUND
         listed_one = days is not None and not days.typed
         view = register_view(repository, days) if found and listed_one else None
@@ -674,11 +664,34 @@ def create_app(
             offer = (member.event_id, member.event)
             if one.by == "repository" and member.event_id is not None and offer not in offers:
                 offers.append(offer)
-        return render(request, name, result=result, closest=closest, closest_note=note,
-                      seen_before=seen_before, register=view, register_offers=offers,
-                      hedera_code=code_reading.view_of_read(repository, result.hedera_code),
-                      readme_lines=data.said_lines(result.readme_text) if result.story else [],
-                      asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
+        return 200, {
+            "result": result, "closest": closest, "closest_note": note,
+            "seen_before": seen_before, "register": view, "register_offers": offers,
+            "hedera_code": code_reading.view_of_read(repository, result.hedera_code),
+            "readme_lines": data.said_lines(result.readme_text) if result.story else [],
+            "asked": asked,
+        }  # fmt: skip
+
+    @app.get("/check", response_class=HTMLResponse)
+    def check(
+        request: Request, repo: str = "", event: str = "", starts: str = "", ends: str = ""
+    ) -> HTMLResponse:
+        """S3: the check of one submission (design 12.1), in the window over the page, or as a
+        page of its own without JavaScript. Programs read every fact; no model writes."""
+        name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
+        repository = submission.repository_link(repo[:300])
+        if repository is None:
+            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+        try:
+            conninfo = database()
+            days, wrong = event_days(conninfo, event, starts, ends)
+        except (SettingsError, psycopg.OperationalError):
+            return render(request, name, 503, problem=DATABASE_DOWN)
+        if wrong:
+            return render(request, name, 400, problem=wrong)
+        asked = {"event": event, "starts": starts, "ends": ends}
+        status, shown = check_answer(conninfo, repository, days, asked)
+        return render(request, name, status, **shown)
 
     @app.post("/register", response_class=HTMLResponse)
     async def register_page(request: Request) -> HTMLResponse:
