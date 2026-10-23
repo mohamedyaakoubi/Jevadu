@@ -1,0 +1,37 @@
+{
+ "test": "ids-in-code",
+ "made_on": "2026-10-23",
+ "made_at": "2026-10-23T23:04:50Z",
+ "seed": 20261023,
+ "repositories_drawn": 40,
+ "files_read": 5519,
+ "ids_in_code": 161,
+ "new_ids_in_code": 136,
+ "new_ids_in_the_code_of_two_drawn_repositories": 8,
+ "new_ids_made_in_the_window": 91,
+ "new_ids_named_elsewhere_in_the_collection": 13,
+ "new_ids_on_the_ledger": 128,
+ "repositories_read": 40,
+ "repositories_that_would_gain_a_proof": 9,
+ "repositories_with_a_new_id_in_code": 20,
+ "repositories_with_a_new_id_made_in_the_window": 15,
+ "repositories_with_a_new_id_on_the_ledger": 19,
+ "repositories_with_a_new_own_id_on_the_ledger": 18,
+ "repositories_with_a_proof_now": 13,
+ "repositories_with_an_id_in_code": 24,
+ "repositories_with_no_event_window": 0,
+ "new_ids_by_kind_of_file": {
+  "example_settings": 3,
+  "settings": 70,
+  "source": 44,
+  "test": 29
+ },
+ "new_ids_on_the_ledger_by_kind": {
+  "account": 103,
+  "contract": 8,
+  "schedule": 16,
+  "token": 10,
+  "topic": 22,
+  "transaction": 23
+ }
+}
