@@ -354,7 +354,8 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-story-time dd { margin: 0; }
 /* a word of the page is a button that looks like a link; its marks in the page's texts show only
    when it is pressed, and the place in view is outlined */
-.hm-said-word { padding: 0.1875rem 0; border: 0; background: none; font: inherit; color: var(--tblr-link-color); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.hm-said-word { padding: 0.1875rem 0; border: 0; background: none; font: inherit; text-align: start; color: var(--tblr-link-color); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.hm-said-list { display: flex; flex-direction: column; align-items: flex-start; }
 .hm-said-word:hover { color: var(--tblr-link-hover-color); }
 mark.hm-said { background: none; padding: 0; color: inherit; }
 mark.hm-said.is-shown { background: color-mix(in oklab, var(--tblr-primary) 24%, transparent); padding: 0 0.1em; cursor: pointer; }
