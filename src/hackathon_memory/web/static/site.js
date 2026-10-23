@@ -343,8 +343,10 @@
     marks[next].classList.add("is-current");
     marks[next].scrollIntoView({ block: "center", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
     var status = card.querySelector(".hm-said-status");
+    var story = button.closest("[data-said-in]");
+    var where = story ? story.getAttribute("data-said-in") : "on the page";
     if (status) {
-      status.textContent = "“" + marks[next].textContent + "” on the page: place " +
+      status.textContent = "“" + marks[next].textContent + "” " + where + ": place " +
         (next + 1) + " of " + marks.length + "." +
         (marks.length > 1 ? " Press the word again, or a marked place, for the next one." : "");
     }

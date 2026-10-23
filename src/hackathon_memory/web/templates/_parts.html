@@ -101,30 +101,31 @@
 {# The words of the page that name one service, each a button that marks the places where the
    page says it and brings the next one into view (design 7.5). `line` is a ServiceLine; in a
    table cell (`listed`) the words stand one under the other, in a sentence they follow the text. #}
-{% macro said_words(line, listed=false) -%}
-{% if listed %}<span class="hm-said-list">{% endif %}{% for word in line.words %}<button type="button" class="hm-said-word" data-said-word="{{ word | casefold }}">&ldquo;{{ word }}&rdquo;<span class="visually-hidden">: show where the page says it, {{ line.places[loop.index0] }} place{{ 's' if line.places[loop.index0] != 1 }}</span></button>{{ ", " if not loop.last and not listed }}{% endfor %}{% if listed %}</span>{% endif %}
+{% macro said_words(line, listed=false, source="page") -%}
+{% if listed %}<span class="hm-said-list">{% endif %}{% for word in line.words %}<button type="button" class="hm-said-word" data-said-word="{{ word | casefold }}">&ldquo;{{ word }}&rdquo;<span class="visually-hidden">: show where the {{ source }} says it, {{ line.places[loop.index0] }} place{{ 's' if line.places[loop.index0] != 1 }}</span></button>{{ ", " if not loop.last and not listed }}{% endfor %}{% if listed %}</span>{% endif %}
 {%- endmacro %}
 
 {# The ledger story of a project (design 7.5): for each Hedera service, the words of its page,
    its code and the transactions of its own IDs side by side; then what stands out, and the time
-   before and after, in words. `story` is a Story of check/story.py. #}
-{% macro ledger_story(story, pid) -%}
-<section class="card project-section story-section" aria-labelledby="story-{{ pid }}-title">
+   before and after, in words. `story` is a Story of check/story.py; `source` names the text whose
+   words it compares (the page, or the README of a check) and `own` which IDs it reads. #}
+{% macro ledger_story(story, pid, source="page", source_title="Page", own="those that no other project names and whose kind fits the page", no_days="The days of the event are not known.", tip="story") -%}
+<section class="card project-section story-section" aria-labelledby="story-{{ pid }}-title" data-said-in="{{ "in the " if source == "README" else "on the " }}{{ source }}">
   <div class="card-body">
-    <h3 id="story-{{ pid }}-title">Hedera services: page, code and ledger{{ info("story", "Hedera services: page, code and ledger") }}</h3>
+    <h3 id="story-{{ pid }}-title">Hedera services: {{ source }}, code and ledger{{ info(tip, "Hedera services: " ~ source ~ ", code and ledger") }}</h3>
     {% if not story.read %}
     <p class="text-secondary">The history of its own Hedera IDs has not been read yet.</p>
     {% else %}
     {% set within = " in that time" if story.starts_on else "" %}
     {% if story.lines %}
     <table class="table table-sm hm-story">
-      <caption>{% if story.starts_on %}Ledger: the transactions of its own IDs from {{ story.starts_on | day }} to {{ story.ends_on | day }}, the event and 30 days on each side.{% else %}Ledger: every transaction of its own IDs. The days of the event are not known.{% endif %}</caption>
-      <thead><tr><th scope="col">Service</th><th scope="col">Page</th>{% if story.code_read %}<th scope="col">Code</th>{% endif %}<th scope="col" class="text-end">Ledger</th></tr></thead>
+      <caption>{% if story.starts_on %}Ledger: the transactions of its own IDs from {{ story.starts_on | day }} to {{ story.ends_on | day }}, the event and 30 days on each side.{% else %}Ledger: every transaction of its own IDs. {{ no_days }}{% endif %}</caption>
+      <thead><tr><th scope="col">Service</th><th scope="col">{{ source_title }}</th>{% if story.code_read %}<th scope="col">Code</th>{% endif %}<th scope="col" class="text-end">Ledger</th></tr></thead>
       <tbody>
       {% for line in story.lines %}
         <tr>
           <th scope="row">{{ SERVICE_NAMES[line.service] }}</th>
-          <td>{% if not line.compared %}<span class="text-secondary">not compared</span>{% elif line.words %}{{ said_words(line, listed=true) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
+          <td>{% if not line.compared %}<span class="text-secondary">not compared</span>{% elif line.words %}{{ said_words(line, listed=true, source=source) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
           {% if story.code_read %}<td>{% if line.in_code %}yes{% elif line.set_up %}EVM setup{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
           <td class="text-end">{{ "{:,}".format(line.count) }}</td>
         </tr>
@@ -133,15 +134,15 @@
     </table>
     {% if not story.code_read %}<p class="hm-small">Its code was not read, so the table leaves it out.</p>{% endif %}
     {% else %}
-    <p class="text-secondary">Its IDs show no transaction{{ within }}, and the page names none of the services that are looked for.</p>
+    <p class="text-secondary">Its IDs show no transaction{{ within }}, and the {{ source }} names none of the services that are looked for.</p>
     {% endif %}
     {% if story.named_not_seen or story.seen_not_named or story.all_named_seen %}
     <ul class="hm-story-facts">
-      {% for service in story.named_not_seen %}<li>The page names {{ SERVICE_SUBJECTS[service] }} ({{ said_words(story.lines | selectattr("service", "equalto", service) | first) }}), and its IDs show no {{ SERVICE_TRANSACTIONS[service] }}{{ within }}.</li>{% endfor %}
-      {% for service, count in story.seen_not_named %}<li>Its IDs show {{ transactions(service, count) }}{{ within }}, and the page does not name {{ SERVICE_SUBJECTS[service] }}.</li>{% endfor %}
-      {% if story.all_named_seen %}<li>Every service that the page names has transactions of its IDs{{ within }}.</li>{% endif %}
+      {% for service in story.named_not_seen %}<li>The {{ source }} names {{ SERVICE_SUBJECTS[service] }} ({{ said_words(story.lines | selectattr("service", "equalto", service) | first, source=source) }}), and its IDs show no {{ SERVICE_TRANSACTIONS[service] }}{{ within }}.</li>{% endfor %}
+      {% for service, count in story.seen_not_named %}<li>Its IDs show {{ transactions(service, count) }}{{ within }}, and the {{ source }} does not name {{ SERVICE_SUBJECTS[service] }}.</li>{% endfor %}
+      {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{{ within }}.</li>{% endif %}
     </ul>
-    {% if story.named_not_seen %}<p class="hm-small">The ledger shows only the IDs that the page gives. A team can use a service through an ID that it never names.</p>{% endif %}
+    {% if story.named_not_seen %}<p class="hm-small">The ledger shows only the IDs that the {{ source }} gives. A team can use a service through an ID that it never names.</p>{% endif %}
     {% endif %}
     <p class="hm-small hm-said-status" aria-live="polite"></p>
     {% if story.starts_on %}
@@ -152,7 +153,7 @@
     <p class="hm-small">Before and after, only its own topics, tokens, contracts and schedules count, not its accounts: an account is often kept for years and across projects.</p>
     {% endif %}
     {% set first, last = story.read_on %}
-    <p class="hm-small">Read from the mirror node {% if first == last %}on {{ first | day }}{% else %}from {{ first | day }} to {{ last | day }}{% endif %}: {{ story.read | length }} of its IDs, those that no other project names and whose kind fits the page.{% if story.cut %} {{ story.cut }} of them {{ "was" if story.cut == 1 else "were" }} cut by the limit of the reading, {{ "{:,}".format(MAX_EVENTS) }} transactions, so later transactions may be missing.{% endif %}{% if story.not_read %} {{ story.not_read }} more {{ "is" if story.not_read == 1 else "are" }} not read yet.{% endif %}</p>
+    <p class="hm-small">Read from the mirror node {% if first == last %}on {{ first | day }}{% else %}from {{ first | day }} to {{ last | day }}{% endif %}: {{ story.read | length }} of its IDs, {{ own }}.{% if story.cut %} {{ story.cut }} of them {{ "was" if story.cut == 1 else "were" }} cut by the limit of the reading, {{ "{:,}".format(MAX_EVENTS) }} transactions, so later transactions may be missing.{% endif %}{% if story.not_read %} {{ story.not_read }} more {{ "is" if story.not_read == 1 else "are" }} not read yet.{% endif %}</p>
     {% endif %}
   </div>
 </section>
