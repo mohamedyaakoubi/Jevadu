@@ -1,0 +1,118 @@
+<!doctype html>
+{% import "_parts.html" as parts %}
+<html lang="en" data-bs-theme-primary="teal" data-bs-theme-base="stone">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Jevadu{% endblock %}</title>
+<meta name="description" content="Search past Hedera hackathon projects by idea, check a submission, and see what the public Hedera ledger says about each project.">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<meta name="htmx-config" content='{"historyCacheSize": 20, "refreshOnHistoryMiss": false, "defaultFocusScroll": false, "timeout": 90000}'>
+<link rel="preload" href="/static/vendor/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/ibm-plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/vendor/tabler.min.css">
+<link rel="stylesheet" href="/static/vendor/tabler-themes.min.css">
+<link rel="stylesheet" href="/static/style.css">
+<script>
+/* Before the page is drawn: the theme chosen with the switch at the top of the page, or else the
+   light or dark look of the computer; a search that the person has not cleared comes back (design
+   12.1); and the first page of a visit shows the name of the tool, unless less motion is asked. */
+(function () {
+  var root = document.documentElement;
+  var chosen = null;
+  try { chosen = window.localStorage.getItem("hm-theme"); } catch (error) { /* nothing is kept */ }
+  var dark = chosen === "dark" || chosen === "light" ? chosen === "dark" :
+    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  root.setAttribute("data-bs-theme", dark ? "dark" : "light");
+  try {
+    var here = window.location;
+    if (here.pathname === "/" && !here.search) {
+      var last = window.localStorage.getItem("hm-last");
+      if (last) { here.replace("/?" + last); return; }
+    }
+    if (!window.sessionStorage.getItem("hm-seen") &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      root.classList.add("hm-splash");
+    }
+  } catch (error) { /* the browser keeps nothing: no memory of the search, no first screen */ }
+})();
+</script>
+<script src="/static/vendor/htmx.min.js" defer></script>
+<script src="/static/vendor/chart.umd.js" defer></script>
+<script src="/static/site.js" defer></script>
+</head>
+<body>
+<div class="splash" aria-hidden="true">
+  <div class="splash-inner">
+    {{ parts.brand_mark("splash-mark") }}
+    <p class="splash-name">Jevadu</p>
+    <p class="splash-line">Past Hedera hackathon projects, checked against the public ledger</p>
+  </div>
+</div>
+<a class="skip-link" href="#{% block skip_target %}results{% endblock %}">{% block skip_words %}Skip to the results{% endblock %}</a>
+<div class="page">
+  <div class="page-wrapper">
+    <header class="container-xl hm-topline" data-theme-switch hidden>
+      <fieldset class="hm-theme">
+        <legend class="hm-way-legend">Theme</legend>
+        <div class="btn-group" role="group">
+          <input type="radio" class="btn-check" name="hm-theme" value="light" id="theme-light">
+          <label class="btn btn-sm" for="theme-light">light</label>
+          <input type="radio" class="btn-check" name="hm-theme" value="dark" id="theme-dark">
+          <label class="btn btn-sm" for="theme-dark">dark</label>
+          <input type="radio" class="btn-check" name="hm-theme" value="auto" id="theme-auto">
+          <label class="btn btn-sm" for="theme-auto" title="Match the system setting">auto<span class="visually-hidden">: match the system setting</span></label>
+        </div>
+      </fieldset>
+    </header>
+    <main id="main" hx-history-elt>
+    {% block main %}{% endblock %}
+    </main>
+    <footer class="hm-footer">
+      <div class="container-xl">
+        <div class="hm-footer-cols">
+          <div class="hm-footer-brand">
+            <p class="hm-footer-name">{{ parts.brand_mark("footer-mark") }}<span>Jevadu</span></p>
+            <p>Past Hedera hackathon projects: what each one claimed, and what the public ledger says about it.</p>
+            <p class="hm-footer-small">Made for the Hedera Cross Campus Challenge 2026, FSS Campus Edition.</p>
+          </div>
+          <nav aria-label="About this tool">
+            <p class="hm-footer-title">About</p>
+            <ul>
+              <li><a href="/about/how" data-sheet="how">How it works</a></li>
+              <li><a href="/about/questions" data-sheet="questions">Common questions</a></li>
+              <li><a href="/about/sources" data-sheet="sources">Sources and references</a></li>
+            </ul>
+          </nav>
+          <div>
+            <p class="hm-footer-title">Data sources</p>
+            <ul>
+              <li>Project pages: ETHGlobal's showcase and the organisers' lists of winners.</li>
+              <li>Hedera data: the public mirror node{{ parts.ref("mirror") }}.</li>
+              <li>Code data: GitHub.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="hm-footer-base">Nothing here scores or ranks a project by quality. The order of a list only reflects similarity to an idea.</p>
+        <p class="hm-footer-small">Jevadu is not affiliated with, sponsored, or endorsed by Hedera Hashgraph, LLC.</p>
+      </div>
+    </footer>
+  </div>
+</div>
+{% include "_tips.html" %}
+<dialog class="viewer" id="viewer" aria-labelledby="viewer-title">
+  <div class="viewer-bar">
+    <div class="viewer-steps">
+      <button type="button" class="btn btn-sm" data-viewer-step="-1" aria-label="The previous project of the list">&lsaquo; Previous</button>
+      <button type="button" class="btn btn-sm" data-viewer-step="1" aria-label="The next project of the list">Next &rsaquo;</button>
+    </div>
+    <button type="button" class="btn btn-sm btn-icon" data-close-viewer aria-label="Close this window">&times;</button>
+  </div>
+  <div class="viewer-body" id="viewer-body">{% block viewer %}{% endblock %}</div>
+</dialog>
+<dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
+  <div class="viewer-bar"><span></span><button type="button" class="btn btn-sm btn-icon" data-close-sheet aria-label="Close this window">&times;</button></div>
+  <div class="viewer-body" id="sheet-body"></div>
+</dialog>
+</body>
+</html>

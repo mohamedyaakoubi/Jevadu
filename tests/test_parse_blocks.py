@@ -163,7 +163,7 @@ def test_a_rule_between_two_lines_keeps_them_apart() -> None:
 MESSY = """
 <h2>What <em>it</em> is</h2>
 <p>Pebble<strong>Pay</strong> lets a vendor take a coin.<br>It runs on the test
-   network<!-- note -->, with the topic <code>0.0.3456789</code>.</p>
+   network<!-- note -->, with the topic <code>0.0.3456781</code>.</p>
 loose words
 <ul>
   <li>one <a href="https://example.test/x">link</a>
@@ -191,7 +191,7 @@ def test_the_order_of_the_page_is_kept() -> None:
     assert texts == [
         "What it is",
         "PebblePay lets a vendor take a coin. It runs on the test network, with the topic "
-        "0.0.3456789.",
+        "0.0.3456781.",
         "loose words",
         "one link",
         "inside item",

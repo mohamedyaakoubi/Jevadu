@@ -1,0 +1,95 @@
+{
+  "set": "test1",
+  "model": "gemini-3.1-pro-preview",
+  "thinking_level": "HIGH",
+  "instructions_version": "card-form-2",
+  "made_on": "2026-10-15",
+  "counts_of": "the cards of a test set, counted before any grading; not a test result",
+  "pages_of_the_set": 60,
+  "cards": 60,
+  "quotes_given": 829,
+  "quotes_found": 829,
+  "fields": {
+    "kept": 413,
+    "not_found": 7
+  },
+  "labels": {
+    "category": {
+      "stated": 15,
+      "inferred": 45
+    },
+    "for_whom": {
+      "inferred": 32,
+      "stated": 28
+    },
+    "hedera_services": {
+      "stated": 54,
+      "inferred": 3,
+      "not_found": 3
+    },
+    "how_it_works": {
+      "stated": 56,
+      "inferred": 4
+    },
+    "problem": {
+      "stated": 33,
+      "inferred": 25,
+      "not_found": 2
+    },
+    "solution": {
+      "stated": 57,
+      "inferred": 1,
+      "not_found": 2
+    },
+    "what_it_does": {
+      "stated": 57,
+      "inferred": 3
+    }
+  },
+  "words": {
+    "for_whom": {
+      "middle": 16.0,
+      "longest": 28
+    },
+    "hedera_services": {
+      "middle": 18,
+      "longest": 31
+    },
+    "problem": {
+      "middle": 17.0,
+      "longest": 30
+    },
+    "solution": {
+      "middle": 18.0,
+      "longest": 26
+    },
+    "what_it_does": {
+      "middle": 17.0,
+      "longest": 30
+    }
+  },
+  "steps": {
+    "4": 7,
+    "5": 23,
+    "6": 30
+  },
+  "categories": {
+    "Tools for AI agents": 20,
+    "AI agents and automation": 7,
+    "Lending, saving and investing": 5,
+    "Real-world assets and tokens": 4,
+    "Payments and remittance": 4,
+    "Developer tools": 3,
+    "Social and community": 3,
+    "Gaming and entertainment": 3,
+    "Data and devices": 2,
+    "Health": 2,
+    "Public services": 2,
+    "Sustainability, energy and climate": 2,
+    "Supply chain and provenance": 1,
+    "Other": 1,
+    "Identity and credentials": 1
+  },
+  "cost_usd": 3.1257,
+  "cost_usd_a_card": 0.0521
+}

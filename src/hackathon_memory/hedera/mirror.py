@@ -15,6 +15,9 @@ the answers were read from the real test network, on 9 October 2026 and again on
 * token:         {"token_id", "type": "FUNGIBLE_COMMON" | "NON_FUNGIBLE_UNIQUE", "total_supply",
                   "created_timestamp", "modified_timestamp", "deleted", "name", "symbol", ...}
 * contract:      {"contract_id", "created_timestamp", "deleted", "evm_address", "bytecode", ...}
+* schedule:      {"schedule_id", "consensus_timestamp" (made), "executed_timestamp" (null until
+                  it runs), "creator_account_id", "payer_account_id", "deleted", ...}. Read on
+                  22 October 2026.
 
 A time is a text of seconds and nanoseconds: "1791566671.807617381".
 
@@ -64,6 +67,7 @@ MAX_LINKS = 24
 
 _ENTITY_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}$")
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_TRANSACTION_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}-\d{1,11}-\d{1,9}$")
 _BEFORE = re.compile(r"timestamp=lte?:(\d+\.\d+)")
 _AFTER = re.compile(r"timestamp=gte?:(\d+\.\d+)")
 
@@ -194,8 +198,33 @@ class MirrorNode:
         """A contract, by its id or by its EVM address."""
         return self._get(f"/contracts/{self._entity_or_address(contract)}")
 
+    def schedule(self, schedule_id: str) -> dict | None:
+        """A scheduled transaction: a transaction that runs later, once enough keys signed it."""
+        return self._get(f"/schedules/{self._entity(schedule_id)}")
+
+    def transaction(self, transaction_id: str) -> dict | None:
+        """One transaction, by its ID "0.0.12345-1700000000-123456789": the list "transactions",
+        the parent first. Read on 18 October 2026: each item has "name" (the kind of action, such
+        as CRYPTOTRANSFER), "result" (SUCCESS or the reason it failed) and "consensus_timestamp".
+        The form with "@" is refused by the node with a 400."""
+        if not _TRANSACTION_ID.match(transaction_id):
+            raise MirrorError(f"not a transaction id: {transaction_id!r}")
+        return self._get(f"/transactions/{transaction_id}")
+
     def topic_message(self, topic_id: str, sequence_number: int) -> dict | None:
         return self._get(f"/topics/{self._entity(topic_id)}/messages/{int(sequence_number)}")
+
+    def topic_messages_from(self, topic_id: str, first: int, *, limit: int = 100) -> list[dict]:
+        """The messages of a topic from the number `first` on, oldest first, at most `limit`.
+
+        The filter is "gte": on 16 October 2026 the test network's node answered
+        "sequencenumber=gt:0" with no message, and "sequencenumber=gte:1" with the first one.
+        """
+        path = (
+            f"/topics/{self._entity(topic_id)}/messages?sequencenumber=gte:{int(first)}"
+            f"&limit={int(limit)}&order=asc"
+        )
+        return (self._get(path) or {}).get("messages") or []
 
     # ----------------------------------------------------------------- what happened on it
 

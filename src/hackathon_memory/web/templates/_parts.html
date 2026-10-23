@@ -1,0 +1,159 @@
+{# The parts that the pages and their fragments share (Tabler 1.6, on Bootstrap 5). #}
+{% import "_marks.html" as marks %}
+
+{% macro brand_mark(class="mark-svg") -%}
+<svg class="{{ class }}" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+  <rect x="12" y="4" width="23" height="16" rx="3" class="mk-back"/>
+  <rect x="8.5" y="9" width="23" height="16" rx="3" class="mk-middle"/>
+  <rect x="5" y="14.5" width="24" height="20" rx="3" class="mk-front"/>
+  <path d="M9.5 21.5h11M9.5 26h8" class="mk-lines"/>
+  <circle cx="24" cy="29.5" r="3.4" class="mk-seal"/>
+</svg>
+{%- endmacro %}
+
+{# A numbered source, as in an encyclopedia: the number opens the source (references.py). #}
+{% macro ref(key) -%}
+<sup class="ref"><a href="{{ REFS[key].url }}" target="_blank" rel="noopener">[{{ REF_NUMBER[key] }}]<span class="visually-hidden">: {{ REFS[key].title }}, {{ REFS[key].publisher }}, opens in a new tab</span></a></sup>
+{%- endmacro %}
+
+{# The (i) next to a term: its text is in _tips.html, once for the whole page. #}
+{% macro info(key, label) -%}
+<button type="button" class="info" popovertarget="tip-{{ key }}" data-tip="tip-{{ key }}" aria-label="What {{ label }} means"><span aria-hidden="true">i</span></button>
+{%- endmacro %}
+
+{% macro result(card, summary, line, snippet, rank, query, compared) -%}
+{% set pid = card.hit.project_id %}
+{% set link = "/?" ~ (query ~ "&" if query else "") ~ "open=" ~ pid %}
+<li class="result" id="result-{{ pid }}" data-project="{{ pid }}">
+  <article class="card hm-card">
+    <div class="card-body">
+      <p class="hm-card-top">{% if rank %}<span class="hm-rank">{{ "%02d" | format(rank) }}</span>{% endif %}<span>{{ card.event }}</span></p>
+      <h3 class="hm-card-title"><a class="result-link" href="{{ link }}" data-open-viewer="{{ pid }}"
+        hx-get="/project/{{ pid }}/panel{% if query %}?{{ query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ card.name }}</a></h3>
+      {% if summary and summary.text %}<p class="hm-line">{{ line or summary.text }}</p>{% endif %}
+      {% if snippet %}<p class="hm-matched"><span class="visually-hidden">Matching text: </span>&hellip;{{ snippet }}&hellip;</p>{% endif %}
+      {{ marks.tags(card) }}
+    </div>
+    <div class="card-footer hm-card-foot">{{ marks.proof(card.proof_status) }}{{ marks.life(card.life) }}</div>
+    {% if compared %}
+    <div class="hm-compare compare waiting" id="compare-{{ pid }}" aria-busy="true">
+      <span class="visually-hidden">Gemini is comparing this project with your idea.</span>
+      <span class="placeholder col-11"></span><span class="placeholder col-8"></span><span class="placeholder col-10"></span>
+    </div>
+    {% endif %}
+  </article>
+</li>
+{%- endmacro %}
+
+{# What the code says about Hedera (design 7.3), on a card and in a check: `view` is a CodeView
+   of web/code_reading.py, or none when the code was not read. #}
+{% macro hedera_code(view) -%}
+<div class="hm-code-reading">
+  <h4>Hedera in the code{{ info("hedera-code", "Hedera in the code") }}</h4>
+  {% if view is none %}
+  <p class="text-secondary">The code has not been read for Hedera yet.</p>
+  {% elif view.status in ("gone", "blocked") %}
+  <p class="text-secondary">{{ "GitHub no longer has this code" if view.status == "gone" else "GitHub blocks this repository" }}, so it could not be read.</p>
+  {% else %}
+  <p class="hm-small">Read {{ view.read_at | day }}{% if view.commit %} at commit <span class="id">{{ view.commit[:7] }}</span>{% endif %}{% if view.files is not none %}: {{ view.files }} file{{ "s" if view.files != 1 }} of the project's own code{% endif %}.{% if view.partial %} {{ view.partial }}{% endif %}</p>
+  {% if view.found %}
+  <ul class="hm-code-list">
+    {% for title, kind in (("Hedera packages", "package"), ("Hedera services the code calls", "feature"), ("Other signs of Hedera", "sign"), ("Files that import a Hedera library", "import"), ("Files that name Hedera, Hashgraph or Hiero", "mention")) %}
+    {% set lines = view.of(kind) %}
+    {% if lines %}
+    <li><span class="hm-code-kind">{{ title }}</span>
+      {% for one in lines %}
+      <details class="hm-code-files">
+        <summary>{% if kind not in ("import", "mention") %}{{ one.name }} &middot; {% endif %}{{ one.files }} file{{ "s" if one.files != 1 }}</summary>
+        <ul class="hm-link-list">
+          {% for path, link in one.examples %}<li>{% if link %}<a href="{{ link }}" rel="noopener" target="_blank">{{ path }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ path }}{% endif %}</li>{% endfor %}
+          {% if one.files > one.examples | length %}<li class="hm-small">and {{ one.files - one.examples | length }} more</li>{% endif %}
+        </ul>
+      </details>
+      {% endfor %}
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+  {% if view.only_mentions %}<p class="hm-small">Only mentions: no Hedera package, import, service call or other sign.</p>{% endif %}
+  {% else %}
+  <p class="text-secondary">No Hedera package, import, service call, sign or mention in this code.</p>
+  {% endif %}
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
+{% macro link_reason(by) -%}
+{% if by == "repository" %}Same repository.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}
+{%- endmacro %}
+
+{% macro pager(page, pages, query, label="Pages of the list") -%}
+{% if pages > 1 %}
+{% set base = "/?" ~ (query ~ "&" if query else "") %}
+{% set swap = 'hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML show:#results:top" hx-push-url="true"' %}
+<nav class="hm-pager" aria-label="{{ label }}">
+  <ul class="pagination">
+    {% if page > 1 %}<li class="page-item"><a class="page-link" href="{{ base }}page={{ page - 1 }}" hx-get="{{ base }}page={{ page - 1 }}" {{ swap | safe }}>&lsaquo; Previous</a></li>{% else %}<li class="page-item hm-step-off" aria-hidden="true"><span class="page-link">&lsaquo; Previous</span></li>{% endif %}
+    {% for number in page_numbers(page, pages) %}
+      {% if number is none %}<li class="page-item disabled" aria-hidden="true"><span class="page-link">&hellip;</span></li>
+      {% else %}<li class="page-item{% if number == page %} active{% endif %}"><a class="page-link" href="{{ base }}page={{ number }}" hx-get="{{ base }}page={{ number }}" {{ swap | safe }}{% if number == page %} aria-current="page"{% endif %}><span class="visually-hidden">Page </span>{{ number }}</a></li>{% endif %}
+    {% endfor %}
+    {% if page < pages %}<li class="page-item"><a class="page-link" href="{{ base }}page={{ page + 1 }}" hx-get="{{ base }}page={{ page + 1 }}" {{ swap | safe }}>Next &rsaquo;</a></li>{% else %}<li class="page-item hm-step-off" aria-hidden="true"><span class="page-link">Next &rsaquo;</span></li>{% endif %}
+  </ul>
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro filter_select(name, label, all_words, options, current, tip=none) -%}
+<div class="hm-filter{% if current %} chosen{% endif %}">
+  <span class="hm-filter-head"><label for="filter-{{ name }}">{{ label }}</label>{% if tip %}{{ info(tip, label) }}{% endif %}</span>
+  <select class="form-select form-select-sm" id="filter-{{ name }}" name="{{ name }}">
+    <option value="">{{ all_words }}</option>
+    {% for choice in options %}<option value="{{ choice.value }}"{% if choice.value == current %} selected{% endif %}>{{ choice.words }} ({{ "{:,}".format(choice.count) }})</option>
+    {% endfor %}
+  </select>
+</div>
+{%- endmacro %}
+
+{# The shape of the cards, drawn while Gemini works. #}
+{% macro skeleton_cards(count=8) -%}
+<div class="hm-skeletons" aria-hidden="true">
+  <p class="hm-asking">Gemini is reading the 30 closest projects. This takes a few seconds.</p>
+  <ol class="hm-grid">
+  {% for _ in range(count) %}<li><div class="card hm-card placeholder-glow"><div class="card-body"><span class="placeholder col-4"></span><span class="placeholder placeholder-lg col-8"></span><span class="placeholder col-12"></span><span class="placeholder col-10"></span><span class="placeholder col-6"></span></div></div></li>{% endfor %}
+  </ol>
+</div>
+{%- endmacro %}
+
+{# One chart of the counts of the list on the screen: drawn by Chart.js, with the numbers also as
+   a list for screen readers and for a browser without JavaScript. #}
+{% macro chart(one) -%}
+<section class="card hm-chart" aria-labelledby="chart-{{ one.key }}">
+  <div class="card-body">
+    <h3 class="hm-chart-title" id="chart-{{ one.key }}">{{ one.title }}{% if one.tip %}{{ info(one.tip, one.title | lower) }}{% endif %}</h3>
+    <p class="hm-chart-note">{{ one.note }}</p>
+    {% if one.bars %}
+    <div class="hm-chart-canvas" style="height: {{ 44 + 30 * (one.bars | length) }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
+    <ul class="visually-hidden">{% for bar in one.bars %}<li>{{ bar.words }}: {{ bar.count }}{% if bar.winners %}, {{ bar.winners }} with a Hedera prize{% endif %}</li>{% endfor %}</ul>
+    {% else %}
+    <p class="text-secondary">Nothing to count in this list.</p>
+    {% endif %}
+  </div>
+</section>
+{%- endmacro %}
+
+{# Two shares side by side (web/charts.py, Comparison): bars appear only when each group holds
+   20 projects; otherwise the note says why. #}
+{% macro comparison(one) -%}
+<section class="card hm-chart" aria-labelledby="chart-{{ one.key }}">
+  <div class="card-body">
+    <h3 class="hm-chart-title" id="chart-{{ one.key }}">{{ one.title }}{% if one.tip %}{{ info(one.tip, one.title | lower) }}{% endif %}</h3>
+    <p class="hm-chart-note">{{ one.note }}</p>
+    {% if one.pairs %}
+    <div class="hm-chart-canvas" style="height: {{ 44 + 34 * (one.pairs | length) }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
+    <ul class="visually-hidden">{% for pair in one.pairs %}<li>{{ pair.words }}: {{ pair.won }} of {{ pair.won_of }} with a Hedera prize ({{ pair.won_share }}%), {{ pair.other }} of {{ pair.other_of }} without ({{ pair.other_share }}%)</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+</section>
+{%- endmacro %}

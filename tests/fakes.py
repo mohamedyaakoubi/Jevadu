@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import tarfile
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -31,6 +32,7 @@ class Reply:
     status: int = 200
     body: bytes = b""
     headers: dict[str, str] = field(default_factory=dict)
+    stream: object = None  # what the answer is read from as it comes, when not the body
 
 
 class FakeTime:
@@ -84,7 +86,9 @@ class FakeSite(BaseAdapter):
             response.headers.update(reply.headers)
             response.url = request.url
             response.request = request
-            response.raw = io.BytesIO(reply.body)
+            response.raw = _Raw(
+                reply.stream if reply.stream is not None else io.BytesIO(reply.body)
+            )
             return response
         finally:
             with self._lock:
@@ -98,11 +102,46 @@ class FakeSite(BaseAdapter):
         return [str(r.url) for r in self.seen]
 
 
+class _Raw:
+    """The raw stream of an answer, read as urllib3 reads it."""
+
+    def __init__(self, stream: io.RawIOBase | io.BytesIO) -> None:
+        self._stream = stream
+
+    def read(self, amt: int | None = None, decode_content: bool | None = None) -> bytes:  # noqa: ARG002
+        return self._stream.read(-1 if amt is None else amt)
+
+    def close(self) -> None:
+        pass
+
+
 def session_for(site: FakeSite) -> requests.Session:
     session = requests.Session()
     session.mount("https://", site)
     session.mount("http://", site)
     return session
+
+
+# ------------------------------------------------------------------ an invented archive
+
+ARCHIVE_COMMIT = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
+ARCHIVE_TOP = "sample-org-pebble-pay-1a2b3c4"  # the first folder of an archive of GitHub
+
+
+def archive(
+    files: dict[str, bytes], top: str = ARCHIVE_TOP, commit: str | None = ARCHIVE_COMMIT
+) -> bytes:
+    """An INVENTED .tar.gz archive of a repository: these files under the first folder, after a
+    global header that names the commit, as git archive makes it for GitHub."""
+    data = io.BytesIO()
+    header = {"comment": commit} if commit else {}
+    with tarfile.open(fileobj=data, mode="w:gz", format=tarfile.PAX_FORMAT,
+                      pax_headers=header) as tar:  # fmt: skip
+        for path, body in files.items():
+            info = tarfile.TarInfo(f"{top}/{path}")
+            info.size = len(body)
+            tar.addfile(info, io.BytesIO(body))
+    return data.getvalue()
 
 
 # ------------------------------------------------------------------ an invented showcase list
@@ -396,6 +435,14 @@ class StandInMirror:
     def account(self, entity: str) -> dict | None:
         return self._one("account", entity)
 
+    def schedule(self, entity: str) -> dict | None:
+        return self._one("schedule", entity)
+
+    def transaction(self, entity: str) -> dict | None:
+        """The answer of /transactions/{id}: a list, the parent first, or nothing."""
+        found = self._one("transaction", entity)
+        return {"transactions": [found]} if found is not None else None
+
     def _end(
         self,
         what: str,
@@ -438,6 +485,15 @@ class StandInMirror:
         until: datetime | None = None,
     ) -> list[dict]:
         return self._end("transactions", entity, newest_first, since, until)
+
+    # The messages of the register's topic, in self.lists[("register", topic)].
+    def topic_messages_from(self, topic_id: str, first: int, *, limit: int = 100) -> list[dict]:
+        self.asked.append(("register", topic_id, first))
+        messages = self.lists.get(("register", topic_id), [])
+        return [one for one in messages if one["sequence_number"] >= first][:limit]
+
+    def wait_for_message(self, topic_id: str, sequence_number: int, **_: object) -> dict:
+        return self.lists[("register", topic_id)][sequence_number - 1]
 
 
 def _inside(item: dict, since: datetime | None, until: datetime | None) -> bool:

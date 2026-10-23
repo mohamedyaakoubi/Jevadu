@@ -32,7 +32,7 @@ PEBBLE = "https://github.com/sample-org/pebble-pay"
 EEL = "https://github.com/sample-org/eel-ledger"
 FERN = "https://github.com/sample-org/fern-feed"
 README_TEXT = (
-    "# Pebble Pay\n\nPay a vendor. Our topic on testnet: 0.0.3456789.\n\n"
+    "# Pebble Pay\n\nPay a vendor. Our topic on testnet: 0.0.3456781.\n\n"
     "## Team\n\n- Quill Invented, [profile](https://x.com/quill_invented)\n\n"
     "## Setup\n\nAsk @reed_invented.\n"
 )
@@ -76,7 +76,7 @@ def test_a_readme_is_kept_as_text_without_its_team_part_and_its_handles() -> Non
     assert "Quill" not in text and "quill" not in text and "reed" not in text
     assert "## Team" not in text
     assert f"Ask {HIDDEN_HANDLE}." in text
-    assert "Our topic on testnet: 0.0.3456789." in text
+    assert "Our topic on testnet: 0.0.3456781." in text
     assert facts == {
         "name": "README.md",
         "path": "README.md",
@@ -140,7 +140,7 @@ def test_each_kind_of_saved_answer_is_read_back(tmp_path: Path) -> None:
     found = saved_readme(store, PEBBLE)
     assert found is not None and found.status == FOUND
     assert found.name == "README.md"
-    assert "0.0.3456789" in found.text and "Quill" not in found.text
+    assert "0.0.3456781" in found.text and "Quill" not in found.text
     assert found.taken_out["team_parts_cut"] == 1
     assert [saved_readme(store, repo).status for repo in (EEL, FERN, other)] == [  # type: ignore[union-attr]
         NONE,

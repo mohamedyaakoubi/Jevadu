@@ -1,0 +1,131 @@
+{
+ "test": "code-findings",
+ "made_on": "2026-10-22",
+ "made_at": "2026-10-22T09:46:50Z",
+ "repositories_read": {
+  "gone": 2,
+  "read": 579
+ },
+ "projects": {
+  "all": {
+   "use": 508,
+   "nothing": 50,
+   "not_read": 70,
+   "mention_only": 23,
+   "gone_or_blocked": 2,
+   "no_repository_on_github": 5
+  },
+  "hedera_prize": {
+   "use": 72,
+   "not_read": 10,
+   "nothing": 7,
+   "mention_only": 1,
+   "no_repository_on_github": 2
+  },
+  "no_prize": {
+   "use": 371,
+   "nothing": 33,
+   "not_read": 56,
+   "mention_only": 20,
+   "gone_or_blocked": 2,
+   "no_repository_on_github": 3
+  },
+  "other_prize": {
+   "nothing": 10,
+   "use": 65,
+   "not_read": 4,
+   "mention_only": 2
+  }
+ },
+ "projects_with_no_hedera_id": {
+  "all": {
+   "use": 259,
+   "nothing": 47,
+   "not_read": 64,
+   "mention_only": 17,
+   "gone_or_blocked": 1,
+   "no_repository_on_github": 4
+  },
+  "hedera_prize": {
+   "use": 44,
+   "not_read": 9,
+   "nothing": 5,
+   "mention_only": 1,
+   "no_repository_on_github": 1
+  },
+  "no_prize": {
+   "use": 179,
+   "nothing": 33,
+   "not_read": 51,
+   "mention_only": 14,
+   "gone_or_blocked": 1,
+   "no_repository_on_github": 3
+  },
+  "other_prize": {
+   "nothing": 9,
+   "use": 36,
+   "not_read": 4,
+   "mention_only": 2
+  }
+ },
+ "repositories_per_name": {
+  "feature": {
+   "Accounts and HBAR transfers": 287,
+   "Consensus Service (topics)": 258,
+   "Token Service": 163,
+   "Smart contracts": 72,
+   "Scheduled transactions": 71,
+   "File Service": 29,
+   "Batch transactions": 4,
+   "Random numbers": 1
+  },
+  "package": {
+   "@hashgraph/sdk": 232,
+   "@hiero-ledger/sdk": 138,
+   "@hashgraph/hedera-wallet-connect": 45,
+   "hedera-agent-kit": 43,
+   "@hiero-ledger/proto": 23,
+   "@hashgraph/asset-tokenization-sdk": 19,
+   "@hashgraph/hedera-agent-kit": 17,
+   "@hashgraph/asset-tokenization-contracts": 12,
+   "hashconnect": 10,
+   "hiero-sdk-python": 10,
+   "@hashgraph/hedera-agent-kit-langchain": 8,
+   "@hashgraphonline/standards-sdk": 8,
+   "@hashgraph/proto": 7,
+   "github.com/hiero-ledger/hiero-sdk-go/v2": 7,
+   "@hashgraph/hedera-local": 5,
+   "@hashgraph/system-contracts-forking": 4,
+   "@hiero-ledger/hiero-contracts": 4,
+   "hedera-sdk-py": 4,
+   "@hashgraph/smart-contracts": 3,
+   "@hashgraphonline/hashinal-wc": 3,
+   "hedera": 3,
+   "@hashgraph/hardhat-hethers": 2,
+   "@hashgraph/hashconnect": 2,
+   "@hashgraph/hedera-agent-kit-ai-sdk": 2,
+   "@hashgraph/hedera-custodians-integration": 2,
+   "@hashgraph/hethers": 2,
+   "@hashgraphonline/hedera-agent-kit": 2,
+   "@hashgraphonline/standards-agent-kit": 2,
+   "@hashgraph/cryptography": 1,
+   "@hashgraph/did-sdk-js": 1,
+   "@hashgraph/eslint-config": 1,
+   "@hashgraph/hedera-smart-contracts": 1,
+   "@hashgraph/hedera-wallet-snap": 1,
+   "@hashgraph/mass-payout-sdk": 1,
+   "com.hedera.hashgraph:sdk": 1,
+   "github.com/hashgraph/hedera-protobufs-go": 1,
+   "github.com/hashgraph/hedera-sdk-go/v2": 1,
+   "hedera-proto": 1,
+   "hiero_sdk_python": 1
+  },
+  "sign": {
+   "Mirror node read by the code": 312,
+   "Hedera JSON-RPC relay (Hashio)": 250,
+   "Hedera chain ID in EVM settings": 214,
+   "Hedera network of an EVM tool": 165,
+   "Hedera system contracts in Solidity": 41
+  }
+ }
+}

@@ -57,7 +57,7 @@ def test_the_example_settings_file_holds_no_value() -> None:
             "GEMINI_REWRITE_MODEL": "gemini-3.1-pro-preview",
             "GEMINI_REWRITE_THINKING_LEVEL": "HIGH",
             "GEMINI_SEARCH_MODEL": "gemini-3.8-flash",
-            "GEMINI_SEARCH_THINKING_LEVEL": "HIGH",
+            "GEMINI_SEARCH_THINKING_LEVEL": "LOW",
             "GEMINI_EMBEDDING_MODEL": "gemini-embedding-2",
         }
         assert value == allowed.get(name, ""), f"{name} has a value in .env.example"
@@ -107,7 +107,7 @@ def test_the_scanner_finds_planted_secrets() -> None:
     }
     for name, text in planted.items():
         assert name in find_secret_shapes(f"before {text} after"), name
-    assert find_secret_shapes("a normal sentence, 0.0.12345 and a short 302e0201 prefix") == []
+    assert find_secret_shapes("a normal sentence, 0.0.12346 and a short 302e0201 prefix") == []
 
 
 def test_no_tracked_file_holds_something_that_looks_like_a_secret() -> None:

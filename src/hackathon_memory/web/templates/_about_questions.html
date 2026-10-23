@@ -1,0 +1,43 @@
+{# Common questions: what "How it works" and the (i) marks do not already answer. #}
+{% import "_parts.html" as parts %}
+<article class="about" aria-labelledby="sheet-title">
+  <h2 id="sheet-title" class="about-title" tabindex="-1">Common questions</h2>
+
+  <details class="question" open>
+    <summary>Why doesn't the AI judge, score or rank the projects?</summary>
+    <p>A verdict needs a basis that can be checked, and here there is none. To trust a model as a judge, people who know the field would first label many examples against written criteria, and the model's answers would be measured against theirs. No such set exists for hackathon projects.</p>
+    <p>Research on models used as judges also found biases that have nothing to do with quality: preferring the longer answer, or the one shown first{{ parts.ref("mtbench") }}, and, when screening CVs, preferring some names over others{{ parts.ref("cvstudy") }}.</p>
+    <p>So AI here only does work that can be checked. It summarises a page against written rules and quotes the sentences it used, and code verifies every quote. The facts come from code and from the ledger. People judge.</p>
+  </details>
+
+  <details class="question">
+    <summary>Where does the data come from?</summary>
+    <p>ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, rate-limited read of its Hedera prize projects, with the site's name and a contact address in every request, and the other projects that its showcase ties to Hedera are read in exactly the same way. The winners of other events come from the organisers' own public lists.</p>
+    <p>Hedera data comes from the public mirror node{{ parts.ref("mirror") }}, and code data from GitHub. Every project links to the page it comes from.</p>
+  </details>
+
+  <details class="question">
+    <summary>Is my idea stored?</summary>
+    <p>Your browser keeps your last search until you clear it. The server does not store your idea. It is sent to Google's models, and their answers are cached for one day under a hash of the idea (a short code computed from it), so the same search is not paid for twice.</p>
+  </details>
+
+  <details class="question">
+    <summary>Does "no ID given" mean the project did not use Hedera?</summary>
+    <p>No. It means that neither the project page nor the README of its code names an ID that could be checked. Many teams never wrote their IDs down.</p>
+  </details>
+
+  <details class="question">
+    <summary>Why do some projects have no AI summary?</summary>
+    <p>A summary is made from the project's own page. An entry that comes only from an organiser's list of winners has no page to summarise, so it shows what the list gives.</p>
+  </details>
+
+  <details class="question">
+    <summary>Why does Gemini only run when I click?</summary>
+    <p>So that you always know when generative AI is used. The default results come from semantic or keyword search. The button calls Gemini, says what it will do, and takes a few seconds.</p>
+  </details>
+
+  <details class="question">
+    <summary>Why do some events show only their winners?</summary>
+    <p>For those events, the organiser's list of winners is the only part that is still public.</p>
+  </details>
+</article>

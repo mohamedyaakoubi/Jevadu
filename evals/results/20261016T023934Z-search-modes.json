@@ -1,0 +1,3124 @@
+{
+ "test": "search-modes",
+ "made_on": "2026-10-16",
+ "cases_of": "test2, the counted cases",
+ "embedding_model": "gemini-embedding-2",
+ "search_model": "gemini-3.8-flash",
+ "thinking_level": "LOW",
+ "pool_ordered_by_ai": 30,
+ "typing_errors_in_each_idea": 0,
+ "typo_seed": null,
+ "projects_searched": 826,
+ "modes": {
+  "words": {
+   "share": 0.4035,
+   "range": [
+    0.25,
+    0.5614
+   ],
+   "found": 23,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 0,
+   "seconds_middle": 0.49,
+   "seconds_95_of_100": 0.57,
+   "cost_usd_per_search": 0.0
+  },
+  "meaning": {
+   "share": 0.6316,
+   "range": [
+    0.4833,
+    0.7719
+   ],
+   "found": 36,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 0,
+   "seconds_middle": 0.06,
+   "seconds_95_of_100": 0.08,
+   "cost_usd_per_search": 0.0
+  },
+  "both": {
+   "share": 0.5965,
+   "range": [
+    0.4444,
+    0.7414
+   ],
+   "found": 34,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 0,
+   "seconds_middle": 0.55,
+   "seconds_95_of_100": 0.66,
+   "cost_usd_per_search": 0.0
+  },
+  "meaning, then AI": {
+   "share": 0.7368,
+   "range": [
+    0.6102,
+    0.8596
+   ],
+   "found": 42,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 0,
+   "seconds_middle": 2.03,
+   "seconds_95_of_100": 71.76,
+   "cost_usd_per_search": 0.002165
+  },
+  "both, then AI": {
+   "share": 0.7193,
+   "range": [
+    0.5833,
+    0.8475
+   ],
+   "found": 41,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 0,
+   "seconds_middle": 2.58,
+   "seconds_95_of_100": 86.25,
+   "cost_usd_per_search": 0.002227
+  },
+  "AI over every project": {
+   "share": 0.7193,
+   "range": [
+    0.5763,
+    0.8545
+   ],
+   "found": 41,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 0,
+   "seconds_middle": 2.43,
+   "seconds_95_of_100": 31.6,
+   "cost_usd_per_search": 0.016407
+  }
+ },
+ "rows": [
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.52,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.64,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.04,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.83,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.2,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.51,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.63,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.79,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.59,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.99,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.58,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.37,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.36,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.03,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.1,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.8,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.29,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.58,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.97,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.8,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 31.6,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 39.74,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.91,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.02,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.59,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.27,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 58.66,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.52,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.57,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.35,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.38,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.52,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.91,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 200.69,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.98,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.5,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.6,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 86.25,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 123.65,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.86,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.33,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.27,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.05,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.15,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.15,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.2,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.51,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.13,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 8.79,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.33,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.78,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.8,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.13,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.57,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.87,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.56,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.18,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.5,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.37,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.23,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.59,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.51,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.57,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.85,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 22.85,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.22,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.58,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.88,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.64,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.79,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.05,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.61,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.32,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.59,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.23,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.46,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.26,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.51,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.04,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.18,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.32,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.46,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.63,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.53,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.38,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.78,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.7,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.57,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.8,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.1,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.1,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.65,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.2,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.64,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.5,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 108.35,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.39,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 5.7,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.08,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.02,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.66,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 6.12,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.6,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.16,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.38,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 5.96,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.5,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.99,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 5.95,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.64,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.5,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.57,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.94,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 42.27,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.4,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.78,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.7,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.33,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.57,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.99,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.35,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.46,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.5,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.47,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.19,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.19,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.65,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.7,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.53,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.26,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 37.18,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.49,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.22,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.98,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 3.22,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.98,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.52,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.29,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.32,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.91,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.08,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.58,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.1,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 15.33,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.69,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 196.84,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.38,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.27,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.02,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 3.21,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 5.01,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.52,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.39,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.04,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.58,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.05,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.7,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.31,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 4.27,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.93,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.95,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.11,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.5,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.65,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.22,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.11,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.35,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.6,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.08,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.89,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.79,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.59,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.16,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.78,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.09,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.07,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 71.76,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 4.69,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.15,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.57,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.07,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.58,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.77,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.39,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.14,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.87,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.12,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "AI over every project",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.37,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.65,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.34,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.57,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.66,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.68,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 92.62,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 4.05,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "meaning",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.05,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "meaning, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.91,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "both, then AI",
+   "found": 0,
+   "known": 1,
+   "seconds": 48.0,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.23,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "words",
+   "found": 0,
+   "known": 2,
+   "seconds": 0.48,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "meaning",
+   "found": 1,
+   "known": 2,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "both",
+   "found": 0,
+   "known": 2,
+   "seconds": 0.54,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "meaning, then AI",
+   "found": 2,
+   "known": 2,
+   "seconds": 1.84,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "both, then AI",
+   "found": 2,
+   "known": 2,
+   "seconds": 4.37,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 2,
+   "seconds": 2.04,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.49,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.55,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.68,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 77.91,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.46,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.47,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.82,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.23,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.56,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "words",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.51,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "both",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.59,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 7.31,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.37,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 7.61,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "words",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.53,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "meaning",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.06,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "both",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.52,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "meaning, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 4.0,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "both, then AI",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.78,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "AI over every project",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.15,
+   "failed": false
+  }
+ ]
+}

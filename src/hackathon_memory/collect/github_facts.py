@@ -95,6 +95,7 @@ class RepositoryFacts:
     current_url: str | None  # the link today, which differs when the repository was moved
     sha256: str
     fetched_at: str
+    default_branch: str | None = None  # the branch that GitHub opens first, such as main
 
 
 def _moment(value: object) -> datetime | None:
@@ -110,6 +111,7 @@ def read_facts(saved: SavedPage) -> RepositoryFacts:
     if status == 200:
         kept = json.loads(saved.read().decode("utf-8") or "{}")
         url = kept.get("html_url")
+        branch = kept.get("default_branch")
         return RepositoryFacts(
             status=FOUND,
             created_at=_moment(kept.get("created_at")),
@@ -120,6 +122,7 @@ def read_facts(saved: SavedPage) -> RepositoryFacts:
             current_url=url.lower() if isinstance(url, str) else None,
             sha256=meta["sha256"],
             fetched_at=meta["fetched_at"],
+            default_branch=branch if isinstance(branch, str) and branch else None,
         )
     return RepositoryFacts(
         status=BLOCKED if status in (403, 451) else GONE,

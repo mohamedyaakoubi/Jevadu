@@ -34,8 +34,8 @@ PEBBLE = "https://github.com/sample-org/pebble-pay"
 CEDAR = "https://github.com/sample-org/cedar-lens"
 DUNE = "https://github.com/sample-org/dune-notes"
 README = (
-    "# Pebble Pay\n\nOur topic on testnet: 0.0.3456789.\n\n"
-    "## Team\n\nQuill Invented runs the account 0.0.1234567.\n\n## License\n\nMIT\n"
+    "# Pebble Pay\n\nOur topic on testnet: 0.0.3456781.\n\n"
+    "## Team\n\nQuill Invented runs the account 0.0.1234561.\n\n## License\n\nMIT\n"
 )
 
 
@@ -108,8 +108,8 @@ def test_the_ids_of_a_readme_go_to_every_project_of_its_repository(
     run = run_step(database, raw)
     # The id that stood in the part about the team was cut out with it, and counted.
     assert readme_ids(database) == [
-        ("pebble-copy-x1y2z", "0.0.3456789", "testnet", "topic"),
-        ("pebble-pay-x1y2z", "0.0.3456789", "testnet", "topic"),
+        ("pebble-copy-x1y2z", "0.0.3456781", "testnet", "topic"),
+        ("pebble-pay-x1y2z", "0.0.3456781", "testnet", "topic"),
     ]
     assert dict(run.counts) == {
         "projects_with_code_on_github": 3,
@@ -157,8 +157,8 @@ def test_the_ids_of_a_readme_are_checked_like_those_of_a_page(
     run_step(database, raw)
     to_check = LedgerStore(database).ids_to_check()
     assert {(item.project_id, item.entity_id) for item in to_check} == {
-        (ids["pebble-pay-x1y2z"], "0.0.3456789"),
-        (ids["pebble-copy-x1y2z"], "0.0.3456789"),
+        (ids["pebble-pay-x1y2z"], "0.0.3456781"),
+        (ids["pebble-copy-x1y2z"], "0.0.3456781"),
     }
 
 

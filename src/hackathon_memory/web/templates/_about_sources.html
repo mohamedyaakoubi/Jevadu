@@ -1,0 +1,10 @@
+{# The numbered sources of the pages, as in an encyclopedia (references.py). #}
+<article class="about" aria-labelledby="sheet-title">
+  <h2 id="sheet-title" class="about-title" tabindex="-1">Sources and references</h2>
+  <p class="about-lede">A number in square brackets next to a term links to its source. Hedera's own documentation comes first wherever it covers the term.</p>
+  <ol class="reference-list">
+  {% for reference in REFERENCES %}
+    <li id="ref-{{ reference.key }}"><a href="{{ reference.url }}" rel="noopener" target="_blank">{{ reference.title }}<span class="visually-hidden"> (opens in a new tab)</span></a> <span class="where">{{ reference.publisher }}</span></li>
+  {% endfor %}
+  </ol>
+</article>

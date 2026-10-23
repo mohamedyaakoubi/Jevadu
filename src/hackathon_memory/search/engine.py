@@ -32,10 +32,15 @@ the search (design 13.3).
 
 The idea itself is kept nowhere. Its embedding is kept for a day under the fingerprint of the
 idea, so that the same idea is not paid for twice (db/embeddings.py).
+
+The filters of the website (search/filters.py) can limit the search to some projects. Both lists
+are then taken from those projects only. The weights of the words are still counted over every
+project, so a filter never changes the order of two projects that it keeps.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -46,6 +51,8 @@ from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.llm.embeddings import embed_query
 
 RRF_K = 60
+BOTH, MEANING, WORDS = "both", "meaning", "words"
+MODES = (BOTH, MEANING, WORDS)  # which lists a search makes
 CANDIDATES = 10  # from each of the two lists, when no other number is asked for
 LANGUAGE = "english"  # the texts of the showcase are in English
 
@@ -81,6 +88,7 @@ FROM terms t
 JOIN frequency f USING (lexeme)
 JOIN lengths l USING (id)
 CROSS JOIN corpus c
+WHERE %(only)s::bigint[] IS NULL OR t.id = ANY(%(only)s)
 GROUP BY t.id
 ORDER BY score DESC, t.id
 LIMIT %(limit)s
@@ -111,9 +119,13 @@ def merge(by_meaning: list[int], by_words: list[int], *, k: int = RRF_K) -> list
     return sorted(hits, key=lambda hit: (-hit.score, hit.project_id))
 
 
-def by_words(conninfo: str, idea: str, *, limit: int = CANDIDATES) -> list[int]:
-    """The projects that have words of the idea, best first by BM25."""
-    values = {"language": LANGUAGE, "idea": idea, "limit": limit, "k1": BM25_K1, "b": BM25_B}
+def by_words(
+    conninfo: str, idea: str, *, limit: int = CANDIDATES, only: Sequence[int] | None = None
+) -> list[int]:
+    """The projects that have words of the idea, best first by BM25. With `only`, the projects
+    are taken from those alone; the weights of the words still come from every project."""
+    values = {"language": LANGUAGE, "idea": idea, "limit": limit, "k1": BM25_K1, "b": BM25_B,
+              "only": None if only is None else list(only)}  # fmt: skip
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(_WORDS, values)
         return [project for project, _ in rows.fetchall()]
@@ -127,16 +139,17 @@ def by_meaning(
     model: str,
     limit: int = CANDIDATES,
     now: datetime | None = None,
+    only: Sequence[int] | None = None,
 ) -> list[int]:
-    """The projects closest in meaning to the idea, closest first. The idea is embedded once a
-    day at most."""
+    """The projects closest in meaning to the idea, closest first, from `only` when it is given.
+    The idea is embedded once a day at most."""
     store.forget_old_ideas(now)
     fingerprint = idea_fingerprint(idea)
     values = store.idea(fingerprint, model, now)
     if values is None:
         values = embed_query(client, idea, model=model).values
         store.save_idea(fingerprint, model, values, now)
-    return [project for project, _ in store.nearest(values, model, limit=limit)]
+    return [project for project, _ in store.nearest(values, model, limit=limit, only=only)]
 
 
 def search(
@@ -147,15 +160,22 @@ def search(
     model: str,
     limit: int = 10,
     now: datetime | None = None,
+    only: Sequence[int] | None = None,
+    mode: str = BOTH,
 ) -> list[Hit]:
-    """The projects closest to the idea, best first. With no project embedding of the model, only
-    the words are searched, and the idea is not embedded: nothing is paid for."""
-    if not idea.strip():
+    """The projects closest to the idea, best first, from the projects of `only` when it is given
+    (the filters). The mode says which lists are made: both (the default), meaning or words.
+    With no project embedding of the model, only the words are searched, and the idea is not
+    embedded: nothing is paid for. No idea, or no project left, finds nothing."""
+    if mode not in MODES:
+        raise ValueError(f"unknown mode of search: {mode}")
+    if not idea.strip() or (only is not None and not only):
         return []
     store = EmbeddingStore(conninfo)
     meaning = (
-        by_meaning(store, client, idea, model=model, limit=limit, now=now)
-        if store.counts(model)["embeddings"]
+        by_meaning(store, client, idea, model=model, limit=limit, now=now, only=only)
+        if mode != WORDS and store.counts(model)["embeddings"]
         else []
     )
-    return merge(meaning, by_words(conninfo, idea, limit=limit))[:limit]
+    words = by_words(conninfo, idea, limit=limit, only=only) if mode != MEANING else []
+    return merge(meaning, words)[:limit]

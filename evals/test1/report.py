@@ -287,6 +287,8 @@ def _project_answers(sheet: dict, grades: dict) -> list[dict]:
 
 def report(sheet: dict, key: dict, first: dict, second: dict, draws: int = DRAWS) -> dict:
     for name, grades in (("maintainer", first), ("second grader", second)):
+        if grades.get("absent"):
+            continue  # this grader did not grade this sheet
         if grades.get("sheet") != sheet["fingerprint"]:
             raise ReportError(f"the grades of the {name} belong to another sheet")
     if key.get("sheet") != sheet["fingerprint"]:
@@ -302,7 +304,9 @@ def report(sheet: dict, key: dict, first: dict, second: dict, draws: int = DRAWS
     to_check = [case["page"] for case in sheet["cases"] if case["parser_check"]]
     checks = [first["cases"].get(page, {}).get("parser") for page in to_check]
     return {
-        "test": "test1",
+        "test": "test1"
+        if sheet.get("instructions_version") in (None, "card-form-1")
+        else f"test1-{sheet['instructions_version']}",
         "made_on": datetime.now(UTC).strftime("%Y-%m-%d"),
         "sheet": sheet["fingerprint"],
         "model": sheet["model"],
@@ -342,7 +346,7 @@ def report(sheet: dict, key: dict, first: dict, second: dict, draws: int = DRAWS
 def write(result: dict, folder: Path | None = None) -> Path:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     folder = folder or RESULTS
-    path = folder / f"{stamp}-test1.json"
+    path = folder / f"{stamp}-{result['test']}.json"
     folder.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8", newline="\n")
     return path
@@ -355,16 +359,24 @@ def _read(path: Path) -> dict:
         raise ReportError(f"{path.name} cannot be read") from error
 
 
+def _read_or_none(path: Path) -> dict:
+    """The grades of a grader, or none when this grader did not grade this sheet."""
+    if not path.exists():
+        return {"sheet": None, "cases": {}, "absent": True}
+    return _read(path)
+
+
 def main(argv: Sequence[str]) -> int:
-    if argv:
-        print("usage: python -m evals.test1.report")
+    if len(argv) not in (0, 2) or (argv and argv[0] != "--name"):
+        print("usage: python -m evals.test1.report [--name <folder of the sheet in data/evals>]")
         return 2
-    folder = Path(Settings().data_dir) / "evals" / "test1"
+    name = argv[1] if argv else "test1"
+    folder = Path(Settings().data_dir) / "evals" / name
     try:
         result = report(
             _read(folder / DATA_FILE),
             _read(folder / KEY_FILE),
-            _read(folder / MAINTAINER_GRADES),
+            _read_or_none(folder / MAINTAINER_GRADES),
             _read(folder / SECOND_GRADES),
             DRAWS,
         )

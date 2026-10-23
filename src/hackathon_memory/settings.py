@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     gemini_rewrite_model: str = Field("gemini-3.1-pro-preview", json_schema_extra=_PUBLIC)
     gemini_rewrite_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
     gemini_search_model: str = Field("gemini-3.8-flash", json_schema_extra=_PUBLIC)
-    gemini_search_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
+    gemini_search_thinking_level: ThinkingLevelName = Field("LOW", json_schema_extra=_PUBLIC)
     # The embedding model of the search (design 8.1). Chosen on 11 October 2026 for its known
     # price and its length of 8,192 tokens (llm/embeddings.py).
     gemini_embedding_model: str = Field("gemini-embedding-2", json_schema_extra=_PUBLIC)

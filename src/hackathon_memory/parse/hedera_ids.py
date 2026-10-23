@@ -1,9 +1,19 @@
 """Find Hedera ids in a text, with the words around each one (design 6.1 and 7.1).
 
-An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for three reasons.
+An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for five reasons.
 
 * A version number has the same shape ("0.0.3", "v0.0.12"). The numbers up to 1000 belong to the
   network itself, so no project owns one of them. Such a number is never given as an id.
+* A number whose digits count up or down, such as 0.0.12345 or 0.0.54321, shows how an id looks:
+  a value to replace in the steps of a setup, or the form of an id in a sentence. In the
+  collection, every such number is an example (read on 22 October 2026), and some of them are
+  real things of somebody else on the ledger, which the check took for proof. Such a number is
+  not given as an id either.
+* A local Hedera network, which a team runs on its own computer, gives its default accounts the
+  numbers 0.0.1002 to 0.0.1031. On the public networks these numbers were given out long before
+  any event (in 2019 on mainnet, on the day testnet was last emptied), so a text that names one
+  speaks of a local network, which the ledger does not know. Such a number is not given as an
+  id, and neither is a transaction that it paid.
 * The same number is a different thing on each network, so an id is kept with its network. A
   link to HashScan names the network exactly. Words do it less surely, and a wrong network is
   worse than none: the ledger would be asked about another thing. So the network is taken from
@@ -11,10 +21,19 @@ An id of Hedera looks like 0.0.12345. A pattern alone is not enough, for three r
   two, the network stays open and both are asked later.
 * The words near an id often say what it is: an account, a token, a topic or a contract. The
   word just before the id on its line counts ("Topic ID: 0.0.12345"). If there is none, the word
-  just after it counts ("0.0.12345 (topic)"). A word on the far side of another id does not.
+  just after it counts ("0.0.12345 (topic)"). A word on the far side of another id does not. A
+  schedule (a scheduled transaction, which HashScan shows at /schedule/) is named only by a link
+  or by "schedule" right before the id: the word has other meanings, such as a fee schedule.
 
 An address of the EVM kind (0x and 40 letters) is kept only when a HashScan link names it. The
 same address can live on any other chain, so a bare one is not taken for Hedera.
+
+A transaction is one action on the ledger: a transfer, the creation of a token, a message to a
+topic, a call of a contract. Its ID is the account that paid for it and the moment it was sent:
+"0.0.12345@1700000000.123456789" or "0.0.12345-1700000000-123456789". Both give two IDs: the
+transaction itself, which says exactly what happened and when, and the account that paid. The
+mirror node asks for the second form only (measured on 18 October 2026), so every transaction is
+kept in it. A link to a transaction that gives only a time names no ID.
 
 Sources, read on 11 October 2026. The shape of an id with its check word of five letters is the
 one of hiero-sdk-python 0.2.10 (utils/entity_id_helper.py, ID_REGEX). The first number that a
@@ -26,10 +45,19 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from itertools import pairwise
 
 NETWORKS = ("mainnet", "testnet", "previewnet")
 ACCOUNT, TOKEN, TOPIC, CONTRACT = "account", "token", "topic", "contract"
+TRANSACTION = "transaction"
+SCHEDULE = "schedule"  # a scheduled transaction
 FIRST_USER_NUMBER = 1001
+# A number that counts (1234, 54321) is an example from four digits on.
+_SHORTEST_COUNT = 4
+# The default accounts of a local Hedera network: "Default is 10 per type", 0.0.1002 to 0.0.1011
+# (ECDSA), 0.0.1012 to 0.0.1021 (ECDSA with an alias) and 0.0.1022 to 0.0.1031 (ED25519).
+# Source: the README of hiero-ledger/hiero-local-node, read on 22 October 2026.
+LOCAL_DEFAULT_ACCOUNTS = range(1002, 1032)
 
 # How far from an id the name of a network is looked for, in characters: on its own line, and
 # in the text before that line.
@@ -54,14 +82,25 @@ _KIND_WORDS = {
 _KIND = re.compile(
     "|".join(f"(?P<{kind}>{words})" for kind, words in _KIND_WORDS.items()), re.IGNORECASE
 )
+# "Schedule" names the kind only right before the id ("schedule `0.0.123`", "Schedule ID: 0.0.123"),
+# and never as a fee schedule. Measured on the collection on 22 October 2026: a "schedule" a few
+# words away named a token's fee schedule once, and a schedule that an account signs once.
+_SCHEDULE_RIGHT_BEFORE = re.compile(
+    r"(?<![a-z])(?<!fee[ _-])schedule(?:[ _-]?id)?[\s:=`'\"(\[|]*\Z", re.IGNORECASE
+)
 # A link to HashScan: the network, what the thing is, and its id or address.
 _HASHSCAN = re.compile(
     r"hashscan\.io/(mainnet|testnet|previewnet)/"
-    r"(account|token|topic|contract|transaction|address)/"
+    r"(account|token|topic|contract|transaction|address|schedule)/"
     r"([0-9A-Za-z.@_-]+)",
     re.IGNORECASE,
 )
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+# A transaction: the account that paid, then the seconds and the nanoseconds of the moment it was
+# sent, joined by "@" and "." or by two "-".
+_TRANSACTION = re.compile(
+    r"(?<![\w.@])0\.0\.([1-9]\d{0,11})(?:@(\d{1,11})\.(\d{1,9})|-(\d{1,11})-(\d{1,9}))(?!\w|\.\d)"
+)
 # What a HashScan link says the thing is. The payer of a transaction is an account. "address"
 # is an address of the EVM kind, which can be an account or a contract.
 _HASHSCAN_KINDS = {
@@ -71,6 +110,7 @@ _HASHSCAN_KINDS = {
     "contract": CONTRACT,
     "transaction": ACCOUNT,
     "address": None,
+    "schedule": SCHEDULE,
 }
 
 
@@ -96,6 +136,34 @@ def find_ids(*texts: str) -> list[FoundId]:
     return _merge(mentions)
 
 
+def transaction_id(match: re.Match[str]) -> str | None:
+    """A transaction as the mirror node asks for it, from a match of _TRANSACTION. In the form
+    with a dot, the digits after the dot are the start of the nanoseconds."""
+    account = match.group(1)
+    if not _of_a_project(account):
+        return None
+    if match.group(2) is not None:
+        seconds, nanos = match.group(2), match.group(3).ljust(9, "0")
+    else:
+        seconds, nanos = match.group(4), match.group(5)
+    return f"0.0.{account}-{int(seconds)}-{int(nanos)}"
+
+
+def _of_a_project(number: str) -> bool:
+    """Whether the number after "0.0." can name a thing of a project. The numbers below 1001
+    belong to the network itself, a default account of a local network is not on the ledger,
+    and a number whose digits count is an example."""
+    value = int(number)
+    local = value in LOCAL_DEFAULT_ACCOUNTS
+    return value >= FIRST_USER_NUMBER and not local and not _counts(number)
+
+
+def _counts(digits: str) -> bool:
+    """True when the digits go up by one, or down by one, all the way: 1234, 98765, 67890."""
+    steps = {(int(after) - int(before)) % 10 for before, after in pairwise(digits)}
+    return len(digits) >= _SHORTEST_COUNT and steps in ({1}, {9})
+
+
 def _mentions(text: str) -> list[FoundId]:
     found: list[tuple[int, FoundId]] = []
     links: list[tuple[int, int]] = []
@@ -107,17 +175,33 @@ def _mentions(text: str) -> list[FoundId]:
         inner = _ID.match(target)
         if _EVM_ADDRESS.match(target):
             entity = target.lower()
-        elif inner and int(inner.group(1)) >= FIRST_USER_NUMBER:
+        elif inner and _of_a_project(inner.group(1)):
             entity = f"0.0.{inner.group(1)}"
         else:
             continue
         words = _kept(text, *link.span())
         found.append((link.start(3), FoundId(entity, network, kind, words, True)))
+        transaction = (
+            _TRANSACTION.fullmatch(target) if link.group(2).lower() == "transaction" else None
+        )
+        if transaction and (exact := transaction_id(transaction)):
+            found.append((link.start(3), FoundId(exact, network, TRANSACTION, words, True)))
+    payers: set[int] = set()  # where a transaction starts: the account there paid for it
+    for match in _TRANSACTION.finditer(text):
+        start, end = match.span()
+        payers.add(start)
+        exact = transaction_id(match)
+        if exact is None or any(left <= start < right for left, right in links):
+            continue  # a link has already said it
+        mention = FoundId(
+            exact, _said_network(text, start, end), TRANSACTION, _kept(text, start, end)
+        )
+        found.append((start, mention))
     ids = [match for match in _ID.finditer(text)]
     spans = [match.span() for match in ids]
     for match in ids:
         start, end = match.span()
-        if int(match.group(1)) < FIRST_USER_NUMBER:
+        if not _of_a_project(match.group(1)):
             continue  # a number of the network itself, or a version number
         if any(left <= start < right for left, right in links):
             continue  # the link has already said it, and said it exactly
@@ -125,7 +209,7 @@ def _mentions(text: str) -> list[FoundId]:
         mention = FoundId(
             f"0.0.{match.group(1)}",
             _said_network(text, start, end),
-            _said_kind(text, start, end, others),
+            ACCOUNT if start in payers else _said_kind(text, start, end, others),
             _kept(text, start, end),
         )
         found.append((start, mention))
@@ -153,11 +237,14 @@ def _said_network(text: str, start: int, end: int) -> str | None:
 
 
 def _said_kind(text: str, start: int, end: int, others: list[tuple[int, int]]) -> str | None:
-    """What the word next to the id says it is: the last word before it on its line, or else the
-    first word after it. A word that another id separates from this id is not counted."""
+    """What the word next to the id says it is: "schedule" right before it, or else the last word
+    before it on its line, or else the first word after it. A word that another id separates from
+    this id is not counted."""
     line_start, line_end = _line(text, start, end)
     last_id_before = max((right for _, right in others if right <= start), default=0)
     left = max(line_start, start - _KIND_REACH, last_id_before)
+    if _SCHEDULE_RIGHT_BEFORE.search(text, left, start):
+        return SCHEDULE
     before = list(_KIND.finditer(text, left, start))
     if before:
         return before[-1].lastgroup

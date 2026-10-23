@@ -27,13 +27,13 @@ PRIZE_WORDS = {
 }
 STATUS_WORDS = {
     "proof_found": "proof found",
-    "window_not_known": "found, the end of the event is not typed in yet",
+    "window_not_known": "found, the end of the event is not known yet",
     "dates_do_not_fit": "found, but the dates do not fit",
     "found_but_empty": "found, but empty",
     "another_kind": "found, but as another kind of thing",
     "cannot_be_checked": "cannot be checked",
     "not_found": "not found",
-    "no_id_given": "no Hedera id given on the page or in the README",
+    "no_id_given": "no Hedera ID given",
     None: "not checked yet",
 }
 
@@ -50,6 +50,8 @@ class LedgerLine:
     created_at: datetime | None
     last_activity_at: datetime | None
     asked_at: datetime | None
+    action: str | None = None  # for a transaction: its kind, such as CRYPTOTRANSFER
+    outcome: str | None = None  # for a transaction: SUCCESS, or why it failed
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,12 @@ WHERE p.id = ANY(%s)
 """
 
 
+def signs_of_life(conn: psycopg.Connection, ids: Sequence[int]) -> dict[int, tuple]:
+    """For each project: the end of its event, the status, start and last push of its code, and
+    the last activity of its own ids (design 7.4)."""
+    return {row[0]: row[1:] for row in conn.execute(_SIGNS, (list(ids),)).fetchall()}
+
+
 def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) -> list[ResultCard]:
     """The facts of each project that was found, in the order of the hits."""
     now = now or datetime.now(UTC)
@@ -109,14 +117,15 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         ledger: dict[int, list[LedgerLine]] = {}
         for row in conn.execute(
             "SELECT h.project_id, h.entity_id, h.found_in, c.network, c.status, f.kind, "
-            "f.created_at, f.last_activity_at, f.asked_at "
+            "f.created_at, f.last_activity_at, f.asked_at, f.details ->> 'name', "
+            "f.details ->> 'result' "
             "FROM hedera_ids h LEFT JOIN id_checks c ON c.hedera_id = h.id "
             "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "
             "WHERE h.project_id = ANY(%s) ORDER BY h.project_id, h.id, c.network",
             (ids,),
         ).fetchall():
             ledger.setdefault(row[0], []).append(LedgerLine(*row[1:]))
-        signs = {row[0]: row[1:] for row in conn.execute(_SIGNS, (ids,)).fetchall()}
+        signs = signs_of_life(conn, ids)
     found: list[ResultCard] = []
     for rank, hit in enumerate(hits, start=1):
         if hit.project_id not in projects:

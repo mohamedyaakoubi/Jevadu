@@ -94,6 +94,16 @@ SERVICE_NAMES = {
     "file": ("Hedera File Service", "File Service", "HFS"),
 }
 SWAP, SERVICE, CATEGORY = "another project's words", "another service", "another category"
+# Categories that a grader may fairly take for one another. A planted category comes from
+# another group, so that it clearly does not fit: a plant of 13 October 2026 put a tool for
+# AI agents under "Developer tools", which one grader took as right and the other as partly.
+NEAR_CATEGORIES = (
+    {"AI agents and automation", "Tools for AI agents", "Developer tools", "Data and devices"},
+    {"Payments and remittance", "Lending, saving and investing", "Real-world assets and tokens"},
+    {"Identity and credentials", "Public services", "Social and community"},
+    {"Supply chain and provenance", "Agriculture", "Sustainability, energy and climate"},
+    {"Gaming and entertainment", "Social and community"},
+)
 
 
 class SheetError(ValueError):
@@ -217,6 +227,16 @@ def plant(
     return changed, key
 
 
+def far_from(category: str) -> set[str]:
+    """The categories that a planted category may not be: the same one, \"Other\", and the
+    categories near it."""
+    near = {category, "Other"}
+    for group in NEAR_CATEGORIES:
+        if category in group:
+            near |= group
+    return near
+
+
 def _planted_field(
     case: Case, kind: str, donors: list[dict], rng: random.Random
 ) -> tuple[str, dict, str] | None:
@@ -227,7 +247,7 @@ def _planted_field(
         field = case.card["category"]
         if field["state"] != KEPT:
             return None
-        others = [c.value for c in Category if c.value not in (field["value"], "Other")]
+        others = [c.value for c in Category if c.value not in far_from(field["value"])]
         return "category", {**field, "value": rng.choice(others)}, kind
     names = [name for name in SWAPPED_FIELDS if case.card[name]["state"] == KEPT]
     rng.shuffle(names)
@@ -366,9 +386,11 @@ def main(argv: Sequence[str]) -> int:
     )
     parser.add_argument("--show", type=int, metavar="N", help="print the page of project N")
     parser.add_argument("--card", action="store_true", help="with --show: print its card")
+    parser.add_argument("--name", default="test1",
+                        help="the folder of the sheet in data/evals (default: test1)")  # fmt: skip
     arguments = parser.parse_args(argv)
     settings = Settings()
-    folder = Path(settings.data_dir) / "evals" / "test1"
+    folder = Path(settings.data_dir) / "evals" / arguments.name
     if arguments.show is not None:
         return show(folder, arguments.show, card=arguments.card)
     if arguments.card:

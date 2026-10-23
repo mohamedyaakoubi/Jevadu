@@ -25,7 +25,14 @@ from hackathon_memory.check.proof import (
     needs_a_look_inside,
     window_of,
 )
-from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
+from hackathon_memory.parse.hedera_ids import (
+    ACCOUNT,
+    CONTRACT,
+    SCHEDULE,
+    TOKEN,
+    TOPIC,
+    TRANSACTION,
+)
 
 START = datetime(2026, 3, 6, 16, 0, tzinfo=UTC)  # the event starts on a Friday afternoon
 END = date(2026, 3, 8)  # and ends on the Sunday
@@ -39,7 +46,7 @@ LONG_AFTER = datetime(2026, 8, 1, tzinfo=UTC)
 def thing(kind: str | None = TOPIC, *, network: str = "testnet", **facts: object) -> LedgerFacts:
     values: dict = {"created_at": DURING, "first_activity_at": DURING, "last_activity_at": DURING}
     return LedgerFacts(
-        "0.0.3456789",
+        "0.0.3456781",
         network,
         ASKED,
         found=kind is not None,
@@ -83,6 +90,10 @@ def test_an_event_with_no_start_or_no_end_has_no_window() -> None:
         (TOPIC, CONTRACT, False),
         (TOKEN, ACCOUNT, False),
         (ACCOUNT, TOPIC, False),
+        (SCHEDULE, SCHEDULE, True),
+        (None, SCHEDULE, True),
+        (ACCOUNT, SCHEDULE, False),
+        (SCHEDULE, ACCOUNT, False),
     ],
 )
 def test_which_kinds_a_word_of_the_page_can_mean(said: str | None, kind: str, fits: bool) -> None:
@@ -95,6 +106,14 @@ def test_which_kinds_a_word_of_the_page_can_mean(said: str | None, kind: str, fi
 def test_a_thing_made_inside_the_window_is_proof() -> None:
     assert judge(thing(), TOPIC, WINDOW) == PROOF_FOUND
     assert judge(thing(ACCOUNT), None, WINDOW) == PROOF_FOUND
+
+
+def test_a_transaction_is_judged_by_its_own_moment() -> None:
+    assert judge(thing(TRANSACTION), TRANSACTION, WINDOW) == PROOF_FOUND
+    old = thing(TRANSACTION, created_at=LONG_BEFORE, first_activity_at=LONG_BEFORE,
+                last_activity_at=LONG_BEFORE)  # fmt: skip
+    assert judge(old, TRANSACTION, WINDOW) == DATES_DO_NOT_FIT
+    assert judge(thing(TRANSACTION, empty=True), TRANSACTION, WINDOW) == FOUND_BUT_EMPTY  # failed
 
 
 def test_a_thing_made_before_and_used_inside_the_window_is_proof() -> None:

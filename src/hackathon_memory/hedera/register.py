@@ -35,7 +35,7 @@ from hiero_sdk_python.crypto.public_key import PublicKey
 from hiero_sdk_python.exceptions import MaxAttemptsError, PrecheckError, ReceiptStatusError
 from hiero_sdk_python.response_code import ResponseCode
 
-REGISTER_MEMO = "Hackathon Memory register"  # a topic memo holds 100 bytes at most
+REGISTER_MEMO = "Jevadu register"  # a topic memo holds 100 bytes at most
 MAX_RECORD_BYTES = 1024  # one message; a longer one is cut into pieces (design 9.3)
 
 AUTORENEW_NOT_ALLOWED = "AUTORENEW_ACCOUNT_NOT_ALLOWED"

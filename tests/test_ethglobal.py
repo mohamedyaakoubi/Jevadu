@@ -194,7 +194,7 @@ def test_a_full_run_saves_the_winners_without_personal_tags(tmp_path: Path) -> N
     assert saved is not None
     content = saved.read()
     assert b"Pebble Pay" in content
-    assert b"0.0.2345678" in content
+    assert b"0.0.2345671" in content
     assert b'name="author"' not in content  # the personal tags go on every page
     assert b'name="twitter:creator"' not in content
     assert saved.meta["status"] == 200

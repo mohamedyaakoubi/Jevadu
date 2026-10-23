@@ -105,7 +105,7 @@ def test_the_gemini_layers_have_the_owners_choices_by_default(clean_env: None) -
     assert s.gemini_rewrite_model == "gemini-3.1-pro-preview"  # reading and rewriting the pages
     assert s.gemini_search_model == "gemini-3.8-flash"  # the search
     assert s.gemini_rewrite_thinking_level == "HIGH"
-    assert s.gemini_search_thinking_level == "HIGH"
+    assert s.gemini_search_thinking_level == "LOW"  # measured faster, 16 October 2026
 
 
 def test_the_gemini_settings_are_read_from_the_environment(
@@ -141,4 +141,4 @@ def test_a_wrong_gemini_setting_is_refused_at_once(clean_env: None, bad: dict) -
 def test_the_gemini_settings_are_public(clean_env: None) -> None:
     lines = {line.name: line.state for line in describe(make())}
     assert lines["GEMINI_REWRITE_MODEL"] == "gemini-3.1-pro-preview"
-    assert lines["GEMINI_SEARCH_THINKING_LEVEL"] == "HIGH"
+    assert lines["GEMINI_SEARCH_THINKING_LEVEL"] == "LOW"

@@ -1,0 +1,308 @@
+{
+  "set": "test3",
+  "drawn_on": "2026-10-18",
+  "seed": 20261018,
+  "groups": "where the tool found a Hedera id: on the page (15 pages), in the README only (20), or nowhere (15), fixed before the draw (design 13.4)",
+  "cases": [
+    {
+      "page": "https://ethglobal.com/showcase/you-have-been-served-0ejqd",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:42:18Z",
+      "sha256": "c6fc0dab011aa08cbb09d72998b96000c2b02fe8b94ccbcdcf78b97e42c8a600"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/hanvil-i4sqq",
+      "group": "an id on the page",
+      "read_at": "2026-10-10T19:42:57Z",
+      "sha256": "2f0b334bf86ae8b2de7467f36ddc78ac2afcc38eb17ad0efdcb5feaced5c9704"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/zikibols-zfsag",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:13:38Z",
+      "sha256": "88bee7b035c77ccbedcfea6a676414450c0f5b62596698478440a09e55c737a6"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/datachain-iuv0y",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T02:00:29Z",
+      "sha256": "32c39eb003d0806a716fe13a547bcc648f3d06551e2cbf415ece2acf2e71eadf"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/nova-m49pn",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:49:30Z",
+      "sha256": "8f18f538b3ca14b5a4e444d67aa64a3bd2e747b15becbe4627f11d4fab81ea0a"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/carrentic-ingep",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:06:39Z",
+      "sha256": "cc0fe8d1cc15888267fc8ad446025cb79ffe4bc4a369333ebcd8fd69d98071a6"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/swarmproof-9yxyf",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:30:25Z",
+      "sha256": "7a55903ca661c4c4c4a5bf5898371a42df2c83be521391746fdb533145decdb0"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/covenant-kxv95",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:01:56Z",
+      "sha256": "f0bf9db9b6de59e9f1474ddddda3ab28081f251dfa19d1c241263ffb728c319d"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/pixport-zxhkp",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:37:35Z",
+      "sha256": "e040dbfcedd3793555a7d0e8a7727d1d42eceecc401ae8b7ff9f51e1a2be73af"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/aetheros-ipzx7",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:52:58Z",
+      "sha256": "19e8488199f077436f18ecee41248c224df45b1e534ddb5d7b0f9ec76c22a0ad"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/x402-work-receipts-69zvd",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:13:59Z",
+      "sha256": "ac4c4d5ef5fb58adc91619c98a29b5e2c5c3b6dad6abf8295cde8b4d2990a008"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/thenar-n0ma1",
+      "group": "an id on the page",
+      "read_at": "2026-10-10T23:59:54Z",
+      "sha256": "a0b460d8496d22f283bff16b19dd29465483ab6308293335bbabd8dc9f43f5d8"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/covenant-6j7sn",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:35:29Z",
+      "sha256": "bc7367eaa40a528c43541ad344d658831f96ad53d382cb428c2b90dfd8b94150"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/bridle-w8ao2",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:14:21Z",
+      "sha256": "07f9e805929a520dedda87a8e7c6a859282b5b3b41fd6823699c094f7ad8b266"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/receipt-woetu",
+      "group": "an id on the page",
+      "read_at": "2026-10-11T01:00:33Z",
+      "sha256": "06224deee9cff8e3688a0878fbf98a2dc81382336c07c3ff15b5b678323766e1"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/alive402-ezcr5",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:02:28Z",
+      "sha256": "9745f4d5a06f3043ce138747d9736620ac32d4980deaba64884fe1d1b53b1030"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/copycat-5vsa9",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T02:12:05Z",
+      "sha256": "5183e7a5e2aa24b5a2fd1d5335a5e594e63db40fa43add779cc9790aabb61565"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/neltrix-dkqxs",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:24:40Z",
+      "sha256": "b92b31a24357050170010125a9246f21859e9cb05c45d3617995eab7641982c5"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/yourturn-concierge-6pm36",
+      "group": "an id in the README only",
+      "read_at": "2026-10-10T19:43:48Z",
+      "sha256": "6167948c0169d596c95df7e59ec87d6b6735adc044900b4161125f3a7fd585a9"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/syndicatelend-dd17h",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:26:25Z",
+      "sha256": "136a42b20e9cab30ede7bda711b16138875f0bd0d9b69d00fb368051df374ef6"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/contragent-8x0c9",
+      "group": "an id in the README only",
+      "read_at": "2026-10-10T19:41:10Z",
+      "sha256": "a5d1f793524ff75dd93251c5675f77f1982932ff2099fe582562a79462bd3fce"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/executor-8f6xa",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:20:59Z",
+      "sha256": "09ee55cf7fd685d37da89b0efd4ea373fb54af8d14adb9645dcc40857cf23d8d"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/held-iti6y",
+      "group": "an id in the README only",
+      "read_at": "2026-10-10T23:57:15Z",
+      "sha256": "d4bef5e466476f24a4172801fa63badfb5539c10dfc5a7eba8b9a59c428c34bc"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/betai-zpy9e",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:56:59Z",
+      "sha256": "8cdb6fb6047a3e80560dd14059f6af1a2b5b8b703726c239bdaa8fb206fe66af"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/squash-4x5ep",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T00:00:04Z",
+      "sha256": "abd72b3adab9cf400dc5225e8db40e0a2935ec78720a2d8022ef3c8c80c674bf"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/bond-desk-1jn36",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:13:27Z",
+      "sha256": "dc25527160fff0d25d1b7010e06de05f69d7423e69a5b44183fad211d5ec5b1e"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/agentrail-5dppt",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:22:55Z",
+      "sha256": "dad5ca216c3dd71b8c4111933449580ae7551ea219dd646c7f6651cc03062d73"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/tessera-d89rk",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:16:37Z",
+      "sha256": "77539fffa8001f2808ca6c3f8565e8edb2bd3b45cc82ce0638aa8067f7af6ad9"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/market-minds-ok0qp",
+      "group": "an id in the README only",
+      "read_at": "2026-10-10T19:45:43Z",
+      "sha256": "2d6fd15afb27041e8d9d663344471d1f7eb2b1c7f90f7132131dc2a9ea52ccb4"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/alt-agent-bt6pb",
+      "group": "an id in the README only",
+      "read_at": "2026-10-10T23:59:57Z",
+      "sha256": "aec8372ba30ef36548009110c57bbdefb3d408223ffa5ce9c6302117dcb96771"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/hardpull-zak21",
+      "group": "an id in the README only",
+      "read_at": "2026-10-10T23:58:48Z",
+      "sha256": "0e9606ceea86557dee2887744cebb03647ac0542aefb34c1a3f751935cf7613f"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/roll-call-7rtg5",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:14:11Z",
+      "sha256": "10af144a1d29b1a81847d916483b4423d5f3651cdaa5ba4dda2bb7924c89421f"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/fitcentive-mptde",
+      "group": "an id in the README only",
+      "read_at": "2026-10-10T19:45:09Z",
+      "sha256": "91a4f42b44011994108c329c24a9d88711d11ae91ad7db6bee0ae6d339e7af19"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/stealthscape-ybnrx",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T02:26:59Z",
+      "sha256": "eea946a2d8f82a121bf86ffd4218d6018cf4bd4091a7013474cfb125a8e27b42"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/voxel-bench-nvug0",
+      "group": "an id in the README only",
+      "read_at": "2026-10-11T01:23:05Z",
+      "sha256": "9c3d45f8f21027f7b94a06d02caa82026e49686384aae145c62ad89df52a63e0"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/dry-nwpcs",
+      "group": "no id found",
+      "read_at": "2026-10-11T02:08:34Z",
+      "sha256": "c28dc75f9bded6abe31c070d9c4b9a759d4d39ce53d407efbbd22c26dcf6d9c7"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/mass-multiplayer-ai-nrz22",
+      "group": "no id found",
+      "read_at": "2026-10-11T01:36:52Z",
+      "sha256": "07fdc6f8ab9a95cdd09705859f87e3fe6d69f573b51dbb90667b55b71eb771f9"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/havefun-d-fm3ie",
+      "group": "no id found",
+      "read_at": "2026-10-11T02:20:41Z",
+      "sha256": "376ccb5884121fd44fb6fe22c0522e40e9c56ddc4dac0d7b76e544e02f315634"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/parkpulse-w84tg",
+      "group": "no id found",
+      "read_at": "2026-10-10T19:45:12Z",
+      "sha256": "0658df8fc5bc49c166edcf0b86f81b297f57afe7203ca0d2047053b768af1432"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/agentrail-1ekv0",
+      "group": "no id found",
+      "read_at": "2026-10-11T01:55:25Z",
+      "sha256": "4f85e4cc936f9bc0e07d90be30520518518898955f3da1a26f10c8620085a3ee"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/x402-health-oracle-adbgm",
+      "group": "no id found",
+      "read_at": "2026-10-11T01:31:07Z",
+      "sha256": "cef0deccb6fc203ef3dbd196e3266230e9db248f475fd886d28f97271e88d436"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/futarfi-p2e2u",
+      "group": "no id found",
+      "read_at": "2026-10-11T02:04:33Z",
+      "sha256": "6c596db4c431b57c1e39f9671e3e5c812a77758ece5be37d43f2eca5fa5122e4"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/freeride-rd324",
+      "group": "no id found",
+      "read_at": "2026-10-10T23:57:58Z",
+      "sha256": "a347e5d3634fafee5d020c5095ca70f39e745d973391fee7ea3b2543dd3af80e"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/money-3-0-twittbar-kmzs1",
+      "group": "no id found",
+      "read_at": "2026-10-10T19:46:32Z",
+      "sha256": "2206a993acd57f47caaea132ff05177e4c743184a569b80b8f8dc8dfd491ab57"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/rawmarkets-mmjj7",
+      "group": "no id found",
+      "read_at": "2026-10-10T23:59:02Z",
+      "sha256": "23ae3ca8f3c8cdcba5ecfa8b6c7f000a919e8e03f4390e1a7e0b80e3dc2613ad"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/safe-wire-foucc",
+      "group": "no id found",
+      "read_at": "2026-10-11T02:24:43Z",
+      "sha256": "f0dd776dc8b2b02b0095121d5f75b74206ca4fe67c11dcf4cb4d1d3a99eda9f4"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/jessmac-5wcf1",
+      "group": "no id found",
+      "read_at": "2026-10-11T01:53:51Z",
+      "sha256": "a9a46732ba75825c4ef943cbd2fc057718c383359691dacf01f623f336a9e517"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/soulz-4s6np",
+      "group": "no id found",
+      "read_at": "2026-10-11T01:54:01Z",
+      "sha256": "85e3909d22b15b9910fa34f96880b89c5e3dd082510a7621913608b4850de97a"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/mandatee-7o675",
+      "group": "no id found",
+      "read_at": "2026-10-11T01:20:07Z",
+      "sha256": "c919314d44547876245fa3be33ace066c9dd3d59aeb16c23a2332a87536e435b"
+    },
+    {
+      "page": "https://ethglobal.com/showcase/rwa-nexus-bridge-4j3gx",
+      "group": "no id found",
+      "read_at": "2026-10-11T02:15:35Z",
+      "sha256": "7ce88e266c592211a9f8c3fc3c9c034a1978dbb3f2fb30c1dd274de4d1d1051a"
+    }
+  ]
+}

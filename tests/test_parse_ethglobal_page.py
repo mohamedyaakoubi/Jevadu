@@ -249,26 +249,26 @@ def test_an_empty_text_is_a_part_with_no_block() -> None:
 
 def test_the_ids_of_the_two_texts_and_of_their_links_are_found() -> None:
     html = project_page(
-        description="<p>The coin is the token 0.0.2345678 on the test network.</p>",
+        description="<p>The coin is the token 0.0.2345671 on the test network.</p>",
         made=(
-            "<p>Each sale goes to the topic 0.0.3456789. The version of the page is 0.0.1.</p>"
-            '<p>The payer is <a href="https://hashscan.io/mainnet/account/0.0.4567890">here</a>.'
+            "<p>Each sale goes to the topic 0.0.3456781. The version of the page is 0.0.1.</p>"
+            '<p>The payer is <a href="https://hashscan.io/mainnet/account/0.0.4567891">here</a>.'
             "</p>"
         ),
     )
     page = read_project_page(html, PROJECT_PAGE)
     assert [(i.entity_id, i.network, i.said_kind) for i in page.hedera_ids] == [
-        ("0.0.2345678", "testnet", TOKEN),
-        ("0.0.3456789", None, TOPIC),
-        ("0.0.4567890", "mainnet", ACCOUNT),
+        ("0.0.2345671", "testnet", TOKEN),
+        ("0.0.3456781", None, TOPIC),
+        ("0.0.4567891", "mainnet", ACCOUNT),
     ]
 
 
 def test_a_demo_link_to_hashscan_gives_an_id() -> None:
-    html = project_page(demo="https://hashscan.io/testnet/topic/0.0.3456789")
+    html = project_page(demo="https://hashscan.io/testnet/topic/0.0.3456781")
     page = read_project_page(html, PROJECT_PAGE)
     assert [(i.entity_id, i.network, i.said_kind) for i in page.hedera_ids] == [
-        ("0.0.3456789", "testnet", TOPIC)
+        ("0.0.3456781", "testnet", TOPIC)
     ]
 
 
@@ -382,10 +382,10 @@ def test_a_page_with_no_word_about_people_hides_nothing() -> None:
 
 
 def test_an_id_next_to_a_hidden_word_is_still_found_and_its_words_name_nobody() -> None:
-    html = project_page(made="<p>Ask @quill about the topic 0.0.3456789 on testnet.</p>")
+    html = project_page(made="<p>Ask @quill about the topic 0.0.3456781 on testnet.</p>")
     page = read_project_page(html, PROJECT_PAGE)
     assert [(i.entity_id, i.network, i.said_kind) for i in page.hedera_ids] == [
-        ("0.0.3456789", "testnet", TOPIC)
+        ("0.0.3456781", "testnet", TOPIC)
     ]
     assert "quill" not in page.hedera_ids[0].words_around
 
@@ -428,7 +428,7 @@ def test_a_handle_in_the_words_of_a_header_link_is_hidden() -> None:
 
 def test_no_id_is_taken_from_a_link_whose_address_is_hidden() -> None:
     page = read_project_page(
-        project_page(demo="https://t.me/invented_helper_bot?start=0.0.3456789"), PROJECT_PAGE
+        project_page(demo="https://t.me/invented_helper_bot?start=0.0.3456781"), PROJECT_PAGE
     )
     assert page.hedera_ids == ()
 

@@ -20,7 +20,14 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 
 from hackathon_memory.check.ledger import LedgerFacts
-from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
+from hackathon_memory.parse.hedera_ids import (
+    ACCOUNT,
+    CONTRACT,
+    SCHEDULE,
+    TOKEN,
+    TOPIC,
+    TRANSACTION,
+)
 
 # The statuses of design 7.2.
 PROOF_FOUND = "proof_found"
@@ -61,6 +68,8 @@ _FITS = {
     ACCOUNT: {ACCOUNT, CONTRACT},
     CONTRACT: {CONTRACT},
     TOPIC: {TOPIC},
+    TRANSACTION: {TRANSACTION},  # one action, judged by its own moment
+    SCHEDULE: {SCHEDULE},  # judged by the moment it was made and the moment it ran
 }
 
 

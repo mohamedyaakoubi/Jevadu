@@ -83,7 +83,7 @@ def test_everything_works(results_dir: Path) -> None:
     rewrite, search = measured["layers"]["rewrite"], measured["layers"]["search"]
     assert rewrite["model"] == "gemini-3.1-pro-preview"
     assert search["model"] == "gemini-3.8-flash"
-    assert rewrite["thinking_level"] == search["thinking_level"] == "HIGH"
+    assert (rewrite["thinking_level"], search["thinking_level"]) == ("HIGH", "LOW")
     assert rewrite["cost_usd"] == pytest.approx(0.008)  # 1000 in at 2.00, 500 out at 12.00
     assert search["cost_usd"] == pytest.approx(0.002625)  # 1000 in at 0.75, 500 out at 3.75
     assert measured["gemini_cost_usd_total"] == pytest.approx(0.010625)
@@ -131,7 +131,7 @@ def test_a_budget_that_is_too_small_stops_the_model_calls(results_dir: Path) -> 
     body = saved(results_dir)
     names = failed(body)
     assert "rewrite: gemini-3.1-pro-preview (thinking HIGH) returned a valid form" in names
-    assert "search: gemini-3.8-flash (thinking HIGH) returned a valid form" in names
+    assert "search: gemini-3.8-flash (thinking LOW) returned a valid form" in names
     assert "was not made" in json.dumps(body)
     paths = [path for path, _ in google.requests]
     assert not any(p.endswith(":generateContent") for p in paths)  # no model was asked
@@ -179,7 +179,7 @@ def test_a_google_error_that_names_the_project_is_scrubbed(results_dir: Path) ->
     assert run_with(google) == 1
     body = saved(results_dir)
     assert "rewrite: gemini-3.1-pro-preview (thinking HIGH) returned a valid form" in failed(body)
-    assert "search: gemini-3.8-flash (thinking HIGH) returned a valid form" in failed(body)
+    assert "search: gemini-3.8-flash (thinking LOW) returned a valid form" in failed(body)
     text = json.dumps(body)
     assert PROJECT not in text
     assert "Permission denied" in text  # the reason itself stays
@@ -194,7 +194,7 @@ def test_an_invalid_form_fails_that_check_but_the_embeddings_still_run(
     body = saved(results_dir)
     assert failed(body) == [
         "rewrite: gemini-3.1-pro-preview (thinking HIGH) returned a valid form",
-        "search: gemini-3.8-flash (thinking HIGH) returned a valid form",
+        "search: gemini-3.8-flash (thinking LOW) returned a valid form",
     ]
     assert body["measurements"]["embedding_dimensions"] == 3072
 

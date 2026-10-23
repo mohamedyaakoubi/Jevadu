@@ -1,4 +1,4 @@
-# Hackathon Memory: the design
+# Jevadu: the design
 
 This document explains what the tool is, how it is built, and why. The code and the tests point to its sections by number, for example "design 5.7" or "design section 11.6". So the numbers are fixed: a new section is added at the end, never in the middle.
 
@@ -199,6 +199,8 @@ For an event whose submissions are not public, the only thing left is the organi
 
 **What they cannot do.** They do not show the ledger check, and that check is what this tool adds. So the demo is built on full cards. Winner entries only widen the search. Every winner entry says where it comes from, and that only the winners of its event are public.
 
+**Their dates (16 and 18 October 2026).** An organiser's list of winners gives no start and no end, so the year of each of these twelve events is typed by hand from the organiser's own post, in a file that the parse step reads. Where the post also gives the days, its line carries the first and the last day too. The saved posts give them for four events: Hello Future 2024 (22 July to 20 August 2024), Hello Future 2.0, Hello Future Origins and the building stage of Beyond Blockchain 2023. The eight others give only a length, such as four weeks, or nothing. Since no winner entry of these events has a Hedera ID or a repository, the days change no mark: they only let the check of a submission offer these events with their days.
+
 **Where they come from.** Hedera's own winner posts, and winners pages that were copied by hand, with no request by a program. Nothing is read by a program before the rules of section 5.2 allow it.
 
 ---
@@ -242,6 +244,8 @@ Collection by a program is a proof of the idea. Real use would need the sites to
 - A saved page is never edited afterwards, with one exception: **personal data that is found in a saved page later is taken out.** The store has one function for that, and no other way to change a page. It writes next to the page the reason, the time, the number of places and the fingerprint that the page had before. The text that was taken out is written nowhere. The proof of the lists fails when a page differs from its fingerprint, and it counts the pages that carry such a record.
 - Running the collection again skips pages that are already saved, and pages that an earlier run read and did not keep.
 - Everything else in the system can be rebuilt from the raw pages with one command. This is also the backup.
+
+**Built again on 18 October 2026** (`evals/results/20261018T102138Z-rebuild.json`, the steps at the top of `evals/rebuild.py`). A new, empty database was built from the saved pages, the saved answers of GitHub and the hand-typed files, with the mirror node asked again and the embeddings made again; the cards came back from a file that `cards --export` wrote, since the model would not write them twice, and their quotes were checked again (`cards --restore`). Of 36 counts, 33 are the same, among them every count that the site uses. The other 3 are one outdated card of the first version of the instructions, refused because its page text changed after it was made.
 
 ### 5.4 Personal data
 
@@ -356,9 +360,11 @@ A trap for the parser: a version number like "0.0.3" has the same shape as a Hed
 
 **The parser of ETHGlobal's pages.** A page tells each fact twice: in what it shows, and in the data of the page. The parser reads both and refuses a page where they differ, for the name, the short line, the event and the prizes. It guesses nothing. A text is kept block by block (a paragraph, an item of a list, a title, code), word for word, and a test compares the blocks with the page letter by letter. A title that a team wrote inside a text stays a block of that text.
 
-For a Hedera ID there are three rules:
+For a Hedera ID there are five rules:
 
 - A number below 1001 belongs to the network itself and is never taken as an ID. The first number that a user can own is 1001: the setting `firstUserEntity` of the node software.
+- A number whose digits count up or down, from four digits on, such as `0.0.12345` or `0.0.54321`, is an example and not an ID (22 October 2026). In the whole collection there were 36 of them, and each one, read in its place, was an example.
+- The default accounts of Hedera's local node, `0.0.1002` to `0.0.1031`, are not IDs, and neither are the transactions that they paid (22 October 2026). A team that tests on its own computer gets these numbers, and on the real networks the same numbers belong to other accounts. The range comes from the README of the local node (`hiero-ledger/hiero-local-node`), read on 22 October 2026.
 - The network is taken from the words only when the words near the ID name one network and no other. A wrong network is worse than none: the ledger would be asked about another thing.
 - An EVM address is kept only when a HashScan link names it, because the same address can live on another chain.
 
@@ -417,6 +423,10 @@ Hedera has two networks that matter here: the **main network**, with real money,
 
 For each ID the **mirror node** is asked: what kind of thing is it (account, topic, token or contract), when it was created, how much happened on it, and when the first and the last activity were. The raw answer is stored with the time of the question.
 
+**Built on 18 October 2026: a single transaction.** A page or a README often names one transaction: a link to it on HashScan, or its ID in the text. A transaction is one action on the ledger, such as a transfer, the creation of a token or a message to a topic, and its ID is the account that paid for it and the moment it was sent: `0.0.12345-1700000000-123456789`. It is now its own kind of Hedera ID. The mirror node says what the action was, whether it succeeded and when the network agreed on it, and the proof rule judges it by that moment; a failed transaction counts as empty. The account that paid is kept too, as before. The mirror node refuses the other way of writing it, `0.0.12345@1700000000.123456789` (measured on 18 October 2026), so every transaction is kept in the first form. On the real collection: 223 transactions in 93 projects; 90 of these projects now show a transaction as proof, and none of them depended on it.
+
+**Built on 22 October 2026: a scheduled transaction.** A project can make a transaction that runs later, at a set time or once enough keys have signed it. Hedera keeps it as a **schedule**, with its own ID, and HashScan shows it at `/schedule/`. A schedule is now its own kind of Hedera ID. A HashScan link to it names it, and so does the word "schedule" right before the ID, but never a "fee schedule", which is the list of fees of a token: a first version that took the word anywhere near an ID gave one token a wrong status on the pages of Test 3. The mirror node says when the schedule was made and when it ran, and the proof rule judges it by these two days. A schedule deleted before it ran counts as empty, like a deleted contract. The mirror node also says "deleted" of a schedule that ran at its time, and that one is not empty; a schedule that expired without running was still made, and is not empty either. On the 50 pages of Test 3 there are 7 schedules, on 4 pages (section 13.4).
+
 ### 7.2 The proof rule
 
 An ID that exists proves almost nothing: nearly every small number exists on Hedera as something. So the rule looks at the kind of thing and at the dates.
@@ -427,7 +437,7 @@ The window of an event runs from 30 days before it started to 14 days after it e
 |---|---|
 | Proof found | The ID exists. Its kind fits how the page describes it. It was created or active inside the window. |
 | Found, but the dates do not fit | The ID exists, but nothing happened on it inside the window. |
-| Found, but empty | A topic with no message, a token never issued, or a deleted contract. |
+| Found, but empty | A topic with no message, a token never issued, a deleted contract, a failed transaction, or a schedule deleted before it ran. |
 | Not found | The ID does not exist on the network. |
 | Cannot be checked | The ID is on the test network and older than its last reset (1 February 2024). |
 | No ID given | The page and the README give no Hedera ID. |
@@ -446,7 +456,7 @@ The numbers 30 and 14 are a first choice. Test 3 (section 13.4) tells whether th
 
 ### 7.3 Facts from the code
 
-The GitHub API is asked with a read-only token. Without a token the limit is 60 requests per hour. With a token it is 5,000 per hour. Requests go one after the other, the limit headers are read, and every answer is stored so it is never asked twice.
+The GitHub API is asked with a read-only token. Without a token the limit is 60 requests per hour. With a token it is 5,000 per hour. Requests go one after the other, the limit headers are read, and every answer is stored. A repository is asked again only when a team registers it, because its line must be read in the README at that moment (9.2); GitHub's limits are far above what the tool sends (read on docs.github.com on 18 October 2026).
 
 **How GitHub is asked.** The rules of section 5.7 hold here too: the name of the tool and a contact address in every request, at least one second between two requests, a limit of requests counted on disk over all runs, and a stop switch in `.env` (`COLLECT_GITHUB`), read again before every request. GitHub's own rules, read on its documentation on 11 October 2026, are kept as well:
 
@@ -460,7 +470,25 @@ The GitHub API is asked with a read-only token. Without a token the limit is 60 
 
 For each repository: does it exist, when was it created, when was the first and the last change, how many changes, how many contributors, which languages. The package files are read to see whether a Hedera library is named. The README is searched for Hedera IDs, because many project pages give none.
 
-**The facts of a repository, as built.** One request for each repository asks for its facts (`python -m hackathon_memory.pipeline code`). The answer also holds the account that owns the repository: its photo, and for some accounts a name and an email address. None of it is kept. Before saving, only a fixed list of fields stays: the link, the dates (made, last push), the state (archived, a fork), the language, the size, the short name of the license, and the description with the words about people hidden. The number of changes, the contributors and the libraries are not read yet.
+**The facts of a repository, as built.** One request for each repository asks for its facts (`python -m hackathon_memory.pipeline code`). The answer also holds the account that owns the repository: its photo, and for some accounts a name and an email address. None of it is kept. Before saving, only a fixed list of fields stays: the link, the dates (made, last push), the state (archived, a fork), the language, the size, the short name of the license, and the description with the words about people hidden. The number of changes and the contributors are not read; the libraries are read from the code itself (below).
+
+**The check of one submission (16 October 2026).** The check of screen S3 asks GitHub for one repository, with the same client and the same rules: three requests, the facts, the README and the newest commit (since 18 October), one after the other. The answers are saved, so a repository is never asked for twice, also when it already belongs to the collection. Of the newest commit only its ID and its date are kept: the names and the addresses of the people who made it are dropped before saving.
+
+**Where Hedera stands in the code (21 October 2026).** The Hedera IDs of a project show what exists on the ledger. The code shows how the project calls Hedera. So the code of each repository is read once, whole:
+
+- **Two requests for each repository.** `GET /repos/{owner}/{repo}/tarball` answers 302 with an address on `codeload.github.com` (GitHub's documentation "Download a repository archive (tar)"); the archive of the default branch is downloaded from there as a stream. The client follows this one redirect, only to that host and only over https. The download carries the name of the tool and a contact address and no token. Both requests are counted in the limit of requests and paced like every other. A no or a 429 of the archive host is judged like an answer of GitHub, and downloads that keep breaking off stop the run like errors in a row.
+- **Read on the computer of the tool, never kept.** Every file of the project's own code is read, in no order of importance. The folders of other people's code and of generated files (node_modules, vendor, dist, build and the like) and the lock files are skipped, a file over 1 MB is skipped, and a file named .env is never opened. Plain text matching, no AI (section 6.4). What is kept:
+  - the Hedera packages that the package files name: npm, PyPI, Go, Cargo, Maven, Swift and NuGet (the names of all dependencies are kept too, for a later rule; the rest of a package file can name its authors and is not kept);
+  - the files that import a Hedera library;
+  - the Hedera services that the code calls, by the class names of Hedera's SDKs (TopicCreateTransaction and the like), which are the same in every language; a class name counts only with a Hedera library in the file or in the package files;
+  - signs: Hedera's JSON-RPC relay (Hashio), a Hedera chain ID in EVM settings, a Hedera network taken from an EVM tool (the Hedera chains of viem and wagmi, a thirdweb chain made from a Hedera chain ID, a network of Hardhat, Truffle or Foundry named after Hedera), Hedera's system contracts in Solidity, and the mirror node read by the code;
+  - mentions: the files that name Hedera, Hashgraph or Hiero at all. The weakest sign, kept apart: a mention is not a use.
+- **The commit.** git writes the commit of an archive into its header, so the commit that was read is kept, and a link to a file opens that file as it was read.
+- **Saved and written.** A small record under `data/raw/api.github.com/`, with the fingerprint of the archive and how long the reading took; then the table `hedera_in_code` and five columns of `repositories` (migration 0014). The step is `python -m hackathon_memory.pipeline hedera_code`. It runs in "all", after the facts of the code, and does not ask for a repository that GitHub already said is gone or blocked. With `--no-requests` it builds the table again from the saved records.
+- **The check of a submission (S3)** reads a repository that the tool has not read yet within 50 MB and 30 seconds, and keeps the reading only when it reached the end, so that the step reads a large repository whole later.
+- **Measured on 21 October 2026** (`evals/results/20261021T190159Z-code-times.json`): the code of 579 repositories was read whole, and 2 had been deleted. A reading, with its two requests and their pauses, took 3.45 seconds at the median, under 10.8 seconds for 90 of 100 and under 17.7 seconds for 95 of 100; the longest took 100 seconds, and all of them together about an hour. The archives weighed 1.2 MB at the median and under 37 MB for 95 of 100. 558 of the 579 stay under both limits of a check.
+- **Found** (`evals/results/20261021T190200Z-code-findings.json`): of the 658 projects with a full card, the code of 508 shows a use of Hedera (a Hedera package, an import of a Hedera library, a call to a Hedera service or another sign), 23 only name Hedera, and 50 show nothing; the code of 77 could not be read (deleted, or not on GitHub). Of the 373 projects that name no Hedera ID on their page or in their README, the code of 242 shows a use of Hedera.
+- **What it cannot do.** It says what the code names, not whether a line runs. It does not see Hedera used from another repository, or through a tool that it does not know.
 
 ### 7.4 The life rule
 
@@ -505,19 +533,58 @@ Each method finds what the other misses. The original text is always searched, s
 - **By words.** BM25 over the name, the short line and the two texts, on PostgreSQL's own English stems, with the usual numbers k1 = 1.2 and b = 0.75. PostgreSQL's own ranking was tried first and dropped: its documentation says that its ranking functions "do not use any global information". They count how often a word stands in a project, not how rare the word is, and every project here says "Hedera" and "token".
 - **The merge.** Reciprocal rank fusion with the constant 60 (Cormack, Clarke and Buettcher, 2009). Each list gives as many projects as the listing shows, the default of Elasticsearch's own fusion. A first try with 50 projects from each list put the closest project in meaning out of the first ten. Test 2 compares these numbers.
 - **The listing.** For each project: the event, the prize, the result of the proof rule, the links, and for each Hedera ID what the mirror node answered and on which day. Nothing in it is written by a model, and the place in the list says only how close a project is to the idea.
-- **The idea.** It is kept nowhere. Its embedding is kept for one day under the fingerprint of the idea, so the same idea is not paid for twice.
+- **The idea.** It is kept nowhere. Its embedding is kept for one day under the fingerprint of the idea, so the same idea is not paid for twice. An idea holds at most 4,000 characters, from its cost: each 1,000 characters add about 0.024 cent to a search (the embedding, and the comparison that reads the idea again), so 4,000 keep a search within about 0.1 cent of a one-line idea.
 
 The user can filter by event, year, category, proof status and life status.
 
+**The ways to search (16 October 2026).** The maintainer asked whether the ways of searching should be separate choices, each with its speed and accuracy. Six ways ran on the counted cases of Test 2 (`evals/search_modes.py`, `evals/results/20261016T023934Z-search-modes.json`):
+
+| Way | Known projects in the first 10 | Middle time | Cost of a search |
+|---|---|---|---|
+| Words only | 23 of 57 | 0.5 s | nothing |
+| Meaning only | 36 of 57 | 0.1 s | nothing |
+| Meaning and words, the default until then | 34 of 57 | 0.6 s | nothing |
+| The 30 closest by meaning, put in order by the search model | 42 of 57 | 2.0 s | about 0.2 cent |
+| The 30 first of both lists, put in order by the model | 41 of 57 | 2.6 s | about 0.2 cent |
+| The model picks from the short line of every project | 41 of 57 | 2.4 s | about 1.6 cents |
+
+The order by the model was better than the old default in 10 cases and worse in 3, so it is the default since 16 October 2026. Meaning, words and the order by the model are offered on the search page (below), each with its numbers read from the result file. The model reads one line for each project and answers numbers only; it does not score or judge a project. Its service was sometimes much slower than usual (95 of 100 searches under 72 seconds, against 2 in the middle), so its call is made once and given up after 8 seconds; then the page keeps the order by meaning and says so. Picking from every project is not offered: it found no more and costs about seven times as much.
+
+**Typing errors.** The same cases ran with two typing errors in each idea (`evals/results/20261016T030409Z-search-modes-typos.json`). Every way moved by at most 3 of 57, and the search by meaning found as many as without errors, because the embedding reads through them. So no layer that corrects spelling is added.
+
+**Quick results, and the model only when asked (16 October 2026, later).** A person must always know when the model works. So:
+
+- While the idea is typed, the page shows quick results after a pause of half a second, by meaning, or by words when the person chooses words. By meaning they use only the embedding model, which turns the text into numbers and writes nothing (about 0.0005 cent a search in the cost ledger). The page calls them quick results.
+- One button says what the search model will do: read the 30 projects closest in meaning, put the ten most similar first, and write for each of them what is the same and what differs, in about 3 to 10 seconds, for about 0.6 cent. Only this button calls the search model. The measure above is the reason it exists: 42 of 57 known projects in the first ten, against 36 by meaning only.
+- The order of the model and its comparisons are kept for one day under the fingerprint of the idea, the filters and the model. A reload, the back button, or the same search again shows them without a new call.
+- **The three example ideas** under the search box are the tool's own words, not a person's, so their embedding, the order of the model and its comparisons are kept for good (22 October 2026). After the first time, a click on an example never waits for Google and costs nothing.
+- In each result, the words of the idea are marked, except a short list of common ones such as "app", "user" or "without", which say little about one idea (18 October 2026). How often a word appears is no guide: "payment" stands in 35% of the projects and "app" in 14%.
+- A filter works on the quick results at once, with no model. It keeps the projects of the 50 closest that have its value, so the number next to a value is the number of projects the filter leaves (16 October 2026: before, a filter searched again among all the projects with its value, and a value marked 16 gave a list of 50). The model's order for the new filters is asked only with the button again, and kept for one day for those filters.
+- Ten projects a page, with numbered pages; a search shows its 50 closest projects. The way "meaning and words" stays in the measure, and the page offers meaning, words and the order by the model.
+
+**What a result shows.** Its short line, with the words of the idea marked by PostgreSQL's ts_headline after the text is escaped, and in the way by words also the part of the page where the words stand.
+
+**Why no separate search engine.** The collection holds 826 projects. PostgreSQL already gives the search by meaning (pgvector), by words (BM25 in SQL), marked words (ts_headline), search operators (websearch_to_tsquery) and near spellings (pg_trgm), with no copy of the data to keep in step. Meilisearch's own comparison says that PostgreSQL is enough for thousands of documents, and Elasticsearch runs as a server of its own. A separate engine is considered again if the collection grows by tens of times, or if typing errors start to matter.
+
 ### 8.3 The comparison
 
-For the first results, the LLM reads the cards and the user's idea. For each project it writes what is the same and what differs, and it names the card fields it used. If this call fails, the page still shows the cards.
+For the first results, the LLM reads the cards and the user's idea. For each project it writes what is the same and what differs, and it names the card fields it used. If this call fails, the page still shows the cards. It runs after the results are shown, at the thinking level LOW, and is given up after 30 seconds; the page says when it is slower than usual.
+
+**The card or the full text? (measured on 18 October 2026)** The comparison could read the whole text of each page instead of its card. For the 9 ideas of Test 2, both were asked (`evals/results/20261018T044605Z-compare-inputs.json`): a middle time of 7.1 seconds with the cards and 7.8 with the full texts, and 4.3 against 7.7 cents for the 9 ideas; one call on a full text failed after 342 seconds. Which one writes the more right sentences is for a person to read: the sentences stand side by side in a local page, and the cards stay until then.
+
+**Graded on 18 October 2026** (`evals/results/20261018T085521Z-compare-inputs-grades.json`). Of the 80 pairs with both answers, the full text was the more specific in 30, both were alike in 50, and the card was never the more specific. Where the two answers stated different facts, the project's page was read (8 projects): the answer from the card was wrong 3 times, for instance that a project did not charge by the five seconds when its page says it does, and it missed the main likeness 3 times; the answer from the full text was right each time. The reason: a card is a summary, so a detail that it leaves out reads as missing from the project. The comparison keeps reading the cards, by the maintainer's decision: the full text costs about 80% more, and one call on it failed after 342 seconds.
+
+**Since the evening of 18 October 2026 (instructions compare-2).** The comparison is told that the texts of a project are a short summary of its page, not the whole page. When they do not mention something, it writes that the texts do not say it, and never that the project does not do it. The comparisons kept under the old instructions are asked again.
+
+**The check of a submission** (screen S3) uses the same comparison on a button: the README of the submission stands for the idea, and its closest past projects are compared with it.
 
 ### 8.4 "Seen before"
 
 Two entries are the same project when they share the same repository link, or the same Hedera ID on the same network. This is exact matching, with no AI.
 
-One trap: some IDs are services that many projects use, like a popular token. An ID that appears in more than three projects with different repositories is treated as a shared service. It is shown as such and is not used for "seen before".
+One trap: some IDs are services that many projects use, like a popular token. An ID that appears in more than three projects with different repositories, or in two projects with different repositories at one event, is treated as a shared service. It is shown as such and is not used for "seen before".
+
+**Since 18 October 2026.** The second part of the rule is new: three teams of one event, each with its own code, named one account of the main network, and the first part alone made them one group, with a fourth project. The groups of the collection went from 2 with 7 projects to 2 with 5 (`evals/results/20261018T092000Z-overview.json`). The card of a project names the projects it is linked to, and why; the charts show the projects linked across events first.
 
 A returning name is a hint, not "seen before". Two teams can pick the same name.
 
@@ -545,6 +612,10 @@ A **topic** is a public message list on Hedera. Nobody can edit or delete a mess
 
 If the same fingerprint appears again later, at any event, the tool says "seen before" and shows the first date.
 
+**Who writes (18 October 2026).** A registration is the team's own. Before the button, the page gives a line made from the link and the event, such as `jevadu: 7K2F9QXD`. The team adds it to the README of its repository, and the button reads the README on GitHub again and writes only when the line is there. Only who can change the repository can add it, so a stranger cannot register a team's code, and the line says that the team agrees to the record. Judges and organisers only read. The projects of the collection are never registered: they are not the tool's to register.
+
+**A hackathon of the list (18 October 2026).** A registration names a hackathon of a list: an event of the collection, or one added by hand from its organiser's announcement. The first one added is the FSS Campus Edition of the Hedera Cross Campus Challenge 2026. Its registration opened on 10 August 2026, and that is its first day. Its submission opened on 19 October 2026 and closes on 7 November 2026, its last day. A name or days typed by each team would differ from team to team. Days typed in serve the check only, which writes nothing.
+
 **Why a ledger and not a normal database.** Hedera's hackathons run on several websites that do not share data. A register that belongs to none of them makes sense. And nobody, including the people who run the tool, can change a date afterwards.
 
 ### 9.3 The record
@@ -554,9 +625,23 @@ If the same fingerprint appears again later, at any event, the tool says "seen b
 - Far below 1 KB, because a longer message is cut into pieces. The record of the Gate A proof has 102 bytes.
 - Only the tool's own account can write to the topic. This keeps strangers from filling it.
 
+**Built on 18 October 2026: version 2 of the record.** In compact JSON:
+
+```json
+{"v":2,"event":"ethglobal.com/prague","code":"<64 hex>","commit":"<40 hex>","account":"<64 hex>"}
+```
+
+- `code` is the SHA-256 of the repository's link, written in one spelling. The link itself is never written: it holds the name of its owner. Anybody can compute the fingerprint of a link again and find its records.
+- `commit` is the ID of the newest commit of the repository when it was checked. It is computed from every file of that version, so a record says which code existed at that time, and not only which address. If the repository is later deleted or made private, the record still proves this; only a copy of the code can show the code again. Version 1, without it, was never written.
+- `account` is the SHA-256 of the team's Hedera account, and only when the team gives one.
+- `event` names the event by its site and the short name in its address, or by its first and its last day when the collection does not hold it (`days/2026-10-01/2026-10-20`).
+- About 250 bytes. A record above 384 bytes, or one that is not this form, is refused before anything is sent. A code is written once for one event, and a registration without a known version of the code is refused.
+- The topic is created once with `python -m hackathon_memory.hedera.registry open`, which then checks on the mirror node that it has no admin key and the tool's key as its submit key. Until it exists, the page says that the register is not open. **Created on 22 October 2026:** topic `0.0.11126502` on the test network, with the memo "Jevadu register"; the mirror node confirmed that it has no admin key and the tool's key as its submit key. It replaces the topic of 21 October, `0.0.11106500`, whose memo still carries the working name and cannot change; that topic holds no registration.
+- The records are read back from the mirror node page by page, with the filter `sequencenumber=gte:`. On 16 October 2026 the test network's node answered `gt:0` with no message and `gte:1` with the first one.
+
 ### 9.4 What the register proves, and what it does not
 
-It proves that a fingerprint was registered through the tool at a given time. It does not prove who registered it, because in the first version the tool's account does the writing. A stronger form, where the team signs with its own account, is not in the first version.
+It proves that a fingerprint was registered through the tool at a given time, and that the README of the repository carried the team's line at that time, which only someone who could change the repository can add. It does not prove that the team took part in the hackathon: only its organiser knows that. Nor does it prove who pressed the button: in the first version the tool's account does the writing. A stronger form, where the team signs with its own account, is not in the first version.
 
 ### 9.5 The keys of the topic
 
@@ -644,9 +729,9 @@ There are two layers of LLM. The models and their thinking levels are settings, 
 - It thinks at the level LOW, MEDIUM or HIGH. The thinking tokens are billed as output.
 - It costs 2 dollars for a million tokens in and 12 out, for prompts up to 200,000 tokens.
 
-**The search compares the closest projects with the idea of the user. It uses Gemini 3.8 Flash.** It is generally available. It costs 0.75 dollars for a million tokens in and 3.75 out until 31 December 2026, then double.
+**The search puts the closest projects in order and compares them with the idea of the user. It uses Gemini 3.8 Flash.** It is generally available. It costs 0.75 dollars for a million tokens in and 3.75 out until 31 December 2026, then double.
 
-**Both run at the thinking level HIGH.** One call of each layer on a short text took about 15 to 45 seconds and cost 1 to 3 cents (the result files of the Google proof have each number). A search that makes a person wait that long is slow, so the level of the search is the first setting to test again.
+**The pages are read at the thinking level HIGH, the search runs at LOW.** One call of each layer on a short text took about 15 to 45 seconds at HIGH and cost 1 to 3 cents (the result files of the Google proof have each number). A search that makes a person wait that long is slow, so the level of the search was measured again on 15 October 2026, on 9 ideas written by the maintainer (`evals/results/20261015T013838Z-compare-levels.json`). The comparison of the 10 closest projects took 26.0 seconds in the middle at HIGH and 7.5 seconds at LOW, and cost about three times more at HIGH. Every project got its two sentences at both levels. Since 16 October 2026 the search runs at LOW.
 
 **A model sometimes gives a bad answer.** On the first live runs, one model once returned text that was not valid JSON, and the other once answered with a server error. So a bad answer is asked for again, up to three calls in all, and an error of the server is retried up to four calls with growing waits. Every call is counted in the cost, also a failed one.
 
@@ -661,7 +746,7 @@ None of these choices is trusted blindly. Test 1 measures the LLM fields, and Te
 | Thing | Cost |
 |---|---|
 | The first layer, once for each project | Not measured on a full page yet. One call on a short text cost about 3 cents. |
-| The search, for each search | About 1 to 3 cents for one call as measured, less at a lower thinking level. |
+| The search, for each search | About 0.5 cent for the comparison at LOW, and 1.6 cents at HIGH, as measured on 9 ideas. The embedding of the idea costs about 0.0005 cent. |
 | The Hedera test network | Free test money |
 | Reference: the main network | About 1 cent to create a topic, 0.08 cent for a message |
 
@@ -726,18 +811,54 @@ No page is built before its row here is agreed. For each screen: who uses it, wh
 
 | # | Screen | Who | What they decide | What must be on the screen |
 |---|---|---|---|---|
-| S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. The closest projects, each with its one-sentence description, event, proof status and life status. What is the same and what differs. Filters. |
-| S2 | Project card | Everybody | What is this project really? | The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan. The date of each check. |
-| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box for a project link or a repository link. Progress while the check runs. Then the proof status with the facts behind it, the closest past projects, and "seen before". |
-| S4 | Register | Builder | Do I want my submission on the public register? | What will be written, in plain words, before the button. Existing registrations with the same fingerprint. After the button: the receipt with number, time and link. |
-| S5 | Event overview | Organiser | What did this event produce? | Counts by category, by proof status and by life status. |
-| S6 | Method and limits | Everybody | How far can I trust this tool? | The test results with their ranges, what the tool cannot do, and what exists elsewhere. |
+| S1 | Search | Builder | Is my idea new on Hedera? | A box for the idea. Quick results by meaning while the idea is typed, said to be quick. A button that says what the model will do, in how long and for how much, and then orders the closest and compares them. The closest projects as a grid of ten cards, each with its one-sentence description, event, proof status and life status, and after the button what is the same and what differs. Filters in one row under the box. Numbered pages. Under the results of an idea, one sentence invites a builder back: "Building this? Before you submit, check your GitHub link here." |
+| S2 | Project card | Everybody | What is this project really? | Opens over the results, on most of the screen, with the results still seen behind it; on a phone, on the whole screen. The three sources, visibly separate. Each LLM field with its label and quotes. The original text. Links to the page, the code and HashScan, and buttons at the head of the card for the page, the code and the live demo, when the page links one. The date of each check. The previous and the next card of the list. The projects it is linked to, when there are some (8.4). Under the code, what the code says about Hedera (7.3): its Hedera packages, the Hedera services that it calls, the signs, the files that import a Hedera library and those that only name it, each with its number of files and links to the first ones at the commit that was read; or, in plain words, why it was not read. (Added on 21 October 2026.) |
+| S3 | Check a submission | Judge | Can I trust this submission's claims? | A box beside the box of the idea: the GitHub link of a repository and, if the judge wants, its hackathon, from the list of hackathons (the ones running now first, then the past ones whose days are known, in a group for each year; those added by hand among them) or with its first and last day typed in. The tool is a memory of past hackathons, not a live view, so without a hackathon the check shows every fact with its own date and judges none, and an (i) says so. The steps while the check runs, in the window over the page. Then the proof status with the facts of each Hedera ID of the README, the life of the code, the version of the code, "seen before", and the five closest past projects by the meaning of the README; each of them opens in the same window, with a way back to the check. No model writes, except on the button "Compare these 5 with Gemini" at the head of the closest projects. What the code says about Hedera, as on the card (7.3); a repository that the tool has not read yet is read during the check, within 50 MB and 30 seconds. (Added on 21 October 2026.) |
+| S4 | Register | Builder | Do I want my submission on the public register? | Reached from the result of S3, at the head of its right column, beside the title. Without a hackathon, when the collection keeps a project with the same code, it names that project's hackathon and offers to check the code again for it, so that a team registers in one step. What will be written, in plain words, before the button. Existing registrations with the same fingerprint. Only for a hackathon of the list (9.2). Before the button, the line that the team adds to its README; at the press, the README and the newest version of the code are read again. After the button: the receipt with number, time and link. |
+| S5 | Charts of a list | Organiser | What did this event produce? | A switch beside the grid shows the same list as charts: the whole collection, a search, or the filters of an event and a year. The charts sit in four tabs, so that no tab holds more than four blocks: Overview (the proof status, the life status, and the projects linked across events, first when the list holds some, with their number), Hedera services (the services that the code calls, the Hedera packages that the code names, and the kinds of ID that the ledger confirms), Winners (what the projects with a Hedera prize use in their code, next to the others, and the insights in sentences) and Events (the themes, the events, and the projects of each event with a link to its page). Without the page's script, the four parts show one under the other; with it, one part shows at a time, the arrow keys move between the tabs, and the tab chosen stays for the visit. The counts are for all the projects and for those with a Hedera prize; what the code shows is counted among the projects whose code was read. What winners use is two shares side by side, of the projects with a Hedera prize and of the others, each with 20 projects or more; it says what winners used, not why they won. A share only with 20 projects or more behind it. Counted from the tables when the page is made, with the same tally as the dated overview job (evals/overview.py). The insights in sentences, each with its numbers: linked projects that each won a Hedera prize at more than one event, the categories with the most Hedera prizes, and how many winners and other projects were still worked on after the event; a sentence appears only when the list holds enough projects for it. (The tabs, the code and what winners use added on 22 October 2026.) |
+| S6 | Method and limits | Everybody | How far can I trust this tool? | A window opened from the bottom of every page: the steps of the search, the test results with their ranges, what the tool cannot do, and what exists elsewhere. |
 
 Every screen also needs three more states: while loading, when there is nothing to show, and when something failed. Each one says in plain words what happened and what to do.
 
+**The third version of the page (16 October 2026).** After a second test of the website:
+
+- **One page.** Every screen opens on the search page. The card of a project, "How it works", the common questions and the list of sources open as windows over it, and opening them never loses the search.
+- **No bar of links at the top.** The bottom of the page holds the name of the tool, "How it works", the common questions, the sources, and where the data comes from.
+- **Each term and mark explains itself.** A small (i) stands next to it. On a computer, its text opens when the pointer rests on it or when it gets the keyboard focus; on a phone, with a tap. It closes with Escape, with a tap outside it, or when the pointer leaves both the (i) and its text, so it can be read with the pointer on it (WCAG 2.2, criterion 1.4.13).
+- **References, as in an encyclopedia.** A term that a newcomer may not know (Hedera, a Hedera ID, a topic, a token, a smart contract, the mirror node, HashScan, the test network, an embedding) carries a number that opens an outside source, Hedera's own documentation first. The window of sources lists them all.
+- **A short first screen.** The first visit of a browser opens with the name of the tool for about one second. Any key or tap skips it, and it is left out when the system asks for less motion.
+- **Shapes while loading.** While a list or a card loads, its shape is drawn in grey.
+- **A search is kept until the person clears it.** The address holds it, so a reload or the back button shows it again. The order and the comparisons of the model are kept for one day (section 8.2), so they are not asked for again. The browser keeps the last search, so a later visit finds it, until the person clears the box.
+
+**The fourth version of the page (16 October 2026, later).** After a third test, the page still looked dated. It now uses Tabler 1.6.1, a design system built on Bootstrap 5, with Chart.js 4.5.1 for the charts and IBM Plex Sans as its type. All three are MIT or SIL Open Font licensed and were checked against the npm registry. htmx still loads the parts of the page, and the windows are still the browser's own dialog and popover.
+
+- **The idea takes the width.** The box of the idea is wide, and the check of a submission (S3) stands beside it.
+- **Charts for every list** (S5), with a switch between cards and charts.
+- **Filters that follow the search.** The numbers of a filter count the 50 projects closest to the idea. A chosen value stays offered, with 0, even when none of them has it.
+- **Clear words for the two orders.** "Quick order" and "Gemini's order" are two switches with an (i), and a button clears the search.
+- **Each event links to its own page**, on ETHGlobal or on the organiser's list of winners.
+- **Contrast.** Tabler's teal gives white text a contrast of 3 to 1, and WCAG AA asks 4.5 to 1. The light theme uses a deeper teal, and the dark theme a lighter one with dark text; the coloured pills and labels get darker text. axe-core finds no problem on the real collection in seven views, in both themes and at both widths.
+
+What the look avoids, after the same test: the common look of generated websites, such as harsh gradients, stock icon sets, a pure white background, a shadow on every element, three feature cards in a row, emoji, glass effects, the fonts Inter, Geist and Space Grotesk, a coloured stripe on the side of a box, large soft corners, purple with black, neon or pastel colours, and an animation on every hover.
+
+**The fifth version of the page (18 October 2026, evening).** After a fourth test by the maintainer:
+
+- **A switch of the theme.** "light, dark, auto" stands at the top right of every page. The choice is kept in the browser and applied before the page is drawn, and "auto" follows the computer. It is one small control, so the page still has no bar of links at the top.
+- **The live demo at the head of a card,** next to the buttons of the project's page and of its code, when the page links one.
+- **The register box at the head of the check,** in the space beside the title, with the faster way of S4.
+- **The list of hackathons in groups.** A browser's own list cannot colour a part of a line, and a list built by hand would lose the keyboard and the screen reader. So the hackathons running now come first, then one group for each year, and the days of a line leave out the year of their group: "ETHGlobal Cannes 2026 (3 to 5 April)" under 2026.
+- **A wider "How it works".** The window is 1040 pixels wide. The lines of text keep their width, so that they stay easy to read, and the table of the ways to search takes the whole width. Its three steps carry their numbers again.
+- **Errors in plain words.** No waiting state stays on the screen after a request that failed. In a window, the content says what happened and what to do; the list and the forms keep what they showed, with a line above them. The page stops waiting after 90 seconds. An error that no part of the server expects gets a short page in plain words, and the server keeps the details in its log.
+
+**The sixth version of the page (20 October 2026).** After a fifth review by the maintainer:
+
+- **A calmer dark theme.** Light text on a dark page spreads a little in the eye (halation), more for people with astigmatism, and a saturated colour seems to vibrate on a dark ground (Material Design's guidance for dark themes: lighter, less saturated colours). For most readers, dark text on a light page reads best (Nielsen Norman Group, 2020, after Piepenbrock and colleagues, 2013), so the switch keeps its three choices. The dark theme is no longer green: its text is off-white (12 to 1 on the page instead of 14 to 1), its headings are no longer pure white, its one accent is a soft blue (8.7 to 1) with a soft amber in the charts, a chosen switch is a tint instead of a bright block, and the letters and lines have a little more space. axe-core finds no problem in either theme.
+- **The words of a normal product.** The page uses the usual words of the field, such as semantic search, keyword search, embedding, mirror node, HashScan and testnet, each explained once in its (i), and no longer paraphrases them. The labels: "Search: Semantic, Keyword", "Sort and compare with Gemini", "Search order" and "Gemini's order", "Cards" and "Insights", "Activity" after the event, "AI summary" for the fields written by the model, "Most similar past projects" in a check, and "Register on Hedera testnet". What each label means did not change: the AI writes only after its named button, and it never scores a project.
+- **Insights in sentences** above the charts (S5). The data holds two groups of projects linked across events, and one of them won a Hedera prize at three events, so "the teams that won most" is a sentence, not a ranking. A share needs 20 projects or more, as in the charts.
+
 ### 12.2 Marks and their legend
 
-The statuses and the labels are shown as small marks. Each mark has one meaning, defined once, and a legend on every screen that uses it. A mark is never only a colour: it always has words.
+The statuses and the labels are shown as small marks. Each mark has one meaning, defined once, and a small (i) next to it that explains it, wherever it is shown. A mark is never only a colour: it always has words.
 
 ### 12.3 Two review layers
 
@@ -815,6 +936,12 @@ Rules for every test:
 
 - **Cases:** pages where the IDs were checked by hand on HashScan and the right answer was written down.
 - **The numbers:** how many IDs the parser found, how many it invented, and how often the proof status agrees with the hand check.
+
+**Begun on 18 October 2026.** The guideline (`evals/test3/guideline.md`) was written before any page was checked. The 50 pages (`evals/sets/test3.json`) were drawn from three groups fixed before the draw: 15 with an ID on the page, 20 with an ID in the README only, and 15 with no ID found, the last group for the IDs that the tool missed. The sheet (`python -m evals.test3.sheet`) shows each page and its README with every string shaped like an ID; the facts of the ledger are asked with plain HTTP, not with the tool's code (`evals.test3.facts`); `evals.test3.run` gives the three numbers with their ranges. Three planted IDs, which stand in no text, must be counted as missed.
+
+**Run on 18 October 2026** (`evals/results/20261018T185311Z-test3.json`; the report is `evals/test3/report-2026-10.md`). A second reader, a language model that is not part of the tool, found 156 IDs on 34 of the 50 pages. The tool found all of them (100%; pass mark 95%) and gave 148 of them the same status (94.9%, range 89.2% to 98.7%; pass mark 90%). It also counted 22 IDs that are not the project's (12.4%, range 3.9% to 23.3%; pass mark at most 2%, not met): 10 of a local network that one project runs on its computer, 5 example values, and 7 scheduled transactions, a kind that the guideline does not count. The statuses differ 5 times because the tool took the kind word of a neighbouring line, and twice because it does not count the move of a token inside the window. The first reading of the READMEs was cut at each README's first code block by a reading aid; a first run on it is not valid, and the READMEs were read again in full after it, so that second reading is not blind for ten projects whose IDs the first run had shown.
+
+**Runs on 22 October 2026** (the last two sections of the report). Three changes of the reader followed: a number whose digits count up or down is an example, the default accounts of Hedera's local node are not IDs, and a schedule is read as a scheduled transaction. The tool then found all 156 IDs again, gave 148 the same status, and counted 8 of 164 IDs that are not the project's (4.9%, not met): one number of a local network and 7 schedules (`evals/results/20261022T094640Z-test3.json`). The maintainer then decided that a schedule counts as an ID, and the guideline got a dated last section. The 50 pages were read again for schedules, which found the same 7 and no other. With them: found 163 of 163 (100%), invented 1 of 164 (0.6%, range 0% to 2.1%), status 154 of 163 (94.5%, range 89.1% to 98.2%), all three marks met (`evals/results/20261022T110121Z-test3.json`). This changed the test after a run, so the report keeps both results.
 
 ### 13.5 Test 4: usability
 

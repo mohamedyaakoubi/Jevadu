@@ -53,7 +53,7 @@ MESSAGE = {
     "sequence_number": 1,
     "message": base64.b64encode(b'{"v":0}').decode(),
     "consensus_timestamp": "1791566671.807617381",
-    "payer_account_id": "0.0.1234",
+    "payer_account_id": "0.0.1235",
     "running_hash": "aa",
 }
 
@@ -66,12 +66,12 @@ def test_the_addresses_are_the_ones_of_the_library() -> None:
 def test_an_account_a_topic_and_a_message_are_read() -> None:
     mirror, site, _ = node(
         {
-            f"{BASE}/accounts/0.0.1234": reply({"account": "0.0.1234", "key": KEY}),
+            f"{BASE}/accounts/0.0.1235": reply({"account": "0.0.1235", "key": KEY}),
             f"{BASE}/topics/0.0.5555": reply(TOPIC),
             f"{BASE}/topics/0.0.5555/messages/1": reply(MESSAGE),
         }
     )
-    assert mirror.account("0.0.1234")["key"] == KEY
+    assert mirror.account("0.0.1235")["key"] == KEY
     topic = mirror.topic("0.0.5555")
     assert topic["admin_key"] is None
     assert topic["submit_key"] == KEY
@@ -235,6 +235,15 @@ def test_a_token_and_a_contract_are_read_and_an_address_serves_as_an_id() -> Non
     assert mirror.requests_made == len(site.seen) == 5
 
 
+def test_a_scheduled_transaction_is_read() -> None:
+    answer = {"schedule_id": "0.0.7777", "consensus_timestamp": "1785016492.973922171",
+              "executed_timestamp": None, "deleted": False}  # fmt: skip
+    mirror, site, _ = node({f"{BASE}/schedules/0.0.7777": reply(answer)})
+    assert mirror.schedule("0.0.7777")["schedule_id"] == "0.0.7777"
+    assert mirror.schedule("0.0.9") is None
+    assert len(site.seen) == 2
+
+
 def test_an_address_is_not_an_id_of_a_token_or_a_topic() -> None:
     mirror, site, _ = node({})
     for ask in (mirror.token, mirror.topic):
@@ -276,9 +285,9 @@ def test_the_messages_of_a_topic_are_asked_from_one_end_and_inside_a_time() -> N
 
 def test_a_thing_of_another_kind_has_an_empty_list_and_not_an_error() -> None:
     # The real node answers 200 with an empty list for the messages of an account.
-    empty = f"{BASE}/topics/0.0.1234/messages?limit=1&order=desc"
+    empty = f"{BASE}/topics/0.0.1235/messages?limit=1&order=desc"
     mirror, _, _ = node({empty: reply({"messages": [], "links": {"next": None}})})
-    assert mirror.topic_messages("0.0.1234", newest_first=True) == []
+    assert mirror.topic_messages("0.0.1235", newest_first=True) == []
     assert mirror.topic_messages("0.0.9", newest_first=True) == []  # a 404
     assert mirror.contract_results("0.0.9", newest_first=False) == []
 
@@ -303,7 +312,7 @@ def transactions_page(found: list[dict], following: str | None) -> Reply:
 
 
 PAID = {"consensus_timestamp": "1775400511.765025000", "name": "CRYPTOTRANSFER"}
-START = "/transactions?account.id=0.0.1234&limit=1&order=desc"
+START = "/transactions?account.id=0.0.1235&limit=1&order=desc"
 HOP_1 = f"{START}&timestamp=lt:1786499436.730000001"
 HOP_2 = f"{START}&timestamp=lt:1781315436.730000001"
 HOP_3 = f"{START}&timestamp=lt:1776131436.730000001"
@@ -319,7 +328,7 @@ def test_the_transactions_of_an_account_are_followed_through_the_empty_answers()
             BASE + HOP_3: transactions_page([PAID], "/api/v1" + START + "&timestamp=lt:1.0"),
         }
     )
-    assert mirror.account_transactions("0.0.1234", newest_first=True) == [PAID]
+    assert mirror.account_transactions("0.0.1235", newest_first=True) == [PAID]
     assert site.urls == [BASE + START, BASE + HOP_1, BASE + HOP_2, BASE + HOP_3]
 
 
@@ -334,26 +343,26 @@ def test_the_links_are_not_followed_past_the_time_that_was_asked_for() -> None:
             BASE + first_link: transactions_page([], "/api/v1" + second_link),
         }
     )
-    assert mirror.account_transactions("0.0.1234", newest_first=True, since=since) == []
+    assert mirror.account_transactions("0.0.1235", newest_first=True, since=since) == []
     assert len(site.seen) == 2  # the link that starts before `since` was not asked
 
 
 def test_an_account_with_nothing_at_all_ends_at_the_last_link() -> None:
     mirror, site, _ = node({BASE + START: transactions_page([], None)})
-    assert mirror.account_transactions("0.0.1234", newest_first=True) == []
+    assert mirror.account_transactions("0.0.1235", newest_first=True) == []
     assert len(site.seen) == 1
 
 
 def test_only_a_fixed_number_of_links_is_followed() -> None:
     forever = transactions_page([], "/api/v1" + START)  # a node that always links to itself
     mirror, site, _ = node({BASE + START: forever})
-    assert mirror.account_transactions("0.0.1234", newest_first=True, max_links=3) == []
+    assert mirror.account_transactions("0.0.1235", newest_first=True, max_links=3) == []
     assert len(site.seen) == 4  # the first question and three links
 
 
 def test_going_forward_in_time_the_links_stop_at_the_end_that_was_asked_for() -> None:
     until = datetime.fromtimestamp(1720000000, UTC)
-    asc = "/transactions?account.id=0.0.1234&limit=1&order=asc&timestamp=lt:1720000000.000000000"
+    asc = "/transactions?account.id=0.0.1235&limit=1&order=asc&timestamp=lt:1720000000.000000000"
     first_link = asc + "&timestamp=gt:1717180520.600000000"
     second_link = asc + "&timestamp=gt:1722364520.600000000"
     mirror, site, _ = node(
@@ -362,7 +371,7 @@ def test_going_forward_in_time_the_links_stop_at_the_end_that_was_asked_for() ->
             BASE + first_link: transactions_page([], "/api/v1" + second_link),
         }
     )
-    assert mirror.account_transactions("0.0.1234", newest_first=False, until=until) == []
+    assert mirror.account_transactions("0.0.1235", newest_first=False, until=until) == []
     assert len(site.seen) == 2
 
 

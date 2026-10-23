@@ -2,11 +2,13 @@
 
 The embedding of a project is made again only when its text or its model changes. The embedding
 of a typed idea is kept by the fingerprint of the idea for one day, and the idea itself nowhere.
+The embedding of an example idea of the search screen is kept for good (example_ideas.py).
 """
 
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -14,10 +16,12 @@ import psycopg
 from pgvector import Vector
 from pgvector.psycopg import register_vector
 
+from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.llm.embeddings import Embedding
 
 PAGE = "page"  # the page as it is: the name, the short line and the two texts
 IDEA_LIFETIME = timedelta(hours=24)
+_ANY_TIME = datetime(2000, 1, 1, tzinfo=UTC)  # earlier than anything that the tool kept
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,15 @@ class PageText:
 def idea_fingerprint(idea: str) -> str:
     """The fingerprint of an idea: the same words, in any case and spacing, give the same one."""
     return hashlib.sha256(" ".join(idea.lower().split()).encode()).hexdigest()
+
+
+KEPT_IDEAS = frozenset(idea_fingerprint(idea) for idea in EXAMPLE_IDEAS)
+
+
+def kept_since(sha256: str, now: datetime | None = None) -> datetime:
+    """The oldest moment of what is still kept about an idea: any moment for an example idea,
+    one day back for a typed one."""
+    return _ANY_TIME if sha256 in KEPT_IDEAS else (now or datetime.now(UTC)) - IDEA_LIFETIME
 
 
 class EmbeddingStore:
@@ -101,15 +114,25 @@ class EmbeddingStore:
             )
 
     def nearest(
-        self, values: list[float], model: str, *, limit: int, kind: str = PAGE
+        self,
+        values: list[float],
+        model: str,
+        *,
+        limit: int,
+        kind: str = PAGE,
+        only: Sequence[int] | None = None,
     ) -> list[tuple[int, float]]:
-        """The projects closest in meaning, with their cosine distance, closest first. An exact
-        search: every row is compared (design 11.6)."""
+        """The projects closest in meaning, with their cosine distance, closest first, from the
+        projects of `only` when it is given. An exact search: every row is compared (design
+        11.6)."""
+        ids = None if only is None else list(only)
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT project_id, embedding <=> %s AS distance FROM project_embeddings "
-                "WHERE model = %s AND text_kind = %s ORDER BY distance, project_id LIMIT %s",
-                (Vector(values), model, kind, limit),
+                "WHERE model = %s AND text_kind = %s "
+                "AND (%s::bigint[] IS NULL OR project_id = ANY(%s)) "
+                "ORDER BY distance, project_id LIMIT %s",
+                (Vector(values), model, kind, ids, ids, limit),
             ).fetchall()
         return [(project_id, float(distance)) for project_id, distance in rows]
 
@@ -125,8 +148,8 @@ class EmbeddingStore:
     # ------------------------------------------------------------------ the typed ideas
 
     def idea(self, sha256: str, model: str, now: datetime | None = None) -> list[float] | None:
-        """The embedding of an idea typed less than a day ago, or None."""
-        since = (now or datetime.now(UTC)) - IDEA_LIFETIME
+        """The embedding of an idea typed less than a day ago, or of an example idea, or None."""
+        since = kept_since(sha256, now)
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT embedding FROM idea_embeddings "
@@ -147,9 +170,11 @@ class EmbeddingStore:
             )
 
     def forget_old_ideas(self, now: datetime | None = None) -> int:
-        """Delete the embeddings of ideas typed a day ago or more. Returns how many."""
+        """Delete the embeddings of ideas typed a day ago or more, never those of the example
+        ideas. Returns how many."""
         before = (now or datetime.now(UTC)) - IDEA_LIFETIME
         with psycopg.connect(self._conninfo) as conn:
             return conn.execute(
-                "DELETE FROM idea_embeddings WHERE made_at <= %s", (before,)
+                "DELETE FROM idea_embeddings WHERE made_at <= %s AND NOT idea_sha256 = ANY(%s)",
+                (before, list(KEPT_IDEAS)),
             ).rowcount

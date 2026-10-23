@@ -36,7 +36,7 @@ from hackathon_memory.hedera.register import (
 ECDSA_DER = "3030020100300706052b8104000a04220420"
 OPERATOR = AccountId(0, 0, 1234)
 NODE = AccountId(0, 0, 3)
-TX_ID = "0.0.1234@1791566670.123456789"
+TX_ID = "0.0.1235@1791566670.123456789"
 
 
 def a_key():
@@ -74,7 +74,7 @@ def test_the_topic_has_no_admin_key_and_one_submit_key() -> None:
     body = body_of(transaction)
     assert not body.HasField("adminKey")  # nobody can delete the register or change its rules
     assert body.HasField("submitKey")  # only the tool's account can post
-    assert body.memo == "Hackathon Memory register"
+    assert body.memo == "Jevadu register"
 
 
 def test_no_other_key_is_set() -> None:

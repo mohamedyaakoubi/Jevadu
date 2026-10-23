@@ -27,6 +27,7 @@ from hackathon_memory.parse.ethglobal_page import (
     read_project_page,
 )
 from hackathon_memory.parse.event_ends import EventEndsError, read_event_ends
+from hackathon_memory.parse.event_years import EventYearsError, read_event_days, read_event_years
 from hackathon_memory.parse.hedera_posts import read_hedera_posts
 from hackathon_memory.parse.project import ProjectPage
 from hackathon_memory.parse.winner_entries import PARSER_VERSION as WINNER_PARSER
@@ -117,6 +118,25 @@ def parse_winner_entries(
             run.counts["winner_entries_" + projects.save(entry.page, entry.sha256)] += 1
             if entry.page.people_words_hidden:
                 run.counts["words_about_people_hidden"] += entry.page.people_words_hidden
+
+
+def apply_event_years(projects: ProjectStore, path: Path, run: Run) -> None:
+    """Write the years of the events that no page dates, typed into `path` (migration 0012). A
+    file that cannot be read is named in the run, and nothing of it is used."""
+    try:
+        years = read_event_years(path)
+    except EventYearsError as wrong:
+        run.counts["event_years_not_read"] += 1
+        run.problem("the years of events typed by hand", str(wrong))
+        return
+    written, unknown = projects.set_event_years(years)
+    if written:
+        run.counts["event_years_written"] += written
+    for event in unknown:
+        run.problem(f"{path.name}: {event}", "no saved project names this event")
+    days_written, _ = projects.set_event_days(read_event_days(path))
+    if days_written:
+        run.counts["event_days_written"] += days_written
 
 
 def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) -> None:

@@ -12,7 +12,9 @@ import pytest
 
 from fakes import project_page
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
+from hackathon_memory.db.idea_answers import AnswerStore, KeptComparison, KeptOrder
 from hackathon_memory.db.projects import ProjectStore
+from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.llm.embeddings import SEARCH_MODEL
 from hackathon_memory.parse.ethglobal_page import read_project_page
 from hackathon_memory.search import engine, listing
@@ -109,6 +111,36 @@ def test_an_idea_of_yesterday_is_forgotten(database: str) -> None:
     assert store.idea(idea_fingerprint("an old idea"), SEARCH_MODEL, later) is None
 
 
+def test_the_embedding_of_an_example_idea_is_kept_for_good(database: str) -> None:
+    store = EmbeddingStore(database)
+    old = datetime(2026, 10, 10, 9, tzinfo=UTC)
+    example, typed = idea_fingerprint(EXAMPLE_IDEAS[0]), idea_fingerprint("an old idea")
+    for sha256 in (example, typed):
+        store.save_idea(sha256, SEARCH_MODEL, vector_for("vendor"), old)
+    a_year_later = old + timedelta(days=365)
+    assert store.forget_old_ideas(a_year_later) == 1  # the typed idea only
+    assert store.idea(example, SEARCH_MODEL, a_year_later) is not None
+    assert store.idea(typed, SEARCH_MODEL, a_year_later) is None
+
+
+def test_the_answers_about_an_example_idea_are_kept_for_good(database: str) -> None:
+    store, project = AnswerStore(database), next(iter(ids_of(database).values()))
+    old = datetime(2026, 10, 10, 9, tzinfo=UTC)
+    example, typed = idea_fingerprint(EXAMPLE_IDEAS[1]), idea_fingerprint("an old idea")
+    order, texts = KeptOrder([project], [project]), "b" * 64
+    one = KeptComparison("Both pay a vendor.", "This one adds a ledger.", ["short_line"])
+    for sha256 in (example, typed):
+        store.save_order(sha256, "", SEARCH_MODEL, "LOW", "v1", order, old)
+        store.save_comparisons(sha256, {project: (texts, one)}, SEARCH_MODEL, "LOW", "v1", old)
+    later = old + timedelta(days=365)
+    assert store.forget_old(later) == 2  # the order and the comparison of the typed idea
+    assert store.order(example, "", SEARCH_MODEL, "LOW", "v1", later) == order
+    found = store.comparisons(example, {project: texts}, SEARCH_MODEL, "LOW", "v1", later)
+    assert found == {project: one}
+    assert store.order(typed, "", SEARCH_MODEL, "LOW", "v1", later) is None
+    assert store.comparisons(typed, {project: texts}, SEARCH_MODEL, "LOW", "v1", later) == {}
+
+
 # --------------------------------------------------------------------- the listing
 
 
@@ -135,13 +167,13 @@ def test_the_listing_shows_what_the_mirror_node_said(database: str) -> None:
     with psycopg.connect(database) as conn:
         hedera_id = conn.execute(
             "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
-            "words_around, in_hashscan_link) VALUES (%s, '0.0.3456789', 'testnet', 'topic', "
+            "words_around, in_hashscan_link) VALUES (%s, '0.0.3456781', 'testnet', 'topic', "
             "'readme', 'our topic', false) RETURNING id",
             (pebble,),
         ).fetchone()[0]
         conn.execute(
             "INSERT INTO ledger_facts (entity_id, network, asked_at, found, kind, created_at, "
-            "last_activity_at) VALUES ('0.0.3456789', 'testnet', '2026-10-11T20:00:00Z', true, "
+            "last_activity_at) VALUES ('0.0.3456781', 'testnet', '2026-10-11T20:00:00Z', true, "
             "'topic', '2026-03-05T10:00:00Z', '2026-03-07T12:00:00Z')"
         )
         conn.execute(
@@ -154,11 +186,11 @@ def test_the_listing_shows_what_the_mirror_node_said(database: str) -> None:
     text = "\n".join(listing.lines([card]))
     assert "Hedera proof: proof found." in text
     assert (
-        "0.0.3456789 on testnet, from the README: topic, created 2026-03-05, last activity "
+        "0.0.3456781 on testnet, from the README: topic, created 2026-03-05, last activity "
         "2026-03-07. proof found (asked 2026-10-11)"
     ) in text
     quiet = "\n".join(listing.lines([card], names=False))
-    assert "0.0.3456789" not in quiet
+    assert "0.0.3456781" not in quiet
     assert "ids asked of the mirror node: 1, with 1 answer(s) kept" in quiet
 
 
@@ -262,7 +294,7 @@ def test_the_dates_of_the_code_make_a_project_active(database: str) -> None:
 
 def test_the_ledger_activity_of_an_id_of_its_own_counts(database: str) -> None:
     pebble = ids_of(database)["Pebble Pay"]
-    give_an_id(database, pebble, "0.0.3456789", "2026-09-01T10:00:00Z")
+    give_an_id(database, pebble, "0.0.3456781", "2026-09-01T10:00:00Z")
     end_the_event(database, "2026-03-08")
     assert life_line(database, pebble).startswith("   life: active (")
 
@@ -270,8 +302,8 @@ def test_the_ledger_activity_of_an_id_of_its_own_counts(database: str) -> None:
 def test_an_id_that_projects_with_other_code_name_is_not_a_sign(database: str) -> None:
     ids = ids_of(database)
     # A shared service: two projects with different code name the same busy token.
-    give_an_id(database, ids["Pebble Pay"], "0.0.4567890", "2026-10-10T10:00:00Z")
-    give_an_id(database, ids["Cedar Post"], "0.0.4567890", "2026-10-10T10:00:00Z")
+    give_an_id(database, ids["Pebble Pay"], "0.0.4567891", "2026-10-10T10:00:00Z")
+    give_an_id(database, ids["Cedar Post"], "0.0.4567891", "2026-10-10T10:00:00Z")
     end_the_event(database, "2026-03-08")  # so that a sign would make it active
     assert life_line(database, ids["Pebble Pay"]) == (
         "   life: unknown (no date of the code and no activity of its own ids)."
@@ -280,7 +312,7 @@ def test_an_id_that_projects_with_other_code_name_is_not_a_sign(database: str) -
 
 def test_the_work_of_a_recent_event_is_too_early_to_tell(database: str) -> None:
     pebble = ids_of(database)["Pebble Pay"]
-    give_an_id(database, pebble, "0.0.3456789", "2026-09-30T10:00:00Z")
+    give_an_id(database, pebble, "0.0.3456781", "2026-09-30T10:00:00Z")
     end_the_event(database, "2026-09-16")
     assert life_line(database, pebble) == (
         "   life: too early to tell (the event ended less than 90 days ago, nothing later than "
@@ -290,9 +322,62 @@ def test_the_work_of_a_recent_event_is_too_early_to_tell(database: str) -> None:
 
 def test_with_no_end_of_the_event_no_sign_can_be_judged(database: str) -> None:
     pebble = ids_of(database)["Pebble Pay"]
-    give_an_id(database, pebble, "0.0.3456789", "2026-10-01T10:00:00Z")
+    give_an_id(database, pebble, "0.0.3456781", "2026-10-01T10:00:00Z")
     assert life_line(database, pebble) == (
         "   life: unknown (the end of the event is not known, last sign 2026-10-01)."
     )
     end_the_event(database, "2026-03-08")
     assert life_line(database, pebble).startswith("   life: active (")
+
+
+# --------------------------------------------------------------------- the filters (design 8.2)
+
+
+def test_the_filters_limit_both_lists_to_their_projects(database: str) -> None:
+    client, _, _ = google()
+    embed_all(database, client)
+    ids = ids_of(database)
+    cedar = ids["Cedar Post"]
+    hits = engine.search(database, client, "a vendor and a parcel", model=SEARCH_MODEL,
+                         only=[cedar])  # fmt: skip
+    assert [hit.project_id for hit in hits] == [cedar]
+    assert engine.by_words(database, "a parcel tracker", only=[ids["Pebble Pay"]]) == []
+
+
+def test_no_project_left_by_the_filters_finds_nothing_and_costs_nothing(database: str) -> None:
+    client, fake, _ = google()
+    embed_all(database, client)
+    before = len(fake.requests)
+    assert engine.search(database, client, "a vendor", model=SEARCH_MODEL, only=[]) == []
+    assert len(fake.requests) == before  # the idea was not embedded
+
+
+def test_a_filter_keeps_the_order_of_the_projects_it_keeps(database: str) -> None:
+    # How rare a word is, is counted over every project, also when a filter keeps only a few.
+    echo = project_page(name="Echo Echo", slug="echo-echo", short_line="Invented, invented.",
+                        description="<p>" + "Invented parcel words. " * 30 + "</p>")  # fmt: skip
+    page = "https://ethglobal.com/showcase/echo-echo-x1y2z"
+    ProjectStore(database).save(read_project_page(echo, page), "b" * 64)
+    ids = ids_of(database)
+    kept = {ids["Echo Echo"], ids["Fern Vote"]}
+    everything = engine.by_words(database, "invented parcel")
+    assert engine.by_words(database, "invented parcel", only=sorted(kept)) == [
+        project for project in everything if project in kept
+    ]
+
+
+def test_a_mode_makes_only_its_own_list(database: str) -> None:
+    client, fake, _ = google()
+    embed_all(database, client)
+    ids = ids_of(database)
+    before = len(fake.requests)
+    words = engine.search(database, client, "a parcel tracker", model=SEARCH_MODEL,
+                          mode=engine.WORDS)  # fmt: skip
+    assert [hit.project_id for hit in words] == [ids["Cedar Post"]]
+    assert len(fake.requests) == before  # by words only, the idea is not embedded
+    meaning = engine.search(database, client, "help a vendor get paid", model=SEARCH_MODEL,
+                            mode=engine.MEANING)  # fmt: skip
+    assert meaning[0].project_id == ids["Pebble Pay"]
+    assert all(hit.words_rank is None for hit in meaning)
+    with pytest.raises(ValueError, match="unknown mode"):
+        engine.search(database, client, "a vendor", model=SEARCH_MODEL, mode="magic")

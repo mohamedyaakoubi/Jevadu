@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime
 
 import psycopg
 import pytest
@@ -59,9 +59,9 @@ def everything(database: str) -> dict[str, list[tuple]]:
 FULL = {
     "prizes": [won(), won("Other Sponsor", OTHER_ID, track="Best use", kind="track")],
     "description": (
-        "<p>The coin is the token 0.0.2345678 on the test network.</p><ul><li>one</li></ul>"
+        "<p>The coin is the token 0.0.2345671 on the test network.</p><ul><li>one</li></ul>"
     ),
-    "made": '<p>See <a href="https://hashscan.io/testnet/topic/0.0.3456789">the log</a>.</p>',
+    "made": '<p>See <a href="https://hashscan.io/testnet/topic/0.0.3456781">the log</a>.</p>',
 }
 
 
@@ -114,11 +114,11 @@ def test_a_project_is_saved_with_all_that_the_parser_read(database: str) -> None
             1,
             "description",
             "Project Description",
-            "The coin is the token 0.0.2345678 on the test network.\none",
+            "The coin is the token 0.0.2345671 on the test network.\none",
             [
                 {
                     "kind": "paragraph",
-                    "text": "The coin is the token 0.0.2345678 on the test network.",
+                    "text": "The coin is the token 0.0.2345671 on the test network.",
                     "level": 0,
                 },
                 {"kind": "item", "text": "one", "level": 1},
@@ -137,8 +137,8 @@ def test_a_project_is_saved_with_all_that_the_parser_read(database: str) -> None
         "SELECT entity_id, network, said_kind, found_in, in_hashscan_link FROM hedera_ids "
         "ORDER BY id",
     ) == [
-        ("0.0.2345678", "testnet", "token", "page", False),
-        ("0.0.3456789", "testnet", "topic", "page", True),
+        ("0.0.2345671", "testnet", "token", "page", False),
+        ("0.0.3456781", "testnet", "topic", "page", True),
     ]
 
 
@@ -214,12 +214,12 @@ def test_an_id_found_in_a_readme_stays_when_the_page_is_parsed_again(database: s
         conn.execute(
             "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
             "words_around, in_hashscan_link) "
-            "SELECT id, '0.0.4567890', NULL, NULL, 'readme', 'the id 0.0.4567890', false "
+            "SELECT id, '0.0.4567891', NULL, NULL, 'readme', 'the id 0.0.4567891', false "
             "FROM projects"
         )
     store.save(parsed(), SHA_B)  # the page no longer names an id
     assert rows(database, "SELECT entity_id, found_in FROM hedera_ids") == [
-        ("0.0.4567890", "readme")
+        ("0.0.4567891", "readme")
     ]
 
 
@@ -294,7 +294,7 @@ def test_the_same_id_is_kept_once_for_a_project_also_with_no_network(database: s
     insert = (
         "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
         "words_around, in_hashscan_link) "
-        "SELECT id, '0.0.4567890', NULL, NULL, 'readme', 'words', false FROM projects"
+        "SELECT id, '0.0.4567891', NULL, NULL, 'readme', 'words', false FROM projects"
     )
     with psycopg.connect(database) as conn:
         conn.execute(insert)
@@ -369,6 +369,40 @@ def test_an_event_that_no_project_names_is_not_made_up(database: str) -> None:
     assert rows(database, "SELECT count(*) FROM events") == [(1,)]
     other_site = store.set_event_ends("example.test", {"sample-event": date(2026, 3, 8)})
     assert other_site.unknown == ["sample-event"]  # the same name on another site
+
+
+def test_the_typed_year_of_an_event_is_written_and_used_when_no_date_is_known(
+    database: str,
+) -> None:
+    from hackathon_memory.search import filters
+
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)  # the event starts on 6 March 2026
+    with psycopg.connect(database) as conn:  # an event of a list of winners: no date at all
+        conn.execute("UPDATE events SET starts_at = NULL, ends_on = NULL")
+    years = {("ethglobal.com", "sample-event"): 2025, ("ethglobal.com", "none"): 2024}
+    written, unknown = store.set_event_years(years)
+    assert (written, unknown) == (1, ["ethglobal.com none"])  # no event is made up
+    assert store.set_event_years(years)[0] == 0  # the same year again writes nothing
+    found = filters.facts(database, model="m", version="v")
+    assert {row.year for row in found} == {"2025"}
+    with psycopg.connect(database) as conn:  # a known date wins over the typed year
+        conn.execute("UPDATE events SET ends_on = '2026-03-08'")
+    assert {row.year for row in filters.facts(database, model="m", version="v")} == {"2026"}
+
+
+def test_the_typed_days_of_an_event_become_its_start_and_its_end(database: str) -> None:
+    store = ProjectStore(database)
+    store.save(parsed(), SHA_A)
+    with psycopg.connect(database) as conn:  # an event of a list of winners: no date at all
+        conn.execute("UPDATE events SET starts_at = NULL, ends_on = NULL")
+    days = {("ethglobal.com", "sample-event"): (date(2024, 7, 22), date(2024, 8, 20)),
+            ("ethglobal.com", "none"): (date(2024, 1, 1), date(2024, 1, 2))}  # fmt: skip
+    assert store.set_event_days(days) == (1, ["ethglobal.com none"])
+    assert store.set_event_days(days)[0] == 0  # the same days again write nothing
+    with psycopg.connect(database) as conn:
+        start, end = conn.execute("SELECT starts_at, ends_on FROM events").fetchone()
+    assert start == datetime(2024, 7, 22, tzinfo=UTC) and end == date(2024, 8, 20)
 
 
 def test_an_end_before_the_start_is_refused(database: str) -> None:

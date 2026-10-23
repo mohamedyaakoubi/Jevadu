@@ -1,0 +1,55 @@
+{# S6, method and limits (design 12.1): a window over the page, or its own page without JavaScript.
+   Every number comes from a dated result file (design rule 6). #}
+{% import "_parts.html" as parts %}
+{% set comparing = compare_numbers() %}
+{% macro pct(found, known) %}{% if known %}{{ "%.0f" | format(100 * found / known) }}%{% endif %}{% endmacro %}
+{% macro pct1(share) %}{{ "%.1f" | format(100 * share) }}%{% endmacro %}
+{% macro range(numbers) %}{% if numbers and numbers.range %}{{ "%.0f" | format(100 * numbers.range[0]) }}% to {{ "%.0f" | format(100 * numbers.range[1]) }}%{% endif %}{% endmacro %}
+<article class="about" aria-labelledby="sheet-title">
+  <h2 id="sheet-title" class="about-title" tabindex="-1">How it works</h2>
+  <p class="about-lede">How the search works, and how well. Every number here comes from a dated test result in the repository. The (i) next to each part of the page explains that part.</p>
+
+  <h3>The search, step by step</h3>
+  <ol>
+    <li><b>Results as you type.</b> Semantic search with Google's embedding model{{ parts.ref("embedding") }}, or keyword search (BM25{{ parts.ref("bm25") }}) when you choose Keyword. No generative AI.</li>
+    <li><b>Gemini on request.</b> "Sort and compare with Gemini" sends the 30 closest projects to Gemini 3.8 Flash{{ parts.ref("gemini") }}, which puts the 10 most similar first and writes, for each, what is the same as your idea and what differs. It only sees the projects of step 1, and it never scores a project.</li>
+    <li><b>Cached for a day.</b> The models' answers are cached for one day under a hash of the idea, so the same search never calls them twice. Your browser keeps your last search until you clear it.</li>
+  </ol>
+
+  <h3 id="modes">Search modes compared</h3>
+  <p>Each mode ran on the cases of Test 2, where the right answer was known beforehand: {% if test2 %}{{ test2.numbers.pairs.known }} pairs of past projects with the same idea, and {{ test2.numbers.ideas.known }} ideas written by a person for a project they had in mind{% else %}pairs of past projects with the same idea, and ideas written by a person for a known project{% endif %}. For each case the tool searched, and the test looked whether the known project came back in the first 10 results. {% if modes and modes[0].known %}“{{ modes[0].found }} of {{ modes[0].known }}” means that it did in {{ modes[0].found }} of the {{ modes[0].known }} cases. {% endif %}The range shows how far that share could move with other test cases of the same kind.</p>
+  <div class="table-wrap" tabindex="0" role="region" aria-label="The table of the search modes, which scrolls sideways"><table>
+    <thead><tr><th scope="col">Mode</th><th scope="col">Known project in the first 10 results</th><th scope="col">Time per search</th><th scope="col">Cost per search</th></tr></thead>
+    <tbody>
+    {% for mode in modes %}
+      <tr><td><b>{{ mode.label }}</b><br><span class="where">{{ mode.words }}{% if mode.why_not %} {{ mode.why_not }}{% endif %}</span></td>
+        <td>{% if mode.known %}<span class="text-nowrap">{{ mode.found }} of {{ mode.known }} ({{ mode.share }}%)</span>{% if mode.low is not none %}<br><span class="where">range {{ "%.0f" | format(100 * mode.low) }}% to {{ "%.0f" | format(100 * mode.high) }}%</span>{% endif %}{% else %}not measured yet{% endif %}</td>
+        <td>{% if mode.seconds is not none %}<span class="text-nowrap">about {{ "%.1f" | format([mode.seconds, 0.1] | max) }} s</span><br><span class="where text-nowrap">95% under {{ "%.1f" | format([mode.slow_seconds, 0.1] | max) }} s</span>{% else %}not measured yet{% endif %}</td>
+        <td>{% if mode.cost_usd %}<span class="text-nowrap">about {{ "%.1f" | format(100 * mode.cost_usd) }} cent</span>{% if mode.key == "ai" and comparing %}<br><span class="where">plus about {{ "%.1f" | format(100 * comparing.cost_usd) }} cent to compare the 10</span>{% endif %}{% elif mode.seconds is not none %}free{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% if measured %}<p class="where">Measured on {{ measured.made_on | iso_day }}, over {{ measured.projects_searched }} projects. Gemini was sometimes much slower than usual, so the page waits {{ RERANK_SECONDS }} seconds for its order, then falls back to the search order and says so.</p>{% endif %}
+
+  <h3>What the tests measured</h3>
+  {% if test1 %}
+  {% set second = test1.numbers.second %}
+  <p><b>Test 1: the AI summaries.</b> {{ test1.projects }} project pages, each summary graded field by field against its page ({{ test1.made_on | iso_day }}). Wrong: {{ second.wrong.count }} of {{ second.wrong.of }} fields. Fully right: {{ second.right.count }} of {{ second.right.of }} ({{ pct(second.right.count, second.right.of) }}, range {{ range(second.right) }}). Correct labels: {{ second.labels.count }} of {{ second.labels.of }}.</p>
+  {% endif %}
+  {% if test2 %}
+  {% set all = test2.numbers.all %}
+  <p><b>Test 2: the search.</b> {{ all.found }} of {{ all.known }} known similar projects in the top 10 ({{ pct(all.found, all.known) }}, range {{ range(all) }}), over {{ test2.projects_searched }} projects ({{ test2.made_on | iso_day }}), with the search mode of that day. The table above shows each mode since.</p>
+  {% endif %}
+  {% if test3 %}
+  {% set ids = test3.numbers %}
+  <p><b>Test 3: the Hedera IDs.</b> On {{ test3.pages }} project pages and their READMEs ({{ test3.made_on | iso_day }}), a second reader, a language model that is not part of the tool, wrote down every Hedera ID. The parser found {{ ids.found.count }} of its {{ ids.found.of }} IDs ({{ pct1(ids.found.share) }}), and gave {{ ids.status.count }} of them the same status ({{ pct1(ids.status.share) }}, range {{ range(ids.status) }}). It also counted {{ ids.invented.count }} of {{ ids.invented.of }} IDs that are not the project's ({{ pct1(ids.invented.share) }}, range {{ range(ids.invented) }}; the pass mark is 2%): IDs of a local test network, example values and scheduled transactions.</p>
+  {% endif %}
+  <p class="where">A range shows how far a number could move with another set of test cases of the same kind.</p>
+
+  <h3>Limits</h3>
+  <ul>
+    <li>It knows the projects whose page is still public, and only the winners of the events whose other submissions are gone.</li>
+    <li>The AI summaries exist for the projects with a full page; an entry from a winners' list shows only what the list gives.</li>
+    <li>The order of a list reflects similarity to your idea only: never quality, and never copying.</li>
+  </ul>
+</article>
