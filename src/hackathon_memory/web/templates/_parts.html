@@ -83,12 +83,13 @@
 </div>
 {%- endmacro %}
 
-{# The transactions of a project's own things before or after the time of the ledger story:
-   `part` is an Outside of check/story.py, or none when they are not counted. #}
+{# A number of transactions of one service, in words: "1 Token Service transaction". #}
 {% macro transactions(service, count) -%}
 {{ "{:,}".format(count) }} {{ SERVICE_TRANSACTIONS[service] if count != 1 else SERVICE_TRANSACTIONS[service][:-1] }}
 {%- endmacro %}
 
+{# The transactions of a project's own things before or after the time of the ledger story:
+   `part` is an Outside of check/story.py, or none when they are not counted. #}
 {% macro outside(part, which) -%}
 {% if part is none %}not counted: its IDs are accounts only
 {%- elif not part.count %}none
