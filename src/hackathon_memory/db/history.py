@@ -17,6 +17,11 @@ from hackathon_memory.check.history import History
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
 
 KINDS_THAT_FIT = (PROOF_FOUND, DATES_DO_NOT_FIT, FOUND_BUT_EMPTY)
+# The own IDs, as the first part of a query that joins `own` (design 8.4).
+OWN = (
+    "WITH own AS (SELECT entity_id FROM hedera_ids GROUP BY entity_id "
+    "             HAVING count(DISTINCT project_id) = 1) "
+)
 
 
 @dataclass(frozen=True)
@@ -38,9 +43,8 @@ class HistoryStore:
         """The own IDs whose kind fits and whose history was not read yet."""
         with psycopg.connect(self._conninfo) as conn:
             rows = conn.execute(
-                "WITH own AS (SELECT entity_id FROM hedera_ids GROUP BY entity_id "
-                "             HAVING count(DISTINCT project_id) = 1) "
-                "SELECT DISTINCT h.entity_id, c.network, f.kind, f.ledger_id, f.created_at "
+                OWN  # noqa: S608  (fixed text)
+                + "SELECT DISTINCT h.entity_id, c.network, f.kind, f.ledger_id, f.created_at "
                 "FROM hedera_ids h JOIN own USING (entity_id) "
                 "JOIN id_checks c ON c.hedera_id = h.id "
                 "JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "

@@ -18,33 +18,33 @@ import sys
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 
 import psycopg
 
 from evals.test1.report import Counts, share
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, SCHEDULED, TOKENS
-from hackathon_memory.check.proof import ORDER, PROOF_FOUND
-from hackathon_memory.db.history import KINDS_THAT_FIT
+from hackathon_memory.check.proof import PROOF_FOUND
+from hackathon_memory.check.story import (
+    AT_LEAST,
+    LIFE_LINE,
+    NAMES,
+    WINDOW_BEFORE,
+    WORDS,
+    Event,
+    merged,
+    name_patterns,
+    named_services,
+    on_its_network,
+)
+from hackathon_memory.db.history import KINDS_THAT_FIT, OWN
 from hackathon_memory.parse.hedera_ids import ACCOUNT
 from hackathon_memory.settings import Settings
 
 RESULTS = Path(__file__).parent.parent / "results"
-WINDOW_BEFORE = timedelta(days=30)  # design 7.2: the window starts 30 days before the event
-LIFE_LINE = timedelta(days=30)  # design 7.4: a sign of life is later than 30 days after the end
-AT_LEAST = 3  # S4: the events of a service that make it "done"
 SHARE_TO_BUILD = 0.20  # guideline.md: fixed before the reading
 COUNTED = ("S1", "S3", "S4")  # the signals of the decision; S2 and S5 are reported
-# The words that name a service (guideline.md, "What the page names"). HBAR is left out.
-WORDS = {
-    CONSENSUS: ("consensus service", "HCS", "Hedera topic", "HCS topic", "consensus topic",
-                "topic ID"),
-    TOKENS: ("token service", "HTS", "Hedera token"),
-    CONTRACTS: ("smart contract", "Solidity"),
-    SCHEDULED: ("scheduled transaction", "schedule service", "HSS"),
-    FILES: ("file service", "HFS"),
-}  # fmt: skip
 # A check of the words, not the rule (the report): the same measure with looser words, to see
 # whether the decision hangs on the strict ones.
 LOOSE_WORDS = {
@@ -54,24 +54,7 @@ LOOSE_WORDS = {
     SCHEDULED: (*WORDS[SCHEDULED], "schedule", "scheduled"),
     FILES: (*WORDS[FILES], "file"),
 }
-
-
-def _patterns(words: dict[str, tuple[str, ...]]) -> dict[str, re.Pattern]:
-    return {
-        service: re.compile("|".join(rf"\b{re.escape(word)}\b" for word in found), re.IGNORECASE)
-        for service, found in words.items()
-    }
-
-
-_NAMES = _patterns(WORDS)
-_LOOSE_NAMES = _patterns(LOOSE_WORDS)
-
-
-@dataclass(frozen=True)
-class Event:
-    at: datetime
-    service: str
-    of_an_account: bool  # seen only through an account, whose old history is not the project's
+_LOOSE_NAMES = name_patterns(LOOSE_WORDS)
 
 
 @dataclass(frozen=True)
@@ -84,18 +67,13 @@ class Project:
     events: tuple[Event, ...]
 
 
-def named_services(words: str, names: dict[str, re.Pattern] = _NAMES) -> set[str]:
-    """The services that the page's words name."""
-    return {service for service, pattern in names.items() if pattern.search(words)}
-
-
-def named_not_done(project: Project, names: dict[str, re.Pattern] = _NAMES) -> set[str]:
+def named_not_done(project: Project, names: dict[str, re.Pattern] = NAMES) -> set[str]:
     """S3, by service: what the page names and none of its IDs shows, at any time."""
     done = {event.service for event in project.events}
     return {service for service in named_services(project.words, names) if service not in done}
 
 
-def done_not_named(project: Project, names: dict[str, re.Pattern] = _NAMES) -> set[str]:
+def done_not_named(project: Project, names: dict[str, re.Pattern] = NAMES) -> set[str]:
     """S4, by service: what its IDs show at least AT_LEAST times from the start of the window
     on, and the page does not name."""
     window_start = project.starts_at - WINDOW_BEFORE
@@ -104,7 +82,7 @@ def done_not_named(project: Project, names: dict[str, re.Pattern] = _NAMES) -> s
     return {service for service in WORDS if counts[service] >= AT_LEAST and service not in named}
 
 
-def signals(project: Project, names: dict[str, re.Pattern] = _NAMES) -> dict[str, bool]:
+def signals(project: Project, names: dict[str, re.Pattern] = NAMES) -> dict[str, bool]:
     """The five signals of the guideline for one project."""
     window_start = project.starts_at - WINDOW_BEFORE
     life_line = datetime.combine(project.ends_on, time.max, tzinfo=UTC) + LIFE_LINE
@@ -119,35 +97,12 @@ def signals(project: Project, names: dict[str, re.Pattern] = _NAMES) -> dict[str
     }
 
 
-def on_its_network(rows: Sequence[tuple]) -> list[tuple]:
-    """The rows (project, ID, network, status, ...) of each ID on its network only: where its
-    status is the best. A page that names no network has its ID asked on both, and the same
-    number is another thing on each; the better status of the two counts (design 7.1, 7.2)."""
-    best: dict[tuple[int, str], int] = {}
-    for row in rows:
-        key, rank = (row[0], row[1]), ORDER.index(row[3])
-        best[key] = min(best.get(key, rank), rank)
-    return [row for row in rows if ORDER.index(row[3]) == best[(row[0], row[1])]]
-
-
-def merged(events: Sequence[tuple[str, datetime, str, bool]]) -> tuple[Event, ...]:
-    """The events of one project, each moment of consensus once. A moment that an account and a
-    topic both show belongs to the topic: it is then an event of the project's own things."""
-    by_stamp: dict[str, Event] = {}
-    for stamp, at, service, of_an_account in events:
-        kept = by_stamp.get(stamp)
-        if kept is None or (kept.of_an_account and not of_an_account):
-            by_stamp[stamp] = Event(at, service, of_an_account)
-    return tuple(sorted(by_stamp.values(), key=lambda event: event.at))
-
-
 def projects(conninfo: str) -> tuple[list[Project], dict[str, int]]:
     """The projects of the measure, and what was read for them."""
     with psycopg.connect(conninfo) as conn:
         ids = conn.execute(
-            "WITH own AS (SELECT entity_id FROM hedera_ids GROUP BY entity_id "
-            "             HAVING count(DISTINCT project_id) = 1) "
-            "SELECT DISTINCT h.project_id, h.entity_id, c.network, c.status, r.kind, r.cut "
+            OWN  # noqa: S608  (fixed text)
+            + "SELECT DISTINCT h.project_id, h.entity_id, c.network, c.status, r.kind, r.cut "
             "FROM hedera_ids h JOIN own USING (entity_id) "
             "JOIN id_checks c ON c.hedera_id = h.id "
             "JOIN ledger_histories r ON r.entity_id = h.entity_id AND r.network = c.network "
