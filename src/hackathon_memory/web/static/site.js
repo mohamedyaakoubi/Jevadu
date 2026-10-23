@@ -354,6 +354,101 @@
     }
   });
 
+  // ---------------------------------------------------------------- the graph of a list
+  // A dot of the graph (design 8.6, S7) shows its project while the pointer rests on it, with the
+  // line to its closest project, and opens its card on a click, through the link of the same
+  // project in the lists under the graph. The words of a project are put in as text only.
+  function graphDot(node) { return node && node.closest ? node.closest(".hm-dot") : null; }
+  function graphOf(node) { return node.closest("[data-graph]"); }
+  function dotOf(graph, id) { return graph.querySelector('.hm-dot[data-graph-id="' + id + '"]'); }
+  function darkGraph(graph) {
+    graph.querySelectorAll(".is-lit").forEach(function (one) { one.classList.remove("is-lit"); });
+    var hover = graph.querySelector(".hm-graph-hover");
+    if (hover) hover.setAttribute("visibility", "hidden");
+    var tip = graph.querySelector(".hm-graph-tip");
+    if (tip) tip.hidden = true;
+  }
+  function lightGraph(graph, dot) {
+    var id = dot.getAttribute("data-graph-id"), near = dot.getAttribute("data-near");
+    dot.classList.add("is-lit");
+    graph.querySelectorAll('.hm-graph-lines line[data-ends~="' + id + '"]').forEach(function (line) {
+      line.classList.add("is-lit");
+    });
+    var other = near ? dotOf(graph, near) : null, hover = graph.querySelector(".hm-graph-hover");
+    if (!other || !hover) return;
+    var from = dot.querySelector(".hm-mark"), to = other.querySelector(".hm-mark");
+    hover.setAttribute("x1", from.getAttribute("cx"));
+    hover.setAttribute("y1", from.getAttribute("cy"));
+    hover.setAttribute("x2", to.getAttribute("cx"));
+    hover.setAttribute("y2", to.getAttribute("cy"));
+    hover.setAttribute("visibility", "visible");
+    other.classList.add("is-lit");
+  }
+  function showGraphTip(graph, dot) {
+    var tip = graph.querySelector(".hm-graph-tip");
+    if (!tip) return;
+    tip.textContent = "";
+    function line(text, kind) {
+      if (!text) return;
+      var one = document.createElement("p");
+      if (kind) one.className = kind;
+      one.textContent = text;
+      tip.appendChild(one);
+    }
+    var rank = dot.getAttribute("data-rank"), near = dot.getAttribute("data-near");
+    var other = near ? dotOf(graph, near) : null;
+    line(dot.getAttribute("data-name"), "hm-tip-name");
+    line((rank ? "Number " + rank + " in the list · " : "") + dot.getAttribute("data-event"), "hm-tip-small");
+    line(dot.getAttribute("data-line"));
+    line([dot.getAttribute("data-proof"), dot.getAttribute("data-prize")].filter(Boolean).join(" · "), "hm-tip-small");
+    line("Group: " + dot.getAttribute("data-group"), "hm-tip-small");
+    if (other) line("Closest in meaning: " + other.getAttribute("data-name"), "hm-tip-small");
+    tip.hidden = false;
+    var box = graph.getBoundingClientRect(), mark = dot.querySelector(".hm-mark").getBoundingClientRect();
+    var x = mark.left + mark.width / 2 - box.left, y = mark.top + mark.height / 2 - box.top;
+    var width = tip.offsetWidth, height = tip.offsetHeight;
+    var left = x + width + 16 < box.width ? x + 14 : x - width - 14;
+    var top = y + height + 16 < box.height ? y + 14 : y - height - 14;
+    tip.style.left = Math.round(Math.max(4, left)) + "px";
+    tip.style.top = Math.round(Math.max(4, top)) + "px";
+  }
+  document.addEventListener("pointerover", function (event) {
+    var dot = graphDot(event.target);
+    var link = dot ? null : event.target.closest && event.target.closest("[data-graph-link]");
+    if (link) dot = document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
+    if (!dot) return;
+    var graph = graphOf(dot);
+    darkGraph(graph);
+    lightGraph(graph, dot);
+    if (!link && HOVER.matches) showGraphTip(graph, dot);
+  });
+  document.addEventListener("pointerout", function (event) {
+    var from = graphDot(event.target) || (event.target.closest && event.target.closest("[data-graph-link]"));
+    if (!from || (event.relatedTarget && from.contains(event.relatedTarget))) return;
+    document.querySelectorAll("[data-graph]").forEach(darkGraph);
+  });
+  document.addEventListener("focusin", function (event) { // a project of the lists, by keyboard
+    var link = event.target.closest && event.target.closest("[data-graph-link]");
+    var dot = link && document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
+    if (!dot) return;
+    darkGraph(graphOf(dot));
+    lightGraph(graphOf(dot), dot);
+  });
+  document.addEventListener("focusout", function (event) {
+    if (event.target.closest && event.target.closest("[data-graph-link]")) {
+      document.querySelectorAll("[data-graph]").forEach(darkGraph);
+    }
+  });
+  document.addEventListener("click", function (event) {
+    var dot = graphDot(event.target);
+    if (!dot || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    var link = document.querySelector('[data-graph-link="' + dot.getAttribute("data-graph-id") + '"]');
+    if (!link || !window.htmx) return; // the address of the dot then loads the whole page
+    event.preventDefault();
+    darkGraph(graphOf(dot));
+    window.htmx.trigger(link, "click");
+  });
+
   // ---------------------------------------------------------------- the window of a project
   var viewer = function () { return $("viewer"); };
   var pushed = false; // the window added an entry to the history, so "back" closes it

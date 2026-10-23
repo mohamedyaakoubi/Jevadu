@@ -73,7 +73,7 @@
       <div class="hm-results-head">
         <div class="hm-results-titles">
           <h2 class="hm-results-title" id="results-title">{% if asked %}{% if with_ai %}Sorted by Gemini{% else %}Results{% endif %}{% elif chosen and chosen.chosen() %}{{ "{:,}".format(total) }} project{{ "s" if total != 1 }} match{{ "es" if total == 1 }} the filters{% else %}All {{ "{:,}".format(total) }} projects{% endif %}</h2>
-          {% if view != "charts" and results %}<p class="hm-results-sub">{% if asked %}{{ first_shown }} to {{ last_shown }} of {% if chosen and chosen.chosen() %}the {{ total }} matching your filters, among the {{ shown_limit }} closest{% else %}the {{ total }} closest{% endif %}{% if mode == "words" %} by keyword{% elif with_ai %}: Gemini's top 10 of the 30 closest{% else %} by meaning{% endif %}{% if elapsed is not none %} &middot; {{ "%.1f" | format(elapsed) }} s{% endif %}{% else %}Newest events first &middot; {{ first_shown }} to {{ last_shown }}{% endif %}</p>{% endif %}
+          {% if not view and results %}<p class="hm-results-sub">{% if asked %}{{ first_shown }} to {{ last_shown }} of {% if chosen and chosen.chosen() %}the {{ total }} matching your filters, among the {{ shown_limit }} closest{% else %}the {{ total }} closest{% endif %}{% if mode == "words" %} by keyword{% elif with_ai %}: Gemini's top 10 of the 30 closest{% else %} by meaning{% endif %}{% if elapsed is not none %} &middot; {{ "%.1f" | format(elapsed) }} s{% endif %}{% else %}Newest events first &middot; {{ first_shown }} to {{ last_shown }}{% endif %}</p>{% endif %}
         </div>
         <div class="hm-switches">
           {% if asked and mode == "meaning" %}
@@ -86,15 +86,18 @@
           {% endif %}
           <div class="hm-switch">
             <div class="btn-group" role="group" aria-label="How to show the projects">
-              <a class="btn btn-sm{% if view != 'charts' %} active{% endif %}" href="/{{ '?' ~ cards_query if cards_query }}" hx-get="/{{ '?' ~ cards_query if cards_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view != 'charts' %} aria-current="true"{% endif %}>Cards</a>
+              <a class="btn btn-sm{% if not view %} active{% endif %}" href="/{{ '?' ~ cards_query if cards_query }}" hx-get="/{{ '?' ~ cards_query if cards_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if not view %} aria-current="true"{% endif %}>Cards</a>
+              <a class="btn btn-sm{% if view == 'graph' %} active{% endif %}" href="/?{{ graph_query }}" hx-get="/?{{ graph_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == 'graph' %} aria-current="true"{% endif %}>Graph</a>
               <a class="btn btn-sm{% if view == 'charts' %} active{% endif %}" href="/?{{ charts_query }}" hx-get="/?{{ charts_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == 'charts' %} aria-current="true"{% endif %}>Insights</a>
-            </div>{{ parts.info("charts", "the insights") }}
+            </div>{{ parts.info("views", "the three views") }}
           </div>
         </div>
       </div>
 
       {% if view == "charts" %}
         {% include "_charts.html" %}
+      {% elif view == "graph" %}
+        {% include "_graph.html" %}
       {% elif nothing_matches %}
         <div class="empty"><p class="empty-title">No project matches these filters</p><p class="empty-subtitle text-secondary">Remove a filter to see more.</p></div>
       {% elif none_close %}

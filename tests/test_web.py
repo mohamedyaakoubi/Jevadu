@@ -1254,6 +1254,47 @@ def test_the_insights_come_in_four_tabs(site) -> None:  # noqa: ANN001
     assert 'id="chart-event-table"' in panels["events"] and 'id="chart-themes"' in panels["events"]
 
 
+def embed_calls(fake, since: int = 0) -> int:  # noqa: ANN001
+    return len([path for path, _ in fake.requests[since:] if "embedContent" in path])
+
+
+def test_the_graph_of_a_list_needs_an_idea_or_a_filter(site) -> None:  # noqa: ANN001
+    client, fake, ids, database = site
+    asked = client.get("/", params={"view": "graph"})
+    assert asked.status_code == 200 and 'aria-current="true">Graph</a>' in asked.text
+    assert "No graph for this list" in asked.text and "choose a filter" in asked.text
+    with psycopg.connect(database) as conn:
+        (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
+    before = len(fake.requests)
+    page = client.get("/", params={"event": event, "view": "graph"}).text
+    assert page.count('<a class="hm-dot ') == 3 and 'class="hm-graph-idea"' not in page
+    assert '<svg class="hm-graph-svg"' in page and 'aria-hidden="true"' in page
+    # The same projects as lists of links, for a keyboard, a screen reader and a phone.
+    assert page.count("data-graph-link=") == 3
+    assert f'hx-get="/project/{ids["Pebble Pay"]}/panel?view=graph&amp;event={event}"' in page
+    assert "Like " in page and "1 project" not in page  # three projects: one group
+    assert len(fake.requests) == before  # the graph of a list asks no model
+    assert client.get("/", params={"event": event, "view": "graph", "page": "2"}).status_code == 200
+
+
+def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None:  # noqa: ANN001
+    from hackathon_memory.web import graph
+
+    client, fake, ids, _ = site
+    before = len(fake.requests)
+    page = client.get("/", params={"idea": VENDOR, "view": "graph"}).text
+    assert 'class="hm-graph-idea"' in page and page.count('<a class="hm-dot ') == 3
+    first = re.search(r'<a class="hm-dot[^>]*data-graph-id="(\d+)"[^>]*data-rank="1"', page)
+    assert first and int(first.group(1)) == ids["Pebble Pay"]  # the vendor's project
+    assert "the closer the project is in meaning" in page
+    assert embed_calls(fake, before) == 1 and model_calls(fake, before) == 0  # the search's own
+    switch = re.search(r'href="/\?([^"]*)"[^>]*>Graph</a>', page)
+    assert switch and "view=graph" in switch.group(1) and "idea=" in switch.group(1)
+    monkeypatch.setattr(graph, "MOST", 2)
+    many = client.get("/", params={"idea": VENDOR, "view": "graph"}).text
+    assert "the graph draws at most 2" in many and '<a class="hm-dot ' not in many
+
+
 # ------------------------------------------------- smaller parts
 
 

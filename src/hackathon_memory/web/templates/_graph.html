@@ -1,0 +1,57 @@
+{# The graph of the list on the screen (design 8.6, S7): the places come from web/graph.py, so the
+   picture needs no script. It is a picture only, hidden from screen readers: the same groups
+   follow it as lists of links, which a keyboard and a screen reader use, and a phone too. #}
+{% import "_parts.html" as parts %}
+{% if graph_problem or not graph %}
+<div class="empty"><p class="empty-title">No graph for this list</p><p class="empty-subtitle text-secondary">{{ graph_problem or "Remove a filter, or search with other words." }}</p></div>
+{% else %}
+{% set link = "/?" ~ (search_query ~ "&" if search_query else "") ~ "open=" %}
+{% set count = graph.dots | length %}
+<p class="hm-graph-note">{{ count }} project{{ "s" if count != 1 }}{% if graph.ranked %}, the closest to your idea,{% endif %} in {{ graph.groups | length }} group{{ "s" if graph.groups | length != 1 }} by meaning.
+  {%- if graph.ranked %} {% if graph.by_meaning %}The closer a dot stands to your idea, the closer the project is in meaning, compared with the others of this list.{% else %}The closer a dot stands to your idea, the higher the project is in the list.{% endif %} The first 10 are numbered as in the list.{% endif %}
+  Point at a dot to see the project and a line to its closest project; click to open its card.
+  {%- if graph.left_out %} {{ graph.left_out }} project{{ "s have" if graph.left_out != 1 else " has" }} no embedding yet, so {{ "they are" if graph.left_out != 1 else "it is" }} not drawn.{% endif %}</p>
+<div class="card hm-graph-card">
+  <div class="card-body hm-graph" data-graph>
+    <svg class="hm-graph-svg" viewBox="{{ graph.view_box }}" style="max-width: {{ graph.box[2] | round | int }}px" aria-hidden="true" focusable="false">
+      <g class="hm-graph-lines">
+        {% for line in graph.lines %}<line x1="{{ line.x1 }}" y1="{{ line.y1 }}" x2="{{ line.x2 }}" y2="{{ line.y2 }}" data-ends="{{ line.a }} {{ line.b }}"/>{% endfor %}
+        <line class="hm-graph-hover" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/>
+      </g>
+      {% if graph.ranked %}<g class="hm-graph-idea"><circle cx="0" cy="0" r="7"/><text class="hm-graph-small" x="0" y="22" text-anchor="middle">Your idea</text></g>{% endif %}
+      <g class="hm-graph-dots">
+        {% for dot in graph.dots %}{% set one = graph_about.get(dot.project_id, {}) %}{% set first = dot.rank and dot.rank <= 10 %}
+        <a class="hm-dot hm-g{{ dot.group }}{% if first %} is-first{% endif %}" href="{{ link }}{{ dot.project_id }}" tabindex="-1" data-graph-id="{{ dot.project_id }}"{% if dot.near %} data-near="{{ dot.near }}"{% endif %}
+           data-name="{{ one.name }}" data-event="{{ one.event }}" data-line="{{ one.line }}" data-proof="Proof: {{ PROOF_SHORT.get(one.proof or 'not_checked', one.proof) }}"{% if one.prize == "hedera_prize" %} data-prize="Won a Hedera prize"{% elif one.prize == "other_prize" %} data-prize="Won another sponsor's prize"{% endif %}{% if dot.rank %} data-rank="{{ dot.rank }}"{% endif %} data-group="{{ graph.groups[dot.group - 1].title }}">
+          <circle class="hm-hit" cx="{{ dot.x }}" cy="{{ dot.y }}" r="{{ dot.r + 5 }}"/>
+          <circle class="hm-mark" cx="{{ dot.x }}" cy="{{ dot.y }}" r="{{ dot.r }}"/>
+          {% if first %}<text x="{{ dot.x }}" y="{{ dot.y }}">{{ dot.rank }}</text>{% endif %}
+        </a>{% endfor %}
+      </g>
+      <g class="hm-graph-names">
+        {% for group in graph.groups %}<text x="{{ group.x }}" y="{{ group.y }}" text-anchor="{{ group.anchor }}"><tspan class="hm-graph-title">{{ group.title }}</tspan><tspan class="hm-graph-sub" x="{{ group.x }}" dy="16">{{ group.subtitle }}</tspan></text>{% endfor %}
+      </g>
+    </svg>
+    <div class="hm-graph-tip" hidden></div>
+    <ul class="hm-graph-key" aria-label="What the colours and lines mean">
+      {% for group in graph.groups %}<li><span class="hm-graph-swatch hm-g{{ group.number }}" aria-hidden="true"></span>{{ group.title }}</li>{% endfor %}
+      {% if graph.lines %}<li><span class="hm-graph-stroke" aria-hidden="true"></span>Same code or Hedera ID</li>{% endif %}
+    </ul>
+  </div>
+</div>
+<section class="hm-graph-lists" aria-labelledby="graph-lists-title">
+  <h3 class="hm-graph-lists-title" id="graph-lists-title">The groups{{ parts.info("graph", "the graph") }}</h3>
+  {% for group in graph.groups %}
+  <details class="hm-graph-group"{% if graph.groups | length == 1 %} open{% endif %}>
+    <summary><span class="hm-graph-swatch hm-g{{ group.number }}" aria-hidden="true"></span><b>Like {{ group.centre_name }}</b> <span class="text-secondary">{{ group.said }}</span></summary>
+    <ol class="hm-graph-members">
+      {% for dot in graph.members(group.number) %}{% set one = graph_about.get(dot.project_id, {}) %}
+      <li><a href="{{ link }}{{ dot.project_id }}" data-open-viewer="{{ dot.project_id }}" data-graph-link="{{ dot.project_id }}"
+        hx-get="/project/{{ dot.project_id }}/panel{% if search_query %}?{{ search_query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ one.name }}</a>
+        <span class="text-secondary">{{ one.event }}{% if dot.rank %} &middot; number {{ dot.rank }} in the list{% endif %}</span></li>
+      {% endfor %}
+    </ol>
+  </details>
+  {% endfor %}
+</section>
+{% endif %}

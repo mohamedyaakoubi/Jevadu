@@ -52,6 +52,8 @@ REFERENCES = (
               "University of Washington",
               "https://www.washington.edu/news/2024/10/31/ai-bias-resume-screening-race-gender/"),
     Reference("sdk", "SDKs", "Hedera", f"{DOCS}/sdks-and-apis/sdks"),  # read on 22 October 2026
+    Reference("ward", "Ward's method", "Wikipedia",
+              "https://en.wikipedia.org/wiki/Ward%27s_method"),  # read on 24 October 2026
 )  # fmt: skip
 BY_KEY = {reference.key: reference for reference in REFERENCES}
 NUMBER = {reference.key: number for number, reference in enumerate(REFERENCES, start=1)}

@@ -249,6 +249,75 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-linked { padding-left: 1.1rem; margin: 0; display: grid; gap: 0.5rem; }
 .hm-linked a { font-weight: 600; }
 
+/* ------------------------------------------------------------------ the graph of a list */
+
+/* The colours of the groups (design 8.6, S7): blue, yellow, pink and green of the reference
+   palette of the dataviz method, the only four of its eight that stay apart for every reader
+   when any two meet, in both themes (its validator with all pairs, on 23 October 2026). Yellow
+   and pink are under 3:1 on white, so every group is also named on the graph and in the lists. */
+:root {
+  --hm-group-1: #2a78d6;
+  --hm-group-2: #eda100;
+  --hm-group-3: #e87ba4;
+  --hm-group-4: #008300;
+}
+[data-bs-theme="dark"] {
+  --hm-group-1: #3987e5;
+  --hm-group-2: #c98500;
+  --hm-group-3: #d55181;
+  --hm-group-4: #008300;
+}
+.hm-g1 { --hm-group: var(--hm-group-1); }
+.hm-g2 { --hm-group: var(--hm-group-2); }
+.hm-g3 { --hm-group: var(--hm-group-3); }
+.hm-g4 { --hm-group: var(--hm-group-4); }
+.hm-workspace.asking-ai .hm-results :is(.hm-graph-note, .hm-graph-card, .hm-graph-lists) { display: none; }
+.hm-graph-note { color: var(--tblr-secondary); font-size: 0.875rem; margin: 0 0 1rem; }
+.hm-graph { position: relative; }
+.hm-graph-svg { display: block; width: 100%; height: auto; max-height: 80vh; margin: 0 auto; overflow: visible; }
+.hm-graph-svg text { font-family: var(--tblr-font-sans-serif); }
+.hm-graph-small { fill: var(--tblr-secondary); font-size: 12px; paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: 4px; stroke-linejoin: round; }
+/* a strong line: the same code or Hedera ID; the dashed line of a pointed dot: its closest project */
+.hm-graph-lines line { stroke: var(--tblr-body-color); stroke-width: 2.5px; stroke-opacity: 0.8; }
+.hm-graph-lines line.is-lit { stroke-opacity: 1; }
+.hm-graph-lines .hm-graph-hover { stroke-width: 1.5px; stroke-dasharray: 5 3; stroke-opacity: 1; }
+.hm-graph-idea circle { fill: var(--tblr-body-color); }
+.hm-dot { cursor: pointer; }
+.hm-dot .hm-hit { fill: transparent; }
+.hm-dot .hm-mark { fill: var(--hm-group); stroke: var(--tblr-bg-surface); stroke-width: 1.5px; }
+/* the first 10 of a search: a ring in the colour of the group, the place in the list inside */
+.hm-dot.is-first .hm-mark { fill: var(--tblr-bg-surface); stroke: var(--hm-group); stroke-width: 3px; }
+.hm-dot text { fill: var(--tblr-body-color); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.hm-dot:hover .hm-mark, .hm-dot.is-lit .hm-mark { stroke: var(--tblr-body-color); stroke-width: 2.5px; }
+.hm-graph-names text { fill: var(--tblr-body-color); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: 5px; stroke-linejoin: round; }
+.hm-graph-title { font-size: 13px; font-weight: 600; }
+.hm-graph-sub { fill: var(--tblr-secondary); font-size: 12px; }
+.hm-graph-tip {
+  position: absolute; z-index: 5; max-width: min(320px, 90%); padding: 0.5rem 0.625rem;
+  background: var(--tblr-bg-surface); color: var(--tblr-body-color); border: 1px solid var(--tblr-border-color);
+  border-radius: 6px; box-shadow: var(--tblr-shadow-dropdown); font-size: 0.8125rem; line-height: 1.45; pointer-events: none;
+}
+.hm-graph-tip p { margin: 0; }
+.hm-graph-tip p + p { margin-top: 0.25rem; }
+.hm-graph-tip .hm-tip-name { font-weight: 700; }
+.hm-graph-tip .hm-tip-small { color: var(--tblr-secondary); }
+.hm-graph-key { display: flex; flex-wrap: wrap; gap: 0.375rem 1.25rem; margin: 0.75rem 0 0; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--tblr-secondary); }
+.hm-graph-key li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.hm-graph-swatch { display: inline-block; flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--hm-group); vertical-align: -0.05em; }
+.hm-graph-stroke { display: inline-block; width: 1.5rem; height: 0; border-top: 3px solid var(--tblr-body-color); }
+.hm-graph-lists { margin: 1.25rem 0 0; }
+.hm-graph-lists-title { display: flex; align-items: center; font-size: 1rem; font-weight: 700; margin: 0 0 0.5rem; }
+.hm-graph-group { border-top: 1px solid var(--tblr-border-color); padding: 0.5rem 0; }
+.hm-graph-group summary { cursor: pointer; }
+.hm-graph-group summary .hm-graph-swatch { margin-right: 0.4rem; }
+.hm-graph-members { margin: 0.5rem 0 0.25rem; padding-left: 1.6rem; display: grid; gap: 0.25rem; }
+.hm-graph-members a { font-weight: 600; }
+/* On a phone the graph is a small picture: its words would be too small to read, so the key and
+   the lists under it name the groups. */
+@media (max-width: 640px) {
+  .hm-graph-names, .hm-dot text, .hm-graph-small { display: none; }
+}
+
 /* ------------------------------------------------------------------ the (i) and its text */
 
 .info {

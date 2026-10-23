@@ -1,6 +1,6 @@
 """The website: the search (S1), the card of a project over it (S2), the check of a submission
-(S3) and its registration on Hedera (S4), the charts of a list (S5) and the method (S6), on one
-page (design 12.1, fourth version, on Tabler).
+(S3) and its registration on Hedera (S4), the charts of a list (S5), the method (S6) and the graph
+of a list (S7), on one page (design 12.1, fourth version, on Tabler).
 
 While an idea is typed, the page shows quick results, by meaning or by words, with no model that
 writes. Only the button "Order and compare with Gemini" calls the search model: it orders the 30
@@ -54,9 +54,9 @@ from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode,
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
+from hackathon_memory.search import closeness, engine, listing, rerank, seen
 from hackathon_memory.search import compare as comparing
 from hackathon_memory.search import counts as counting
-from hackathon_memory.search import engine, listing, rerank, seen
 from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
 from hackathon_memory.web import (
@@ -65,6 +65,7 @@ from hackathon_memory.web import (
     code_reading,
     data,
     evidence,
+    graph,
     hackathons,
     insights,
     references,
@@ -96,6 +97,8 @@ MODES = (MEANING, WORDS)
 FILTERS = ("event", "year", "category", "proof", "life")
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 CHARTS = "charts"
+GRAPH = "graph"
+VIEWS = (CHARTS, GRAPH)  # the views beside the cards, each named in the address
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
                 "proof": "the Hedera proof", "life": "the life"}  # fmt: skip
 EXAMPLES = EXAMPLE_IDEAS  # what the search learns about them is kept for good
@@ -186,6 +189,17 @@ NOT_YET_VISIBLE = (
 MIRROR_SECONDS = 10.0
 MIRROR_PAUSES = (2.0,)
 IDEA_CUT = f"Your idea was longer than {LONGEST_IDEA:,} characters, so it was shortened."
+GRAPH_ASKS = (
+    "Type an idea, or choose a filter such as an event, to see its projects as a graph. A graph "
+    "of the whole collection would be too dense to read."
+)
+GRAPH_TOO_MANY = (
+    "These filters keep {count:,} projects, and the graph draws at most {most}. Choose an event "
+    "or a category to see fewer."
+)
+GRAPH_TOO_FEW = (
+    "A graph needs at least two projects with an embedding. Remove a filter to see more."
+)
 SHEETS = {"how": ("How it works", "_about_how.html"),
           "questions": ("Common questions", "_about_questions.html"),
           "sources": ("Sources and references", "_about_sources.html")}  # fmt: skip
@@ -256,7 +270,7 @@ def search_query(values: dict[str, str], *, drop: tuple[str, ...] = ()) -> str:
         del kept["mode"]
     if kept.get("ai") != "1":
         kept.pop("ai", None)
-    if kept.get("view") != CHARTS:
+    if kept.get("view") not in VIEWS:
         kept.pop("view", None)
     return urlencode(kept)
 
@@ -379,6 +393,54 @@ def create_app(
         prize = {row.project_id: row.prize for row in project_facts(conninfo)}
         return built, members, insights.build(found, members, prize)
 
+    def graph_of(
+        conninfo: str, ids: list[int] | None, idea: str = ""
+    ) -> tuple[graph.Graph | None, str | None, dict[int, dict[str, Any]]]:
+        """The graph of the projects of `ids` (design 8.6, S7), closest first when there is an
+        idea, with what each dot shows; or, in place of a graph, why there is none, in plain
+        words. The embedding of the idea is the one that the search keeps for a day; without
+        Google, the places in the list stand in for the distances in meaning."""
+        if ids is None:
+            return None, GRAPH_ASKS, {}
+        if len(ids) > graph.MOST:
+            return None, GRAPH_TOO_MANY.format(count=len(ids), most=graph.MOST), {}
+        model = settings.gemini_embedding_model
+        kept = closeness.with_embedding(conninfo, ids, model=model)
+        order = [pid for pid in ids if pid in kept]
+        if len(order) < 2:
+            return None, GRAPH_TOO_FEW, {}
+        pairs = closeness.similarities(conninfo, order, model=model)
+        found = closeness.groups(order, pairs, graph.group_count(len(order)))
+        rows = {row.project_id: row for row in facts_of(conninfo, order)}
+        (members,) = data.members(conninfo, [order])
+        named = {member.project_id: member for member in members}
+        lines = data.summaries(conninfo, order, model=settings.gemini_rewrite_model,
+                               version=INSTRUCTIONS_VERSION)  # fmt: skip
+        distance = None
+        if idea:
+            store = EmbeddingStore(conninfo)
+            try:
+                values = engine.idea_embedding(store, client("google", "embed_query"), idea,
+                                               model=model)  # fmt: skip
+                distance = dict(store.nearest(values, model, limit=len(order), only=order))
+            except (*FAILED_CALLS, BudgetExceeded):
+                distance = None
+        built = graph.build(
+            order, found, ranked=bool(idea), distance=distance,
+            closeness=lambda one, two: closeness.similarity(pairs, one, two),
+            nearest=closeness.nearest(order, pairs),
+            centres=[closeness.central(group, pairs) for group in found],
+            categories={pid: row.category for pid, row in rows.items()},
+            names={pid: member.name for pid, member in named.items()},
+            linked=seen.came_back(conninfo), left_out=len(ids) - len(order),
+        )  # fmt: skip
+        about = {pid: {"name": named[pid].name, "event": named[pid].event,
+                       "line": lines[pid].text if pid in lines else "",
+                       "proof": rows[pid].proof if pid in rows else None,
+                       "prize": rows[pid].prize if pid in rows else None}
+                 for pid in order if pid in named}  # fmt: skip
+        return built, None, about
+
     def results_of(conninfo: str, ids: list[int], idea: str, words: bool) -> list[tuple]:
         """The card facts, the sentence, the marked sentence and the words found, of each id."""
         found = listing.cards(conninfo, [engine.Hit(pid, 0.0, None, None) for pid in ids])
@@ -471,7 +533,7 @@ def create_app(
             mode, ai = MEANING, "1"
         mode = mode if mode in MODES else MEANING
         with_ai = ai == "1" and mode == MEANING and bool(idea)
-        view = CHARTS if view in (CHARTS, "overview") else ""
+        view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
         asked = filtering.Filters(event, year, category, proof, life)
@@ -502,6 +564,7 @@ def create_app(
                  "unfiltered_query": search_query(values, drop=FILTERS),
                  "cards_query": search_query(values, drop=("view",)),
                  "charts_query": search_query({**values, "view": CHARTS}),
+                 "graph_query": search_query({**values, "view": GRAPH}),
                  "check_events": data.dated_events(conninfo), "all_projects": every.projects,
                  "shown_limit": SHOWN,
                  "with_category": every.with_category, "notes": notes}  # fmt: skip
@@ -515,6 +578,11 @@ def create_app(
                     return render(request, "search.html", asked=False, results=[], total=total,
                                   charts=built, came_back=groups, insights=said, offer=every,
                                   panel_card=panel_card, **shown)  # fmt: skip
+                if view == GRAPH:
+                    drawn, why, about = graph_of(conninfo, only)
+                    return render(request, "search.html", asked=False, results=[], total=total,
+                                  graph=drawn, graph_problem=why, graph_about=about,
+                                  offer=every, panel_card=panel_card, **shown)  # fmt: skip
                 ids, total = data.browse(conninfo, only, offset=(page_number - 1) * PAGE_SIZE,
                                          limit=PAGE_SIZE)  # fmt: skip
                 results = results_of(conninfo, ids, "", False)
@@ -535,6 +603,13 @@ def create_app(
                 built, groups, said = charts_of(conninfo, ranking)
                 return render(request, "search.html", asked=True, results=[], total=len(ranking),
                               charts=built, came_back=groups, insights=said, offer=offer,
+                              nothing_matches=only == [], none_close=none_close,
+                              panel_card=panel_card,
+                              **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
+            if view == GRAPH:
+                drawn, why, about = graph_of(conninfo, ranking, idea)
+                return render(request, "search.html", asked=True, results=[], total=len(ranking),
+                              graph=drawn, graph_problem=why, graph_about=about, offer=offer,
                               nothing_matches=only == [], none_close=none_close,
                               panel_card=panel_card,
                               **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
