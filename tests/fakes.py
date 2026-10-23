@@ -414,6 +414,7 @@ class StandInMirror:
         self.things = things  # kind -> id -> answer
         self.lists: dict[tuple[str, str], list[dict]] = {}  # (what, id) -> oldest first
         self.asked: list[tuple] = []
+        self.since: dict[str, datetime | None] = {}  # account -> the start of its history
 
     @property
     def requests_made(self) -> int:
@@ -493,7 +494,10 @@ class StandInMirror:
         found = self.lists.get((what, entity), [])
         return found[:max_rows], len(found) >= max_rows
 
-    def account_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
+    def account_history(
+        self, entity: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        self.since[entity] = since
         return self._history("transactions", entity, max_rows)
 
     def topic_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:

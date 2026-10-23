@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 
 from hackathon_memory.hedera.mirror import MirrorNode
 from hackathon_memory.parse.hedera_ids import (
@@ -58,13 +59,19 @@ def service_of(transaction: Mapping) -> str:
 
 
 def read_history(
-    mirror: MirrorNode, entity_id: str, kind: str, *, max_events: int = MAX_EVENTS
+    mirror: MirrorNode,
+    entity_id: str,
+    kind: str,
+    *,
+    max_events: int = MAX_EVENTS,
+    made_at: datetime | None = None,
 ) -> History:
-    """The events of one ID of `kind` on the network of `mirror`."""
+    """The events of one ID of `kind` on the network of `mirror`. `made_at` is the moment the
+    ledger says the ID was made: an account's history is asked from then on."""
     events: dict[str, str] = {}
     cut = False
     if kind == ACCOUNT:
-        rows, cut = mirror.account_history(entity_id, max_rows=max_events)
+        rows, cut = mirror.account_history(entity_id, max_rows=max_events, since=made_at)
         events = {row["consensus_timestamp"]: service_of(row) for row in rows}
     elif kind == TOPIC:
         rows, cut = mirror.topic_history(entity_id, max_rows=max_events)

@@ -48,7 +48,9 @@ def read_histories(
             run.counts["on_a_network_that_is_not_asked"] += 1
             continue
         try:
-            history = read_history(mirror, item.ledger_id or item.entity_id, item.kind)
+            history = read_history(
+                mirror, item.ledger_id or item.entity_id, item.kind, made_at=item.made_at
+            )
         except MirrorError as error:
             run.counts["errors_of_the_node"] += 1
             run.problem(f"{item.entity_id} on {item.network}", str(error))

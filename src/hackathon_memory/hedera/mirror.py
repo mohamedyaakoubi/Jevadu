@@ -323,9 +323,17 @@ class MirrorNode:
                 return rows, True
             path = following.removeprefix("/api/v1")
 
-    def account_history(self, account_id: str, *, max_rows: int) -> tuple[list[dict], bool]:
-        """Every transaction of an account, oldest first (see _all)."""
-        path = f"/transactions?account.id={self._entity(account_id)}&limit=100&order=asc"
+    def account_history(
+        self, account_id: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        """Every transaction of an account, oldest first (see _all). Give `since`, the moment the
+        account was made: with no start, the node searches 60 days at a time from the start of
+        its network (2019 on the main network), and the empty pages before the account reach the
+        limit of _all first (measured on 23 October 2026)."""
+        path = (
+            f"/transactions?account.id={self._entity(account_id)}&limit=100&order=asc"
+            + self._range(since, None)
+        )
         return self._all(path, "transactions", max_rows)
 
     def topic_history(self, topic_id: str, *, max_rows: int) -> tuple[list[dict], bool]:

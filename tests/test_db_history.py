@@ -24,6 +24,7 @@ pytestmark = pytest.mark.integration
 ASKED = datetime(2026, 10, 23, 2, 0, tzinfo=UTC)
 SECOND_PAGE = "https://ethglobal.com/showcase/quartz-notes-q3w4e"
 ONE, TWO = "1780000000.000000001", "1780000060.000000002"
+MADE = datetime(2026, 9, 1, 8, 0, tzinfo=UTC)
 
 
 def judge_every_id(database: str, status: str) -> None:
@@ -53,7 +54,9 @@ def database(empty_database: str) -> str:
     ledger = LedgerStore(empty_database)
     for entity, kind in (("0.0.3456781", TOPIC), ("0.0.2345671", TOKEN)):
         ledger.save_facts(
-            LedgerFacts(entity, "testnet", ASKED, found=True, kind=kind, ledger_id=entity)
+            LedgerFacts(
+                entity, "testnet", ASKED, found=True, kind=kind, ledger_id=entity, created_at=MADE
+            )
         )
     judge_every_id(empty_database, PROOF_FOUND)
     return empty_database
@@ -67,7 +70,7 @@ def rows(database: str, query: str) -> list[tuple]:
 def test_only_an_own_id_whose_kind_fits_is_given(database: str) -> None:
     # The coin is named by two projects: it is left out, as a shared service may be.
     assert HistoryStore(database).ids_to_read() == [
-        IdToRead("0.0.3456781", "testnet", TOPIC, "0.0.3456781")
+        IdToRead("0.0.3456781", "testnet", TOPIC, "0.0.3456781", MADE)
     ]
     judge_every_id(database, ANOTHER_KIND)  # the number is something else on the ledger
     assert HistoryStore(database).ids_to_read() == []

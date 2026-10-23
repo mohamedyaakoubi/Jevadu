@@ -102,3 +102,12 @@ def test_a_thing_that_the_node_does_not_know_gives_no_event() -> None:
     for kind in (TOKEN, SCHEDULE):
         assert read_history(mirror, "0.0.5009", kind) == History({}, False)
     assert read_history(mirror, "0.0.5009-1780000000-000000001", TRANSACTION) == History({}, False)
+
+
+def test_an_account_is_read_from_the_moment_it_was_made() -> None:
+    from datetime import UTC, datetime
+
+    made = datetime(2025, 11, 6, 17, 58, tzinfo=UTC)
+    mirror = StandInMirror()
+    read_history(mirror, "0.0.5001", ACCOUNT, made_at=made)
+    assert mirror.since == {"0.0.5001": made}

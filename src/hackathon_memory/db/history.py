@@ -25,6 +25,7 @@ class IdToRead:
     network: str
     kind: str  # what the ledger says it is
     ledger_id: str | None  # the id that the ledger gives it, such as 0.0.123 for an EVM address
+    made_at: datetime | None = None  # when the ledger says it was made
 
 
 class HistoryStore:
@@ -39,7 +40,7 @@ class HistoryStore:
             rows = conn.execute(
                 "WITH own AS (SELECT entity_id FROM hedera_ids GROUP BY entity_id "
                 "             HAVING count(DISTINCT project_id) = 1) "
-                "SELECT DISTINCT h.entity_id, c.network, f.kind, f.ledger_id "
+                "SELECT DISTINCT h.entity_id, c.network, f.kind, f.ledger_id, f.created_at "
                 "FROM hedera_ids h JOIN own USING (entity_id) "
                 "JOIN id_checks c ON c.hedera_id = h.id "
                 "JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "

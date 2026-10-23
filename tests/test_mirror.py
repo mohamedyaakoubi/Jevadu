@@ -446,3 +446,14 @@ def test_the_histories_of_a_topic_a_contract_and_nfts_are_asked_from_the_start()
     assert mirror.contract_history(ADDRESS, max_rows=10) == ([call], False)
     assert mirror.nft_history("0.0.7777", max_rows=10) == ([minted], False)
     assert site.urls == [topic, contract, nfts]
+
+
+def test_an_account_history_starts_at_the_moment_the_account_was_made() -> None:
+    # With no start, the node searches the main network 60 days at a time from 2019, and the
+    # empty pages before the account would reach the limit (measured on 23 October 2026).
+    made = datetime.fromtimestamp(1762451892, UTC)
+    path = BASE + HISTORY + "&timestamp=gte:1762451892.000000000"
+    row = history_row("1762451900.000000001")
+    mirror, site, _ = node({path: transactions_page([row], None)})
+    assert mirror.account_history("0.0.1235", max_rows=10, since=made) == ([row], False)
+    assert site.urls == [path]

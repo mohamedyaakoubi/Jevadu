@@ -109,3 +109,15 @@ def test_the_lines_say_what_was_read_in_plain_words() -> None:
     assert history_lines(run) == [
         "Histories read: 2, with 3 events in all. Cut by the limit of events: 0."
     ]
+
+
+def test_an_account_is_asked_from_the_moment_the_ledger_says_it_was_made() -> None:
+    from hackathon_memory.parse.hedera_ids import ACCOUNT
+
+    made = datetime(2025, 11, 6, 17, 58, tzinfo=UTC)
+    mirror = a_node()
+    run_once(
+        StandInStore(IdToRead("0.0.5010", "mainnet", ACCOUNT, "0.0.5010", made)),
+        {"mainnet": mirror},
+    )
+    assert mirror.since == {"0.0.5010": made}
