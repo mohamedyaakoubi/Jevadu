@@ -8,6 +8,9 @@ status of each ID, and the page's own words: its short line and the two texts th
 copied, not the card. It gives each project the five signals of the guideline, and writes
 evals/results/<UTC time>-ledger-signal.json: numbers only, each share with its range by project,
 and the projects by their number in the database, never by a text of their page.
+
+Beside the measure, and apart from its decision, it counts what the card of the same projects
+shows (design 7.5): the card looks in the time around the event, where S3 looked at any time.
 """
 
 from __future__ import annotations
@@ -33,10 +36,12 @@ from hackathon_memory.check.story import (
     WINDOW_BEFORE,
     WORDS,
     Event,
+    OwnId,
     merged,
     name_patterns,
     named_services,
     on_its_network,
+    story_of,
 )
 from hackathon_memory.db.history import KINDS_THAT_FIT, OWN
 from hackathon_memory.parse.hedera_ids import ACCOUNT
@@ -65,6 +70,7 @@ class Project:
     proof_found: bool  # one of its IDs has the status "proof found"
     words: str  # the page's own words
     events: tuple[Event, ...]
+    kinds: tuple[str, ...] = ()  # the kinds of its own IDs that were read
 
 
 def named_not_done(project: Project, names: dict[str, re.Pattern] = NAMES) -> set[str]:
@@ -137,14 +143,17 @@ def projects(conninfo: str) -> tuple[list[Project], dict[str, int]]:
             read["left_out_no_days"] += 1
             continue
         seen: list[tuple[str, datetime, str, bool]] = []
+        kinds: list[str] = []
         for entity, network, kind, cut in {(r[1], r[2], r[4], r[5]) for r in rows}:
+            kinds.append(kind)
             read["ids"] += 1
             read["ids_cut"] += int(cut)
             for stamp, at, service in events.get((entity, network), []):
                 seen.append((stamp, at, service, kind == ACCOUNT))
         starts, ends = days[pid]
-        found.append(Project(pid, starts, ends, any(r[3] == PROOF_FOUND for r in rows),
-                             "\n".join(words.get(pid, [])), merged(seen)))  # fmt: skip
+        proof_found = any(r[3] == PROOF_FOUND for r in rows)
+        found.append(Project(pid, starts, ends, proof_found, "\n".join(words.get(pid, [])),
+                             merged(seen), tuple(kinds)))  # fmt: skip
         read["events"] += len(found[-1].events)
     return found, dict(read)
 
@@ -190,12 +199,40 @@ def measure(found: Sequence[Project]) -> dict:
     }
 
 
+def on_the_screen(found: Sequence[Project]) -> dict[str, int]:
+    """How many of the same projects show each part of the card (design 7.5). Counts only, apart
+    from the measure and its decision: the card's table looks in the time around the event, where
+    S3 looked at any time, so its first kind of sentence can differ from S3."""
+    stories = [
+        story_of(tuple(OwnId(str(n), "", kind, None) for n, kind in enumerate(project.kinds)),
+                 project.events, project.words, None, starts_at=project.starts_at,
+                 ends_on=project.ends_on)
+        for project in found
+    ]  # fmt: skip
+    return {
+        "projects": len(stories),
+        "with_transactions_in_the_time": sum(
+            any(line.count for line in story.lines) for story in stories
+        ),
+        "named_not_seen": sum(bool(story.named_not_seen) for story in stories),
+        "named_not_seen_differs_from_S3": sum(
+            bool(story.named_not_seen) != bool(named_not_done(project))
+            for story, project in zip(stories, found, strict=True)
+        ),
+        "seen_not_named": sum(bool(story.seen_not_named) for story in stories),
+        "all_named_seen": sum(story.all_named_seen for story in stories),
+        "before": sum(bool(story.before and story.before.count) for story in stories),
+        "after": sum(bool(story.after and story.after.count) for story in stories),
+        "accounts_only": sum(story.before is None for story in stories),
+    }
+
+
 def main(argv: Sequence[str]) -> int:
     del argv
     found, read = projects(Settings().database_conninfo())
     now = datetime.now(UTC)
     result = {"test": "ledger-signal", "made_on": now.date().isoformat(), "projects": len(found),
-              "read": read, **measure(found)}  # fmt: skip
+              "read": read, **measure(found), "on_the_screen": on_the_screen(found)}  # fmt: skip
     RESULTS.mkdir(exist_ok=True)
     path = RESULTS / f"{now:%Y%m%dT%H%M%SZ}-ledger-signal.json"
     path.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
@@ -204,7 +241,8 @@ def main(argv: Sequence[str]) -> int:
     counted = result["any_of_S1_S3_S4"]
     print(f"Projects: {len(found)}. {shown}. At least one of S1, S3, S4: {counted['count']} of "
           f"{counted['of']} ({counted['share']}, range {counted['range']}). Worth building: "
-          f"{result['worth_building']}. Written: {path}")  # fmt: skip
+          f"{result['worth_building']}. On the card: {result['on_the_screen']}. "
+          f"Written: {path}")  # fmt: skip
     return 0
 
 

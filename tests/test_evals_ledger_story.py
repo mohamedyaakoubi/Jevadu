@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 
-from evals.ledger_story.run import Project, measure, signals
+from evals.ledger_story.run import Project, measure, on_the_screen, signals
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, HBAR, TOKENS
 from hackathon_memory.check.story import Event
 
@@ -16,8 +16,10 @@ LONG_BEFORE = STARTS - timedelta(days=90)  # before the window, which opens 30 d
 LONG_AFTER = datetime(2026, 11, 1, tzinfo=UTC)  # later than 30 days after the end
 
 
-def a_project(*events: Event, words: str = "", proof_found: bool = True) -> Project:
-    return Project(1, STARTS, ENDS, proof_found, words, tuple(events))
+def a_project(
+    *events: Event, words: str = "", proof_found: bool = True, kinds: tuple[str, ...] = ()
+) -> Project:
+    return Project(1, STARTS, ENDS, proof_found, words, tuple(events), kinds)
 
 
 def test_s1_needs_a_proof_and_an_own_thing_active_before_the_window() -> None:
@@ -73,3 +75,15 @@ def test_the_check_with_loose_words_is_reported_beside_the_rule() -> None:
     assert result["signals"]["S4"]["count"] == 1  # by the rule: done but not named
     assert result["check_loose_words"]["S4"] == 0  # by the loose words, "contract" names it
     assert result["check_loose_words"]["S3"] == 1  # and "NFT" names tokens, never done
+
+
+def test_what_the_card_shows_is_counted_apart_from_the_measure() -> None:
+    words = "We use the Hedera Token Service and HCS."
+    late_token = (Event(DURING, CONSENSUS, False), Event(LONG_AFTER, TOKENS, False))
+    topic = a_project(*late_token, words=words, kinds=("topic",))
+    screen = on_the_screen([topic, a_project(Event(DURING, HBAR, True), kinds=("account",))])
+    assert not signals(topic)["S3"]  # the measure looked for the token at any time
+    assert screen["named_not_seen"] == 1  # the card looks in the time around the event
+    assert screen["named_not_seen_differs_from_S3"] == 1
+    assert (screen["after"], screen["before"], screen["accounts_only"]) == (1, 0, 1)
+    assert screen["with_transactions_in_the_time"] == 2
