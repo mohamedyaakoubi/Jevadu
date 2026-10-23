@@ -22,7 +22,8 @@ from hackathon_memory.web.checks import (
     SKIPPED,
     WAITING,
     CheckJobs,
-    part_done,
+    share_done,
+    still_to_come,
 )
 
 
@@ -34,11 +35,18 @@ class Clock:
         return self.now
 
 
-def test_a_running_step_moves_to_ninety_percent_at_its_usual_time_and_never_ends() -> None:
-    assert part_done(0.0, 2.0) == 0.0
-    assert part_done(1.0, 2.0) == pytest.approx(0.45)
-    assert part_done(2.0, 2.0) == pytest.approx(0.9)
-    assert 0.9 < part_done(4.0, 2.0) < part_done(40.0, 2.0) < 0.99
+def test_the_bar_is_the_time_spent_out_of_the_time_spent_and_still_to_come() -> None:
+    waiting = {key: WAITING for key, _ in checks.STEPS}
+    assert still_to_come(waiting, 0.0) == sum(PACE.values())
+    running = {**waiting, GITHUB: RUNNING}
+    assert still_to_come(running, 1.0) == sum(PACE.values()) - 1.0
+    late = still_to_come(running, 60.0)  # a step that takes long still has a quarter to come
+    assert late == sum(PACE.values()) - PACE[GITHUB] + PACE[GITHUB] / 4
+    assert share_done(0.0, 10.0) == 0.0
+    assert share_done(5.0, 5.0) == pytest.approx(0.5)
+    assert share_done(5.0, 0.0) == checks.MOST  # never full before the answer
+    moving = [share_done(t, still_to_come({**waiting, GITHUB: RUNNING}, t)) for t in (1, 3, 9)]
+    assert moving == sorted(moving) and len(set(moving)) == 3  # it always moves
 
 
 def test_the_steps_show_their_states_and_the_bar_follows_them() -> None:
@@ -62,13 +70,13 @@ def test_the_steps_show_their_states_and_the_bar_follows_them() -> None:
     first = jobs.view(job, announce=False)
     assert [step.state for step in first.steps] == [SAVED, RUNNING, WAITING, WAITING, WAITING]
     assert first.say is None and first.running == CODE  # the first page reads out nothing yet
-    done_before = PACE[GITHUB] / sum(PACE.values())
-    assert first.percent == round(100 * done_before)
-    clock.now += PACE[CODE]  # the code took its usual time
+    assert first.percent == 0  # no time has passed yet
+    clock.now += 2.0
     later = jobs.view(job)
     assert later.say == "The code: read for Hedera" and jobs.view(job).say is None  # read once
-    assert later.percent == round(100 * (PACE[GITHUB] + 0.9 * PACE[CODE]) / sum(PACE.values()))
-    assert [step.elapsed_ms for step in later.steps][1] == round(1000 * PACE[CODE])
+    to_come = PACE[CODE] - 2.0 + PACE[LEDGER] + PACE[HISTORY] + PACE[COLLECTION]
+    assert later.percent == round(100 * 2.0 / (2.0 + to_come))
+    assert [step.elapsed_ms for step in later.steps][1] == 2000  # the code ran for 2 seconds
     assert job.answer is None
     gate.set()
     job.done.result(5)

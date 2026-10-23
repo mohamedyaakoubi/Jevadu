@@ -10,7 +10,6 @@ and the check is forgotten; a check that nobody asks for again is forgotten afte
 from __future__ import annotations
 
 import logging
-import math
 import secrets
 import threading
 import time
@@ -46,13 +45,16 @@ STATE_WORDS = {
     SAVED: "done, from the tool's tables",
     SKIPPED: "nothing to read",
 }
-# How long each step takes when it asks, in seconds: the pace of the bar only, never shown.
-# GitHub: three requests, one second apart (design 7.3). The code and the histories: the medians
-# of evals/results/*-code-times.json and *-history-times.json (21 and 23 October 2026). The
-# others are short: a few questions to the mirror node, one embedding and a search in the tables.
-PACE = {GITHUB: 3.0, CODE: 3.45, LEDGER: 2.0, HISTORY: 1.39, COLLECTION: 1.0}
+# How long each step may take when it asks, in seconds: the pace of the bar only, never shown.
+# Generous on purpose, so that the bar runs behind and jumps forward when a step ends, rather than
+# running ahead and then standing still near its end. GitHub: three requests, one second apart
+# (design 7.3). The code and the histories: between the median and the 90th of 100 of
+# evals/results/*-code-times.json (3.45 and 10.8 s) and *-history-times.json (1.4 and 7.0 s).
+# The ledger: a few questions to the mirror node for each ID. The collection: an embedding of the
+# README and a search in the tables.
+PACE = {GITHUB: 3.5, CODE: 6.0, LEDGER: 3.0, HISTORY: 3.0, COLLECTION: 3.0}
 KEEP_SECONDS = 600
-MOST = 0.97  # the bar stops here until the answer is there
+MOST = 0.97  # the bar never passes this before the answer is there
 
 Answer = tuple[int, dict]  # the status of the page, and what it shows
 Progress = Callable[[str, str], None]
@@ -97,12 +99,23 @@ class JobView:
     running: str | None  # the key of the running step
 
 
-def part_done(elapsed: float, pace: float) -> float:
-    """How much of a running step the bar shows: 90% at its usual time, then slower and slower,
-    never all of it."""
-    if elapsed <= pace:
-        return 0.9 * elapsed / pace
-    return 0.9 + 0.09 * (1 - math.exp(-(elapsed - pace) / pace))
+def still_to_come(states: dict[str, str], running_for: float) -> float:
+    """The seconds that the check may still take: the pace of each step that waits, and what is
+    left of the pace of the running one, never less than a quarter of it."""
+    left = 0.0
+    for key, _ in STEPS:
+        if states[key] == WAITING:
+            left += PACE[key]
+        elif states[key] == RUNNING:
+            left += max(PACE[key] - running_for, PACE[key] / 4)
+    return left
+
+
+def share_done(elapsed: float, left: float) -> float:
+    """How far the bar is: the time spent, out of the time spent and the time still to come. It
+    always moves, slower near its end, and jumps forward when a step ends early."""
+    total = elapsed + left
+    return min(MOST, elapsed / total) if total > 0 else 0.0
 
 
 class CheckJobs:
@@ -153,12 +166,8 @@ class CheckJobs:
             now = self._clock()
             states = dict(job.states)
             running = next((key for key, _ in STEPS if states[key] == RUNNING), None)
-            total = sum(PACE.values())
-            done = sum(PACE[key] for key, _ in STEPS if states[key] in (DONE, SAVED, SKIPPED))
-            if running is not None:
-                elapsed = now - job.since.get(running, job.started)
-                done += PACE[running] * part_done(elapsed, PACE[running])
-            percent = round(100 * min(MOST, done / total))
+            running_for = now - job.since.get(running, job.started) if running else 0.0
+            percent = round(100 * share_done(now - job.started, still_to_come(states, running_for)))
             say = None
             if announce and running is not None and running != job.said:
                 job.said = running
