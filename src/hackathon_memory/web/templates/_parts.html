@@ -144,7 +144,7 @@
     <p class="hm-small">Before and after, only its own topics, tokens, contracts and schedules count, not its accounts: an account is often kept for years and across projects.</p>
     {% endif %}
     {% set first, last = story.read_on %}
-    <p class="hm-small">Read from the mirror node {% if first == last %}on {{ first | day }}{% else %}from {{ first | day }} to {{ last | day }}{% endif %}: {{ story.read | length }} of its IDs, those that no other project names and whose kind fits the page.{% if story.cut %} {{ story.cut }} of them {{ "has" if story.cut == 1 else "have" }} more than {{ "{:,}".format(MAX_EVENTS) }} transactions, and only the first {{ "{:,}".format(MAX_EVENTS) }} were read.{% endif %}{% if story.not_read %} {{ story.not_read }} more {{ "is" if story.not_read == 1 else "are" }} not read yet.{% endif %}</p>
+    <p class="hm-small">Read from the mirror node {% if first == last %}on {{ first | day }}{% else %}from {{ first | day }} to {{ last | day }}{% endif %}: {{ story.read | length }} of its IDs, those that no other project names and whose kind fits the page.{% if story.cut %} {{ story.cut }} of them {{ "was" if story.cut == 1 else "were" }} cut by the limit of the reading, {{ "{:,}".format(MAX_EVENTS) }} transactions, so later transactions may be missing.{% endif %}{% if story.not_read %} {{ story.not_read }} more {{ "is" if story.not_read == 1 else "are" }} not read yet.{% endif %}</p>
     {% endif %}
   </div>
 </section>
