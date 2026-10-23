@@ -682,7 +682,8 @@ def create_app(
             "result": result, "closest": closest, "closest_note": note,
             "seen_before": seen_before, "register": view, "register_offers": offers,
             "hedera_code": code_reading.view_of_read(repository, result.hedera_code),
-            "readme_lines": data.said_lines(result.readme_text) if result.story else [],
+            "readme_lines": (data.said_lines(submission.readme_prose(result.readme_text))
+                             if result.story else []),  # fmt: skip
             "asked": asked,
         }  # fmt: skip
 

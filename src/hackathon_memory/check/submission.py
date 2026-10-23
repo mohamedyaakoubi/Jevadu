@@ -98,6 +98,10 @@ _IMAGE = re.compile(r"!\[[^\]\n]*\]\([^)\n]*\)")
 _LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
 _TAG = re.compile(r"<[^>\n]+>")
 _ADDRESS = re.compile(r"https?://\S+")
+_HEADING = re.compile(r"^\s{0,3}#{1,6}\s*")
+_LIST_MARK = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+_CELL = re.compile(r"\s*\|\s*")
+_RULE = re.compile(r"^[\s:·-]*$")  # a row of dashes, such as the one under a table's head
 
 
 @dataclass(frozen=True)
@@ -311,11 +315,29 @@ def story_of_check(check: SubmissionCheck, own: list[OwnId], events: list[tuple]
     scan = check.hedera_code.scan if check.hedera_code is not None else None
     found = [(one.kind, one.name) for one in scan.found()] if scan is not None else None
     event = check.event
-    return story_of(own, merged(events), check.readme_text,
+    return story_of(own, merged(events), readme_prose(check.readme_text),
                     services_in_code(found) if found is not None else None,
                     starts_at=event.starts_at if event is not None else None,
                     ends_on=event.ends_on if event is not None else None,
                     set_up=set_up_in_code(found or []))  # fmt: skip
+
+
+def readme_prose(text: str) -> str:
+    """The prose of a README, line by line, for the ledger story (design 7.5): no code, no images,
+    no addresses, no HTML, links as their words, and none of the marks of Markdown (headings,
+    lists, bold, code quotes, the bars of a table). A word in an address or a block of code does
+    not name a service."""
+    text = _FENCE.sub(" ", text)
+    text = _IMAGE.sub(" ", text)
+    text = _LINK.sub(r"\1", text)
+    text = _ADDRESS.sub(" ", _TAG.sub(" ", text))
+    lines = []
+    for line in text.splitlines():
+        line = _LIST_MARK.sub("", _HEADING.sub("", line))
+        line = line.replace("**", "").replace("__", "").replace("`", "")
+        line = _CELL.sub(" · ", line.strip().strip("|"))
+        lines.append("" if _RULE.match(line) else " ".join(line.split()))
+    return "\n".join(lines)
 
 
 def readme_words(text: str) -> str:
