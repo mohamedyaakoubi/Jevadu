@@ -761,7 +761,7 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
                              (TOPIC,)).fetchall()  # fmt: skip
     assert again == first  # the second check took it from the table
     none = client.get("/check", params={"repo": REPO}, headers=HX).text  # no hackathon
-    assert "No hackathon was chosen, so every transaction counts." in none
+    assert "Ledger: every transaction of its own IDs. No hackathon was chosen." in none
 
 
 def test_a_check_asked_by_the_script_shows_its_steps_until_the_answer(site) -> None:  # noqa: ANN001
