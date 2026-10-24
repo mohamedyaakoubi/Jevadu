@@ -1241,23 +1241,36 @@ def embed_calls(fake, since: int = 0) -> int:  # noqa: ANN001
     return len([path for path, _ in fake.requests[since:] if "embedContent" in path])
 
 
-def test_the_graph_of_a_list_needs_an_idea_or_a_filter(site) -> None:  # noqa: ANN001
+def test_the_graph_draws_the_whole_collection_or_a_filtered_list(site, monkeypatch) -> None:  # noqa: ANN001
+    from hackathon_memory.search import closeness
+
     client, fake, ids, database = site
-    asked = client.get("/", params={"view": "graph"})
-    assert asked.status_code == 200 and 'aria-current="true">Graph</a>' in asked.text
-    assert "No graph for this list" in asked.text and "choose a filter" in asked.text
+    asked = 0
+    similarities = closeness.similarities
+
+    def counted(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        nonlocal asked
+        asked += 1
+        return similarities(*args, **kwargs)
+
+    monkeypatch.setattr(closeness, "similarities", counted)
+    before = len(fake.requests)
+    whole = client.get("/", params={"view": "graph"})
+    assert whole.status_code == 200 and 'aria-current="true">Graph</a>' in whole.text
+    assert "The whole collection: 3 projects" in whole.text
+    assert whole.headers.get("content-encoding") == "gzip"  # a page of the graph is large
+    assert client.get("/", params={"view": "graph"}).status_code == 200 and asked == 1  # kept
     with psycopg.connect(database) as conn:
         (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
-    before = len(fake.requests)
     page = client.get("/", params={"event": event, "view": "graph"}).text
     assert page.count('<a class="hm-dot ') == 3 and 'class="hm-graph-idea"' not in page
     assert '<svg class="hm-graph-svg"' in page and 'aria-hidden="true"' in page
-    # The same projects as lists of links, for a keyboard, a screen reader and a phone.
+    assert "The whole collection:" not in page and 'data-proof="not checked yet"' in page
+    # The same projects as lists of links, for a keyboard and a screen reader.
     assert page.count("data-graph-link=") == 3
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel?view=graph&amp;event={event}"' in page
     assert "Like " in page and "1 project" not in page  # three projects: one group
     assert len(fake.requests) == before  # the graph of a list asks no model
-    assert client.get("/", params={"event": event, "view": "graph", "page": "2"}).status_code == 200
 
 
 def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None:  # noqa: ANN001

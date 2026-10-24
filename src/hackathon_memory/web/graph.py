@@ -17,10 +17,13 @@ from __future__ import annotations
 
 import math
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, replace
 
-MOST = 300  # the longest list that is drawn: every event of the collection fits (271 at most)
+# The longest list that is drawn. The whole collection (826 projects) fits: its groups take about
+# 4 seconds the first time (3.2 s for the 340,725 similarities, 0.8 s for the groups, measured on
+# 24 October 2026), and both grow as the square of the list.
+MOST = 1000
 FIRST = 10  # the first projects of a search, numbered on the graph as in the list
 # Four colours stay apart for every reader when any two of them meet, in the light and in the
 # dark theme (the validator of the colours, run with all pairs on 23 October 2026); five do not.
@@ -71,6 +74,7 @@ class Group:
     sharing: int  # how many of its projects have that category
     centre_id: int  # its most central project, after which it is named
     centre_name: str
+    listed: int = 0  # how many of its projects are known only from a winners' list
     x: float = 0.0  # where its name stands
     y: float = 0.0
     anchor: str = "middle"
@@ -80,6 +84,10 @@ class Group:
         return f"Like {shortened(self.centre_name)}"
 
     def _shared(self) -> str:
+        # A project known only from a winners' list has a name and a line, no page, so such
+        # projects group together by the shape of their text more than by their idea.
+        if self.listed * 2 > self.size:
+            return f"{'all' if self.listed == self.size else self.listed} from winners' lists"
         if not self.sharing:
             return ""
         if self.size == 1:
@@ -337,6 +345,7 @@ def build(
     ranked: bool,
     distance: Mapping[int, float] | None = None,
     linked: Sequence[Sequence[int]] = (),
+    listed: Collection[int] = frozenset(),
     left_out: int = 0,
 ) -> Graph:
     """The graph of the projects of `order`, closest first when `ranked`, in the groups of
@@ -344,7 +353,8 @@ def build(
     each project to the most central one of its group, `nearest` the closest project of each,
     `distance` the cosine distance of each project to the idea (its places in the list stand in
     when it is None), and `linked` the groups of projects with the same code or Hedera ID
-    (search/seen.py). `left_out` counts the projects of the list that could not be placed."""
+    (search/seen.py). `listed` holds the projects known only from a winners' list, and
+    `left_out` counts the projects of the list that could not be placed."""
     together = list(zip(found, centres, strict=True))
     if not ranked:  # the largest group first, so that it takes the first colour
         together.sort(key=lambda one: -len(one[0]))
@@ -352,7 +362,8 @@ def build(
     ordered = [[centre, *sorted((pid for pid in group if pid != centre),
                                 key=lambda pid: (-typical.get(pid, 0.0), pid))]
                for group, centre in together]  # fmt: skip
-    groups = [Group(number, len(group), *named(group, categories), centre, names.get(centre, ""))
+    groups = [Group(number, len(group), *named(group, categories), centre, names.get(centre, ""),
+                    sum(1 for pid in group if pid in listed))
               for number, (group, centre) in enumerate(together, start=1)]  # fmt: skip
     if ranked:
         places, labels = around_idea(order, ordered, distance)

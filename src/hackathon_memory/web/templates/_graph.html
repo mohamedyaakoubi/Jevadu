@@ -7,7 +7,7 @@
 {% else %}
 {% set link = "/?" ~ (search_query ~ "&" if search_query else "") ~ "open=" %}
 {% set count = graph.dots | length %}
-<p class="hm-graph-note">{{ count }} project{{ "s" if count != 1 }}{% if graph.ranked %}, the closest to your idea,{% endif %} in {{ graph.groups | length }} group{{ "s" if graph.groups | length != 1 }} by meaning.
+<p class="hm-graph-note">{% if not graph.ranked and not chosen.chosen() %}The whole collection: {% endif %}{{ "{:,}".format(count) }} project{{ "s" if count != 1 }}{% if graph.ranked %}, the closest to your idea,{% endif %} in {{ graph.groups | length }} group{{ "s" if graph.groups | length != 1 }} by meaning.
   {%- if graph.ranked %} {% if graph.by_meaning %}The closer a dot stands to your idea, the closer the project is in meaning, compared with the others of this list.{% else %}The closer a dot stands to your idea, the higher the project is in the list.{% endif %} The first 10 are numbered as in the list.{% endif %}
   Point at a dot to see the project and a line to its closest project; click to open its card.
   {%- if graph.left_out %} {{ graph.left_out }} project{{ "s have" if graph.left_out != 1 else " has" }} no embedding yet, so {{ "they are" if graph.left_out != 1 else "it is" }} not drawn.{% endif %}</p>

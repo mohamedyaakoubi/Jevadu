@@ -27,6 +27,7 @@ from urllib.parse import parse_qs, urlencode
 
 import psycopg
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -189,10 +190,10 @@ NOT_YET_VISIBLE = (
 MIRROR_SECONDS = 10.0
 MIRROR_PAUSES = (2.0,)
 IDEA_CUT = f"Your idea was longer than {LONGEST_IDEA:,} characters, so it was shortened."
-GRAPH_ASKS = (
-    "Type an idea, or choose a filter such as an event, to see its projects as a graph. A graph "
-    "of the whole collection would be too dense to read."
-)
+# The groups of a graph are kept this long: the whole collection takes about 4 seconds, and its
+# embeddings change only when the pipeline runs. At most GRAPHS_KEPT lists are kept.
+GRAPH_SECONDS = 600
+GRAPHS_KEPT = 16
 GRAPH_TOO_MANY = (
     "These filters keep {count:,} projects, and the graph draws at most {most}. Choose an event "
     "or a category to see fewer."
@@ -303,6 +304,9 @@ def create_app(
     one record to the register (hedera/registry.py); by default it is made when first needed."""
     settings = settings or Settings()
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
+    # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
+    # 6 is zlib's own default: almost as small as 9, and faster.
+    app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
     jobs = checks.CheckJobs()  # the checks that run while their page waits
@@ -312,6 +316,7 @@ def create_app(
                                "github": github_client, "mirrors": mirrors,
                                "writer": register_writer}  # fmt: skip
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
+    graphs: dict[tuple, tuple[float, Any]] = {}  # the groups of a list, with when they were made
 
     def database() -> str:
         return make_conninfo(settings.database_conninfo(), connect_timeout=CONNECT_SECONDS)
@@ -400,8 +405,8 @@ def create_app(
         idea, with what each dot shows; or, in place of a graph, why there is none, in plain
         words. The embedding of the idea is the one that the search keeps for a day; without
         Google, the places in the list stand in for the distances in meaning."""
-        if ids is None:
-            return None, GRAPH_ASKS, {}
+        if ids is None:  # no idea and no filter: the whole collection
+            ids = [row.project_id for row in project_facts(conninfo)]
         if len(ids) > graph.MOST:
             return None, GRAPH_TOO_MANY.format(count=len(ids), most=graph.MOST), {}
         model = settings.gemini_embedding_model
@@ -409,8 +414,7 @@ def create_app(
         order = [pid for pid in ids if pid in kept]
         if len(order) < 2:
             return None, GRAPH_TOO_FEW, {}
-        pairs = closeness.similarities(conninfo, order, model=model)
-        found = closeness.groups(order, pairs, graph.group_count(len(order)))
+        found, centres, nearest, typical = grouped(conninfo, order, model)
         rows = {row.project_id: row for row in facts_of(conninfo, order)}
         (members,) = data.members(conninfo, [order])
         named = {member.project_id: member for member in members}
@@ -425,16 +429,13 @@ def create_app(
                 distance = dict(store.nearest(values, model, limit=len(order), only=order))
             except (*FAILED_CALLS, BudgetExceeded):
                 distance = None
-        centres = [closeness.central(group, pairs) for group in found]
         built = graph.build(
-            order, found, ranked=bool(idea), distance=distance,
-            typical={pid: closeness.similarity(pairs, pid, centre)
-                     for group, centre in zip(found, centres, strict=True)
-                     for pid in group if pid != centre},
-            nearest=closeness.nearest(order, pairs), centres=centres,
+            order, found, ranked=bool(idea), distance=distance, typical=typical,
+            nearest=nearest, centres=centres,
             categories={pid: row.category for pid, row in rows.items()},
             names={pid: member.name for pid, member in named.items()},
             linked=seen.came_back(conninfo), left_out=len(ids) - len(order),
+            listed={pid for pid, row in rows.items() if row.entry_kind == "winner_entry"},
         )  # fmt: skip
         about = {pid: {"name": named[pid].name, "event": named[pid].event,
                        "line": lines[pid].text if pid in lines else "",
@@ -442,6 +443,26 @@ def create_app(
                        "prize": rows[pid].prize if pid in rows else None}
                  for pid in order if pid in named}  # fmt: skip
         return built, None, about
+
+    def grouped(conninfo: str, order: list[int], model: str) -> tuple:
+        """The groups of the projects of `order` (design 8.6), their most central projects, the
+        closest project of each, and how close each is to the most central one of its group.
+        Kept for GRAPH_SECONDS under the list and the model."""
+        key = (model, tuple(order))
+        kept = graphs.get(key)
+        if kept is not None and time.monotonic() - kept[0] < GRAPH_SECONDS:
+            return kept[1]
+        pairs = closeness.similarities(conninfo, order, model=model)
+        found = closeness.groups(order, pairs, graph.group_count(len(order)))
+        centres = [closeness.central(group, pairs) for group in found]
+        typical = {pid: closeness.similarity(pairs, pid, centre)
+                   for group, centre in zip(found, centres, strict=True)
+                   for pid in group if pid != centre}  # fmt: skip
+        made = (found, centres, closeness.nearest(order, pairs), typical)
+        while len(graphs) >= GRAPHS_KEPT:
+            graphs.pop(next(iter(graphs)))  # the oldest first
+        graphs[key] = (time.monotonic(), made)
+        return made
 
     def results_of(conninfo: str, ids: list[int], idea: str, words: bool) -> list[tuple]:
         """The card facts, the sentence, the marked sentence and the words found, of each id."""

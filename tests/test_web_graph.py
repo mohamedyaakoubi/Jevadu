@@ -58,6 +58,11 @@ def test_a_group_is_named_after_its_most_central_project() -> None:
     assert Group(1, 4, "Health", 4, 7, "Leash").subtitle == "4 projects · all in Health"
     assert Group(1, 1, "Health", 1, 7, "Leash").subtitle == "1 project · Health"
     assert Group(1, 3, "", 0, 7, "Leash").said == "3 projects"
+    # a group made mostly of projects known only from a winners' list says so
+    assert Group(1, 124, "Payments", 2, 7, "Leash", listed=118).subtitle == (
+        "124 projects · 118 from winners' lists")  # fmt: skip
+    assert Group(1, 34, "", 0, 7, "Leash", listed=34).said == "34 projects, all from winners' lists"
+    assert Group(1, 10, "Health", 6, 7, "Leash", listed=4).said == "10 projects, 6 in Health"
     assert Group(1, 3, "", 0, 7, "A name much longer than the label").title == (
         "Like A name much longer than…")  # fmt: skip
 
