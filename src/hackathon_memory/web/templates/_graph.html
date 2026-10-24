@@ -1,7 +1,9 @@
 {# The graph of the list on the screen (design 8.6, S7): the places come from web/graph.py, so the
    picture needs no script. It is a picture only, hidden from screen readers: the same groups
    follow it as lists of links, which a keyboard and a screen reader use, and a phone too. With the
-   page's script, a click keeps the line of a dot, and the graph zooms (site.js). #}
+   page's script, a click keeps the line of a dot, and the graph zooms (site.js). The picture
+   takes the whole width of its card, its graph in the middle at its own size, so a zoom fills
+   the card (24 October 2026: it was a window in the middle of the card). #}
 {% import "_parts.html" as parts %}
 {% if graph_problem or not graph %}
 <div class="empty"><p class="empty-title">No graph for this list</p><p class="empty-subtitle text-secondary">{{ graph_problem or "Remove a filter, or search with other words." }}</p></div>
@@ -20,7 +22,7 @@
       <button type="button" class="btn btn-sm" data-zoom="out" title="Zoom out" disabled>&minus;<span class="visually-hidden"> Zoom out</span></button>
       <button type="button" class="btn btn-sm" data-zoom="reset" disabled>Reset</button>
     </div>
-    <svg class="hm-graph-svg" viewBox="{{ graph.view_box }}" style="max-width: {{ graph.box[2] | round | int }}px" aria-hidden="true" focusable="false">
+    <svg class="hm-graph-svg" viewBox="{{ graph.view_box }}" style="height: {{ graph.box[3] | round | int }}px" aria-hidden="true" focusable="false">
       <g class="hm-graph-lines">
         {% for line in graph.lines %}<line x1="{{ line.x1 }}" y1="{{ line.y1 }}" x2="{{ line.x2 }}" y2="{{ line.y2 }}" data-ends="{{ line.a }} {{ line.b }}"/>{% endfor %}
         <line class="hm-graph-hover" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/>

@@ -1471,6 +1471,11 @@ def test_the_graph_zooms_with_ctrl_and_the_wheel(site, chromium) -> None:  # noq
     page.goto(f"http://site.test/?event={event}&view=graph")
     svg = page.locator(".hm-graph-svg")
     start = [float(n) for n in svg.get_attribute("viewBox").split()]
+    # The picture takes the whole width of its card, so a zoom fills the card (24 October 2026:
+    # it was a window in its middle).
+    wide = page.evaluate("[document.querySelector('.hm-graph-svg').getBoundingClientRect().width,"
+                         " document.querySelector('.hm-graph').clientWidth]")  # fmt: skip
+    assert wide[0] >= 0.9 * wide[1]
     mark = page.locator(f'.hm-dot[data-graph-id="{ids["Pebble Pay"]}"] .hm-mark')
     size = mark.bounding_box()["width"]
     box = svg.bounding_box()

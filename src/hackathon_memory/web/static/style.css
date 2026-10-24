@@ -279,7 +279,7 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-graph { position: relative; }
 /* While the graph is zoomed (site.js), --hm-zoom divides every size of its marks and words, so
    they keep their size on the screen while the distances grow. */
-.hm-graph-svg { display: block; width: 100%; height: auto; max-height: 80vh; margin: 0 auto; overflow: visible; }
+.hm-graph-svg { display: block; width: 100%; max-height: 80vh; margin: 0 auto; overflow: visible; }
 .hm-graph-svg.is-zoomed { overflow: hidden; cursor: grab; }
 .hm-graph-svg.is-dragged { cursor: grabbing; }
 .hm-graph-svg text { font-family: var(--tblr-font-sans-serif); }
