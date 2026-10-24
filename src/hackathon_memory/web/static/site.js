@@ -370,43 +370,49 @@
   function graphOf(node) { return node.closest("[data-graph]"); }
   function dotOf(graph, id) { return graph.querySelector('.hm-dot[data-graph-id="' + id + '"]'); }
   function listLink(id) { return document.querySelector('[data-graph-link="' + id + '"]'); }
-  function darkGraph(graph) {
+  function darkGraph(graph) { // what the pointer showed goes; the kept dot stays (keepDot)
     graph.querySelectorAll(".is-lit").forEach(function (one) { one.classList.remove("is-lit"); });
     var hover = graph.querySelector(".hm-graph-hover");
     if (hover) hover.setAttribute("visibility", "hidden");
     var tip = graph.querySelector(".hm-graph-tip");
     if (tip) tip.hidden = true;
   }
-  function lightGraph(graph, dot) {
-    var id = dot.getAttribute("data-graph-id"), near = dot.getAttribute("data-near");
-    dot.classList.add("is-lit");
-    graph.querySelectorAll('.hm-graph-lines line[data-ends~="' + id + '"]').forEach(function (line) {
-      line.classList.add("is-lit");
-    });
-    var other = near ? dotOf(graph, near) : null, hover = graph.querySelector(".hm-graph-hover");
-    if (!other || !hover) return;
+  function strongLines(graph, dot) {
+    return graph.querySelectorAll('.hm-graph-lines line[data-ends~="' + dot.getAttribute("data-graph-id") + '"]');
+  }
+  // `line` joins the dot to its closest project; returns that project's dot, or null.
+  function joinNearest(graph, dot, line) {
+    var near = dot.getAttribute("data-near"), other = near ? dotOf(graph, near) : null;
+    if (!other || !line) return null;
     var from = dot.querySelector(".hm-mark"), to = other.querySelector(".hm-mark");
-    hover.setAttribute("x1", from.getAttribute("cx"));
-    hover.setAttribute("y1", from.getAttribute("cy"));
-    hover.setAttribute("x2", to.getAttribute("cx"));
-    hover.setAttribute("y2", to.getAttribute("cy"));
-    hover.setAttribute("visibility", "visible");
-    other.classList.add("is-lit");
+    line.setAttribute("x1", from.getAttribute("cx"));
+    line.setAttribute("y1", from.getAttribute("cy"));
+    line.setAttribute("x2", to.getAttribute("cx"));
+    line.setAttribute("y2", to.getAttribute("cy"));
+    line.setAttribute("visibility", "visible");
+    return other;
   }
-  function restGraph(graph) { // back to the dot that a click kept, or to none
-    darkGraph(graph);
-    var kept = graph.getAttribute("data-kept"), dot = kept ? dotOf(graph, kept) : null;
-    if (dot) lightGraph(graph, dot);
+  function lightGraph(graph, dot) {
+    dot.classList.add("is-lit");
+    strongLines(graph, dot).forEach(function (line) { line.classList.add("is-lit"); });
+    var other = joinNearest(graph, dot, graph.querySelector(".hm-graph-hover"));
+    if (other) other.classList.add("is-lit");
   }
+  // The dot that a click kept has a line of its own: it stays lit, with its closest project,
+  // while the pointer shows other dots, until a click on an empty place (24 October 2026: the
+  // pointer took it away, and the dot had to be found again).
   function keepDot(graph, dot) {
-    graph.querySelectorAll(".hm-dot.is-kept").forEach(function (one) { one.classList.remove("is-kept"); });
-    if (dot) {
-      graph.setAttribute("data-kept", dot.getAttribute("data-graph-id"));
-      dot.classList.add("is-kept");
-    } else {
-      graph.removeAttribute("data-kept");
-    }
-    restGraph(graph);
+    graph.querySelectorAll(".is-kept, .is-kept-near").forEach(function (one) {
+      one.classList.remove("is-kept", "is-kept-near");
+    });
+    var kept = graph.querySelector(".hm-graph-kept");
+    if (kept) kept.setAttribute("visibility", "hidden");
+    if (!dot) { graph.removeAttribute("data-kept"); return; }
+    graph.setAttribute("data-kept", dot.getAttribute("data-graph-id"));
+    dot.classList.add("is-kept");
+    strongLines(graph, dot).forEach(function (line) { line.classList.add("is-kept"); });
+    var other = joinNearest(graph, dot, kept);
+    if (other) other.classList.add("is-kept-near");
   }
   function showGraphTip(graph, dot) {
     var tip = graph.querySelector(".hm-graph-tip");
@@ -461,7 +467,7 @@
   document.addEventListener("pointerout", function (event) {
     var from = graphDot(event.target) || (event.target.closest && event.target.closest("[data-graph-link]"));
     if (!from || (event.relatedTarget && from.contains(event.relatedTarget))) return;
-    document.querySelectorAll("[data-graph]").forEach(restGraph);
+    document.querySelectorAll("[data-graph]").forEach(darkGraph);
   });
   document.addEventListener("focusin", function (event) { // a project of the lists, by keyboard
     var link = event.target.closest && event.target.closest("[data-graph-link]");
@@ -472,7 +478,7 @@
   });
   document.addEventListener("focusout", function (event) {
     if (event.target.closest && event.target.closest("[data-graph-link]")) {
-      document.querySelectorAll("[data-graph]").forEach(restGraph);
+      document.querySelectorAll("[data-graph]").forEach(darkGraph);
     }
   });
   document.addEventListener("click", function (event) {
@@ -502,9 +508,10 @@
   });
 
   // Ctrl and the wheel, or the pinch of a touchpad, which the browser sends the same way, zoom the
-  // graph around the pointer, up to 8 times; a drag moves the zoomed graph, and three buttons zoom
-  // in, out and back. The dots, the lines and the names keep their size on the screen (style.css
-  // divides them by --hm-zoom), so dots that touch come apart (design 8.6).
+  // graph around the pointer, up to 8 times; a drag, or two fingers on a touchpad, move the zoomed
+  // graph, and three buttons zoom in, out and back. The dots, the lines and the names keep their
+  // size on the screen (style.css divides them by --hm-zoom), so dots that touch come apart
+  // (design 8.6).
   var ZOOM_MOST = 8, dragging = null;
   function zoomOf(svg) {
     if (!svg.hmZoom) {
@@ -545,12 +552,23 @@
     drawZoom(svg);
   }
   document.addEventListener("wheel", function (event) {
-    if (!event.ctrlKey && !event.metaKey) return;
     var svg = event.target.closest && event.target.closest(".hm-graph-svg");
     if (!svg) return;
-    event.preventDefault(); // the graph zooms, not the page
-    var pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1);
-    zoomAt(svg, event.clientX, event.clientY, Math.exp(-pixels * 0.0025));
+    var unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault(); // the graph zooms, not the page
+      zoomAt(svg, event.clientX, event.clientY, Math.exp(-event.deltaY * unit * 0.0025));
+      return;
+    }
+    // Two fingers on a touchpad send the wheel: they move a zoomed graph (24 October 2026: they
+    // scrolled the page). At the edge of the graph nothing moves, and the page scrolls again.
+    var zoom = zoomOf(svg), matrix = svg.getScreenCTM();
+    if (zoom.k <= 1 || !matrix) return;
+    var before = [zoom.x, zoom.y];
+    zoom.x += event.deltaX * unit / matrix.a;
+    zoom.y += event.deltaY * unit / matrix.d;
+    drawZoom(svg); // keeps the view inside the graph
+    if (zoom.x !== before[0] || zoom.y !== before[1]) event.preventDefault();
   }, { passive: false });
   document.addEventListener("click", function (event) {
     var button = event.target.closest && event.target.closest("[data-zoom]");
@@ -588,7 +606,7 @@
     var ended = dragging;
     dragging = null;
     ended.svg.classList.remove("is-dragged");
-    if (ended.moved) { ended.svg.hmDragged = true; restGraph(graphOf(ended.svg)); }
+    if (ended.moved) ended.svg.hmDragged = true;
   }
   document.addEventListener("pointerup", endDrag);
   document.addEventListener("pointercancel", endDrag);

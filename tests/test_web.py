@@ -1457,11 +1457,18 @@ def test_a_dot_of_the_graph_shows_its_project_and_opens_its_card(site, chromium)
     page.keyboard.press("Escape")
     page.wait_for_selector("#viewer:not([open])", state="attached")
     page.mouse.move(5, 5)
+    kept = page.locator(".hm-graph-kept")
     assert "is-kept" in (dot.get_attribute("class") or "")
+    assert kept.get_attribute("visibility") == "visible"
+    # Another dot shows its own line while the kept one stays (24 October 2026, evening).
+    page.locator(f'.hm-dot[data-graph-id="{ids["Fern Vote"]}"]').hover()
     assert page.locator(".hm-graph-hover").get_attribute("visibility") == "visible"
+    assert kept.get_attribute("visibility") == "visible"
+    assert "is-kept" in (dot.get_attribute("class") or "")
+    page.mouse.move(5, 5)
     box = page.locator(".hm-graph-svg").bounding_box()
     page.mouse.click(box["x"] + 3, box["y"] + 3)
-    assert page.locator(".hm-graph-hover").get_attribute("visibility") == "hidden"
+    assert kept.get_attribute("visibility") == "hidden"
     assert "is-kept" not in (dot.get_attribute("class") or "")
 
 
@@ -1483,6 +1490,7 @@ def test_the_graph_zooms_with_ctrl_and_the_wheel(site, chromium) -> None:  # noq
     size = mark.bounding_box()["width"]
     box = svg.bounding_box()
     page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    scrolled = page.evaluate("window.scrollY")
     page.keyboard.down("Control")
     page.mouse.wheel(0, -400)
     page.keyboard.up("Control")
@@ -1490,8 +1498,18 @@ def test_the_graph_zooms_with_ctrl_and_the_wheel(site, chromium) -> None:  # noq
     zoomed = [float(n) for n in svg.get_attribute("viewBox").split()]
     assert zoomed[2] < start[2] and zoomed[3] < start[3]  # a smaller part of the graph
     assert abs(mark.bounding_box()["width"] - size) < 1.5  # a dot keeps its size on the screen
-    assert page.evaluate("window.scrollY") == 0 and page.locator("[data-zoom=reset]").is_enabled()
+    assert page.evaluate("window.scrollY") == scrolled  # the graph zoomed, not the page
+    assert page.locator("[data-zoom=reset]").is_enabled()
+    zoomed = svg.get_attribute("viewBox")
+    page.mouse.wheel(0, 120)  # two fingers on a touchpad send the wheel, with no Ctrl
+    page.wait_for_timeout(100)
+    assert svg.get_attribute("viewBox") != zoomed and page.evaluate("window.scrollY") == scrolled
     page.locator("[data-zoom=reset]").click()
+    assert [float(n) for n in svg.get_attribute("viewBox").split()] == start
+    box = svg.bounding_box()
+    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.mouse.wheel(0, 120)  # not zoomed: the wheel is the page's
+    page.wait_for_timeout(100)
     assert [float(n) for n in svg.get_attribute("viewBox").split()] == start
     page.locator("[data-zoom=in]").click()
     assert float(svg.get_attribute("viewBox").split()[2]) < start[2]

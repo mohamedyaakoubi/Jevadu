@@ -289,7 +289,7 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 /* a strong line: the same code or Hedera ID; the dashed line of a pointed dot: its closest project */
 .hm-graph-lines line { stroke: var(--tblr-body-color); stroke-width: calc(2.5px / var(--hm-zoom, 1)); stroke-opacity: 0.8; }
 .hm-graph-lines line.is-lit { stroke-opacity: 1; }
-.hm-graph-lines .hm-graph-hover { stroke-width: calc(1.5px / var(--hm-zoom, 1)); stroke-dasharray: calc(5px / var(--hm-zoom, 1)) calc(3px / var(--hm-zoom, 1)); stroke-opacity: 1; }
+.hm-graph-lines :is(.hm-graph-hover, .hm-graph-kept) { stroke-width: calc(1.5px / var(--hm-zoom, 1)); stroke-dasharray: calc(5px / var(--hm-zoom, 1)) calc(3px / var(--hm-zoom, 1)); stroke-opacity: 1; }
 .hm-graph-idea circle { fill: var(--tblr-body-color); }
 .hm-dot { cursor: pointer; }
 .hm-dot .hm-hit { fill: transparent; }
@@ -298,8 +298,10 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-dot.is-first .hm-mark { fill: var(--tblr-bg-surface); stroke: var(--hm-group); stroke-width: calc(3px / var(--hm-zoom, 1)); }
 .hm-dot text { fill: var(--tblr-body-color); font-size: calc(10px / var(--hm-zoom, 1)); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .hm-dot:hover .hm-mark, .hm-dot.is-lit .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(2.5px / var(--hm-zoom, 1)); }
-/* the dot that a click kept, with its line, until a click on an empty place */
-.hm-dot.is-kept .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
+/* the dot that a click kept, and its closest project, with their line, until a click on an
+   empty place */
+.hm-dot:is(.is-kept, .is-kept-near) .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
+.hm-graph-lines line.is-kept { stroke-opacity: 1; }
 .hm-graph-names text { fill: var(--tblr-body-color); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: calc(5px / var(--hm-zoom, 1)); stroke-linejoin: round; }
 .hm-graph-name { cursor: pointer; }
 /* The theme underlines a link on hover, and under the outline of a word of the picture the line
