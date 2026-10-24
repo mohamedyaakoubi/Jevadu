@@ -39,6 +39,7 @@ from hackathon_memory.check import asking
 from hackathon_memory.check.history import read_history
 from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.life import Life, life_of
+from hackathon_memory.check.numbers import Numbers
 from hackathon_memory.check.proof import (
     NO_ID_GIVEN,
     ORDER,
@@ -305,14 +306,16 @@ def judge_code_ids(
     own = [one for one in candidates if one.entity_id not in elsewhere]
     if window is None:
         return [], len({one.entity_id for one in own})
+    numbers = Numbers(ledger.dated_numbers())
     results = []
     for one in own[:MAX_CODE_IDS]:
         for network in [one.network] if one.network else NETWORKS_WHEN_OPEN:
             mirror = mirrors.get(network)
-            if mirror is None:
+            if mirror is None or not numbers.could_be_made_inside(one.entity_id, network, window):
                 continue
             try:
-                facts = asking.facts_of(ledger, mirror, one.entity_id, None, max_age=MAX_AGE,
+                # an account first: most IDs of the code are accounts (pipeline/code_ids.py)
+                facts = asking.facts_of(ledger, mirror, one.entity_id, ACCOUNT, max_age=MAX_AGE,
                                         now=now, counts=counts)  # fmt: skip
             except MirrorError:
                 counts["errors_of_the_node"] += 1

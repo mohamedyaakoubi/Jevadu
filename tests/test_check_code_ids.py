@@ -43,14 +43,14 @@ def test_a_check_weighs_the_own_ids_of_its_code_on_its_hackathon(empty_database:
         "testnet": StandInMirror("testnet", account={
             "0.0.7000001": {"account": "0.0.7000001", **made},
             "0.0.7000003": {"account": "0.0.7000003", **made},
-        }, token={"0.0.7000002": {"token_id": "0.0.7000002", "total_supply": "5",
+        }, token={"0.0.6000002": {"token_id": "0.0.6000002", "total_supply": "5",
                                   "created_timestamp": LONG_BEFORE,
                                   "modified_timestamp": DURING}}),
         "mainnet": StandInMirror("mainnet"),
     }  # fmt: skip
     # Its own account made during the event, a public token made long before, an account that
     # another team's code names, and the topic that its README names.
-    scan = scan_of("0.0.7000001", "0.0.7000002", "0.0.7000003", "0.0.4870201")
+    scan = scan_of("0.0.7000001", "0.0.6000002", "0.0.7000003", "0.0.4870201")
     readme = find_ids("Our log is the topic 0.0.4870201.")
     stores = (LedgerStore(database), CodeIdStore(database))
     results, not_judged = judge_code_ids(scan, readme, EVENT, mirrors, *stores, CHECKED,

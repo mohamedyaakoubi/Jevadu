@@ -10,6 +10,10 @@ from datetime import date, datetime
 import psycopg
 
 IN_THE_CODE = "code"
+# The candidates of one project that the check asks about, the ones in the most files first. On 24
+# October 2026, 257 of 273 projects with candidates had 30 or fewer; the 16 others had up to 199,
+# lists of other people's things such as the tokens of an exchange.
+MOST_CANDIDATES = 30
 
 
 @dataclass(frozen=True)
@@ -36,16 +40,22 @@ class Given:
 # The candidates of every project: an ID that the code of its repository names, that no page and
 # no README of the collection names (the page's own rule judges an ID that its page names, and
 # an ID that another project's page names is not this project's own), and that the code of no
-# other repository names.
+# other repository names; at most MOST_CANDIDATES, the ones in the most files first.
 _CANDIDATES = """
-SELECT p.id, c.entity_id, c.network, c.examples[1], e.starts_at, e.ends_on
-FROM ids_in_code c
-JOIN projects p ON p.repository_id = c.repository_id
-JOIN events e ON e.id = p.event_id
-WHERE NOT EXISTS (SELECT 1 FROM hedera_ids h WHERE h.entity_id = c.entity_id AND h.found_in <> %s)
-  AND NOT EXISTS (SELECT 1 FROM ids_in_code o
-                  WHERE o.entity_id = c.entity_id AND o.repository_id <> c.repository_id)
-ORDER BY p.id, c.entity_id, c.network NULLS FIRST
+SELECT project_id, entity_id, network, path, starts_at, ends_on FROM (
+    SELECT p.id AS project_id, c.entity_id, c.network, c.examples[1] AS path, e.starts_at,
+           e.ends_on, row_number() OVER (PARTITION BY p.id
+               ORDER BY c.files DESC, c.entity_id, c.network NULLS FIRST) AS place
+    FROM ids_in_code c
+    JOIN projects p ON p.repository_id = c.repository_id
+    JOIN events e ON e.id = p.event_id
+    WHERE NOT EXISTS (SELECT 1 FROM hedera_ids h
+                      WHERE h.entity_id = c.entity_id AND h.found_in <> %s)
+      AND NOT EXISTS (SELECT 1 FROM ids_in_code o
+                      WHERE o.entity_id = c.entity_id AND o.repository_id <> c.repository_id)
+) ranked
+WHERE place <= %s
+ORDER BY project_id, place
 """
 
 
@@ -57,7 +67,8 @@ class CodeIdStore:
 
     def candidates(self) -> list[Candidate]:
         with psycopg.connect(self._conninfo) as conn:
-            return [Candidate(*row) for row in conn.execute(_CANDIDATES, (IN_THE_CODE,))]
+            rows = conn.execute(_CANDIDATES, (IN_THE_CODE, MOST_CANDIDATES))
+            return [Candidate(*row) for row in rows]
 
     def named_elsewhere(self, entities: Sequence[str], repository: str) -> set[str]:
         """Of `entities`, those that a page or a README of the collection names, or the code of

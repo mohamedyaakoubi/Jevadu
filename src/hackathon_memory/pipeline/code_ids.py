@@ -24,16 +24,23 @@ from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 
 from hackathon_memory.check import asking
+from hackathon_memory.check.numbers import Numbers
 from hackathon_memory.check.proof import counts_from_the_code, window_of
 from hackathon_memory.db.code_ids import Candidate, CodeIdStore, Given
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.runs import Run
 from hackathon_memory.hedera.mirror import MirrorError, MirrorNode
+from hackathon_memory.parse.hedera_ids import ACCOUNT
 from hackathon_memory.pipeline.check_ids import (
     MAX_ERRORS_IN_A_ROW,
     NETWORKS_WHEN_OPEN,
     NodeIsAway,
 )
+
+# Most IDs of the code are accounts (103 of 128 in evals/results/20261023T230450Z-ids-in-code.json),
+# so the ledger is asked about an account first: two questions in place of four. The order changes
+# how many questions are asked, not the answer, which no kind that a text gave weighs.
+ASK_ACCOUNT_FIRST = ACCOUNT
 
 
 def _now() -> datetime:
@@ -53,6 +60,7 @@ def give_code_ids(
     by_project: dict[int, list[Candidate]] = {}
     for one in store.candidates():
         by_project.setdefault(one.project_id, []).append(one)
+    numbers = Numbers(ledger.dated_numbers())
     errors_in_a_row = 0
     for project_id in sorted(set(by_project) | store.projects_with_code_ids()):
         given: dict[tuple[str, str], Given] = {}
@@ -66,9 +74,13 @@ def give_code_ids(
                 mirror = mirrors.get(network)
                 if mirror is None:
                     continue
+                if not numbers.could_be_made_inside(one.entity_id, network, window):
+                    run.counts["code_ids_ruled_out_by_their_number"] += 1
+                    continue
                 try:
-                    facts = asking.facts_of(ledger, mirror, one.entity_id, None, max_age=max_age,
-                                            now=now, counts=run.counts)  # fmt: skip
+                    facts = asking.facts_of(ledger, mirror, one.entity_id, ASK_ACCOUNT_FIRST,
+                                            max_age=max_age, now=now,
+                                            counts=run.counts)  # fmt: skip
                 except MirrorError as error:
                     run.counts["errors_of_the_node"] += 1
                     run.problem(f"{one.entity_id} on {network} (code)", str(error))

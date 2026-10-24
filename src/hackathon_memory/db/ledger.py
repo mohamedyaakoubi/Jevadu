@@ -43,6 +43,20 @@ class LedgerStore:
 
     # ----------------------------------------------------------------- the facts
 
+    def dated_numbers(self) -> dict[str, list[tuple[datetime, int]]]:
+        """For each network, the number of every thing of the table and when it was made, oldest
+        first (check/numbers.py)."""
+        with psycopg.connect(self._conninfo) as conn:
+            rows = conn.execute(
+                "SELECT network, created_at, split_part(entity_id, '.', 3)::bigint "
+                "FROM ledger_facts WHERE found AND created_at IS NOT NULL "
+                "AND entity_id ~ '^0\\.0\\.[0-9]+$' ORDER BY network, created_at"
+            ).fetchall()
+        dated: dict[str, list[tuple[datetime, int]]] = {}
+        for network, made, number in rows:
+            dated.setdefault(network, []).append((made, number))
+        return dated
+
     def facts(self, entity_id: str, network: str) -> LedgerFacts | None:
         with psycopg.connect(self._conninfo) as conn:
             row = conn.execute(

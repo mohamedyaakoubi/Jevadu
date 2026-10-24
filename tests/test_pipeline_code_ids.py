@@ -55,7 +55,7 @@ def database(empty_database: str) -> str:
                        ids["quartz-notes-q3w4e"]: QUARTZ_CODE})  # fmt: skip
     # The first project's code: its own account, made during the event; the topic that its page
     # names; a public token made long before; an account that the other repository names too.
-    repositories.save_code(PEBBLE_CODE, reading("0.0.7000001", "0.0.3456781", "0.0.7000002",
+    repositories.save_code(PEBBLE_CODE, reading("0.0.7000001", "0.0.3456781", "0.0.6000002",
                                                 "0.0.7000003"))  # fmt: skip
     # The second project's code: the shared account, an empty topic made during the event, and
     # its own account made during the event.
@@ -69,7 +69,7 @@ def nodes() -> dict[str, StandInMirror]:
         "testnet",
         topic={"0.0.3456781": {"topic_id": "0.0.3456781", **made},
                "0.0.7000004": {"topic_id": "0.0.7000004", **made}},
-        token={"0.0.7000002": {"token_id": "0.0.7000002", "total_supply": "1000",
+        token={"0.0.6000002": {"token_id": "0.0.6000002", "total_supply": "1000",
                                "created_timestamp": LONG_BEFORE, "modified_timestamp": DURING}},
         account={pid: {"account": pid, **made} for pid in ("0.0.7000001", "0.0.7000003",
                                                           "0.0.7000006")},
@@ -135,3 +135,32 @@ def test_an_id_of_the_code_that_another_project_names_later_is_taken_back(databa
     run_both(database, mirrors)
     assert [row[1] for row in code_rows(database)] == ["0.0.7000001"]
     assert statuses(database)["quartz-notes-q3w4e"] == "no_id_given"
+
+
+def test_the_check_asks_only_about_the_candidates_in_the_most_files(
+    database: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hackathon_memory.db import code_ids
+
+    with psycopg.connect(database) as conn:  # the own account of the second project in 3 files
+        conn.execute("UPDATE ids_in_code SET files = 3 WHERE entity_id = '0.0.7000006'")
+    monkeypatch.setattr(code_ids, "MOST_CANDIDATES", 1)
+    candidates = CodeIdStore(database).candidates()
+    second = [one.entity_id for one in candidates if one.entity_id.startswith("0.0.70000")
+              and one.project_id == candidates[-1].project_id]  # fmt: skip
+    assert second == ["0.0.7000006"] and len(candidates) == 2  # one for each project
+
+
+def test_a_candidate_whose_number_shows_it_was_made_outside_the_event_is_not_asked(
+    database: str,
+) -> None:
+    mirrors = nodes()
+    run_both(database, mirrors)  # the ledger's facts now date some numbers
+    with psycopg.connect(database) as conn:  # a number below the token made long before
+        conn.execute("INSERT INTO ids_in_code (repository_id, entity_id, network, files, examples) "
+                     "SELECT id, '0.0.5000001', 'testnet', 2, ARRAY['src/old.ts'] "
+                     "FROM repositories WHERE url = %s", (QUARTZ_CODE,))  # fmt: skip
+    before = len(mirrors["testnet"].asked)
+    again = run_both(database, mirrors)
+    assert again.counts["code_ids_ruled_out_by_their_number"] >= 1
+    assert all(question[1] != "0.0.5000001" for question in mirrors["testnet"].asked[before:])
