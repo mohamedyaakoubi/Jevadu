@@ -338,6 +338,27 @@ def own_id(database: str, project_id: int, entity: str, kind: str) -> None:
                      "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
 
 
+def test_an_id_of_the_code_shows_its_file_and_says_where_the_proof_comes_from(site) -> None:  # noqa: ANN001
+    from hackathon_memory.db.code_ids import CodeIdStore, Given
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4870201", "account")
+    with psycopg.connect(database) as conn:  # the page's ID becomes one that only the code names
+        conn.execute("DELETE FROM hedera_ids WHERE project_id = %s", (pebble,))
+        conn.execute("UPDATE projects SET proof_status = 'proof_found' WHERE id = %s", (pebble,))
+    CodeIdStore(database).replace(pebble, [Given("0.0.4870201", "testnet", "config/ids.ts")])
+    with psycopg.connect(database) as conn:
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) SELECT id, 'testnet', "
+                     "'proof_found' FROM hedera_ids WHERE project_id = %s", (pebble,))  # fmt: skip
+    panel = client.get(f"/project/{pebble}/panel").text
+    assert "Proof: found in the code" in panel
+    assert "in the code, config/ids.ts: no page or README names it" in panel
+    listed = client.get("/").text
+    card = listed[listed.index(f'id="result-{pebble}"') :]
+    assert "Proof: found in the code" in card[: card.index("</li>")]
+
+
 def stamp(moment: datetime, number: int) -> str:
     """A moment of consensus as the mirror node writes it: seconds.nanoseconds."""
     return f"{int(moment.timestamp())}.{number:09d}"

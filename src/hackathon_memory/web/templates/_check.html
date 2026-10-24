@@ -48,15 +48,17 @@
               <p class="id-name">{% if link %}<a class="id" href="{{ link }}" rel="noopener" target="_blank">{{ one.found.entity_id }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>{% else %}<span class="id">{{ one.found.entity_id }}</span>{% endif %}{% if one.network %} <span class="badge bg-secondary-lt">{{ one.network }}</span>{% endif %}</p>
               {% if facts and facts.found and facts.kind == "transaction" %}{% set action = facts.details.get("name") %}<p>Transaction: {{ ACTION_WORDS.get(action, (action or "an action") | lower) }}{% if facts.created_at %}, {{ facts.created_at | day }}{% endif %}{% if facts.details.get("result") not in (none, "SUCCESS") %}; failed ({{ facts.details.get("result") }}){% endif %}.</p>
               {% elif facts and facts.found %}<p>{{ KIND_WORDS.get(facts.kind, facts.kind) | capitalize }}{% if facts.created_at %}, created {{ facts.created_at | day }}{% endif %}{% if facts.last_activity_at %}, last activity {{ facts.last_activity_at | day }}{% endif %}.</p>{% endif %}
-              <p class="hm-small">{% if one.status == NOT_ASKED %}No answer from the mirror node{% elif no_dates and one.status == "window_not_known" %}Found, dates not judged{% else %}{{ STATUS_WORDS.get(one.status, one.status) | capitalize }}{% endif %}{% if one.found.said_kind %} &middot; the README says {{ one.found.said_kind }}{% endif %}{% if not one.found.network %} &middot; no network named, so both were checked{% endif %}{% if facts %} &middot; checked {{ facts.asked_at | day }}{% endif %}</p>
+              <p class="hm-small">{% if one.status == NOT_ASKED %}No answer from the mirror node{% elif no_dates and one.status == "window_not_known" %}Found, dates not judged{% else %}{{ STATUS_WORDS.get(one.status, one.status) | capitalize }}{% endif %}{% if one.in_code %} &middot; {{ parts.in_code(result.repository, hedera_code.commit if hedera_code else none, one.in_code) }}{% endif %}{% if one.found.said_kind %} &middot; the README says {{ one.found.said_kind }}{% endif %}{% if not one.found.network %} &middot; no network named, so both were checked{% endif %}{% if facts %} &middot; checked {{ facts.asked_at | day }}{% endif %}</p>
               {% if one.shared %}<p class="hm-small">Other teams use this ID too (more than three in all, or two at one hackathon): most likely a shared service, so it links no project.</p>
               {% elif one.named_elsewhere and one.status in CONFIRMED %}<p class="hm-small">A project with other code uses it too, so its activity does not count as activity of this project.</p>{% endif %}
             </li>
           {% endfor %}
           </ul>
           {% if result.ids_left_out %}<p class="hm-small">The README names {{ result.ids_left_out }} more ID{{ "s" if result.ids_left_out != 1 }}. Only the first {{ MAX_IDS }} are checked, to keep the check fast.</p>{% endif %}
+          {% if result.code_ids_not_judged %}<p class="hm-small">The code names {{ result.code_ids_not_judged }} Hedera ID{{ "s" if result.code_ids_not_judged != 1 }} that no other project names. Choose the hackathon to see which were made during it.</p>{% endif %}
           {% else %}
           <p class="text-secondary">{% if result.readme_text %}No Hedera ID in the README.{% else %}No README to read Hedera IDs from.{% endif %} That is common, and says nothing bad about the project.</p>
+          {% if result.code_ids_not_judged %}<p class="hm-small">The code names {{ result.code_ids_not_judged }} Hedera ID{{ "s" if result.code_ids_not_judged != 1 }} that no other project names. Choose the hackathon to see which were made during it.</p>{% endif %}
           {% endif %}
         </div>
       </section>
@@ -83,7 +85,7 @@
       <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ short }}</{{ level }}>
       <p class="project-lede">Facts from GitHub, the Hedera ledger and the collection. <span class="hm-tiny">No AI-generated text.</span></p>
       <div class="project-marks">
-        {{ marks.proof(proof_shown) }}{{ parts.info("proof", "Hedera proof") }}
+        {{ marks.proof(proof_shown, result.proven_by_code_only) }}{{ parts.info("proof", "Hedera proof") }}
         {% if result.life and not no_dates %}{{ marks.life(result.life) }}{{ parts.info("life", "life") }}{% endif %}
       </div>
       {% for one in result.problems %}<div class="alert alert-warning mt-3 mb-0" role="status">{{ one }}</div>{% endfor %}

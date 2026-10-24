@@ -1034,6 +1034,7 @@ def create_app(
         "REF_NUMBER": references.NUMBER,
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
+        "file_link": code_reading.file_link,
         "ACTION_WORDS": data.ACTION_WORDS,
         "KIND_WORDS": data.KIND_WORDS,
         "SERVICE_NAMES": data.SERVICE_NAMES,

@@ -34,7 +34,7 @@
       {% if snippet %}<p class="hm-matched"><span class="visually-hidden">Matching text: </span>&hellip;{{ snippet }}&hellip;</p>{% endif %}
       {{ marks.tags(card) }}
     </div>
-    <div class="card-footer hm-card-foot">{{ marks.proof(card.proof_status) }}{{ marks.life(card.life) }}</div>
+    <div class="card-footer hm-card-foot">{{ marks.proof(card.proof_status, card.proven_by_code_only) }}{{ marks.life(card.life) }}</div>
     {% if compared %}
     <div class="hm-compare compare waiting" id="compare-{{ pid }}" aria-busy="true">
       <span class="visually-hidden">Gemini is comparing this project with your idea.</span>
@@ -186,6 +186,13 @@
   </ul>
 </nav>
 {% endif %}
+{%- endmacro %}
+
+{# Where an ID of the code stands (design 7.3): the file, linked at the commit that was read,
+   and why it counts. #}
+{% macro in_code(repository, commit, path) -%}
+{% set at = file_link(repository, commit, path) if repository else none %}
+in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ path }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ path }}{% endif %}: no page or README names it, and it was made during the event
 {%- endmacro %}
 
 {% macro filter_select(name, label, all_words, options, current, tip=none) -%}
