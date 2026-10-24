@@ -210,10 +210,10 @@ in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ pat
 </div>
 {%- endmacro %}
 
-{# The shape of the cards, drawn while Gemini works. #}
+{# The shape of the cards, drawn while the search model works: Gemini, or its stand-in. #}
 {% macro skeleton_cards(count=8) -%}
 <div class="hm-skeletons" aria-hidden="true">
-  <p class="hm-asking">Gemini is reading the 30 closest projects. This takes a few seconds.</p>
+  <p class="hm-asking">{{ ordering_model() }} is reading the 30 closest projects. This takes a few seconds.</p>
   <ol class="hm-grid">
   {% for _ in range(count) %}<li><div class="card hm-card placeholder-glow"><div class="card-body"><span class="placeholder col-4"></span><span class="placeholder placeholder-lg col-8"></span><span class="placeholder col-12"></span><span class="placeholder col-10"></span><span class="placeholder col-6"></span></div></div></li>{% endfor %}
   </ol>

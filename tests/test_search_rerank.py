@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 import pytest
 
+from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.llm.embeddings import SEARCH_MODEL
 from hackathon_memory.search import engine, rerank
 from searchfakes import embed_all, google, ids_of, three_projects
@@ -111,6 +112,13 @@ def test_a_failed_order_is_not_kept(database: str) -> None:
     late = Stub(error=httpx.ReadTimeout("late"))
     order, how = rerank.order_pool(database, late, "an idea", ids, model="m", level="LOW")
     assert how == rerank.LATE and order == ids
+    # The page says which: late, failed, or refused by the budget (24 October 2026).
+    wrong = Stub("{}")  # no list of numbers
+    assert rerank.order_pool(database, wrong, "an idea", ids, model="m", level="LOW") == (
+        ids, rerank.FAILED)  # fmt: skip
+    spent = Stub(error=BudgetExceeded("spent"))
+    assert rerank.order_pool(database, spent, "an idea", ids, model="m", level="LOW") == (
+        ids, rerank.SPENT)  # fmt: skip
     stub = Stub(json.dumps({"closest": [3]}))
     _, how = rerank.order_pool(database, stub, "an idea", ids, model="m", level="LOW")
     assert how == rerank.ASKED  # nothing was kept from the failure

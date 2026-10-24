@@ -21,6 +21,7 @@ from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.parse.ethglobal_page import read_project_page
 from hackathon_memory.settings import Settings
+from openfake import FakeOpenModels, open_client
 from searchfakes import embed_all, google, three_projects
 
 pytestmark = [
@@ -83,14 +84,17 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
     mirrors = nodes()
     writes = RegisterWrites(mirrors["testnet"])
 
+    stand_in = FakeOpenModels()  # the stand-in of the search model (search/stand_in.py)
+
     def make(**changes: object) -> TestClient:
         changed = settings.model_copy(update=changes)
         return TestClient(
             create_app(changed, google=client, llm=client, github_client=asker, mirrors=mirrors,
-                       register_writer=writes)
+                       register_writer=writes, stand_in_client=open_client(stand_in))
         )  # fmt: skip
 
     served = make()
+    served.stand_in = stand_in  # what the stand-in of the search model was asked
     served.github_site = github_site  # what the stand-in GitHub was asked
     served.writes = writes  # what was written to the stand-in register
     served.make = make  # the same site with other settings
@@ -248,8 +252,36 @@ def test_a_wrong_answer_of_gemini_keeps_the_order_of_meaning_and_says_so(site) -
     fake.answer_text = "{}"  # not a list of numbers
     page = client.get("/", params={"idea": VENDOR, "ai": "1"})
     assert order_of(page.text) == by_meaning
-    assert "Gemini did not respond in time, so the results are in the search order" in page.text
+    # "did not respond in time" was said for every failure before 24 October 2026
+    assert "Gemini failed to give an order just now, so the results are in the search order" in (
+        page.text)  # fmt: skip
+    assert "after 4 more failures in a row, DeepSeek V4.1 Flash takes its place" in page.text
     assert 'id="compare-loader"' not in page.text
+
+
+def test_after_five_failures_of_gemini_its_stand_in_orders_and_compares(site) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    by_meaning = order_of(client.get("/", params={"idea": VENDOR}).text)
+    fake.fail_writing = (503, "unavailable")  # Gemini fails; the embeddings still answer
+    client.stand_in.content = json.dumps({"closest": [2]})
+    for left in ("4 more failures", "3 more failures", "2 more failures", "1 more failure"):
+        page = client.get("/", params={"idea": VENDOR, "ai": "1"})
+        assert order_of(page.text) == by_meaning and f"after {left} in a row" in page.text
+    assert client.stand_in.sent == []
+    page = client.get("/", params={"idea": VENDOR, "ai": "1"})  # the fifth failure in a row
+    assert "Sorted by DeepSeek V4.1 Flash" in page.text
+    assert "Gemini failed 5 times in a row, so DeepSeek V4.1 Flash put these results" in page.text
+    assert "DeepSeek V4.1 Flash is reading the 30 closest projects" in page.text  # while it waits
+    assert order_of(page.text) == [by_meaning[1], by_meaning[0], *by_meaning[2:]]
+    asked = client.stand_in.body()
+    assert asked["model"] == "deepseek-ai/deepseek-v4.1-flash-maas"
+    assert asked["chat_template_kwargs"] == {"thinking": False}  # its measured level, "off"
+    gemini = model_calls(fake)
+    client.stand_in.content = compare_answer((1, ["short_line"]))
+    first = order_of(page.text)[0]
+    part = client.get("/compare", params={"idea": VENDOR, "ids": first})
+    assert part.status_code == 200 and "By DeepSeek V4.1 Flash, from" in part.text
+    assert model_calls(fake) == gemini  # while the stand-in has its turn, Gemini is not asked
 
 
 def test_a_project_opens_in_the_window_with_its_own_address(site) -> None:  # noqa: ANN001

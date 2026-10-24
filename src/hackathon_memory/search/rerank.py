@@ -40,8 +40,11 @@ OPEN_EFFORT, OPEN_OFF = "high", "off"
 OPEN_MAX_TOKENS = 16384
 OPEN_SECONDS = 60.0  # when the caller gives no limit
 JSON_ANSWER = '\n\nAnswer with JSON only: {"closest": [the numbers, the closest first]}.'
-# Where an order came from: kept from the last day, asked now, or not given (the order of meaning).
-KEPT, ASKED, LATE = "kept", "asked", "late"
+# Where an order came from: kept from the last day, or asked now; or why there is none, so that
+# the order of meaning stays: the model was late, it failed, or the budget is spent. The page says
+# which: on 24 October 2026 it said "late" for errors that came back in 5 seconds.
+KEPT, ASKED, LATE, FAILED, SPENT = "kept", "asked", "late", "failed", "spent"
+ORDERED = (KEPT, ASKED)
 INSTRUCTIONS = """\
 You help a builder find past hackathon projects that are close to their idea.
 
@@ -145,11 +148,12 @@ def order_pool(
     """The closest projects by meaning, put in order by the search model: its answer of the last
     day for the same idea, filters (`scope`), model and pool when there is one, otherwise asked
     now and kept for a day (db/idea_answers.py). Returns the whole pool, the model's order first,
-    and where the order came from: KEPT, ASKED, or LATE when the model failed or was late; then
-    the order is the order of meaning, and nothing is kept."""
+    and where the order came from: KEPT or ASKED; or LATE, FAILED or SPENT when the model was
+    late, failed, or the budget refused the call; then the order is the order of meaning, and
+    nothing is kept."""
     pool = list(pool)
     if not pool:
-        return [], LATE
+        return [], FAILED
     store = AnswerStore(conninfo)
     store.forget_old(now)
     fingerprint = idea_fingerprint(idea)
@@ -161,8 +165,12 @@ def order_pool(
             ordered = by_ai(llm, model, level, idea, pool, texts_of(conninfo, pool),
                             letters=TEXT_LETTERS, with_text=True,
                             timeout_seconds=timeout_seconds)  # fmt: skip
-        except NOT_ORDERED:
+        except httpx.TimeoutException:
             return pool, LATE
+        except BudgetExceeded:
+            return pool, SPENT
+        except NOT_ORDERED:
+            return pool, FAILED
         store.save_order(fingerprint, scope, model, level, INSTRUCTIONS_VERSION,
                          KeptOrder(pool, ordered), now)  # fmt: skip
         how = ASKED
@@ -197,4 +205,4 @@ def closest_by_ai(
     scope = "only=" + ",".join(map(str, sorted(only))) if only is not None else ""
     ordered, how = order_pool(conninfo, llm, idea, pool, model=model, level=level, scope=scope,
                               timeout_seconds=timeout_seconds)  # fmt: skip
-    return engine.merge(ordered[:limit], []), how != LATE
+    return engine.merge(ordered[:limit], []), how in ORDERED

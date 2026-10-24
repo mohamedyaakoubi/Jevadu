@@ -55,7 +55,7 @@ from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode,
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline.embed import FAILED_CALLS
-from hackathon_memory.search import closeness, engine, listing, rerank, seen
+from hackathon_memory.search import closeness, engine, listing, rerank, seen, stand_in
 from hackathon_memory.search import compare as comparing
 from hackathon_memory.search import counts as counting
 from hackathon_memory.search import filters as filtering
@@ -93,6 +93,13 @@ COMPARE_SECONDS = 30
 # The order by the model took 2 s in the middle; the service is sometimes much slower, so the
 # order by meaning is kept after this time, and the page says so.
 RERANK_SECONDS = 8
+# The stand-in of the search model (search/stand_in.py), from its measure of 24 October 2026
+# (evals/results/20261024T051625Z-search-fallback.json): with no thinking it found 40 of 57, and
+# 38 on "high", which took 123 s in the middle; 49 of its 56 orders came within 7 s, the other 7
+# in 29 to 47 s. Its comparisons were not measured, so they wait as long as Gemini's.
+STAND_IN_LEVEL = rerank.OPEN_OFF
+STAND_IN_RERANK_SECONDS = 10
+STAND_IN_COMPARE_SECONDS = COMPARE_SECONDS
 MEANING, WORDS = engine.MEANING, engine.WORDS
 MODES = (MEANING, WORDS)
 FILTERS = ("event", "year", "category", "proof", "life", "winner")
@@ -124,9 +131,26 @@ DATABASE_DOWN = (
     "The database is not running. Start Docker Desktop, run "
     '"docker compose up -d --wait db" in the project folder, then reload this page.'
 )
+# What the page says when Gemini gives no order (design 8.2). Before 24 October 2026 it said "did
+# not respond in time" also for errors that came back in 5 seconds.
 AI_LATE = (
-    "Gemini did not respond in time, so the results are in the search order. Try the button "
-    "again in a moment."
+    "Gemini did not answer within {seconds} seconds, so the results are in the search order. Try "
+    "the button again: after {left} more failure{s} in a row, {stand_in} takes its place for "
+    "{minutes} minutes."
+)
+AI_FAILED = (
+    "Gemini failed to give an order just now, so the results are in the search order. Try the "
+    "button again: after {left} more failure{s} in a row, {stand_in} takes its place for "
+    "{minutes} minutes."
+)
+AI_SPENT = "The budget for AI calls is spent, so the results are in the search order."
+STAND_IN_USED = (
+    "Gemini failed {failures} times in a row, so {stand_in} put these results in order. Gemini is "
+    "asked again after {minutes} minutes."
+)
+BOTH_FAILED = (
+    "Neither Gemini nor {stand_in}, which takes its place when it fails, gave an order just now, "
+    "so the results are in the search order. Try again in a few minutes."
 )
 GOOGLE_AWAY = (
     "Semantic search is not available just now (Google's embedding service did not respond), "
@@ -296,12 +320,15 @@ def create_app(
     github_client: Any = None,
     mirrors: Mapping[str, Any] | None = None,
     register_writer: Any = None,
+    stand_in_client: Any = None,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
     a submission asks GitHub with `github_client` and the ledger with `mirrors`; by default they
     are made when first needed, with the promises of collect/github.py. `register_writer` writes
-    one record to the register (hedera/registry.py); by default it is made when first needed."""
+    one record to the register (hedera/registry.py); by default it is made when first needed.
+    `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
+    is made, counted by the meter, when it is first needed."""
     settings = settings or Settings()
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
@@ -314,7 +341,9 @@ def create_app(
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
                                "github": github_client, "mirrors": mirrors,
-                               "writer": register_writer}  # fmt: skip
+                               "writer": register_writer, "stand_in": stand_in_client}  # fmt: skip
+    breaker = stand_in.Breaker()  # Gemini's failures in a row (design 8.2)
+    app.state.breaker = breaker
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
     graphs: dict[tuple, tuple[float, Any]] = {}  # the groups of a list, with when they were made
 
@@ -327,6 +356,21 @@ def create_app(
 
             clients[name] = metered_client(settings, purpose)
         return clients[name]
+
+    def standing_in(purpose: str) -> Any:
+        """The client of the stand-in of the search model, counted under `purpose`."""
+        if clients["stand_in"] is None:
+            from hackathon_memory.llm.open_models import open_models
+
+            clients["stand_in"] = open_models(settings, purpose)
+        return clients["stand_in"].tagged(purpose=purpose)
+
+    def told(words: str) -> str:
+        """A message about Gemini and its stand-in, with the numbers of the switch."""
+        left = breaker.left()
+        return words.format(seconds=RERANK_SECONDS, left=left, s="s" if left != 1 else "",
+                            stand_in=stand_in.NAME, failures=stand_in.FAILURES,
+                            minutes=int(stand_in.SECONDS // 60))  # fmt: skip
 
     def project_facts(conninfo: str) -> list[filtering.Facts]:
         """The facts of every project for the filters, read at most once a minute."""
@@ -483,9 +527,11 @@ def create_app(
         with_ai: bool,
         chosen: filtering.Filters,
         notes: list[str],
-    ) -> tuple[list[int], str | None]:
-        """The projects closest to the idea, closest first, at most SHOWN, and where Gemini's
-        order came from when it was asked for. When Google cannot be reached, the words.
+    ) -> tuple[list[int], str | None, str | None]:
+        """The projects closest to the idea, closest first, at most SHOWN; where the model's
+        order came from when it was asked for (search/rerank.py); and the name of the model
+        that gave it: Gemini, or after its failures its stand-in (search/stand_in.py). When
+        Google cannot be reached, the words.
 
         A filter keeps the projects of the SHOWN closest that have its values (design 8.2), so
         the number next to a value of a filter is the number of projects it leaves."""
@@ -496,29 +542,49 @@ def create_app(
 
         try:
             if only == []:
-                return [], None
+                return [], None, None
             if mode == WORDS:
-                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
+                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
             if not EmbeddingStore(conninfo).counts(settings.gemini_embedding_model)["embeddings"]:
                 notes.append(NO_PAGE_EMBEDDINGS)
-                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
+                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
             ranking = narrowed(engine.by_meaning(
                 EmbeddingStore(conninfo), client("google", "embed_query"), idea,
                 model=settings.gemini_embedding_model, limit=SHOWN,
             ))  # fmt: skip
             if not (with_ai and ranking):
-                return ranking, None
+                return ranking, None, None
+            pool, rest = ranking[: rerank.POOL], ranking[rerank.POOL :]
+            scope = scope_of(chosen.chosen(), FILTERS)
+            if not breaker.standing_in():
+                order, how = rerank.order_pool(
+                    conninfo, client("rerank", "rerank"), idea, pool,
+                    model=settings.gemini_search_model,
+                    level=settings.gemini_search_thinking_level, scope=scope,
+                    timeout_seconds=RERANK_SECONDS,
+                )  # fmt: skip
+                if how in rerank.ORDERED:
+                    if how == rerank.ASKED:
+                        breaker.answered()
+                    return order + rest, how, "Gemini"
+                if how == rerank.SPENT:
+                    notes.append(AI_SPENT)
+                    return ranking, how, None
+                if not breaker.failed():
+                    notes.append(told(AI_LATE if how == rerank.LATE else AI_FAILED))
+                    return ranking, how, None
             order, how = rerank.order_pool(
-                conninfo, client("rerank", "rerank"), idea, ranking[: rerank.POOL],
-                model=settings.gemini_search_model, level=settings.gemini_search_thinking_level,
-                scope=scope_of(chosen.chosen(), FILTERS), timeout_seconds=RERANK_SECONDS,
+                conninfo, standing_in("rerank"), idea, pool, model=stand_in.MODEL,
+                level=STAND_IN_LEVEL, scope=scope, timeout_seconds=STAND_IN_RERANK_SECONDS,
             )  # fmt: skip
-            if how == rerank.LATE:
-                notes.append(AI_LATE)
-            return order + ranking[rerank.POOL :], how
+            if how in rerank.ORDERED:
+                notes.append(told(STAND_IN_USED))
+                return order + rest, how, stand_in.NAME
+            notes.append(AI_SPENT if how == rerank.SPENT else told(BOTH_FAILED))
+            return ranking, how, None
         except (*FAILED_CALLS, BudgetExceeded):
             notes.append(GOOGLE_AWAY)
-            return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
+            return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
 
     def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
                      only: list[int] | None, every: filtering.Choices,
@@ -531,7 +597,7 @@ def create_app(
         if only is None:
             ids = ranking
         else:
-            ids, _ = ranking_of(conninfo, idea, mode, None, False, filtering.Filters(), [])
+            ids, _, _ = ranking_of(conninfo, idea, mode, None, False, filtering.Filters(), [])
         return filtering.keep_chosen(filtering.choices(facts_of(conninfo, ids)), every, chosen)
 
     @app.get("/", response_class=HTMLResponse)
@@ -616,12 +682,14 @@ def create_app(
                               pages=math.ceil(total / PAGE_SIZE), first_shown=first,
                               last_shown=first + len(results) - 1, **shown)  # fmt: skip
             began = time.perf_counter()
-            ranking, how = ranking_of(conninfo, idea, mode, only, with_ai, chosen, notes)
+            ranking, how, sorted_by = ranking_of(conninfo, idea, mode, only, with_ai, chosen,
+                                                 notes)  # fmt: skip
             elapsed = time.perf_counter() - began
             offer = search_offer(conninfo, idea, mode, ranking, only, every, chosen)
             if cut:
                 notes.append(IDEA_CUT)
-            ordered = how in (rerank.KEPT, rerank.ASKED)
+            ordered = how in rerank.ORDERED
+            shown["sorted_by"] = sorted_by
             none_close = bool(only) and not ranking  # the filters match, but none is close
             if view == CHARTS:
                 built, groups, said = charts_of(conninfo, ranking)
@@ -966,22 +1034,42 @@ def create_app(
             return render(request, "_compare.html", 400, found={}, failed=True, asked_ids=[],
                           **place)  # fmt: skip
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
-                    BudgetExceeded, *FAILED_CALLS)  # fmt: skip
-        try:
-            conninfo = database()
-            items = comparing.items_for(conninfo, project_ids, model=settings.gemini_rewrite_model,
-                                        version=INSTRUCTIONS_VERSION)  # fmt: skip
-            found, _ = comparing.kept_or_compared(
+                    BudgetExceeded, *FAILED_CALLS, *rerank.NOT_ORDERED)  # fmt: skip
+
+        def compared(conninfo: str, items: list, by_stand_in: bool) -> tuple[dict, int]:
+            if by_stand_in:
+                return comparing.kept_or_compared(
+                    conninfo, standing_in("compare"), idea, items, model=stand_in.MODEL,
+                    thinking_level=STAND_IN_LEVEL, timeout_seconds=STAND_IN_COMPARE_SECONDS,
+                )  # fmt: skip
+            return comparing.kept_or_compared(
                 conninfo, client("llm", "compare"), idea, items,
                 model=settings.gemini_search_model,
                 thinking_level=settings.gemini_search_thinking_level,
                 timeout_seconds=COMPARE_SECONDS,
             )  # fmt: skip
+
+        by_stand_in = breaker.standing_in()
+        try:
+            conninfo = database()
+            items = comparing.items_for(conninfo, project_ids, model=settings.gemini_rewrite_model,
+                                        version=INSTRUCTIONS_VERSION)  # fmt: skip
+            try:
+                found, asked = compared(conninfo, items, by_stand_in)
+                if asked and not by_stand_in:
+                    breaker.answered()
+            except (comparing.CompareError, *rerank.NOT_ORDERED) as error:
+                # A failure of Gemini counts toward its stand-in (design 8.2); the one that ends
+                # its turn hands the comparison to the stand-in at once.
+                if by_stand_in or isinstance(error, BudgetExceeded) or not breaker.failed():
+                    raise
+                by_stand_in = True
+                found, _ = compared(conninfo, items, by_stand_in)
         except failures:
             return render(request, "_compare.html", 503, found={}, failed=True,
                           asked_ids=project_ids, **place)  # fmt: skip
         return render(request, "_compare.html", found=found, failed=False, asked_ids=project_ids,
-                      **place)  # fmt: skip
+                      compared_by=stand_in.NAME if by_stand_in else "Gemini", **place)  # fmt: skip
 
     def about(request: Request, name: str) -> HTMLResponse:
         """A window of the bottom of the page: a part of a page for htmx, a whole page without."""
@@ -1029,6 +1117,8 @@ def create_app(
         "CONFIRMED": seen.CONFIRMED,
         "MAX_IDS": submission.MAX_IDS,
         "RERANK_SECONDS": RERANK_SECONDS,
+        # the model that orders the closest now: Gemini, or its stand-in (search/stand_in.py)
+        "ordering_model": lambda: stand_in.NAME if breaker.standing_in() else "Gemini",
         "LONGEST_IDEA": LONGEST_IDEA,
         "EXAMPLES": EXAMPLES,
         "REFS": references.BY_KEY,
