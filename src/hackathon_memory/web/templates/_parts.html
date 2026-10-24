@@ -36,7 +36,7 @@
     </div>
     <div class="card-footer hm-card-foot">
       {%- for part, mark in (("proof", marks.proof(card.proof_status, card.proven_by_code_only)), ("life", marks.life(card.life) if card.life else "")) if mark %}
-      <a class="hm-mark-link" href="{{ link }}" data-open-viewer="{{ pid }}" data-scroll-to="judged-{{ part }}-{{ pid }}" hx-get="/project/{{ pid }}/panel{% if query %}?{{ query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ mark }}<span class="visually-hidden">: how it was judged</span></a>
+      <a class="hm-mark-link" href="{{ link }}" data-open-viewer="{{ pid }}" data-scroll-to="{{ 'ledger' if part == 'proof' else 'life' }}-{{ pid }}" hx-get="/project/{{ pid }}/panel{% if query %}?{{ query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ mark }}<span class="visually-hidden">: how it was judged</span></a>
       {%- endfor %}
     </div>
     {% if compared %}

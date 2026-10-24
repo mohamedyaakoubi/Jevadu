@@ -374,20 +374,27 @@ def test_the_card_says_how_its_proof_and_its_activity_were_judged(site) -> None:
     client, _, ids, database = site
     pebble = ids["Pebble Pay"]
     plain = client.get(f"/project/{pebble}/panel").text
-    assert "How this was judged" in plain and "Neither the page nor the README names" in plain
+    # The box "How this was judged" went into "On the ledger" and the code (24 October 2026).
+    assert "How this was judged" not in plain and "Neither the page nor the README names" in plain
     with psycopg.connect(database) as conn:  # the invented event: 6 to 8 March 2026
         conn.execute("UPDATE events SET starts_at = '2026-03-06T00:00:00Z', ends_on = '2026-03-08'")
     own_id(database, pebble, "0.0.4870201", "topic")  # made on 6 March 2026
     with psycopg.connect(database) as conn:
         conn.execute("UPDATE projects SET proof_status = 'proof_found' WHERE id = %s", (pebble,))
     panel = client.get(f"/project/{pebble}/panel").text
-    assert "The window of ETHGlobal Sample Event: 4 February 2026 to 22 March 2026" in panel
-    assert "topic, made 6 March 2026: <b>made inside the window</b>" in panel
-    assert f'href="#judged-proof-{pebble}" data-scroll-to="judged-proof-{pebble}"' in panel
+    ledger = panel[panel.index(f'id="ledger-{pebble}"') :]
+    ledger = ledger[: ledger.index("</section>")]
+    assert "The window of ETHGlobal Sample Event: 4 February 2026 to 22 March 2026" in ledger
+    assert "<b>Proof found: made inside the window</b>" in ledger  # the ID that decides it
+    assert f'href="#ledger-{pebble}" data-scroll-to="ledger-{pebble}"' in panel
+    assert f'href="#life-{pebble}" data-scroll-to="life-{pebble}"' in panel
+    life = panel[panel.index(f'id="life-{pebble}"') :]
+    assert "ETHGlobal Sample Event ended on 8 March 2026, so a sign of life is a push" in life
     listed = client.get("/").text
     card = listed[listed.index(f'id="result-{pebble}"') :]
     card = card[: card.index("</li>")]
-    assert f'data-scroll-to="judged-proof-{pebble}"' in card  # the mark opens the card there
+    assert f'data-scroll-to="ledger-{pebble}"' in card  # the mark opens the card there
+    assert f'data-scroll-to="life-{pebble}"' in card
     assert f'hx-get="/project/{pebble}/panel"' in card
 
 
@@ -499,7 +506,7 @@ def test_the_card_keeps_the_three_sources_apart(site) -> None:  # noqa: ANN001
     assert ">Inferred<" in text and ">Stated<" in text
     assert f"&ldquo;{ON_PEBBLE}&rdquo;" in text  # the quote that the field rests on
     assert "Hidden: none of its quotes were found" in text
-    assert "No Hedera ID on the page or in the README" in text
+    assert "Neither the page nor the README names a Hedera ID" in text
     assert "as of 10 October 2026" in text  # the day it was saved from its site
     assert "compare-section" not in text  # no idea on its own page, so no comparison
     # The title is a level 1 heading here, so a level 2 stands above the sections of level 3.
@@ -1021,9 +1028,14 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     assert "ETHGlobal Sample Event (6 to 8 March)</option>" in start.text  # a dated one
     part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
     assert part.status_code == 200 and "no hackathon selected" in part.text
-    assert "Proof: found, dates not judged" in part.text
+    # "found, dates not judged", in grey, was not understood (24 October 2026)
+    mark = 'status-azure hm-status"><span class="status-dot"></span>Proof: IDs found, no hackathon'
+    assert mark in part.text
+    assert 'href="#check-ledger" data-scroll-to="check-ledger"' in part.text
+    ledger = part.text[part.text.index('id="check-ledger"') :]
+    assert "Choose the hackathon in the check form to judge them." in ledger
     head = part.text.split("</header>")[0]  # the marks of the check itself
-    assert "Found, dates not judged" in part.text and "Activity:" not in head
+    assert "its dates are not judged without a hackathon" in ledger and "Activity:" not in head
     assert "Register it for that hackathon?" in part.text  # Pebble Pay keeps it
     assert "Register on Hedera testnet" not in part.text
     form = {"repo": REPO, "event": "", "starts": "", "ends": "", "account": ""}
@@ -1474,6 +1486,21 @@ def test_the_page_of_an_event_is_the_page_its_projects_link_to() -> None:
     winners = "https://hedera-hackathon.hashgraph.swiss/#winners"
     assert event_page("hedera-hackathon.hashgraph.swiss", "x", winners) == winners.split("#")[0]
     assert event_page("devpost.com", "hedera21", None) is None  # no page known: no link
+
+
+def test_each_id_says_why_it_counts_in_plain_words() -> None:
+    from hackathon_memory.search.listing import LedgerLine
+    from hackathon_memory.web.data import reason_of, window_of
+
+    window = window_of(datetime(2026, 3, 6, tzinfo=UTC), date(2026, 3, 8))
+    made = datetime(2026, 3, 7, tzinfo=UTC)
+    found = LedgerLine("0.0.5", "readme", "testnet", "proof_found", "topic", made, None, made)
+    assert reason_of(found, window) == "made inside the window"
+    other = LedgerLine("0.0.5", "readme", "mainnet", "another_kind", "account", made, None, made,
+                       said_kind="contract")  # fmt: skip
+    assert reason_of(other, window) == (
+        "the README calls it a contract, but the ledger knows it as an account"
+    )
 
 
 def test_a_date_is_written_as_the_pages_write_it() -> None:

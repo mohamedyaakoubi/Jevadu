@@ -121,7 +121,9 @@ PROOF_SHORT = {
     "no_id_given": "no ID given",
     filtering.NOT_CHECKED: "not checked yet",
     submission.NOT_ASKED: "no answer from the ledger",
-    "dates_not_judged": "found, dates not judged",
+    # A check with no hackathon: the ledger knows IDs, and their dates wait for one. "found, dates
+    # not judged", in grey, was not understood (24 October 2026).
+    "dates_not_judged": "IDs found, no hackathon chosen",
 }
 NO_SUCH_PROJECT = "There is no project with this ID. Close this window and search again."
 SERVER_FAILED = (
@@ -1127,6 +1129,7 @@ def create_app(
         "hashscan": data.hashscan,
         "file_link": code_reading.file_link,
         "judged_of": data.judged_of,
+        "reason_of": data.reason_of,
         "NETWORK_WORDS": data.NETWORK_WORDS,
         "ACTION_WORDS": data.ACTION_WORDS,
         "KIND_WORDS": data.KIND_WORDS,

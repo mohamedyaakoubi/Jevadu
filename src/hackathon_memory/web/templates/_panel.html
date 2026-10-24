@@ -17,8 +17,8 @@
     <p class="project-lede">{{ card.short_line }} <span class="hm-tiny">The team's tagline</span></p>
     {% endif %}
     <div class="project-marks">
-      <a class="hm-mark-link" href="#judged-proof-{{ pid }}" data-scroll-to="judged-proof-{{ pid }}">{{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
-      {% if facts.life %}<a class="hm-mark-link" href="#judged-life-{{ pid }}" data-scroll-to="judged-life-{{ pid }}">{{ marks.life(facts.life) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("life", "life") }}{% endif %}
+      <a class="hm-mark-link" href="#ledger-{{ pid }}" data-scroll-to="ledger-{{ pid }}">{{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
+      {% if facts.life %}<a class="hm-mark-link" href="#life-{{ pid }}" data-scroll-to="life-{{ pid }}">{{ marks.life(facts.life) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("life", "life") }}{% endif %}
       {{ marks.tags(facts) }}{% if facts.prize_state in ("hedera_prize", "other_prize") or facts.entry_kind == WINNER_ENTRY %}{{ parts.info("event", "the prize and the winners' list") }}{% endif %}
     </div>
     <p class="project-links">
@@ -35,33 +35,6 @@
   <div class="project-cols">
     <div class="project-col project-facts">
       {% set how = judged_of(facts) %}
-      <section class="card project-section judged-section" aria-labelledby="judged-{{ pid }}-title">
-        <div class="card-body">
-          <h3 id="judged-{{ pid }}-title">How this was judged{{ parts.info("judged", "how this was judged") }}</h3>
-          <div class="hm-judged" id="judged-proof-{{ pid }}" tabindex="-1">
-            <p class="hm-judged-mark">{{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}</p>
-            {% if how.window %}<p class="hm-small">The window of {{ facts.event }}: {{ how.window.start | day }} to {{ how.window.end | day }}, from 30 days before its start to 14 days after its end.</p>
-            {% elif facts.ledger %}<p class="hm-small">The end of {{ facts.event }} is not known yet, so no date can be judged.</p>{% endif %}
-            {% if how.reasons %}
-            <ul class="hm-judged-ids">
-              {% for one in how.reasons %}{% set line = one.line %}
-              <li><span class="id">{{ line.entity_id }}</span> <span class="text-secondary">({{ NETWORK_WORDS.get(line.network, line.network) }})</span>: {{ KIND_WORDS.get(line.kind, line.kind or "nothing") }}{% if line.created_at %}, made {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}{% if line.found_in == "code" %}, in the code{% endif %}: <b>{{ one.words }}</b>.</li>
-              {% endfor %}
-            </ul>
-            {% if how.more %}<p class="hm-small">And {{ how.more }} more ID{{ "s" if how.more != 1 }} with the same result.</p>{% endif %}
-            <p class="hm-small">The best result among its IDs is the project's. <a href="#ledger-{{ pid }}-title" data-scroll-to="ledger-{{ pid }}-title">Every ID, with the day it was checked</a>, is listed below.</p>
-            {% else %}
-            <p class="hm-small">Neither the page nor the README names a Hedera ID, and the code names none of the team's own made during the event. That is common, and says nothing bad about the project. <a href="#code-{{ pid }}-title" data-scroll-to="code-{{ pid }}-title">What its code shows</a> is below.</p>
-            {% endif %}
-          </div>
-          {% if facts.life %}
-          <div class="hm-judged" id="judged-life-{{ pid }}" tabindex="-1">
-            <p class="hm-judged-mark">{{ marks.life(facts.life) }}</p>
-            <p class="hm-small">{% if how.life_after %}{{ facts.event }} ended on {{ facts.event_ends_on | day }}, so a sign of life is a push of its code, or an activity of its own IDs on the ledger, after {{ how.life_after | day }}.{% else %}The end of {{ facts.event }} is not known, so no date is a sign of life yet.{% endif %} Last push: {{ facts.last_push_at | day if facts.last_push_at else "not known" }}. Last activity of its own IDs: {{ facts.last_own_activity_at | day if facts.last_own_activity_at else "none" }}. So: {{ facts.life.why }}.</p>
-          </div>
-          {% endif %}
-        </div>
-      </section>
       {% if linked %}
       <section class="card project-section linked-section" aria-labelledby="linked-{{ pid }}-title">
         <div class="card-body">
@@ -77,11 +50,14 @@
       </section>
       {% endif %}
       {% if card.story %}{{ parts.ledger_story(card.story, pid) }}{% endif %}
-      <section class="card project-section ledger-section" aria-labelledby="ledger-{{ pid }}-title">
+      {# The proof mark leads here (design 12.1, S2): the window of the event, then each ID with
+         why it counts or not, in sentences made by code. #}
+      <section class="card project-section ledger-section" id="ledger-{{ pid }}" tabindex="-1" data-pointable aria-labelledby="ledger-{{ pid }}-title">
         <div class="card-body">
           <h3 id="ledger-{{ pid }}-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>
           {% set checked = facts.ledger | selectattr("network") | list %}
           {% if checked %}
+          <p class="hm-small hm-ledger-lead">{% if how.window %}The window of {{ facts.event }}: {{ how.window.start | day }} to {{ how.window.end | day }}, from 30 days before its start to 14 days after its end.{% else %}The end of {{ facts.event }} is not known yet, so no date can be judged.{% endif %} The best result among its IDs is the project's: {{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}</p>
           <ul class="id-list">
           {% for line in checked %}
             {% set link = hashscan(line.network, line.kind, line.entity_id) %}
@@ -89,12 +65,13 @@
               <p class="id-name">{% if link %}<a class="id" href="{{ link }}" rel="noopener" target="_blank">{{ line.entity_id }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>{% else %}<span class="id">{{ line.entity_id }}</span>{% endif %} <span class="badge bg-secondary-lt">{{ line.network }}</span></p>
               {% if line.kind == "transaction" %}<p>Transaction: {{ ACTION_WORDS.get(line.action, (line.action or "an action") | lower) }}{% if line.created_at %}, {{ line.created_at | day }}{% endif %}{% if line.outcome and line.outcome != "SUCCESS" %}; failed ({{ line.outcome }}){% endif %}.</p>
               {% else %}<p>{{ KIND_WORDS.get(line.kind, line.kind or "nothing") | capitalize }}{% if line.created_at %}, created {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}.</p>{% endif %}
-              <p class="hm-small">{{ STATUS_WORDS.get(line.status, line.status) | capitalize }} &middot; {% if line.found_in == "code" %}{{ parts.in_code(facts.repository, card.code_reading.commit if card.code_reading else none, line.found_at) }}{% elif line.found_in == "readme" %}in the README{% else %}on the page{% endif %} &middot; checked {{ line.asked_at | day if line.asked_at else "not yet" }}</p>
+              {% set why = (STATUS_WORDS.get(line.status, line.status) | capitalize) ~ ": " ~ reason_of(line, how.window) %}
+              <p class="hm-small">{% if line.status == facts.proof_status %}<b>{{ why }}</b>{% else %}{{ why }}{% endif %} &middot; {% if line.found_in == "code" %}{{ parts.in_code(facts.repository, card.code_reading.commit if card.code_reading else none, line.found_at) }}{% elif line.found_in == "readme" %}in the README{% else %}on the page{% endif %} &middot; checked {{ line.asked_at | day if line.asked_at else "not yet" }}</p>
             </li>
           {% endfor %}
           </ul>
           {% else %}
-          <p class="text-secondary">No Hedera ID on the page or in the README. That is common, and says nothing bad about the project.</p>
+          <p class="text-secondary">Neither the page nor the README names a Hedera ID, and the code names none of the team's own made during the event. That is common, and says nothing bad about the project. <a href="#code-{{ pid }}-title" data-scroll-to="code-{{ pid }}-title">What its code shows</a> is below.</p>
           {% endif %}
         </div>
       </section>
@@ -109,7 +86,8 @@
           {% else %}
           <p class="text-secondary">The page links no repository.</p>
           {% endif %}
-          {% if facts.life %}<p class="hm-small">Activity: {{ facts.life.status }}, {{ facts.life.why }}{% if facts.life.last_sign %}; last sign {{ facts.life.last_sign | day }}{% endif %}.</p>{% endif %}
+          {# The activity mark leads here: the dates behind it, and the rule. #}
+          {% if facts.life %}<p class="hm-small hm-life-line" id="life-{{ pid }}" tabindex="-1" data-pointable>{{ marks.life(facts.life) }} {% if how.life_after %}{{ facts.event }} ended on {{ facts.event_ends_on | day }}, so a sign of life is a push of its code, or an activity of its own IDs on the ledger, after {{ how.life_after | day }}.{% else %}The end of {{ facts.event }} is not known, so no date is a sign of life yet.{% endif %} Last push: {{ facts.last_push_at | day if facts.last_push_at else "not known" }}. Last activity of its own IDs: {{ facts.last_own_activity_at | day if facts.last_own_activity_at else "none" }}. So: {{ facts.life.why }}.</p>{% endif %}
           {% if facts.repository and facts.code_status == "found" %}{{ parts.hedera_code(card.code_reading) }}{% endif %}
         </div>
       </section>

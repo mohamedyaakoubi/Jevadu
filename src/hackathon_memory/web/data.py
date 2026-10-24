@@ -31,7 +31,6 @@ from hackathon_memory.check.proof import (
     DATES_DO_NOT_FIT,
     FOUND_BUT_EMPTY,
     NOT_FOUND,
-    ORDER,
     PROOF_FOUND,
     WINDOW_NOT_KNOWN,
     Window,
@@ -62,7 +61,6 @@ HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transactio
 KIND_WORDS = {"schedule": "scheduled transaction"}
 NETWORK_WORDS = {"testnet": "test network", "mainnet": "main network",
                  "previewnet": "preview network"}  # fmt: skip
-JUDGED_IDS = 5  # the IDs that "How this was judged" shows; the others are counted
 # The kinds of action of a transaction that the mirror node names, in plain words. Another kind is
 # shown as the node writes it.
 ACTION_WORDS = {
@@ -108,22 +106,18 @@ SERVICE_TRANSACTIONS = {  # plural; the singular drops the last letter
 
 
 @dataclass(frozen=True)
-class Reason:
-    """One ID that decides a project's proof, on the network of its best result, and why."""
-
-    line: LedgerLine
-    words: str
-
-
-@dataclass(frozen=True)
 class Judged:
-    """What "How this was judged" shows on a card (design 12.1, S2): the window of the event, the
-    IDs whose result is the project's, and the day after which a sign counts as a sign of life."""
+    """What a card says about how its marks were judged (design 12.1, S2): the window of the
+    event, in "On the ledger", and the day after which a sign counts as a sign of life, in the
+    activity line of the code."""
 
     window: Window | None
-    reasons: tuple[Reason, ...]
-    more: int  # IDs with the same result that are not shown
     life_after: datetime | None
+
+
+def a_or_an(word: str) -> str:
+    """The word with its article: "an account", "a topic"."""
+    return f"{'an' if word[:1].lower() in 'aeiou' else 'a'} {word}"
 
 
 def reason_of(line: LedgerLine, window: Window | None) -> str:
@@ -135,8 +129,9 @@ def reason_of(line: LedgerLine, window: Window | None) -> str:
     if line.status == DATES_DO_NOT_FIT:
         return "made and used outside the window"
     if line.status == ANOTHER_KIND:
-        return (f"the {where} calls it a {line.said_kind}, but the ledger knows it as a "
-                f"{KIND_WORDS.get(line.kind, line.kind)}")  # fmt: skip
+        known = KIND_WORDS.get(line.kind, line.kind or "")
+        return (f"the {where} calls it {a_or_an(line.said_kind or '')}, but the ledger knows it "
+                f"as {a_or_an(known)}")  # fmt: skip
     if line.status == FOUND_BUT_EMPTY:
         return ("nothing in it: a topic with no message, a token with no unit, a deleted contract "
                 "or a failed transaction")  # fmt: skip
@@ -151,19 +146,9 @@ def reason_of(line: LedgerLine, window: Window | None) -> str:
 
 def judged_of(facts: ResultCard) -> Judged:
     """The facts behind the proof and the activity of a project, for its card."""
-    window = window_of(facts.event_starts_at, facts.event_ends_on)
-    best: dict[tuple[str, str], LedgerLine] = {}
-    for line in facts.ledger:
-        if line.network is None or line.status not in ORDER:
-            continue
-        key = (line.entity_id, line.found_in)
-        if key not in best or ORDER.index(line.status) < ORDER.index(best[key].status):
-            best[key] = line
-    deciding = [line for line in best.values() if line.status == facts.proof_status]
-    reasons = tuple(Reason(line, reason_of(line, window)) for line in deciding[:JUDGED_IDS])
     ended = facts.event_ends_on
     after = datetime.combine(ended, time.max, tzinfo=UTC) + AFTER_THE_EVENT if ended else None
-    return Judged(window, reasons, max(0, len(deciding) - JUDGED_IDS), after)
+    return Judged(window_of(facts.event_starts_at, facts.event_ends_on), after)
 
 
 def hashscan(network: str | None, kind: str | None, entity_id: str) -> str | None:

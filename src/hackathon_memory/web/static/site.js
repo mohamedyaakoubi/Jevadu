@@ -463,12 +463,14 @@
   // ---------------------------------------------------------------- how a mark was judged
   // A mark of the proof or the activity leads to how it was judged (design 12.1, S1 to S3): inside
   // a card or a check it brings that part into view; on a card of the list it opens the project's
-  // card first, and brings the part into view once the card is there.
+  // card first, and brings the part into view once the card is there. The window moves as little
+  // as it can: a part that fits is shown whole, a taller one from its top (24 October 2026: it
+  // went to the top every time, far down the check).
   var pointedAt = null; // the part to bring into view when the window of a project opens
   function bringIntoView(id) {
     var part = $(id);
     if (!part) return false;
-    part.scrollIntoView({ block: "start", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
+    part.scrollIntoView({ block: "nearest", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
     if (part.hasAttribute("tabindex")) part.focus({ preventScroll: true });
     part.classList.remove("is-pointed");
     void part.offsetWidth; // start the moment of light again

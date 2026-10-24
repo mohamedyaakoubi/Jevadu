@@ -2,7 +2,8 @@
 
 {% macro proof(status, from_code=false) -%}
 {% set colour = {"proof_found": "green", "dates_do_not_fit": "orange", "found_but_empty": "orange",
-                 "another_kind": "orange", "window_not_known": "orange", "not_found": "red"} %}
+                 "another_kind": "orange", "window_not_known": "orange", "not_found": "red",
+                 "dates_not_judged": "azure"} %}
 <span class="status status-{{ colour.get(status, 'secondary') }} hm-status"><span class="status-dot"></span>Proof: {{ PROOF_SHORT.get(status or "not_checked", status) }}{% if from_code and status == "proof_found" %} in the code{% endif %}</span>
 {%- endmacro %}
 

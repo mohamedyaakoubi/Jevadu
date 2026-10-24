@@ -34,12 +34,13 @@
       {% endif %}
 
       {% if result.story %}{{ parts.ledger_story(result.story, "check", source="README", source_title="README", own="those of the README whose kind fits it, without a shared service", no_days=("No hackathon was chosen." if no_dates else "The days of the hackathon are not known yet."), tip="story-readme", lines=readme_lines) }}{% endif %}
-      <section class="card project-section ledger-section" aria-labelledby="check-ledger-title">
+      {# The proof mark leads here (design 12.1, S3), to a first sentence that says what it says. #}
+      <section class="card project-section ledger-section" id="check-ledger" tabindex="-1" data-pointable aria-labelledby="check-ledger-title">
         <div class="card-body">
           <h3 id="check-ledger-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>
-          {% set window = event.window %}
-          <p class="hm-small" id="check-ids" tabindex="-1">{% if no_dates %}No hackathon selected: the dates are shown, not judged.{% elif window %}Event window: {{ window.start | day }} to {{ window.end | day }} (30 days before the start to 14 days after the end).{% else %}The end date of this event is not known yet, so the dates are not judged.{% endif %}</p>
+          {% set window = event.window if event else none %}
           {% if result.ids %}
+          <p class="hm-small hm-ledger-lead">{% if no_dates %}{% if proof_shown == "dates_not_judged" %}The ledger knows IDs of the README, but no hackathon was chosen, so their dates are shown below and not judged. Choose the hackathon in the check form to judge them.{% else %}No hackathon was chosen, so the dates below are shown and not judged.{% endif %}{% elif window %}The window of the hackathon: {{ window.start | day }} to {{ window.end | day }}, from 30 days before its start to 14 days after its end. The best result among the IDs is the submission's.{% else %}The end date of this hackathon is not known yet, so the dates are not judged.{% endif %}</p>
           <ul class="id-list">
           {% for one in result.ids %}
             {% set facts = one.facts %}
@@ -48,7 +49,7 @@
               <p class="id-name">{% if link %}<a class="id" href="{{ link }}" rel="noopener" target="_blank">{{ one.found.entity_id }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>{% else %}<span class="id">{{ one.found.entity_id }}</span>{% endif %}{% if one.network %} <span class="badge bg-secondary-lt">{{ one.network }}</span>{% endif %}</p>
               {% if facts and facts.found and facts.kind == "transaction" %}{% set action = facts.details.get("name") %}<p>Transaction: {{ ACTION_WORDS.get(action, (action or "an action") | lower) }}{% if facts.created_at %}, {{ facts.created_at | day }}{% endif %}{% if facts.details.get("result") not in (none, "SUCCESS") %}; failed ({{ facts.details.get("result") }}){% endif %}.</p>
               {% elif facts and facts.found %}<p>{{ KIND_WORDS.get(facts.kind, facts.kind) | capitalize }}{% if facts.created_at %}, created {{ facts.created_at | day }}{% endif %}{% if facts.last_activity_at %}, last activity {{ facts.last_activity_at | day }}{% endif %}.</p>{% endif %}
-              <p class="hm-small">{% if one.status == NOT_ASKED %}No answer from the mirror node{% elif no_dates and one.status == "window_not_known" %}Found, dates not judged{% else %}{{ STATUS_WORDS.get(one.status, one.status) | capitalize }}{% endif %}{% if one.in_code %} &middot; {{ parts.in_code(result.repository, hedera_code.commit if hedera_code else none, one.in_code) }}{% endif %}{% if one.found.said_kind %} &middot; the README says {{ one.found.said_kind }}{% endif %}{% if not one.found.network %} &middot; no network named, so both were checked{% endif %}{% if facts %} &middot; checked {{ facts.asked_at | day }}{% endif %}</p>
+              <p class="hm-small">{% if one.status == NOT_ASKED %}No answer from the mirror node{% elif no_dates and one.status == "window_not_known" %}Found on the ledger; its dates are not judged without a hackathon{% else %}{{ STATUS_WORDS.get(one.status, one.status) | capitalize }}{% endif %}{% if one.in_code %} &middot; {{ parts.in_code(result.repository, hedera_code.commit if hedera_code else none, one.in_code) }}{% endif %}{% if one.found.said_kind %} &middot; the README says {{ one.found.said_kind }}{% endif %}{% if not one.found.network %} &middot; no network named, so both were checked{% endif %}{% if facts %} &middot; checked {{ facts.asked_at | day }}{% endif %}</p>
               {% if one.shared %}<p class="hm-small">Other teams use this ID too (more than three in all, or two at one hackathon): most likely a shared service, so it links no project.</p>
               {% elif one.named_elsewhere and one.status in CONFIRMED %}<p class="hm-small">A project with other code uses it too, so its activity does not count as activity of this project.</p>{% endif %}
             </li>
@@ -73,7 +74,7 @@
           {% endif %}
           {% if result.version and result.version.status == "found" %}<p class="hm-small">Commit checked: <span class="id">{{ result.version.sha[:12] }}</span>, the latest on {{ code.default_branch if code and code.default_branch else "the default branch" }}{% if result.version.made_at %}, {{ result.version.made_at | day }}{% endif %}.</p>{% endif %}
           {% if code %}<p class="hm-small">{{ github_reads(code, result.readme, result.version) }}{% if result.readme and result.readme.status == "none" %} No README.{% elif result.readme and result.readme.status != "found" %} The README could not be read as text.{% endif %} GitHub's answers are cached, so checking again sends no new request.</p>{% endif %}
-          {% if result.life and not no_dates %}<p class="hm-small" id="check-life" tabindex="-1">Activity: {{ result.life.status }}, {{ result.life.why }}{% if result.life.last_sign %}; last sign {{ result.life.last_sign | day }}{% endif %}.</p>{% endif %}
+          {% if result.life and not no_dates %}<p class="hm-small" id="check-life" tabindex="-1" data-pointable>Activity: {{ result.life.status }}, {{ result.life.why }}{% if result.life.last_sign %}; last sign {{ result.life.last_sign | day }}{% endif %}.</p>{% endif %}
           {% if code and code.status == "found" %}{{ parts.hedera_code(hedera_code) }}{% endif %}
         </div>
       </section>
@@ -85,7 +86,7 @@
       <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ short }}</{{ level }}>
       <p class="project-lede">Facts from GitHub, the Hedera ledger and the collection. <span class="hm-tiny">No AI-generated text.</span></p>
       <div class="project-marks">
-        <a class="hm-mark-link" href="#check-ids" data-scroll-to="check-ids">{{ marks.proof(proof_shown, result.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
+        <a class="hm-mark-link" href="#check-ledger" data-scroll-to="check-ledger">{{ marks.proof(proof_shown, result.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
         {% if result.life and not no_dates %}<a class="hm-mark-link" href="#check-life" data-scroll-to="check-life">{{ marks.life(result.life) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("life", "life") }}{% endif %}
       </div>
       {% for one in result.problems %}<div class="alert alert-warning mt-3 mb-0" role="status">{{ one }}</div>{% endfor %}
