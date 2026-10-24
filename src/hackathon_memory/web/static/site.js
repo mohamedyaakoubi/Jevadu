@@ -254,9 +254,13 @@
     var width = tip.offsetWidth, height = tip.offsetHeight;
     var left = Math.min(Math.max(8, rect.left + rect.width / 2 - width / 2), window.innerWidth - width - 8);
     var below = rect.bottom + 8, above = rect.top - height - 8;
-    var top = below + height < window.innerHeight - 8 || above < 8 ? below : above;
+    // Below when it fits, else above when it fits. A text taller than both stands whole on the
+    // screen, over its (i) if need be, and scrolls inside itself: it is never taller than the
+    // screen (style.css). Before, it ran off the bottom (24 October 2026).
+    var top = below + height <= window.innerHeight - 8 ? below : above >= 8 ? above :
+      Math.max(8, window.innerHeight - height - 8);
     tip.style.left = Math.round(left) + "px";
-    tip.style.top = Math.round(Math.max(8, top)) + "px";
+    tip.style.top = Math.round(top) + "px";
   }
   function showTip(button) {
     var tip = $(button.getAttribute("data-tip"));

@@ -1433,6 +1433,20 @@ def test_the_six_filters_stand_in_one_row(site, chromium) -> None:  # noqa: ANN0
 
 
 @pytest.mark.browser
+def test_a_long_text_of_an_i_stays_on_the_screen_and_scrolls(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1280, "height": 420})
+    page.goto("http://site.test/")
+    page.wait_for_timeout(1600)  # the first screen of the visit has gone
+    page.locator(".hm-filter .info[data-tip='tip-proof']").click()
+    page.wait_for_selector("#tip-proof:popover-open")
+    box = page.locator("#tip-proof").bounding_box()
+    assert box["y"] >= 0 and box["y"] + box["height"] <= 420  # whole on the screen
+    tall = "(t => t.scrollHeight > t.clientHeight)(document.getElementById('tip-proof'))"
+    assert page.evaluate(tall)  # it scrolls inside itself
+
+
+@pytest.mark.browser
 def test_the_graph_stays_while_the_idea_changes_and_after_clear(site, chromium) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1280, "height": 900})

@@ -350,6 +350,7 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .info:hover span, .info[aria-expanded="true"] span { border-color: var(--tblr-primary); color: var(--tblr-primary); }
 .tip {
   position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(380px, calc(100vw - 24px));
+  max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain;
   padding: 0.75rem 1rem; color: var(--tblr-body-color); background: var(--tblr-bg-surface);
   border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius-lg, 8px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16); font-size: 0.875rem; line-height: 1.5; text-align: left;
