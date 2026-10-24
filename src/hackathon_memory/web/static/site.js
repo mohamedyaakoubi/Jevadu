@@ -680,7 +680,7 @@
     part.classList.remove("is-pointed");
     void part.offsetWidth; // start the moment of light again
     part.classList.add("is-pointed");
-    window.setTimeout(function () { part.classList.remove("is-pointed"); }, 1700);
+    window.setTimeout(function () { part.classList.remove("is-pointed"); }, 2000); // style.css
     return true;
   }
   document.addEventListener("click", function (event) {

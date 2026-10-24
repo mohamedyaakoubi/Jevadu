@@ -1549,6 +1549,23 @@ def test_a_long_list_shows_ten_lines_and_buttons_for_more(site, chromium) -> Non
 
 
 @pytest.mark.browser
+@pytest.mark.parametrize("motion", ["no-preference", "reduce"])
+def test_a_mark_lights_the_part_it_leads_to(site, chromium, motion) -> None:  # noqa: ANN001
+    """A ring shows the part, also when the computer asks for less motion: there the light was
+    an outline, which the rule of no focus frame took away (24 October 2026)."""
+    client, _, ids, _ = site
+    pebble = ids["Pebble Pay"]
+    page = served(chromium, client, viewport={"width": 1440, "height": 900}, reduced_motion=motion)
+    page.goto(f"http://site.test/?open={pebble}")
+    page.wait_for_selector("#viewer[open] .project[data-project]")
+    page.locator("#viewer .project-marks .hm-mark-link").first.click()
+    page.wait_for_timeout(200)
+    part = f"document.getElementById('ledger-{pebble}')"
+    assert "0px 0px 0px 2px" in page.evaluate(f"getComputedStyle({part}).boxShadow")
+    page.context.close()
+
+
+@pytest.mark.browser
 def test_the_six_filters_stand_in_one_row(site, chromium) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1280, "height": 900})

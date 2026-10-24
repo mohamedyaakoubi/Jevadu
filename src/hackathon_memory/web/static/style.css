@@ -350,10 +350,20 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-ledger-lead { margin: 0 0 0.75rem; }
 .ledger-section .text-secondary a { text-decoration: underline; text-underline-offset: 2px; }
 .hm-life-line .hm-status { margin-right: 0.25rem; }
-/* the part that a mark led to shows where it is, for a moment */
-.is-pointed { animation: hm-pointed 1.6s ease-out; border-radius: 6px; }
-@keyframes hm-pointed { from { background: color-mix(in oklab, var(--tblr-primary) 18%, transparent); } to { background: transparent; } }
-@media (prefers-reduced-motion: reduce) { .is-pointed { animation: none; outline: 2px solid var(--tblr-primary); outline-offset: 4px; } }
+/* The part that a mark led to shows where it is for 2 seconds (site.js): a tint and a ring that
+   hold, then fade; still, when the computer asks for less motion. A ring, not an outline: the
+   rule above takes the outline away, and with less motion nothing was lit (24 October 2026). */
+[data-pointable].is-pointed { animation: hm-pointed 2s ease-out; border-radius: 6px; }
+@keyframes hm-pointed {
+  0%, 40% { background-color: color-mix(in oklab, var(--tblr-primary) 16%, var(--tblr-bg-surface)); box-shadow: 0 0 0 2px var(--tblr-primary); }
+  100% { box-shadow: 0 0 0 2px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-pointable].is-pointed {
+    animation: none; box-shadow: 0 0 0 2px var(--tblr-primary);
+    background-image: linear-gradient(color-mix(in oklab, var(--tblr-primary) 14%, transparent), color-mix(in oklab, var(--tblr-primary) 14%, transparent));
+  }
+}
 /* On a phone the graph is a small picture: its words would be too small to read, so the key and
    the lists under it name the groups. */
 @media (max-width: 640px) {
