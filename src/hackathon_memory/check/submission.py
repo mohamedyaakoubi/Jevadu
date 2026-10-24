@@ -42,9 +42,11 @@ from hackathon_memory.check.life import Life, life_of
 from hackathon_memory.check.proof import (
     NO_ID_GIVEN,
     ORDER,
+    PROOF_FOUND,
     WINDOW_NOT_KNOWN,
     Window,
     best,
+    counts_from_the_code,
     judge,
     window_of,
 )
@@ -66,14 +68,19 @@ from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
 from hackathon_memory.collect.github_readmes import Readme, fetch_readmes, saved_readme
 from hackathon_memory.collect.polite import PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.code_ids import CodeIdStore
 from hackathon_memory.db.history import KINDS_THAT_FIT, HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.hedera import registry
 from hackathon_memory.hedera.mirror import MirrorError, MirrorNode
+from hackathon_memory.parse.hedera_code import CodeScan
 from hackathon_memory.parse.hedera_ids import ACCOUNT, FoundId, find_ids
 from hackathon_memory.search import seen
 
 MAX_IDS = 5
+# The own IDs of the code that a check asks the ledger about, the ones in the most files first: a
+# person waits, and each one can take two questions.
+MAX_CODE_IDS = 10
 NETWORKS_WHEN_OPEN = ("testnet", "mainnet")  # as the step of the pipeline asks
 MAX_AGE = timedelta(days=7)  # an answer of the node younger than this is taken from the table
 NOT_ASKED = "not_asked"  # no network could be asked about the ID just now
@@ -129,6 +136,7 @@ class IdResult:
     facts: LedgerFacts | None
     shared: bool = False  # a shared service: many teams name it (design 8.4)
     named_elsewhere: bool = False  # a project with other code names it: not a sign of life
+    in_code: str | None = None  # an ID of the code: the first file where it stands
 
 
 @dataclass(frozen=True)
@@ -152,6 +160,13 @@ class SubmissionCheck:
     seen: list[SeenBefore] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
     story: Story | None = None  # the ledger story of its own IDs (design 7.5), or None
+    code_ids_not_judged: int = 0  # own IDs of the code, not weighed for want of a hackathon
+
+    @property
+    def proven_by_code_only(self) -> bool:
+        """True when only IDs of the code prove the use of Hedera (design 7.3)."""
+        proofs = [one for one in self.ids if one.status == PROOF_FOUND]
+        return bool(proofs) and all(one.in_code for one in proofs)
 
     @property
     def readme_text(self) -> str:
@@ -262,6 +277,52 @@ def judge_ids(
         network = min(on, key=lambda name: ORDER.index(on[name][0]))
         results.append(IdResult(item, on[network][0], network, on[network][1]))
     return results
+
+
+def judge_code_ids(
+    scan: CodeScan | None,
+    readme: list[FoundId],
+    window: Window | None,
+    mirrors: Mapping[str, MirrorNode],
+    ledger: LedgerStore,
+    code_ids: CodeIdStore,
+    repository: str,
+    *,
+    now: Callable[[], datetime],
+    counts: Counter[str] | None = None,
+) -> tuple[list[IdResult], int]:
+    """The IDs of the code that count for the submission (design 7.3): its own (no page or README
+    of the collection names one, nor the code of another repository, nor its own README) and made
+    on the ledger during the hackathon (counts_from_the_code). Without a hackathon none can be
+    weighed: then the number of its own IDs of the code comes back, to be said."""
+    counts = Counter() if counts is None else counts
+    if scan is None or not scan.ids:
+        return [], 0
+    named = {one.entity_id for one in readme}
+    candidates = sorted((one for one in scan.ids.values() if one.entity_id not in named),
+                        key=lambda one: -one.seen.files)  # fmt: skip
+    elsewhere = code_ids.named_elsewhere([one.entity_id for one in candidates], repository)
+    own = [one for one in candidates if one.entity_id not in elsewhere]
+    if window is None:
+        return [], len({one.entity_id for one in own})
+    results = []
+    for one in own[:MAX_CODE_IDS]:
+        for network in [one.network] if one.network else NETWORKS_WHEN_OPEN:
+            mirror = mirrors.get(network)
+            if mirror is None:
+                continue
+            try:
+                facts = asking.facts_of(ledger, mirror, one.entity_id, None, max_age=MAX_AGE,
+                                        now=now, counts=counts)  # fmt: skip
+            except MirrorError:
+                counts["errors_of_the_node"] += 1
+                continue
+            if counts_from_the_code(facts, window):
+                found = FoundId(one.entity_id, network, None, "")
+                results.append(IdResult(found, PROOF_FOUND, network, facts,
+                                        in_code=one.seen.examples[0]))  # fmt: skip
+                break
+    return results, 0
 
 
 def histories(
@@ -389,11 +450,16 @@ def check_submission(
     found = find_ids(check.readme_text)
     check.ids_left_out = max(0, len(found) - MAX_IDS)
     window = event.window if event is not None else None
-    progress(LEDGER, RUNNING if found else SKIPPED)
+    scan = check.hedera_code.scan if check.hedera_code is not None else None
+    progress(LEDGER, RUNNING if found or (scan and scan.ids) else SKIPPED)
     asked_node: Counter[str] = Counter()
     judged = judge_ids(found[:MAX_IDS], window, mirrors, LedgerStore(conninfo), now=now,
                        counts=asked_node)  # fmt: skip
-    if found:
+    from_code, check.code_ids_not_judged = judge_code_ids(
+        scan, found, window, mirrors, LedgerStore(conninfo), CodeIdStore(conninfo), repository,
+        now=now, counts=asked_node,
+    )  # fmt: skip
+    if found or (scan and scan.ids):
         progress(LEDGER, DONE if asked_node["answers_from_the_node"] else SAVED)
     keys = [f"{one.network}:{one.found.entity_id}" for one in judged
             if one.network and one.status in seen.CONFIRMED]  # fmt: skip
@@ -403,7 +469,7 @@ def check_submission(
                  shared=f"{one.network}:{one.found.entity_id}" in known.shared,
                  named_elsewhere=one.found.entity_id in known.named_by_other_code)
         for one in judged
-    ]  # fmt: skip
+    ] + from_code  # fmt: skip
     if found and all(one.status == NOT_ASKED for one in check.ids):
         check.problems.append("The mirror node of Hedera did not answer. Try again in a moment.")
     check.proof = best([one.status for one in check.ids if one.status != NOT_ASKED])
