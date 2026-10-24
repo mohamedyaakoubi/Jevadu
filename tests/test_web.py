@@ -1492,6 +1492,9 @@ def test_the_graph_zooms_with_ctrl_and_the_wheel(site, chromium) -> None:  # noq
     assert [float(n) for n in svg.get_attribute("viewBox").split()] == start
     page.locator("[data-zoom=in]").click()
     assert float(svg.get_attribute("viewBox").split()[2]) < start[2]
+    page.locator(".hm-graph-name").first.hover()  # a link of the picture is never underlined
+    assert page.evaluate("getComputedStyle(document.querySelector('.hm-graph-name'))"
+                         ".textDecorationLine") == "none"  # fmt: skip
 
 
 @pytest.mark.browser
