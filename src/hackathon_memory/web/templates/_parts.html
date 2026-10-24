@@ -228,7 +228,7 @@ in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ pat
     <h3 class="hm-chart-title" id="chart-{{ one.key }}">{{ one.title }}{% if one.tip %}{{ info(one.tip, one.title | lower) }}{% endif %}</h3>
     <p class="hm-chart-note">{{ one.note }}</p>
     {% if one.bars %}
-    <div class="hm-chart-canvas" style="height: {{ 44 + 30 * (one.bars | length) }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
+    <div class="hm-chart-canvas" style="height: {{ [140, 44 + 30 * (one.bars | length)] | max }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
     <ul class="visually-hidden">{% for bar in one.bars %}<li>{{ bar.words }}: {{ bar.count }}{% if bar.winners %}, {{ bar.winners }} with a Hedera prize{% endif %}</li>{% endfor %}</ul>
     {% else %}
     <p class="text-secondary">Nothing to count in this list.</p>
@@ -245,7 +245,7 @@ in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ pat
     <h3 class="hm-chart-title" id="chart-{{ one.key }}">{{ one.title }}{% if one.tip %}{{ info(one.tip, one.title | lower) }}{% endif %}</h3>
     <p class="hm-chart-note">{{ one.note }}</p>
     {% if one.pairs %}
-    <div class="hm-chart-canvas" style="height: {{ 44 + 34 * (one.pairs | length) }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
+    <div class="hm-chart-canvas" style="height: {{ [140, 44 + 34 * (one.pairs | length)] | max }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
     <ul class="visually-hidden">{% for pair in one.pairs %}<li>{{ pair.words }}: {{ pair.won }} of {{ pair.won_of }} with a Hedera prize ({{ pair.won_share }}%), {{ pair.other }} of {{ pair.other_of }} without ({{ pair.other_share }}%)</li>{% endfor %}</ul>
     {% endif %}
   </div>

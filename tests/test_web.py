@@ -1338,6 +1338,9 @@ def test_the_insights_come_in_four_tabs(site) -> None:  # noqa: ANN001
     assert 'id="chart-services"' in panels["services"]
     assert 'id="chart-winners_use"' in panels["winners"]
     assert 'id="chart-event-table"' in panels["events"] and 'id="chart-themes"' in panels["events"]
+    # A chart of one row was 74 pixels high, and a filter left its bars flat (24 October 2026).
+    heights = [int(h) for h in re.findall(r'class="hm-chart-canvas" style="height: (\d+)px"', page)]
+    assert heights and min(heights) >= 140
 
 
 def embed_calls(fake, since: int = 0) -> int:  # noqa: ANN001
@@ -1856,6 +1859,7 @@ def test_the_tabs_of_the_insights_show_one_part_at_a_time(site, chromium) -> Non
     assert page.locator("#panel-overview").is_hidden()
     drawn = "Chart.getChart(document.querySelector('#panel-events canvas[data-chart]'))"
     page.wait_for_function(f"{drawn} && {drawn}.width > 0")
+    assert page.evaluate(f"{drawn}.data.datasets.every(d => d.maxBarThickness === 20)")
     page.keyboard.press("ArrowLeft")
     assert page.evaluate("document.activeElement.id") == "tab-winners"
     assert page.locator("#panel-winners").is_visible() and page.locator("#panel-events").is_hidden()

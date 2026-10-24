@@ -175,7 +175,8 @@
         data: {
           labels: numbers.labels,
           datasets: series.map(function (one) {
-            return { label: one.label, data: one.data, backgroundColor: colours[one.color] || all, borderRadius: 3, barPercentage: 0.9 };
+            // a chart of few rows is 140 pixels high (_parts.html): its bars stay bars
+            return { label: one.label, data: one.data, backgroundColor: colours[one.color] || all, borderRadius: 3, barPercentage: 0.9, maxBarThickness: 20 };
           })
         },
         options: {
