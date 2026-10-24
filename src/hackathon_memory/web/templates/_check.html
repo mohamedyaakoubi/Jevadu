@@ -81,9 +81,7 @@
     <header class="project-head">
       <p class="project-meta">Submission check &middot; {% if no_dates %}no hackathon selected{% elif event.typed %}{{ event.starts_at | day }} to {{ event.ends_on | day }}{% else %}{{ event.name }}{% endif %}</p>
       <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ short }}</{{ level }}>
-      {% set about = result.code.description if result.code else none %}
-      {% if about %}<p class="project-lede">{{ about }} <span class="hm-tiny">Its description on GitHub</span></p>{% endif %}
-      <p class="{{ 'hm-small' if about else 'project-lede' }}">Facts from GitHub, the Hedera ledger and the collection. <span class="hm-tiny">No AI-generated text.</span></p>
+      <p class="project-lede">Facts from GitHub, the Hedera ledger and the collection. <span class="hm-tiny">No AI-generated text.</span></p>
       <div class="project-marks">
         {{ marks.proof(proof_shown) }}{{ parts.info("proof", "Hedera proof") }}
         {% if result.life and not no_dates %}{{ marks.life(result.life) }}{{ parts.info("life", "life") }}{% endif %}

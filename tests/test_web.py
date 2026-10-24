@@ -768,23 +768,6 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
     assert "Ledger: every transaction of its own IDs. No hackathon was chosen." in none
 
 
-def test_a_check_shows_the_description_of_the_repository_on_github(site) -> None:  # noqa: ANN001
-    """The team's own words on GitHub stand under the name of the repository, marked as such
-    (design 12.1, S3); the check still says that no AI wrote anything."""
-    from checkfakes import facts_answer
-    from fakes import Reply
-    from hackathon_memory.collect.github_facts import facts_address
-
-    client, _, _, _ = site
-    about = facts_answer(description="Pay a street vendor\n with a coin.")
-    client.github_site.pages[facts_address(REPO)] = Reply(200, about)
-    part = client.get("/check", params={"repo": REPO}, headers=HX).text
-    head = part.split('<header class="project-head">', 1)[1].split("</header>", 1)[0]
-    assert ('<p class="project-lede">Pay a street vendor with a coin. <span class="hm-tiny">Its '
-            "description on GitHub</span></p>") in head  # fmt: skip
-    assert '<p class="hm-small">Facts from GitHub, the Hedera ledger and the collection.' in head
-
-
 def test_a_check_asked_by_the_script_shows_its_steps_until_the_answer(site) -> None:  # noqa: ANN001
     """The page's script asks with progress=1: the check runs in a thread of its own, the window
     shows its steps, and the next ask gives the answer in place of the whole window (design 12.1,
