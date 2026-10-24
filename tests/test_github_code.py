@@ -24,12 +24,15 @@ from hackathon_memory.collect.github_code import (
     PARTIAL,
     READ,
     SUFFIX,
+    again_store,
     fetch_code,
+    fetch_code_again,
     read_code_now,
     saved_code,
 )
 from hackathon_memory.collect.polite import CollectorIdentity, RequestCount
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.parse import hedera_code
 
 PEBBLE = "https://github.com/sample-org/pebble-pay"
 EEL = "https://github.com/sample-org/eel-ledger"
@@ -265,3 +268,52 @@ def test_a_check_says_in_plain_words_why_the_code_was_not_read(tmp_path: Path) -
     read, problem = read_code_now(off, store, FERN, collector=COLLECTOR)
     assert read is None and problem is not None and "The switch for" in problem
     assert saved_code(store, PEBBLE) is None and saved_code(store, EEL) is None
+
+
+# --------------------------------------------------------------------- a newer reader
+
+
+def test_a_reading_of_an_older_reader_is_made_again_once_into_its_own_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = archive({**FILES, "config/ids.ts": b'export const TOPIC_ID = "0.0.4870201";\n'})
+    site = FakeSite({
+        archive_address(PEBBLE): sent_to(PEBBLE), download(PEBBLE): Reply(200, body),
+        archive_address(EEL): Reply(404, b'{"message": "Not Found"}', API),
+    })  # fmt: skip
+    client = client_for(site, tmp_path)
+    store = RawStore(tmp_path / "raw")
+    monkeypatch.setattr(hedera_code, "FORMAT", 2)  # the reader of 21 October 2026
+    fetch_code(client, store, [PEBBLE, EEL], collector=COLLECTOR)
+    monkeypatch.undo()
+    first = saved_code(store, PEBBLE)
+    assert first is not None and first.scan is not None and first.scan.format == 2
+    first_meta = store.load(archive_address(PEBBLE), SUFFIX).meta  # type: ignore[union-attr]
+
+    again = fetch_code_again(client, store, [PEBBLE, EEL], collector=COLLECTOR)
+    assert again.asked == 1  # the repository that is gone has no code to read again
+    newest = saved_code(store, PEBBLE)
+    assert newest is not None and newest.scan is not None and newest.scan.format == 3
+    assert ("0.0.4870201", None) in newest.scan.ids
+    assert store.load(archive_address(PEBBLE), SUFFIX).meta == first_meta  # never edited
+    assert again_store(store).load(archive_address(PEBBLE), SUFFIX) is not None
+    assert fetch_code_again(client, store, [PEBBLE, EEL], collector=COLLECTOR).asked == 0
+
+
+def test_a_check_reads_again_the_code_that_an_older_reader_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    site = FakeSite({archive_address(PEBBLE): sent_to(PEBBLE),
+                     download(PEBBLE): Reply(200, archive(FILES))})  # fmt: skip
+    store = RawStore(tmp_path / "raw")
+    monkeypatch.setattr(hedera_code, "FORMAT", 2)
+    fetch_code(client_for(site, tmp_path), store, [PEBBLE], collector=COLLECTOR)
+    monkeypatch.undo()
+    away = FakeSite({archive_address(PEBBLE): Reply(502, b"", API)})
+    read, problem = read_code_now(client_for(away, tmp_path / "away"), store, PEBBLE,
+                                  collector=COLLECTOR)  # fmt: skip
+    assert problem is None and read is not None and read.scan.format == 2  # type: ignore[union-attr]
+    read, problem = read_code_now(client_for(site, tmp_path / "now"), store, PEBBLE,
+                                  collector=COLLECTOR)  # fmt: skip
+    assert problem is None and read is not None and read.scan.format == 3  # type: ignore[union-attr]
+    assert saved_code(store, PEBBLE) == read

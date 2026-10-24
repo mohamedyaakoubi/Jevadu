@@ -11,6 +11,8 @@
     python -m hackathon_memory.pipeline hedera_code        where Hedera stands in the code of
                                                            each repository, read from its
                                                            archive (same options)
+    python -m hackathon_memory.pipeline hedera_code --again   read again, once, the archives
+                                                           that an older reader read
     python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
     python -m hackathon_memory.pipeline history            the history of each own Hedera id on
@@ -59,7 +61,7 @@ from hackathon_memory.check import proof
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.ethglobal_site import SITE
-from hackathon_memory.collect.github_code import fetch_code
+from hackathon_memory.collect.github_code import fetch_code, fetch_code_again
 from hackathon_memory.collect.github_facts import fetch_facts
 from hackathon_memory.collect.github_once import AnswersRun
 from hackathon_memory.collect.github_readmes import fetch_readmes
@@ -95,7 +97,8 @@ USAGE = (
     "usage: python -m hackathon_memory.pipeline parse [--limit N]\n"
     "       python -m hackathon_memory.pipeline readmes [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline code [--repos N | --no-requests] [--wait]\n"
-    "       python -m hackathon_memory.pipeline hedera_code [--repos N | --no-requests] [--wait]\n"
+    "       python -m hackathon_memory.pipeline hedera_code [--repos N | --no-requests] [--wait] "
+    "[--again]\n"
     "       python -m hackathon_memory.pipeline check [--max-age-days N]\n"
     "       python -m hackathon_memory.pipeline embed [--limit N]\n"
     "       python -m hackathon_memory.pipeline all [the options of the steps]\n"
@@ -135,6 +138,7 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--repos", type=int)
     parser.add_argument("--no-requests", action="store_true")
     parser.add_argument("--wait", action="store_true")
+    parser.add_argument("--again", action="store_true")
     parser.add_argument("--set", dest="set_file")
     parser.add_argument("--export", dest="export_file")
     parser.add_argument("--restore", dest="restore_file")
@@ -166,6 +170,8 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         raise ValueError("--no-requests and --wait go with readmes, code or hedera_code")
     if arguments.no_requests and (arguments.repos is not None or arguments.wait):
         raise ValueError("--no-requests sends nothing, so --repos and --wait do not go with it")
+    if arguments.again and (arguments.step != hedera_code.STEP or arguments.no_requests):
+        raise ValueError("--again goes with hedera_code alone, and asks GitHub")
     return arguments
 
 
@@ -311,7 +317,8 @@ def _run_step(
                 RepositoryStore(conninfo), RawStore(github.raw_dir(settings)), run, fetch=fetch
             )
         elif step == hedera_code.STEP:
-            fetch, note = _github_fetch(settings, arguments, run, fetch_code)
+            ask = fetch_code_again if arguments.again else fetch_code
+            fetch, note = _github_fetch(settings, arguments, run, ask)
             hedera_code.read_hedera_code(
                 RepositoryStore(conninfo), RawStore(github.raw_dir(settings)), run, fetch=fetch
             )

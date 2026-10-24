@@ -14,6 +14,12 @@ package file can name its authors, and a settings file can hold a key, so no fil
 The step of the pipeline reads every repository whole, with no limit. The check of a
 submission reads with a limit of bytes and of seconds, since a person waits, and saves only a
 reading that reached the end: the step reads a large repository whole later.
+
+A newer reader finds more (FORMAT of parse/hedera_code.py: the IDs of the code since format 3).
+A repository read by an older reader is read again, once, when asked for (fetch_code_again, and
+the check of a submission). A saved reading is never edited, so a reading made again is saved in
+a folder of its own, one for each version of the reader, and the newest reading that holds code
+is the one used.
 """
 
 from __future__ import annotations
@@ -27,6 +33,7 @@ from hackathon_memory.collect.polite import FetchFailed, FetchResult, StopCollec
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
 from hackathon_memory.parse.hedera_code import (
     BROKE_OFF,
+    FORMAT,
     LIMIT_BYTES,
     LIMIT_SECONDS,
     CodeScan,
@@ -34,6 +41,7 @@ from hackathon_memory.parse.hedera_code import (
 )
 
 SUFFIX = ".json"
+FIRST_READ_AGAIN = 3  # the first version of the reader whose readings were made again
 READ = "read"
 PARTIAL = "partial"
 GONE = "gone"
@@ -68,10 +76,27 @@ def read_saved(saved: SavedPage) -> CodeRead:
     return CodeRead(PARTIAL if scan.partial else READ, scan, saved.meta["fetched_at"])
 
 
+def again_store(store: RawStore, version: int = FORMAT) -> RawStore:
+    """Where the readings made again by the reader of `version` are saved."""
+    return RawStore(store.folder / f"code-format-{version}")
+
+
 def saved_code(store: RawStore, repository: str) -> CodeRead | None:
-    """The saved reading of a repository, or None when it was never read."""
-    saved = store.load(archive_address(repository), SUFFIX)
+    """The newest saved reading of a repository that holds its code, else its first reading, or
+    None when it was never read."""
+    address = archive_address(repository)
+    for version in range(FORMAT, FIRST_READ_AGAIN - 1, -1):
+        saved = again_store(store, version).load(address, SUFFIX)
+        read = read_saved(saved) if saved is not None else None
+        if read is not None and read.scan is not None:
+            return read
+    saved = store.load(address, SUFFIX)
     return read_saved(saved) if saved is not None else None
+
+
+def is_older(read: CodeRead | None) -> bool:
+    """True for a reading of the code made by an older version of the reader."""
+    return read is not None and read.scan is not None and read.scan.format < FORMAT
 
 
 def save_reading(
@@ -127,6 +152,23 @@ def fetch_code(
                     limit=limit)  # fmt: skip
 
 
+def fetch_code_again(
+    client: GitHubClient,
+    store: RawStore,
+    repositories: list[str],
+    *,
+    collector: str,
+    limit: int | None = None,
+) -> AnswersRun:
+    """Read again, once and whole, the archive of every repository whose newest reading an older
+    reader made, into the folder of this reader. With `limit`, at most that many in this run."""
+    older = [one for one in repositories if is_older(saved_code(store, one))]
+    again = again_store(store)
+    return ask_each(again, older, address_of=archive_address,
+                    ask=_reader(client, again, collector), statuses=STATUSES, suffix=SUFFIX,
+                    limit=limit)  # fmt: skip
+
+
 def read_code_now(
     client: GitHubClient | None,
     store: RawStore,
@@ -136,9 +178,11 @@ def read_code_now(
 ) -> tuple[CodeRead | None, str | None]:
     """The reading of one repository for the check of a submission: the saved one, or read now
     within the limits of a check. With no client, only the saved one. Returns it with what went
-    wrong, in plain words. A reading that a limit cut is shown and not saved."""
+    wrong, in plain words. A reading that a limit cut is shown and not saved. A reading that an
+    older reader made is made again now, and kept when that fails."""
     known = saved_code(store, repository)
-    if known is not None or client is None:
+    older = is_older(known)
+    if (known is not None and not older) or client is None:
         return known, None
     address = archive_address(repository)
     started = client.clock()
@@ -147,12 +191,15 @@ def read_code_now(
             address, scan_archive, max_bytes=LIVE_MAX_BYTES, seconds=LIVE_SECONDS
         )
     except FetchFailed:
-        return None, GITHUB_AWAY
+        return (known, None) if older else (None, GITHUB_AWAY)
     except StopCollecting as stop:
-        return None, f"GitHub was not asked for the code: {stop}"
+        return (known, None) if older else (None, f"GitHub was not asked for the code: {stop}")
     if scan is not None and scan.partial in (LIMIT_BYTES, LIMIT_SECONDS):
         return CodeRead(PARTIAL, scan, fetch.fetched_at, saved=False), None
+    if older and (scan is None or scan.partial == BROKE_OFF):
+        return known, None  # gone or broken now: the older reading stays the one used
     if scan is not None and scan.partial == BROKE_OFF:
         return None, BROKE_OFF_NOW
     took = client.clock() - started
-    return save_reading(store, fetch, scan, collector, seconds=took), None
+    target = again_store(store) if older else store
+    return save_reading(target, fetch, scan, collector, seconds=took), None
