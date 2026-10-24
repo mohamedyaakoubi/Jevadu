@@ -29,7 +29,7 @@
           </div>{{ parts.info("quick", "the search modes") }}
         </fieldset>
         <div class="hm-actions">
-          <a class="btn btn-ghost-secondary" href="/?clear=1" data-clear-search hx-get="/" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="/">Clear</a>
+          <a class="btn btn-ghost-secondary" href="/?clear=1{% if view %}&amp;view={{ view }}{% endif %}" data-clear-search hx-get="/" hx-include="#view-kept" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Clear</a>
           <span class="hm-ai-group">
             <button type="submit" class="btn btn-primary" name="ai" value="1" id="ai-button"
               hx-get="/" hx-include="#ask" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
@@ -39,7 +39,7 @@
       </div>
       <div class="hm-ask-foot">
         <p class="try"{% if idea %} hidden{% endif %}><span>Try:</span>
-          {% for example in EXAMPLES %}<a href="/?idea={{ example | urlencode }}" hx-get="/?idea={{ example | urlencode }}" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">{{ example }}</a>{% endfor %}
+          {% for example in EXAMPLES %}<a href="/?idea={{ example | urlencode }}{% if view %}&amp;view={{ view }}{% endif %}" hx-get="/?idea={{ example | urlencode }}" hx-include="#view-kept" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">{{ example }}</a>{% endfor %}
         </p>
         <p class="counter" id="idea-count" data-limit="{{ LONGEST_IDEA }}">{{ "{:,}".format(idea | length) }} of {{ "{:,}".format(LONGEST_IDEA) }} characters</p>
       </div>
@@ -47,6 +47,9 @@
   </section>
 
   <div id="workspace" class="hm-workspace">
+    {# The view beside the cards stays when the idea changes, a filter is chosen or the search is
+       cleared (design 12.1, S1): every request of the form, and "Clear", carry it. #}
+    {% if view %}<input type="hidden" name="view" value="{{ view }}" id="view-kept">{% endif %}
     {% if offer %}
     {% set picked = chosen.chosen() %}
     <div class="hm-filters" role="group" aria-label="Filters">

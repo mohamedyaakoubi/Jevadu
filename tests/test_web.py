@@ -1364,6 +1364,19 @@ def test_the_graph_draws_the_whole_collection_or_a_filtered_list(site, monkeypat
     assert len(fake.requests) == before  # the graph of a list asks no model
 
 
+def test_the_view_beside_the_cards_stays_when_the_search_changes(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    graph = client.get("/", params={"idea": VENDOR, "view": "graph"}).text
+    assert '<input type="hidden" name="view" value="graph" id="view-kept">' in graph
+    assert ('href="/?clear=1&amp;view=graph" data-clear-search hx-get="/" '
+            'hx-include="#view-kept"') in graph  # fmt: skip
+    cards = client.get("/", params={"idea": VENDOR}).text
+    assert 'id="view-kept"' not in cards and 'href="/?clear=1" data-clear-search' in cards
+    start = client.get("/", params={"view": "charts"}).text  # the examples keep it too
+    assert 'value="charts" id="view-kept"' in start
+    assert 'hx-include="#view-kept" hx-target="#main"' in start
+
+
 def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None:  # noqa: ANN001
     from hackathon_memory.web import graph
 
@@ -1407,6 +1420,21 @@ def test_a_dot_of_the_graph_shows_its_project_and_opens_its_card(site, chromium)
     assert page.locator("#viewer-body .project").get_attribute("data-project") == str(
         ids["Pebble Pay"])  # fmt: skip
     assert f"open={ids['Pebble Pay']}" in page.url
+
+
+@pytest.mark.browser
+def test_the_graph_stays_while_the_idea_changes_and_after_clear(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1280, "height": 900})
+    page.goto("http://site.test/?view=graph")
+    page.wait_for_timeout(1600)  # the first screen of the visit has gone
+    page.locator("#idea").fill(VENDOR)
+    page.wait_for_function("new URL(location.href).searchParams.get('idea')")
+    page.wait_for_selector(".hm-graph-idea")  # the graph of the search, around the idea
+    assert "view=graph" in page.url
+    page.locator("[data-clear-search]").click()
+    page.wait_for_function("!new URL(location.href).searchParams.get('idea')")
+    assert "view=graph" in page.url and page.locator(".hm-graph-svg").count() == 1
 
 
 # ------------------------------------------------- smaller parts
