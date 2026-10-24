@@ -1423,6 +1423,16 @@ def test_a_dot_of_the_graph_shows_its_project_and_opens_its_card(site, chromium)
 
 
 @pytest.mark.browser
+def test_the_six_filters_stand_in_one_row(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1280, "height": 900})
+    page.goto("http://site.test/")
+    tops = page.evaluate("[...document.querySelectorAll('.hm-filter')]"
+                         ".map(f => Math.round(f.getBoundingClientRect().top))")  # fmt: skip
+    assert len(tops) == 6 and len(set(tops)) == 1  # the prize had wrapped to a second row
+
+
+@pytest.mark.browser
 def test_the_graph_stays_while_the_idea_changes_and_after_clear(site, chromium) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1280, "height": 900})

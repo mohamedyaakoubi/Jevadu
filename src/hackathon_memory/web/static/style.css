@@ -153,17 +153,20 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-check-days { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .hm-check-days[hidden] { display: none; }
 
-/* the filters, in one row under the search */
+/* the six filters in one row under the search, in columns of the same width: a long value shows
+   its start, and its list opens it whole (24 October 2026: the sixth, the prize, had wrapped to a
+   second row) */
 .hm-filters {
-  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem 0.75rem; margin-bottom: 1rem;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)) auto; align-items: end;
+  gap: 0.5rem 0.75rem; margin-bottom: 1rem;
   padding: 0.75rem 1rem; background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color);
   border-radius: var(--tblr-border-radius);
 }
 .hm-filter { display: grid; gap: 0.125rem; min-width: 0; }
 .hm-filter-head { display: inline-flex; align-items: center; min-height: 24px; font-size: 0.75rem; font-weight: 600; color: var(--tblr-secondary); }
-.hm-filter select { max-width: 16rem; }
+.hm-filter select { width: 100%; text-overflow: ellipsis; }
 .hm-filter.chosen select { border-color: var(--tblr-primary); box-shadow: 0 0 0 1px var(--tblr-primary); }
-.hm-filters-note { flex-basis: 100%; margin: 0; font-size: 0.75rem; color: var(--tblr-secondary); }
+.hm-filters-note { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: var(--tblr-secondary); }
 .hm-clear-filters { align-self: flex-end; }
 .hm-notices { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
 .hm-notices .alert { margin: 0; }
@@ -557,7 +560,7 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
   .hm-title { font-size: 1.5rem; }
   .hm-actions, .hm-ai-group { width: 100%; }
   .hm-ai-group .btn { flex: 1; }
-  .hm-filters { flex-wrap: nowrap; overflow-x: auto; }
+  .hm-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; }
   .hm-filter { flex: none; }
 }
 
