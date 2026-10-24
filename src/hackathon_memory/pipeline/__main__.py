@@ -13,7 +13,9 @@
                                                            archive (same options)
     python -m hackathon_memory.pipeline hedera_code --again   read again, once, the archives
                                                            that an older reader read
-    python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger
+    python -m hackathon_memory.pipeline check              check the Hedera ids on the ledger,
+                                                           first giving each project the IDs
+                                                           of its code that prove its use
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
     python -m hackathon_memory.pipeline history            the history of each own Hedera id on
                                                            the ledger, read once (--limit N)
@@ -68,6 +70,7 @@ from hackathon_memory.collect.github_readmes import fetch_readmes
 from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.cards import CardStore
+from hackathon_memory.db.code_ids import CodeIdStore
 from hackathon_memory.db.embeddings import EmbeddingStore
 from hackathon_memory.db.history import HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
@@ -82,6 +85,7 @@ from hackathon_memory.parse import event_ends, event_years
 from hackathon_memory.pipeline import (
     check_ids,
     code,
+    code_ids,
     embed,
     hedera_code,
     history,
@@ -227,6 +231,16 @@ def check_lines(run: Run) -> list[str]:
             if counts[prefix + status]
         )
     lines.append(f"  {counts['projects_with_no_id']:5}  {STATUS_WORDS[proof.NO_ID_GIVEN]}")
+    lines.append(
+        f"IDs of the code: {counts['code_ids_asked']} asked about, {counts['code_ids_given']} "
+        f"given to {counts['projects_with_code_ids']} projects as their own, made during their "
+        f"event."
+    )
+    if counts["projects_whose_code_ids_were_not_all_asked"]:
+        lines.append(
+            f"  {counts['projects_whose_code_ids_were_not_all_asked']:5}  projects keep the IDs of "
+            "their code from an earlier check: the node did not answer about all of them"
+        )
     if counts["projects_not_finished"]:
         lines.append(f"  {counts['projects_not_finished']:5}  not finished: see below")
     return lines + _problem_lines(run, "Not checked, with what went wrong:")
@@ -364,12 +378,10 @@ def _run_step(
                 # the ones of check_ids.NETWORKS_WHEN_OPEN only.
                 mirrors = {name: MirrorNode(name) for name in MIRROR_URLS}
             days = arguments.max_age_days
-            check_ids.check_ids(
-                LedgerStore(conninfo),
-                mirrors,
-                run,
-                max_age=check_ids.MAX_AGE if days is None else timedelta(days=days),
-            )
+            max_age = check_ids.MAX_AGE if days is None else timedelta(days=days)
+            code_ids.give_code_ids(CodeIdStore(conninfo), LedgerStore(conninfo), mirrors, run,
+                                   max_age=max_age)  # fmt: skip
+            check_ids.check_ids(LedgerStore(conninfo), mirrors, run, max_age=max_age)
     if step == parse_pages.STEP:
         lines = parse_lines(run)
     elif step == readmes.STEP:
