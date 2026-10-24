@@ -18,6 +18,7 @@ reading that reached the end: the step reads a large repository whole later.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from hackathon_memory.collect.github import GitHubClient, api_message, archive_address
@@ -97,6 +98,20 @@ def save_reading(
     return read_saved(saved)
 
 
+def _reader(client: GitHubClient, store: RawStore, collector: str) -> Callable[[str], str | None]:
+    """What reads one archive whole and saves the reading into `store`."""
+
+    def ask(address: str) -> str | None:
+        started = client.clock()
+        fetch, scan = client.read_archive(address, scan_archive)
+        if scan is not None and scan.partial == BROKE_OFF:
+            return None  # not saved: a later run asks again
+        took = client.clock() - started
+        return save_reading(store, fetch, scan, collector, seconds=took).status
+
+    return ask
+
+
 def fetch_code(
     client: GitHubClient,
     store: RawStore,
@@ -107,17 +122,9 @@ def fetch_code(
 ) -> AnswersRun:
     """Read the archive of every repository that has no saved reading yet, one after the other
     and whole. With `limit`, at most that many in this run."""
-
-    def ask(address: str) -> str | None:
-        started = client.clock()
-        fetch, scan = client.read_archive(address, scan_archive)
-        if scan is not None and scan.partial == BROKE_OFF:
-            return None  # not saved: a later run asks again
-        took = client.clock() - started
-        return save_reading(store, fetch, scan, collector, seconds=took).status
-
-    return ask_each(store, repositories, address_of=archive_address, ask=ask,
-                    statuses=STATUSES, suffix=SUFFIX, limit=limit)  # fmt: skip
+    return ask_each(store, repositories, address_of=archive_address,
+                    ask=_reader(client, store, collector), statuses=STATUSES, suffix=SUFFIX,
+                    limit=limit)  # fmt: skip
 
 
 def read_code_now(
