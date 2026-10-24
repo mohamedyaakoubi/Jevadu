@@ -277,24 +277,34 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-workspace.asking-ai .hm-results :is(.hm-graph-note, .hm-graph-card, .hm-graph-lists) { display: none; }
 .hm-graph-note { color: var(--tblr-secondary); font-size: 0.875rem; margin: 0 0 1rem; }
 .hm-graph { position: relative; }
+/* While the graph is zoomed (site.js), --hm-zoom divides every size of its marks and words, so
+   they keep their size on the screen while the distances grow. */
 .hm-graph-svg { display: block; width: 100%; height: auto; max-height: 80vh; margin: 0 auto; overflow: visible; }
+.hm-graph-svg.is-zoomed { overflow: hidden; cursor: grab; }
+.hm-graph-svg.is-dragged { cursor: grabbing; }
 .hm-graph-svg text { font-family: var(--tblr-font-sans-serif); }
-.hm-graph-small { fill: var(--tblr-secondary); font-size: 12px; paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: 4px; stroke-linejoin: round; }
+.hm-graph-small { fill: var(--tblr-secondary); font-size: calc(12px / var(--hm-zoom, 1)); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: calc(4px / var(--hm-zoom, 1)); stroke-linejoin: round; }
+.hm-graph-tools { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 4; display: flex; gap: 0.25rem; }
+.hm-graph-tools .btn { min-width: 2rem; }
 /* a strong line: the same code or Hedera ID; the dashed line of a pointed dot: its closest project */
-.hm-graph-lines line { stroke: var(--tblr-body-color); stroke-width: 2.5px; stroke-opacity: 0.8; }
+.hm-graph-lines line { stroke: var(--tblr-body-color); stroke-width: calc(2.5px / var(--hm-zoom, 1)); stroke-opacity: 0.8; }
 .hm-graph-lines line.is-lit { stroke-opacity: 1; }
-.hm-graph-lines .hm-graph-hover { stroke-width: 1.5px; stroke-dasharray: 5 3; stroke-opacity: 1; }
+.hm-graph-lines .hm-graph-hover { stroke-width: calc(1.5px / var(--hm-zoom, 1)); stroke-dasharray: calc(5px / var(--hm-zoom, 1)) calc(3px / var(--hm-zoom, 1)); stroke-opacity: 1; }
 .hm-graph-idea circle { fill: var(--tblr-body-color); }
 .hm-dot { cursor: pointer; }
 .hm-dot .hm-hit { fill: transparent; }
-.hm-dot .hm-mark { fill: var(--hm-group); stroke: var(--tblr-bg-surface); stroke-width: 1.5px; }
+.hm-dot .hm-mark { fill: var(--hm-group); stroke: var(--tblr-bg-surface); stroke-width: calc(1.5px / var(--hm-zoom, 1)); }
 /* the first 10 of a search: a ring in the colour of the group, the place in the list inside */
-.hm-dot.is-first .hm-mark { fill: var(--tblr-bg-surface); stroke: var(--hm-group); stroke-width: 3px; }
-.hm-dot text { fill: var(--tblr-body-color); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-.hm-dot:hover .hm-mark, .hm-dot.is-lit .hm-mark { stroke: var(--tblr-body-color); stroke-width: 2.5px; }
-.hm-graph-names text { fill: var(--tblr-body-color); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: 5px; stroke-linejoin: round; }
-.hm-graph-title { font-size: 13px; font-weight: 600; }
-.hm-graph-sub { fill: var(--tblr-secondary); font-size: 12px; }
+.hm-dot.is-first .hm-mark { fill: var(--tblr-bg-surface); stroke: var(--hm-group); stroke-width: calc(3px / var(--hm-zoom, 1)); }
+.hm-dot text { fill: var(--tblr-body-color); font-size: calc(10px / var(--hm-zoom, 1)); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.hm-dot:hover .hm-mark, .hm-dot.is-lit .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(2.5px / var(--hm-zoom, 1)); }
+/* the dot that a click kept, with its line, until a click on an empty place */
+.hm-dot.is-kept .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
+.hm-graph-names text { fill: var(--tblr-body-color); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: calc(5px / var(--hm-zoom, 1)); stroke-linejoin: round; }
+.hm-graph-name { cursor: pointer; }
+.hm-graph-name:hover .hm-graph-title { text-decoration: underline; }
+.hm-graph-title { font-size: calc(13px / var(--hm-zoom, 1)); font-weight: 600; }
+.hm-graph-sub { fill: var(--tblr-secondary); font-size: calc(12px / var(--hm-zoom, 1)); }
 .hm-graph-tip {
   position: absolute; z-index: 5; max-width: min(320px, 90%); padding: 0.5rem 0.625rem;
   background: var(--tblr-bg-surface); color: var(--tblr-body-color); border: 1px solid var(--tblr-border-color);
@@ -316,6 +326,12 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-graph-group summary .hm-graph-swatch { margin-right: 0.4rem; }
 .hm-graph-members { margin: 0.5rem 0 0.25rem; padding-left: 1.6rem; display: grid; gap: 0.25rem; }
 .hm-graph-members a { font-weight: 600; }
+/* a dot or a name is reached with the mouse; the lists under the graph are the keyboard's way */
+.hm-dot:focus, .hm-graph-name:focus { outline: none; }
+.hm-graph-tally { display: block; padding-left: 1.6rem; font-size: 0.8125rem; color: var(--tblr-secondary); }
+/* the buttons under a long list (site.js) */
+.hm-more { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 0.25rem; }
+.hm-graph-group .hm-more { padding-left: 1.6rem; }
 
 /* ------------------------------------------------------------------ how a mark was judged */
 

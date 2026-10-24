@@ -361,10 +361,14 @@
   // ---------------------------------------------------------------- the graph of a list
   // A dot of the graph (design 8.6, S7) shows its project while the pointer rests on it, with the
   // line to its closest project, and opens its card on a click, through the link of the same
-  // project in the lists under the graph. The words of a project are put in as text only.
+  // project in the lists under the graph. The click keeps the line and both dots lit after the card
+  // is closed, until a click on an empty place. The name of a group opens the card of the project
+  // it is named after. The words of a project are put in as text only.
   function graphDot(node) { return node && node.closest ? node.closest(".hm-dot") : null; }
+  function graphName(node) { return node && node.closest ? node.closest("[data-graph-centre]") : null; }
   function graphOf(node) { return node.closest("[data-graph]"); }
   function dotOf(graph, id) { return graph.querySelector('.hm-dot[data-graph-id="' + id + '"]'); }
+  function listLink(id) { return document.querySelector('[data-graph-link="' + id + '"]'); }
   function darkGraph(graph) {
     graph.querySelectorAll(".is-lit").forEach(function (one) { one.classList.remove("is-lit"); });
     var hover = graph.querySelector(".hm-graph-hover");
@@ -387,6 +391,21 @@
     hover.setAttribute("y2", to.getAttribute("cy"));
     hover.setAttribute("visibility", "visible");
     other.classList.add("is-lit");
+  }
+  function restGraph(graph) { // back to the dot that a click kept, or to none
+    darkGraph(graph);
+    var kept = graph.getAttribute("data-kept"), dot = kept ? dotOf(graph, kept) : null;
+    if (dot) lightGraph(graph, dot);
+  }
+  function keepDot(graph, dot) {
+    graph.querySelectorAll(".hm-dot.is-kept").forEach(function (one) { one.classList.remove("is-kept"); });
+    if (dot) {
+      graph.setAttribute("data-kept", dot.getAttribute("data-graph-id"));
+      dot.classList.add("is-kept");
+    } else {
+      graph.removeAttribute("data-kept");
+    }
+    restGraph(graph);
   }
   function showGraphTip(graph, dot) {
     var tip = graph.querySelector(".hm-graph-tip");
@@ -413,7 +432,11 @@
     line(dot.getAttribute("data-proof"), "hm-tip-small", "Proof:");
     line(dot.getAttribute("data-prize"), "hm-tip-small", "Won:");
     line(dot.getAttribute("data-group"), "hm-tip-small", "Group:");
-    if (other) line(other.getAttribute("data-name"), "hm-tip-small", "Closest in meaning:");
+    if (other) { // a project at the edge of its group can be closest to one of another group
+      var apart = other.getAttribute("data-group") !== dot.getAttribute("data-group");
+      line(other.getAttribute("data-name") + (apart ? ", in the group " + other.getAttribute("data-group") : ""),
+        "hm-tip-small", "Closest in meaning:");
+    }
     tip.hidden = false;
     var box = graph.getBoundingClientRect(), mark = dot.querySelector(".hm-mark").getBoundingClientRect();
     var x = mark.left + mark.width / 2 - box.left, y = mark.top + mark.height / 2 - box.top;
@@ -424,6 +447,7 @@
     tip.style.top = Math.round(Math.max(4, top)) + "px";
   }
   document.addEventListener("pointerover", function (event) {
+    if (dragging && dragging.moved) return;
     var dot = graphDot(event.target);
     var link = dot ? null : event.target.closest && event.target.closest("[data-graph-link]");
     if (link) dot = document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
@@ -436,7 +460,7 @@
   document.addEventListener("pointerout", function (event) {
     var from = graphDot(event.target) || (event.target.closest && event.target.closest("[data-graph-link]"));
     if (!from || (event.relatedTarget && from.contains(event.relatedTarget))) return;
-    document.querySelectorAll("[data-graph]").forEach(darkGraph);
+    document.querySelectorAll("[data-graph]").forEach(restGraph);
   });
   document.addEventListener("focusin", function (event) { // a project of the lists, by keyboard
     var link = event.target.closest && event.target.closest("[data-graph-link]");
@@ -447,18 +471,180 @@
   });
   document.addEventListener("focusout", function (event) {
     if (event.target.closest && event.target.closest("[data-graph-link]")) {
-      document.querySelectorAll("[data-graph]").forEach(darkGraph);
+      document.querySelectorAll("[data-graph]").forEach(restGraph);
     }
   });
   document.addEventListener("click", function (event) {
-    var dot = graphDot(event.target);
-    if (!dot || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    var link = document.querySelector('[data-graph-link="' + dot.getAttribute("data-graph-id") + '"]');
+    var dot = graphDot(event.target), name = dot ? null : graphName(event.target);
+    var id = dot ? dot.getAttribute("data-graph-id") : name ? name.getAttribute("data-graph-centre") : null;
+    if (!id || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    var link = listLink(id);
     if (!link || !window.htmx) return; // the address of the dot then loads the whole page
     event.preventDefault();
-    darkGraph(graphOf(dot));
+    var graph = graphOf(dot || name);
+    keepDot(graph, dot || dotOf(graph, id));
+    // The picture is hidden from screen readers: the focus does not stay in it, so the window of
+    // the card gives it back to the page, not to the dot.
+    if (document.activeElement && graph.contains(document.activeElement)) document.activeElement.blur();
     window.htmx.trigger(link, "click");
   });
+  document.addEventListener("click", function (event) { // a project of the lists keeps its dot too
+    var link = event.target.closest && event.target.closest("[data-graph-link]");
+    var dot = link && document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
+    if (dot && event.isTrusted) keepDot(graphOf(dot), dot);
+  });
+  document.addEventListener("click", function (event) { // an empty place lets go of the kept dot
+    var svg = event.target.closest && event.target.closest(".hm-graph-svg");
+    if (!svg) return;
+    if (svg.hmDragged) { svg.hmDragged = false; return; } // the click that ends a drag
+    if (!graphDot(event.target) && !graphName(event.target)) keepDot(graphOf(svg), null);
+  });
+
+  // Ctrl and the wheel, or the pinch of a touchpad, which the browser sends the same way, zoom the
+  // graph around the pointer, up to 8 times; a drag moves the zoomed graph, and three buttons zoom
+  // in, out and back. The dots, the lines and the names keep their size on the screen (style.css
+  // divides them by --hm-zoom), so dots that touch come apart (design 8.6).
+  var ZOOM_MOST = 8, dragging = null;
+  function zoomOf(svg) {
+    if (!svg.hmZoom) {
+      var box = svg.getAttribute("viewBox").split(/[\s,]+/).map(Number);
+      svg.hmZoom = { base: box, x: box[0], y: box[1], k: 1 };
+    }
+    return svg.hmZoom;
+  }
+  function drawZoom(svg) {
+    var zoom = zoomOf(svg), base = zoom.base;
+    var width = base[2] / zoom.k, height = base[3] / zoom.k;
+    zoom.x = Math.min(Math.max(zoom.x, base[0]), base[0] + base[2] - width);
+    zoom.y = Math.min(Math.max(zoom.y, base[1]), base[1] + base[3] - height);
+    svg.setAttribute("viewBox", [zoom.x, zoom.y, width, height].join(" "));
+    svg.style.setProperty("--hm-zoom", String(zoom.k));
+    svg.classList.toggle("is-zoomed", zoom.k > 1);
+    svg.querySelectorAll("circle[data-r]").forEach(function (circle) {
+      circle.setAttribute("r", String(Number(circle.getAttribute("data-r")) / zoom.k));
+    });
+    var graph = graphOf(svg), tip = graph.querySelector(".hm-graph-tip");
+    if (tip) tip.hidden = true;
+    graph.querySelectorAll("[data-zoom]").forEach(function (button) {
+      var way = button.getAttribute("data-zoom");
+      button.disabled = way === "in" ? zoom.k >= ZOOM_MOST : zoom.k <= 1;
+    });
+  }
+  function zoomAt(svg, clientX, clientY, factor) {
+    var zoom = zoomOf(svg), base = zoom.base;
+    var k = Math.min(ZOOM_MOST, Math.max(1, zoom.k * factor));
+    var matrix = svg.getScreenCTM();
+    if (k === zoom.k || !matrix) return;
+    // The point under the pointer stays under it.
+    var point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    var fx = (point.x - zoom.x) / (base[2] / zoom.k), fy = (point.y - zoom.y) / (base[3] / zoom.k);
+    zoom.k = k;
+    zoom.x = point.x - fx * base[2] / k;
+    zoom.y = point.y - fy * base[3] / k;
+    drawZoom(svg);
+  }
+  document.addEventListener("wheel", function (event) {
+    if (!event.ctrlKey && !event.metaKey) return;
+    var svg = event.target.closest && event.target.closest(".hm-graph-svg");
+    if (!svg) return;
+    event.preventDefault(); // the graph zooms, not the page
+    var pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1);
+    zoomAt(svg, event.clientX, event.clientY, Math.exp(-pixels * 0.0025));
+  }, { passive: false });
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest && event.target.closest("[data-zoom]");
+    var graph = button && graphOf(button), svg = graph && graph.querySelector(".hm-graph-svg");
+    if (!svg) return;
+    var way = button.getAttribute("data-zoom");
+    if (way === "reset") { zoomOf(svg).k = 1; drawZoom(svg); return; }
+    var rect = svg.getBoundingClientRect();
+    zoomAt(svg, rect.left + rect.width / 2, rect.top + rect.height / 2, way === "in" ? 1.6 : 1 / 1.6);
+  });
+  document.addEventListener("pointerdown", function (event) {
+    var svg = event.target.closest && event.target.closest(".hm-graph-svg");
+    if (!svg || event.button !== 0 || graphDot(event.target) || graphName(event.target)) return;
+    var zoom = zoomOf(svg);
+    dragging = { svg: svg, id: event.pointerId, x: event.clientX, y: event.clientY,
+      from: [zoom.x, zoom.y], moved: false };
+  });
+  document.addEventListener("pointermove", function (event) {
+    if (!dragging || event.pointerId !== dragging.id) return;
+    var svg = dragging.svg, zoom = zoomOf(svg), matrix = svg.getScreenCTM();
+    var dx = event.clientX - dragging.x, dy = event.clientY - dragging.y;
+    if (zoom.k <= 1 || !matrix || (!dragging.moved && Math.abs(dx) + Math.abs(dy) < 4)) return;
+    if (!dragging.moved) {
+      dragging.moved = true;
+      svg.setPointerCapture(event.pointerId);
+      svg.classList.add("is-dragged");
+      darkGraph(graphOf(svg));
+    }
+    zoom.x = dragging.from[0] - dx / matrix.a; // from the pixels of the screen to the graph's units
+    zoom.y = dragging.from[1] - dy / matrix.d;
+    drawZoom(svg);
+  });
+  function endDrag(event) {
+    if (!dragging || event.pointerId !== dragging.id) return;
+    var ended = dragging;
+    dragging = null;
+    ended.svg.classList.remove("is-dragged");
+    if (ended.moved) { ended.svg.hmDragged = true; restGraph(graphOf(ended.svg)); }
+  }
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+  function setUpGraphs(root) { // the buttons need this script, so they are hidden without it
+    (root || document).querySelectorAll(".hm-graph-tools[hidden]").forEach(function (tools) {
+      tools.hidden = false;
+    });
+  }
+
+  // ---------------------------------------------------------------- long lists
+  // A long list shows its first 10 lines, with "Show 10 more" and "Show all" under it, and "Show
+  // fewer" once it is whole (design 12.1, S5 and S7). Without this file every line shows.
+  var STEP = 10;
+  function setUpMore(root) {
+    (root || document).querySelectorAll("[data-more-for]").forEach(function (place) {
+      var list = $(place.getAttribute("data-more-for"));
+      if (place.dataset.ready || !list || list.children.length <= STEP) return;
+      place.dataset.ready = "1";
+      var lines = Array.prototype.slice.call(list.children);
+      var said = document.createElement("span");
+      said.className = "visually-hidden";
+      said.setAttribute("aria-live", "polite");
+      function button(then) {
+        var one = document.createElement("button");
+        one.type = "button";
+        one.className = "btn btn-sm";
+        one.addEventListener("click", then);
+        place.appendChild(one);
+        return one;
+      }
+      var shown = STEP;
+      var more = button(function () { show(shown + STEP, true); });
+      var all = button(function () { show(lines.length, true); });
+      var fewer = button(function () {
+        show(STEP, true);
+        list.scrollIntoView({ block: "nearest" });
+        more.focus({ preventScroll: true });
+      });
+      place.appendChild(said);
+      function show(count, announce) {
+        var first = shown;
+        shown = Math.min(count, lines.length);
+        lines.forEach(function (line, at) { line.hidden = at >= shown; });
+        var left = lines.length - shown;
+        more.hidden = left <= 0;
+        all.hidden = left <= STEP;
+        fewer.hidden = left > 0;
+        more.textContent = left > STEP ? "Show " + STEP + " more" : "Show the last " + left;
+        all.textContent = "Show all " + lines.length;
+        fewer.textContent = "Show fewer";
+        if (announce) said.textContent = shown + " of " + lines.length + " shown.";
+        if (announce && left <= 0 && shown > first) fewer.focus({ preventScroll: true });
+      }
+      show(STEP, false);
+      place.hidden = false;
+    });
+  }
 
   // ---------------------------------------------------------------- how a mark was judged
   // A mark of the proof or the activity leads to how it was judged (design 12.1, S1 to S3): inside
@@ -784,6 +970,8 @@
     var target = event.detail.target;
     if (!target) return;
     setUpTabs(document);
+    setUpGraphs(document);
+    setUpMore(document);
     drawCharts(document); // an outerHTML swap leaves the old element in the event
     if (target.id !== "workspace" && target.id !== "main") return;
     showCount();
@@ -795,6 +983,8 @@
   });
   document.addEventListener("htmx:historyRestore", function () {
     setUpTabs(document);
+    setUpGraphs(document);
+    setUpMore(document);
     drawCharts(document);
     showCount();
   });
@@ -812,6 +1002,8 @@
     if (themes) themes.hidden = false; // it needs this script, so it is hidden without it
     showCount();
     setUpTabs(document);
+    setUpGraphs(document);
+    setUpMore(document);
     drawCharts(document);
     remember(window.location.href);
     var dialog = viewer();

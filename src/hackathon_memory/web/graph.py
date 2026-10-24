@@ -75,6 +75,8 @@ class Group:
     centre_id: int  # its most central project, after which it is named
     centre_name: str
     listed: int = 0  # how many of its projects are known only from a winners' list
+    won: int = 0  # how many of its projects won a Hedera prize
+    proven: int = 0  # how many of its projects have a Hedera proof
     x: float = 0.0  # where its name stands
     y: float = 0.0
     anchor: str = "middle"
@@ -104,6 +106,13 @@ class Group:
         """Its size and category, in the words of the lists under the graph."""
         shared = self._shared()
         return plural(self.size, "project") + (f", {shared}" if shared else "")
+
+    @property
+    def tallied(self) -> str:
+        """What its projects won and proved, as counts, never a share (design 8.6)."""
+        won = f"{self.won} won a Hedera prize" if self.won else "none won a Hedera prize"
+        proven = f"{self.proven} with a Hedera proof" if self.proven else "none with a Hedera proof"
+        return f"{won} · {proven}"
 
     @property
     def wide(self) -> float:
@@ -346,6 +355,8 @@ def build(
     distance: Mapping[int, float] | None = None,
     linked: Sequence[Sequence[int]] = (),
     listed: Collection[int] = frozenset(),
+    won: Collection[int] = frozenset(),
+    proven: Collection[int] = frozenset(),
     left_out: int = 0,
 ) -> Graph:
     """The graph of the projects of `order`, closest first when `ranked`, in the groups of
@@ -353,8 +364,9 @@ def build(
     each project to the most central one of its group, `nearest` the closest project of each,
     `distance` the cosine distance of each project to the idea (its places in the list stand in
     when it is None), and `linked` the groups of projects with the same code or Hedera ID
-    (search/seen.py). `listed` holds the projects known only from a winners' list, and
-    `left_out` counts the projects of the list that could not be placed."""
+    (search/seen.py). `listed` holds the projects known only from a winners' list, `won` those
+    with a Hedera prize and `proven` those with a Hedera proof; `left_out` counts the projects of
+    the list that could not be placed."""
     together = list(zip(found, centres, strict=True))
     if not ranked:  # the largest group first, so that it takes the first colour
         together.sort(key=lambda one: -len(one[0]))
@@ -363,7 +375,9 @@ def build(
                                 key=lambda pid: (-typical.get(pid, 0.0), pid))]
                for group, centre in together]  # fmt: skip
     groups = [Group(number, len(group), *named(group, categories), centre, names.get(centre, ""),
-                    sum(1 for pid in group if pid in listed))
+                    listed=sum(1 for pid in group if pid in listed),
+                    won=sum(1 for pid in group if pid in won),
+                    proven=sum(1 for pid in group if pid in proven))
               for number, (group, centre) in enumerate(together, start=1)]  # fmt: skip
     if ranked:
         places, labels = around_idea(order, ordered, distance)

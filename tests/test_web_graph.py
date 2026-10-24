@@ -23,9 +23,10 @@ def inside(box: tuple[float, float, float, float], dot: graph.Dot) -> bool:
         top <= dot.y - dot.r and dot.y + dot.r <= top + height)  # fmt: skip
 
 
-def made(groups: list[list[int]], *, ranked: bool, distance: dict | None = None, linked=()):  # noqa: ANN001, ANN201
+def made(groups: list[list[int]], *, ranked: bool, distance: dict | None = None,  # noqa: ANN201
+         linked=(), **more):  # noqa: ANN001, ANN003  # fmt: skip
     """A graph of the invented projects of `groups`, the first of each its most central, the
-    projects of one group close to each other."""
+    projects of one group close to each other; `more` goes to graph.build as it is."""
     order = sorted(pid for group in groups for pid in group)
     group_of = {pid: n for n, group in enumerate(groups) for pid in group}
 
@@ -38,7 +39,7 @@ def made(groups: list[list[int]], *, ranked: bool, distance: dict | None = None,
         nearest={pid: next(other for other in order if other != pid) for pid in order},
         centres=[group[0] for group in groups],
         categories={pid: "Payments" if pid % 2 else "Developer tools" for pid in order},
-        names={pid: f"Project {pid}" for pid in order}, linked=linked,
+        names={pid: f"Project {pid}" for pid in order}, linked=linked, **more,
     )  # fmt: skip
 
 
@@ -65,6 +66,15 @@ def test_a_group_is_named_after_its_most_central_project() -> None:
     assert Group(1, 10, "Health", 6, 7, "Leash", listed=4).said == "10 projects, 6 in Health"
     assert Group(1, 3, "", 0, 7, "A name much longer than the label").title == (
         "Like A name much longer than…")  # fmt: skip
+
+
+def test_a_group_counts_what_its_projects_won_and_proved() -> None:
+    drawn = made([[1, 2, 3], [4, 5]], ranked=False, won={1, 4, 5}, proven={2})
+    counted = [(group.size, group.won, group.proven) for group in drawn.groups]
+    assert counted == [(3, 1, 1), (2, 2, 0)]
+    assert drawn.groups[1].tallied == "2 won a Hedera prize · none with a Hedera proof"
+    none = "none won a Hedera prize · none with a Hedera proof"
+    assert Group(1, 3, "", 0, 7, "Leash").tallied == none
 
 
 def test_the_distance_to_the_idea_follows_the_closeness_in_meaning() -> None:

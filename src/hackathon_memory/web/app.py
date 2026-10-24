@@ -37,6 +37,7 @@ from starlette.concurrency import run_in_threadpool
 from hackathon_memory import __version__
 from hackathon_memory.check import submission
 from hackathon_memory.check.history import MAX_EVENTS
+from hackathon_memory.check.proof import PROOF_FOUND
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
@@ -482,6 +483,8 @@ def create_app(
             names={pid: member.name for pid, member in named.items()},
             linked=seen.came_back(conninfo), left_out=len(ids) - len(order),
             listed={pid for pid, row in rows.items() if row.entry_kind == "winner_entry"},
+            won={pid for pid, row in rows.items() if row.prize == "hedera_prize"},
+            proven={pid for pid, row in rows.items() if row.proof == PROOF_FOUND},
         )  # fmt: skip
         about = {pid: {"name": named[pid].name, "event": named[pid].event,
                        "line": lines[pid].text if pid in lines else "",

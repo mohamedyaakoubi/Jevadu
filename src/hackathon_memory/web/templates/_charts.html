@@ -85,13 +85,14 @@
         <div class="table-responsive" tabindex="0" role="region" aria-label="The table of the events, which scrolls sideways">
           <table class="table table-vcenter card-table">
             <thead><tr><th scope="col">Event</th><th scope="col">Year</th><th scope="col">Projects</th><th scope="col">With a Hedera prize</th></tr></thead>
-            <tbody>
+            <tbody id="event-rows">
             {% for row in charts.events %}
               <tr><td>{% if row.link %}<a href="{{ row.link }}" target="_blank" rel="noopener">{{ row.name }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ row.name }}{% endif %}</td><td>{{ row.year }}</td><td>{{ row.projects }}</td><td>{{ row.winners }}</td></tr>
             {% endfor %}
             </tbody>
           </table>
         </div>
+        <div class="hm-more" data-more-for="event-rows" hidden></div>
       </div>
     </section>
   </section>

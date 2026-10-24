@@ -1374,6 +1374,12 @@ def test_the_graph_draws_the_whole_collection_or_a_filtered_list(site, monkeypat
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel?view=graph&amp;event={event}"' in page
     assert "Like " in page and "1 project" not in page  # three projects: one group
     assert len(fake.requests) == before  # the graph of a list asks no model
+    # The name of a group opens the card of its project, on the graph and in its list; the list
+    # counts what its projects won and proved; a long list waits for the script's buttons.
+    assert page.count("data-graph-centre=") == 1 and page.count('<b>Like <a href="/?') == 1
+    assert 'class="hm-graph-tally">none won a Hedera prize · none with a Hedera proof' in page
+    assert 'data-more-for="members-1" hidden' in page and 'data-r="' in page
+    assert '<div class="hm-graph-tools" role="group" aria-label="Zoom of the graph" hidden>' in page
 
 
 def test_the_view_beside_the_cards_stays_when_the_search_changes(site) -> None:  # noqa: ANN001
@@ -1387,6 +1393,17 @@ def test_the_view_beside_the_cards_stays_when_the_search_changes(site) -> None: 
     start = client.get("/", params={"view": "charts"}).text  # the examples keep it too
     assert 'value="charts" id="view-kept"' in start
     assert 'hx-include="#view-kept" hx-target="#main"' in start
+
+
+def test_the_graph_says_when_its_numbers_follow_another_order_than_meaning(site) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    plain = client.get("/", params={"idea": VENDOR, "view": "graph"}).text
+    assert "the closer the project is in meaning" in plain and "in the list, which is" not in plain
+    fake.answer_queue = [json.dumps({"closest": [3, 2, 1]})]
+    ordered = client.get("/", params={"idea": VENDOR, "ai": "1", "view": "graph"}).text
+    assert "numbered as in the list, which is Gemini's order" in ordered
+    words = client.get("/", params={"idea": "invented", "mode": "words", "view": "graph"}).text
+    assert "numbered as in the list, which is the keyword order" in words
 
 
 def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None:  # noqa: ANN001
@@ -1432,6 +1449,74 @@ def test_a_dot_of_the_graph_shows_its_project_and_opens_its_card(site, chromium)
     assert page.locator("#viewer-body .project").get_attribute("data-project") == str(
         ids["Pebble Pay"])  # fmt: skip
     assert f"open={ids['Pebble Pay']}" in page.url
+    # The click kept the dashed line to its closest project, after the card closes, until a
+    # click on an empty place of the graph (24 October 2026).
+    page.keyboard.press("Escape")
+    page.wait_for_selector("#viewer:not([open])", state="attached")
+    page.mouse.move(5, 5)
+    assert "is-kept" in (dot.get_attribute("class") or "")
+    assert page.locator(".hm-graph-hover").get_attribute("visibility") == "visible"
+    box = page.locator(".hm-graph-svg").bounding_box()
+    page.mouse.click(box["x"] + 3, box["y"] + 3)
+    assert page.locator(".hm-graph-hover").get_attribute("visibility") == "hidden"
+    assert "is-kept" not in (dot.get_attribute("class") or "")
+
+
+@pytest.mark.browser
+def test_the_graph_zooms_with_ctrl_and_the_wheel(site, chromium) -> None:  # noqa: ANN001
+    client, _, ids, database = site
+    with psycopg.connect(database) as conn:
+        (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
+    page = served(chromium, client, viewport={"width": 1280, "height": 900})
+    page.goto(f"http://site.test/?event={event}&view=graph")
+    svg = page.locator(".hm-graph-svg")
+    start = [float(n) for n in svg.get_attribute("viewBox").split()]
+    mark = page.locator(f'.hm-dot[data-graph-id="{ids["Pebble Pay"]}"] .hm-mark')
+    size = mark.bounding_box()["width"]
+    box = svg.bounding_box()
+    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.keyboard.down("Control")
+    page.mouse.wheel(0, -400)
+    page.keyboard.up("Control")
+    page.wait_for_selector(".hm-graph-svg.is-zoomed")
+    zoomed = [float(n) for n in svg.get_attribute("viewBox").split()]
+    assert zoomed[2] < start[2] and zoomed[3] < start[3]  # a smaller part of the graph
+    assert abs(mark.bounding_box()["width"] - size) < 1.5  # a dot keeps its size on the screen
+    assert page.evaluate("window.scrollY") == 0 and page.locator("[data-zoom=reset]").is_enabled()
+    page.locator("[data-zoom=reset]").click()
+    assert [float(n) for n in svg.get_attribute("viewBox").split()] == start
+    page.locator("[data-zoom=in]").click()
+    assert float(svg.get_attribute("viewBox").split()[2]) < start[2]
+
+
+@pytest.mark.browser
+def test_a_long_list_shows_ten_lines_and_buttons_for_more(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1280, "height": 900})
+    page.goto("http://site.test/")
+    page.evaluate("""() => {
+      const list = document.createElement('ol');
+      list.id = 'long-list';
+      for (let i = 1; i <= 25; i++) list.insertAdjacentHTML('beforeend', '<li>Line ' + i + '</li>');
+      const place = document.createElement('div');
+      place.className = 'hm-more';
+      place.dataset.moreFor = 'long-list';
+      place.hidden = true;
+      document.getElementById('results').append(list, place);
+      const settled = {detail: {target: document.body}};
+      document.dispatchEvent(new CustomEvent('htmx:afterSettle', settled));
+    }""")
+    lines = page.locator("#long-list li")
+    shown = "() => [...document.querySelectorAll('#long-list li')].filter(l => !l.hidden).length"
+    assert lines.count() == 25 and page.evaluate(shown) == 10
+    page.get_by_role("button", name="Show 10 more").click()
+    assert page.evaluate(shown) == 20
+    page.get_by_role("button", name="Show the last 5").click()
+    assert page.evaluate(shown) == 25
+    page.get_by_role("button", name="Show fewer").click()
+    assert page.evaluate(shown) == 10
+    page.get_by_role("button", name="Show all 25").click()
+    assert page.evaluate(shown) == 25
 
 
 @pytest.mark.browser
