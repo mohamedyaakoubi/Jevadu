@@ -32,8 +32,9 @@ def made(groups: list[list[int]], *, ranked: bool, distance: dict | None = None,
     def closeness(one: int, two: int) -> float:
         return (0.9 if group_of[one] == group_of[two] else 0.5) - abs(one - two) / 10_000
 
+    typical = {pid: closeness(pid, group[0]) for group in groups for pid in group[1:]}
     return graph.build(
-        order, groups, ranked=ranked, distance=distance, closeness=closeness,
+        order, groups, ranked=ranked, distance=distance, typical=typical,
         nearest={pid: next(other for other in order if other != pid) for pid in order},
         centres=[group[0] for group in groups],
         categories={pid: "Payments" if pid % 2 else "Developer tools" for pid in order},

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import math
 from collections import Counter
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 
 MOST = 300  # the longest list that is drawn: every event of the collection fits (271 at most)
@@ -329,7 +329,7 @@ def build(
     order: Sequence[int],
     found: Sequence[Sequence[int]],
     *,
-    closeness: Callable[[int, int], float],
+    typical: Mapping[int, float],
     nearest: Mapping[int, int],
     centres: Sequence[int],
     categories: Mapping[int, str],
@@ -340,27 +340,27 @@ def build(
     left_out: int = 0,
 ) -> Graph:
     """The graph of the projects of `order`, closest first when `ranked`, in the groups of
-    `found`, each with its most central project in `centres`. `closeness` gives the similarity
-    of two projects, `nearest` the closest project of each, `distance` the cosine distance of
-    each project to the idea (its places in the list stand in when it is None), and `linked`
-    the groups of projects with the same code or Hedera ID (search/seen.py). `left_out` counts
-    the projects of the list that could not be placed."""
+    `found`, each with its most central project in `centres`. `typical` gives the similarity of
+    each project to the most central one of its group, `nearest` the closest project of each,
+    `distance` the cosine distance of each project to the idea (its places in the list stand in
+    when it is None), and `linked` the groups of projects with the same code or Hedera ID
+    (search/seen.py). `left_out` counts the projects of the list that could not be placed."""
     together = list(zip(found, centres, strict=True))
     if not ranked:  # the largest group first, so that it takes the first colour
         together.sort(key=lambda one: -len(one[0]))
     # each group from its most typical project: the closest to its most central one
-    typical = [[centre, *sorted((pid for pid in group if pid != centre),
-                                key=lambda pid: (-closeness(pid, centre), pid))]
+    ordered = [[centre, *sorted((pid for pid in group if pid != centre),
+                                key=lambda pid: (-typical.get(pid, 0.0), pid))]
                for group, centre in together]  # fmt: skip
     groups = [Group(number, len(group), *named(group, categories), centre, names.get(centre, ""))
               for number, (group, centre) in enumerate(together, start=1)]  # fmt: skip
     if ranked:
-        places, labels = around_idea(order, typical, distance)
+        places, labels = around_idea(order, ordered, distance)
     else:
-        places, labels = in_groups(typical, [group.wide for group in groups])
+        places, labels = in_groups(ordered, [group.wide for group in groups])
     groups = [replace(group, x=round(x, 1), y=round(y, 1), anchor=anchor)
               for group, (x, y, anchor) in zip(groups, labels, strict=True)]  # fmt: skip
-    group_of = {pid: number for number, group in enumerate(typical, start=1) for pid in group}
+    group_of = {pid: number for number, group in enumerate(ordered, start=1) for pid in group}
     rank = {pid: place for place, pid in enumerate(order, start=1)} if ranked else {}
     dots = tuple(Dot(pid, group_of[pid], round(places[pid][0], 1), round(places[pid][1], 1),
                      places[pid][2], rank.get(pid), nearest.get(pid))

@@ -425,11 +425,13 @@ def create_app(
                 distance = dict(store.nearest(values, model, limit=len(order), only=order))
             except (*FAILED_CALLS, BudgetExceeded):
                 distance = None
+        centres = [closeness.central(group, pairs) for group in found]
         built = graph.build(
             order, found, ranked=bool(idea), distance=distance,
-            closeness=lambda one, two: closeness.similarity(pairs, one, two),
-            nearest=closeness.nearest(order, pairs),
-            centres=[closeness.central(group, pairs) for group in found],
+            typical={pid: closeness.similarity(pairs, pid, centre)
+                     for group, centre in zip(found, centres, strict=True)
+                     for pid in group if pid != centre},
+            nearest=closeness.nearest(order, pairs), centres=centres,
             categories={pid: row.category for pid, row in rows.items()},
             names={pid: member.name for pid, member in named.items()},
             linked=seen.came_back(conninfo), left_out=len(ids) - len(order),
