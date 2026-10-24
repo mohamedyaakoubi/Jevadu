@@ -1278,6 +1278,33 @@ def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None
     assert "the graph draws at most 2" in many and '<a class="hm-dot ' not in many
 
 
+@pytest.mark.browser
+def test_a_dot_of_the_graph_shows_its_project_and_opens_its_card(site, chromium) -> None:  # noqa: ANN001
+    client, _, ids, database = site
+    with psycopg.connect(database) as conn:
+        (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
+    page = served(chromium, client, viewport={"width": 1280, "height": 900})
+    page.goto(f"http://site.test/?event={event}&view=graph")
+    dot = page.locator(f'.hm-dot[data-graph-id="{ids["Pebble Pay"]}"]')
+    dot.hover()
+    tip = page.locator(".hm-graph-tip")
+    assert tip.is_visible() and tip.locator(".hm-tip-name").inner_text() == "Pebble Pay"
+    titles = [title.strip() for title in tip.locator(".hm-tip-label").all_inner_texts()]
+    assert titles == ["Proof:", "Group:", "Closest in meaning:"]
+    looks = page.evaluate("""() => {
+      const label = document.querySelector('.hm-graph-tip .hm-tip-label');
+      const value = label.parentElement;
+      return [getComputedStyle(label).color, getComputedStyle(value).color,
+              getComputedStyle(label).fontWeight];
+    }""")
+    assert looks[0] != looks[1] and int(looks[2]) >= 600  # the title stands out from its value
+    dot.click()
+    page.wait_for_selector("#viewer[open] .project[data-project]")
+    assert page.locator("#viewer-body .project").get_attribute("data-project") == str(
+        ids["Pebble Pay"])  # fmt: skip
+    assert f"open={ids['Pebble Pay']}" in page.url
+
+
 # ------------------------------------------------- smaller parts
 
 

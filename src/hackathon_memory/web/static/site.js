@@ -388,11 +388,17 @@
     var tip = graph.querySelector(".hm-graph-tip");
     if (!tip) return;
     tip.textContent = "";
-    function line(text, kind) {
+    function line(text, kind, label) { // a label stands out from its value
       if (!text) return;
       var one = document.createElement("p");
       if (kind) one.className = kind;
-      one.textContent = text;
+      if (label) {
+        var title = document.createElement("span");
+        title.className = "hm-tip-label";
+        title.textContent = label + " ";
+        one.appendChild(title);
+      }
+      one.appendChild(document.createTextNode(text));
       tip.appendChild(one);
     }
     var rank = dot.getAttribute("data-rank"), near = dot.getAttribute("data-near");
@@ -400,9 +406,10 @@
     line(dot.getAttribute("data-name"), "hm-tip-name");
     line((rank ? "Number " + rank + " in the list · " : "") + dot.getAttribute("data-event"), "hm-tip-small");
     line(dot.getAttribute("data-line"));
-    line([dot.getAttribute("data-proof"), dot.getAttribute("data-prize")].filter(Boolean).join(" · "), "hm-tip-small");
-    line("Group: " + dot.getAttribute("data-group"), "hm-tip-small");
-    if (other) line("Closest in meaning: " + other.getAttribute("data-name"), "hm-tip-small");
+    line(dot.getAttribute("data-proof"), "hm-tip-small", "Proof:");
+    line(dot.getAttribute("data-prize"), "hm-tip-small", "Won:");
+    line(dot.getAttribute("data-group"), "hm-tip-small", "Group:");
+    if (other) line(other.getAttribute("data-name"), "hm-tip-small", "Closest in meaning:");
     tip.hidden = false;
     var box = graph.getBoundingClientRect(), mark = dot.querySelector(".hm-mark").getBoundingClientRect();
     var x = mark.left + mark.width / 2 - box.left, y = mark.top + mark.height / 2 - box.top;

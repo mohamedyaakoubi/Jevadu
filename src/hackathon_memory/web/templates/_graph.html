@@ -22,7 +22,7 @@
       <g class="hm-graph-dots">
         {% for dot in graph.dots %}{% set one = graph_about.get(dot.project_id, {}) %}{% set first = dot.rank and dot.rank <= 10 %}
         <a class="hm-dot hm-g{{ dot.group }}{% if first %} is-first{% endif %}" href="{{ link }}{{ dot.project_id }}" tabindex="-1" data-graph-id="{{ dot.project_id }}"{% if dot.near %} data-near="{{ dot.near }}"{% endif %}
-           data-name="{{ one.name }}" data-event="{{ one.event }}" data-line="{{ one.line }}" data-proof="Proof: {{ PROOF_SHORT.get(one.proof or 'not_checked', one.proof) }}"{% if one.prize == "hedera_prize" %} data-prize="Won a Hedera prize"{% elif one.prize == "other_prize" %} data-prize="Won another sponsor's prize"{% endif %}{% if dot.rank %} data-rank="{{ dot.rank }}"{% endif %} data-group="{{ graph.groups[dot.group - 1].title }}">
+           data-name="{{ one.name }}" data-event="{{ one.event }}" data-line="{{ one.line }}" data-proof="{{ PROOF_SHORT.get(one.proof or 'not_checked', one.proof) }}"{% if one.prize == "hedera_prize" %} data-prize="a Hedera prize"{% elif one.prize == "other_prize" %} data-prize="another sponsor's prize"{% endif %}{% if dot.rank %} data-rank="{{ dot.rank }}"{% endif %} data-group="{{ graph.groups[dot.group - 1].title }}">
           <circle class="hm-hit" cx="{{ dot.x }}" cy="{{ dot.y }}" r="{{ dot.r + 5 }}"/>
           <circle class="hm-mark" cx="{{ dot.x }}" cy="{{ dot.y }}" r="{{ dot.r }}"/>
           {% if first %}<text x="{{ dot.x }}" y="{{ dot.y }}">{{ dot.rank }}</text>{% endif %}

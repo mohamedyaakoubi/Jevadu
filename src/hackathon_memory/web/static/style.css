@@ -301,6 +301,7 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-graph-tip p + p { margin-top: 0.25rem; }
 .hm-graph-tip .hm-tip-name { font-weight: 700; }
 .hm-graph-tip .hm-tip-small { color: var(--tblr-secondary); }
+.hm-graph-tip .hm-tip-label { color: var(--tblr-body-color); font-weight: 600; }
 .hm-graph-key { display: flex; flex-wrap: wrap; gap: 0.375rem 1.25rem; margin: 0.75rem 0 0; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--tblr-secondary); }
 .hm-graph-key li { display: inline-flex; align-items: center; gap: 0.4rem; }
 .hm-graph-swatch { display: inline-block; flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--hm-group); vertical-align: -0.05em; }
