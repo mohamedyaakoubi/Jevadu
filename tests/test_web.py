@@ -338,6 +338,27 @@ def own_id(database: str, project_id: int, entity: str, kind: str) -> None:
                      "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
 
 
+def test_the_card_says_how_its_proof_and_its_activity_were_judged(site) -> None:  # noqa: ANN001
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    plain = client.get(f"/project/{pebble}/panel").text
+    assert "How this was judged" in plain and "Neither the page nor the README names" in plain
+    with psycopg.connect(database) as conn:  # the invented event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET starts_at = '2026-03-06T00:00:00Z', ends_on = '2026-03-08'")
+    own_id(database, pebble, "0.0.4870201", "topic")  # made on 6 March 2026
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET proof_status = 'proof_found' WHERE id = %s", (pebble,))
+    panel = client.get(f"/project/{pebble}/panel").text
+    assert "The window of ETHGlobal Sample Event: 4 February 2026 to 22 March 2026" in panel
+    assert "topic, made 6 March 2026: <b>made inside the window</b>" in panel
+    assert f'href="#judged-proof-{pebble}" data-scroll-to="judged-proof-{pebble}"' in panel
+    listed = client.get("/").text
+    card = listed[listed.index(f'id="result-{pebble}"') :]
+    card = card[: card.index("</li>")]
+    assert f'data-scroll-to="judged-proof-{pebble}"' in card  # the mark opens the card there
+    assert f'hx-get="/project/{pebble}/panel"' in card
+
+
 def test_an_id_of_the_code_shows_its_file_and_says_where_the_proof_comes_from(site) -> None:  # noqa: ANN001
     from hackathon_memory.db.code_ids import CodeIdStore, Given
 

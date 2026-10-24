@@ -17,20 +17,33 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, time
 from pathlib import Path
 
 import psycopg
 from markupsafe import Markup, escape
 
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
+from hackathon_memory.check.life import AFTER_THE_EVENT
+from hackathon_memory.check.proof import (
+    ANOTHER_KIND,
+    CANNOT_BE_CHECKED,
+    DATES_DO_NOT_FIT,
+    FOUND_BUT_EMPTY,
+    NOT_FOUND,
+    ORDER,
+    PROOF_FOUND,
+    WINDOW_NOT_KNOWN,
+    Window,
+    window_of,
+)
 from hackathon_memory.check.story import Story, places_in, services_in_code, set_up_in_code
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.history import story_of_project
 from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
 from hackathon_memory.search.engine import LANGUAGE, Hit
-from hackathon_memory.search.listing import ResultCard
+from hackathon_memory.search.listing import STATUS_WORDS, LedgerLine, ResultCard
 from hackathon_memory.web.code_reading import CodeView, view_of_repository
 
 FIELD_TITLES = {
@@ -47,6 +60,9 @@ _SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\n+")
 HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transaction", "schedule"})
 # A kind of ID in the words of a person, where they differ from the name of the kind.
 KIND_WORDS = {"schedule": "scheduled transaction"}
+NETWORK_WORDS = {"testnet": "test network", "mainnet": "main network",
+                 "previewnet": "preview network"}  # fmt: skip
+JUDGED_IDS = 5  # the IDs that "How this was judged" shows; the others are counted
 # The kinds of action of a transaction that the mirror node names, in plain words. Another kind is
 # shown as the node writes it.
 ACTION_WORDS = {
@@ -89,6 +105,65 @@ SERVICE_TRANSACTIONS = {  # plural; the singular drops the last letter
     FILES: "File Service transactions",
     HBAR: "HBAR and account transactions",
 }
+
+
+@dataclass(frozen=True)
+class Reason:
+    """One ID that decides a project's proof, on the network of its best result, and why."""
+
+    line: LedgerLine
+    words: str
+
+
+@dataclass(frozen=True)
+class Judged:
+    """What "How this was judged" shows on a card (design 12.1, S2): the window of the event, the
+    IDs whose result is the project's, and the day after which a sign counts as a sign of life."""
+
+    window: Window | None
+    reasons: tuple[Reason, ...]
+    more: int  # IDs with the same result that are not shown
+    life_after: datetime | None
+
+
+def reason_of(line: LedgerLine, window: Window | None) -> str:
+    """Why the result of one ID is what it is, from its facts, in plain words."""
+    where = "README" if line.found_in == "readme" else "page"
+    if line.status == PROOF_FOUND:
+        return ("made inside the window" if window is not None and window.holds(line.created_at)
+                else "used inside the window")  # fmt: skip
+    if line.status == DATES_DO_NOT_FIT:
+        return "made and used outside the window"
+    if line.status == ANOTHER_KIND:
+        return (f"the {where} calls it a {line.said_kind}, but the ledger knows it as a "
+                f"{KIND_WORDS.get(line.kind, line.kind)}")  # fmt: skip
+    if line.status == FOUND_BUT_EMPTY:
+        return ("nothing in it: a topic with no message, a token with no unit, a deleted contract "
+                "or a failed transaction")  # fmt: skip
+    if line.status == NOT_FOUND:
+        return f"the {NETWORK_WORDS.get(line.network, line.network)} does not know it"
+    if line.status == CANNOT_BE_CHECKED:
+        return "the test network was emptied on 1 February 2024, after this event"
+    if line.status == WINDOW_NOT_KNOWN:
+        return "found; its dates wait for the end of the event"
+    return STATUS_WORDS.get(line.status, line.status or "not checked yet")
+
+
+def judged_of(facts: ResultCard) -> Judged:
+    """The facts behind the proof and the activity of a project, for its card."""
+    window = window_of(facts.event_starts_at, facts.event_ends_on)
+    best: dict[tuple[str, str], LedgerLine] = {}
+    for line in facts.ledger:
+        if line.network is None or line.status not in ORDER:
+            continue
+        key = (line.entity_id, line.found_in)
+        if key not in best or ORDER.index(line.status) < ORDER.index(best[key].status):
+            best[key] = line
+    deciding = [line for line in best.values() if line.status == facts.proof_status]
+    reasons = tuple(Reason(line, reason_of(line, window)) for line in deciding[:JUDGED_IDS])
+    ended = facts.event_ends_on
+    after = datetime.combine(ended, time.max, tzinfo=UTC) + AFTER_THE_EVENT if ended else None
+    return Judged(window, reasons, max(0, len(deciding) - JUDGED_IDS), after)
 
 
 def hashscan(network: str | None, kind: str | None, entity_id: str) -> str | None:

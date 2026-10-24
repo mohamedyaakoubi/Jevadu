@@ -456,6 +456,41 @@
     window.htmx.trigger(link, "click");
   });
 
+  // ---------------------------------------------------------------- how a mark was judged
+  // A mark of the proof or the activity leads to how it was judged (design 12.1, S1 to S3): inside
+  // a card or a check it brings that part into view; on a card of the list it opens the project's
+  // card first, and brings the part into view once the card is there.
+  var pointedAt = null; // the part to bring into view when the window of a project opens
+  function bringIntoView(id) {
+    var part = $(id);
+    if (!part) return false;
+    part.scrollIntoView({ block: "start", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
+    if (part.hasAttribute("tabindex")) part.focus({ preventScroll: true });
+    part.classList.remove("is-pointed");
+    void part.offsetWidth; // start the moment of light again
+    part.classList.add("is-pointed");
+    window.setTimeout(function () { part.classList.remove("is-pointed"); }, 1700);
+    return true;
+  }
+  document.addEventListener("click", function (event) {
+    var link = event.target.closest && event.target.closest("a[data-scroll-to]");
+    if (!link || link.hasAttribute("hx-get")) return; // a card of the list opens first, below
+    if (bringIntoView(link.getAttribute("data-scroll-to"))) event.preventDefault();
+  });
+  document.addEventListener("htmx:beforeRequest", function (event) {
+    var target = event.detail.target;
+    if (!target || target.id !== "viewer-body") return;
+    var link = event.detail.elt && event.detail.elt.closest && event.detail.elt.closest("[data-scroll-to]");
+    pointedAt = link ? link.getAttribute("data-scroll-to") : null;
+  });
+  document.addEventListener("htmx:afterSettle", function (event) {
+    var target = event.detail.target;
+    if (!target || target.id !== "viewer-body" || !pointedAt) return;
+    var id = pointedAt;
+    pointedAt = null;
+    bringIntoView(id);
+  });
+
   // ---------------------------------------------------------------- the window of a project
   var viewer = function () { return $("viewer"); };
   var pushed = false; // the window added an entry to the history, so "back" closes it

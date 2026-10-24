@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import psycopg
 
@@ -53,6 +53,7 @@ class LedgerLine:
     action: str | None = None  # for a transaction: its kind, such as CRYPTOTRANSFER
     outcome: str | None = None  # for a transaction: SUCCESS, or why it failed
     found_at: str | None = None  # an ID of the code: the file where it stands
+    said_kind: str | None = None  # what the page or the README calls it
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,9 @@ class ResultCard:
     last_push_at: datetime | None = None
     life: Life | None = None
     entry_kind: str = FULL_CARD
+    event_starts_at: datetime | None = None
+    event_ends_on: date | None = None
+    last_own_activity_at: datetime | None = None  # the last activity of its own IDs (design 7.4)
 
     @property
     def proven_by_code_only(self) -> bool:
@@ -115,7 +119,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
             row[0]: row[1:]
             for row in conn.execute(
                 "SELECT p.id, p.name, e.name, p.prize_state, p.proof_status, p.page_url, r.url, "
-                "p.entry_kind "
+                "p.entry_kind, e.starts_at "
                 "FROM projects p JOIN events e ON e.id = p.event_id "
                 "LEFT JOIN repositories r ON r.id = p.repository_id WHERE p.id = ANY(%s)",
                 (ids,),
@@ -125,7 +129,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         for row in conn.execute(
             "SELECT h.project_id, h.entity_id, h.found_in, c.network, c.status, f.kind, "
             "f.created_at, f.last_activity_at, f.asked_at, f.details ->> 'name', "
-            "f.details ->> 'result', h.found_at "
+            "f.details ->> 'result', h.found_at, h.said_kind "
             "FROM hedera_ids h LEFT JOIN id_checks c ON c.hedera_id = h.id "
             "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "
             "WHERE h.project_id = ANY(%s) ORDER BY h.project_id, h.id, c.network",
@@ -138,7 +142,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         if hit.project_id not in projects:
             continue
         end, code_status, made_at, last_push, last_activity = signs[hit.project_id]
-        *facts, entry_kind = projects[hit.project_id]
+        *facts, entry_kind, starts_at = projects[hit.project_id]
         life = life_of(
             event_end=end, last_push=last_push, last_ledger_activity=last_activity, now=now
         )
@@ -153,6 +157,9 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
                 last_push_at=last_push,
                 life=life,
                 entry_kind=entry_kind,
+                event_starts_at=starts_at,
+                event_ends_on=end,
+                last_own_activity_at=last_activity,
             )
         )
     return found

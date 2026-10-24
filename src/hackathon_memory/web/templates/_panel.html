@@ -17,8 +17,8 @@
     <p class="project-lede">{{ card.short_line }} <span class="hm-tiny">The team's tagline</span></p>
     {% endif %}
     <div class="project-marks">
-      {{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}{{ parts.info("proof", "Hedera proof") }}
-      {% if facts.life %}{{ marks.life(facts.life) }}{{ parts.info("life", "life") }}{% endif %}
+      <a class="hm-mark-link" href="#judged-proof-{{ pid }}" data-scroll-to="judged-proof-{{ pid }}">{{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
+      {% if facts.life %}<a class="hm-mark-link" href="#judged-life-{{ pid }}" data-scroll-to="judged-life-{{ pid }}">{{ marks.life(facts.life) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("life", "life") }}{% endif %}
       {{ marks.tags(facts) }}{% if facts.prize_state in ("hedera_prize", "other_prize") or facts.entry_kind == WINNER_ENTRY %}{{ parts.info("event", "the prize and the winners' list") }}{% endif %}
     </div>
     <p class="project-links">
@@ -34,6 +34,34 @@
 
   <div class="project-cols">
     <div class="project-col project-facts">
+      {% set how = judged_of(facts) %}
+      <section class="card project-section judged-section" aria-labelledby="judged-{{ pid }}-title">
+        <div class="card-body">
+          <h3 id="judged-{{ pid }}-title">How this was judged{{ parts.info("judged", "how this was judged") }}</h3>
+          <div class="hm-judged" id="judged-proof-{{ pid }}" tabindex="-1">
+            <p class="hm-judged-mark">{{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}</p>
+            {% if how.window %}<p class="hm-small">The window of {{ facts.event }}: {{ how.window.start | day }} to {{ how.window.end | day }}, from 30 days before its start to 14 days after its end.</p>
+            {% elif facts.ledger %}<p class="hm-small">The end of {{ facts.event }} is not known yet, so no date can be judged.</p>{% endif %}
+            {% if how.reasons %}
+            <ul class="hm-judged-ids">
+              {% for one in how.reasons %}{% set line = one.line %}
+              <li><span class="id">{{ line.entity_id }}</span> <span class="text-secondary">({{ NETWORK_WORDS.get(line.network, line.network) }})</span>: {{ KIND_WORDS.get(line.kind, line.kind or "nothing") }}{% if line.created_at %}, made {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}{% if line.found_in == "code" %}, in the code{% endif %}: <b>{{ one.words }}</b>.</li>
+              {% endfor %}
+            </ul>
+            {% if how.more %}<p class="hm-small">And {{ how.more }} more ID{{ "s" if how.more != 1 }} with the same result.</p>{% endif %}
+            <p class="hm-small">The best result among its IDs is the project's. <a href="#ledger-{{ pid }}-title" data-scroll-to="ledger-{{ pid }}-title">Every ID, with the day it was checked</a>, is listed below.</p>
+            {% else %}
+            <p class="hm-small">Neither the page nor the README names a Hedera ID, and the code names none of the team's own made during the event. That is common, and says nothing bad about the project. <a href="#code-{{ pid }}-title" data-scroll-to="code-{{ pid }}-title">What its code shows</a> is below.</p>
+            {% endif %}
+          </div>
+          {% if facts.life %}
+          <div class="hm-judged" id="judged-life-{{ pid }}" tabindex="-1">
+            <p class="hm-judged-mark">{{ marks.life(facts.life) }}</p>
+            <p class="hm-small">{% if how.life_after %}{{ facts.event }} ended on {{ facts.event_ends_on | day }}, so a sign of life is a push of its code, or an activity of its own IDs on the ledger, after {{ how.life_after | day }}.{% else %}The end of {{ facts.event }} is not known, so no date is a sign of life yet.{% endif %} Last push: {{ facts.last_push_at | day if facts.last_push_at else "not known" }}. Last activity of its own IDs: {{ facts.last_own_activity_at | day if facts.last_own_activity_at else "none" }}. So: {{ facts.life.why }}.</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
       {% if linked %}
       <section class="card project-section linked-section" aria-labelledby="linked-{{ pid }}-title">
         <div class="card-body">
