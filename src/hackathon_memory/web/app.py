@@ -95,13 +95,13 @@ COMPARE_SECONDS = 30
 RERANK_SECONDS = 8
 MEANING, WORDS = engine.MEANING, engine.WORDS
 MODES = (MEANING, WORDS)
-FILTERS = ("event", "year", "category", "proof", "life")
+FILTERS = ("event", "year", "category", "proof", "life", "winner")
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 CHARTS = "charts"
 GRAPH = "graph"
 VIEWS = (CHARTS, GRAPH)  # the views beside the cards, each named in the address
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
-                "proof": "the Hedera proof", "life": "the life"}  # fmt: skip
+                "proof": "the Hedera proof", "life": "the life", "winner": "the prize"}  # fmt: skip
 EXAMPLES = EXAMPLE_IDEAS  # what the search learns about them is kept for good
 PROOF_SHORT = {
     "proof_found": "found",
@@ -545,6 +545,7 @@ def create_app(
         category: str = "",
         proof: str = "",
         life: str = "",
+        winner: str = "",
         open: str = "",  # noqa: A002  (the name in the address)
         page: str = "1",
         view: str = "",
@@ -559,7 +560,7 @@ def create_app(
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
-        asked = filtering.Filters(event, year, category, proof, life)
+        asked = filtering.Filters(event, year, category, proof, life, winner)
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
                 "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,

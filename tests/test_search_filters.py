@@ -94,3 +94,21 @@ def test_the_facts_come_from_the_tables(empty_database: str) -> None:
     assert {row.event_name for row in rows.values()} == {"ETHGlobal Sample Event"}
     assert {row.life for row in rows.values()} == {"unknown"}  # no end and no dates of code
     assert {row.year for row in rows.values()} == {"2026"}  # from the start of the event
+
+
+def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list() -> None:
+    rows = [
+        Facts(1, "7", "Event A", "2026", "", "proof_found", "active", prize="hedera_prize"),
+        Facts(2, "7", "Event A", "2026", "", "no_id_given", "unknown", prize="hedera_prize",
+              entry_kind="winner_entry"),
+        Facts(3, "7", "Event A", "2026", "", "no_id_given", "stopped", prize="other_prize"),
+        Facts(4, "7", "Event A", "2026", "", "no_id_given", "stopped"),
+    ]  # fmt: skip
+    assert allowed(rows, Filters(winner="hedera_prize")) == [1, 2]  # both won a Hedera prize
+    assert allowed(rows, Filters(winner="winners_list")) == [2]
+    assert allowed(rows, Filters(winner="winners_list", life="stopped")) == []
+    offered = choices(rows).winner
+    assert [(one.value, one.words, one.count) for one in offered] == [
+        ("hedera_prize", "Won a Hedera prize", 2),
+        ("winners_list", "Winners' list only", 1),
+    ]

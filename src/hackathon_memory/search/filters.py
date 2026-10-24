@@ -1,9 +1,11 @@
-"""The filters of the search (design 8.2): event, year, category, Hedera proof and life.
+"""The filters of the search (design 8.2): event, year, category, Hedera proof, life and prize.
 
-Each project gets its five facts from the tables: its event, the year of that event, the
-category of its card when the model wrote one, the result of the proof rule, and its life by the
-rule of design 7.4. A filter keeps the projects whose fact matches it, and the search then ranks
-only those (search/engine.py). With no filter set, every project is searched.
+Each project gets its six facts from the tables: its event, the year of that event, the
+category of its card when the model wrote one, the result of the proof rule, its life by the
+rule of design 7.4, and its prize. A filter keeps the projects whose fact matches it, and the
+search then ranks only those (search/engine.py). With no filter set, every project is searched.
+The prize is the one fact with two values at once: a project known only from a winners' list
+also won a Hedera prize, so each of the two choices keeps the projects that have it.
 
 The choices that the page offers are the values that the projects really have, each with its
 number of projects. A value that a request names but no project has is left out, and the page
@@ -27,6 +29,9 @@ NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
 # The kinds of Hedera ID that the charts count.
 KINDS = ("account", "topic", "token", "contract", "schedule")
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
+# The choices of the prize filter, and their words, which the tags of a card use too.
+HEDERA_PRIZE, WINNERS_LIST = "hedera_prize", "winners_list"
+WINNER_WORDS = {HEDERA_PRIZE: "Won a Hedera prize", WINNERS_LIST: "Winners' list only"}
 PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
 PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
                NOT_CHECKED: listing.STATUS_WORDS[None]}  # fmt: skip
@@ -41,6 +46,7 @@ class Filters:
     category: str = ""
     proof: str = ""
     life: str = ""
+    winner: str = ""
 
     def chosen(self) -> dict[str, str]:
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name)}
@@ -67,6 +73,12 @@ class Facts:
     code_services: tuple[str, ...] = ()
     code_packages: tuple[str, ...] = ()
 
+    @property
+    def winner(self) -> tuple[str, ...]:
+        """The choices of the prize filter that keep the project."""
+        won = (HEDERA_PRIZE,) if self.prize == HEDERA_PRIZE else ()
+        return won + ((WINNERS_LIST,) if self.entry_kind == "winner_entry" else ())
+
 
 @dataclass(frozen=True)
 class Choice:
@@ -84,6 +96,7 @@ class Choices:
     category: list[Choice]
     proof: list[Choice]
     life: list[Choice]
+    winner: list[Choice]
     projects: int
     with_category: int
 
@@ -136,7 +149,12 @@ def allowed(rows: Sequence[Facts], chosen: Filters) -> list[int] | None:
     wanted = chosen.chosen()
     if not wanted:
         return None
-    return [row.project_id for row in rows if all(getattr(row, k) == v for k, v in wanted.items())]
+    return [row.project_id for row in rows
+            if all(_has(getattr(row, k), v) for k, v in wanted.items())]  # fmt: skip
+
+
+def _has(fact: str | tuple[str, ...], value: str) -> bool:
+    return value in fact if isinstance(fact, tuple) else fact == value
 
 
 def _counted(values: Iterable[str], order: Sequence[str] | None = None) -> list[tuple[str, int]]:
@@ -177,6 +195,12 @@ def choices(rows: Sequence[Facts]) -> Choices:
             Choice(v, PROOF_WORDS[v], n) for v, n in _counted((r.proof for r in rows), PROOF_ORDER)
         ],
         life=[Choice(v, v, n) for v, n in _counted((row.life for row in rows), LIFE_ORDER)],
+        winner=[
+            Choice(v, WINNER_WORDS[v], n)
+            for v, n in _counted(
+                (tag for row in rows for tag in row.winner), (HEDERA_PRIZE, WINNERS_LIST)
+            )
+        ],  # fmt: skip
         projects=len(rows),
         with_category=sum(bool(row.category) for row in rows),
     )

@@ -648,6 +648,23 @@ def test_a_filter_without_an_idea_narrows_the_list(site) -> None:  # noqa: ANN00
     assert "1 project matches the filters" in page.text and page.text.count('class="result"') == 1
 
 
+def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list(site) -> None:  # noqa: ANN001
+    client, _, ids, database = site
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET prize_state = 'hedera_prize' WHERE id = ANY(%s)",
+                     ([ids["Cedar Post"], ids["Fern Vote"]],))  # fmt: skip
+        conn.execute("UPDATE projects SET entry_kind = 'winner_entry' WHERE id = %s",
+                     (ids["Fern Vote"],))  # fmt: skip
+    page = client.get("/").text
+    assert '<option value="hedera_prize">Won a Hedera prize (2)</option>' in page
+    assert '<option value="winners_list">Winners&#39; list only (1)</option>' in page
+    won = client.get("/", params={"winner": "hedera_prize"}).text
+    assert set(order_of(won)) == {str(ids["Cedar Post"]), str(ids["Fern Vote"])}
+    listed = client.get("/", params={"winner": "winners_list"}).text
+    assert order_of(listed) == [str(ids["Fern Vote"])]
+    assert "winner=winners_list" in listed  # the address keeps the choice
+
+
 def test_a_filter_keeps_the_closest_projects_that_have_its_value(site, monkeypatch) -> None:  # noqa: ANN001
     """The number next to a value is what the filter leaves (design 8.2): a filter narrows the
     closest projects of a search, it does not search again among all the projects."""
