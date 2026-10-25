@@ -1,0 +1,2884 @@
+{
+ "test": "ledger-days",
+ "made_on": "2026-10-25",
+ "read": {
+  "ids": 2045,
+  "ids_cut": 20,
+  "events": 103843
+ },
+ "projects": 355,
+ "with_a_transaction_in_the_time": 349,
+ "by_days": {
+  "1": 63,
+  "2": 72,
+  "3-5": 147,
+  "6-10": 44,
+  "11-30": 20,
+  "31+": 3
+ },
+ "active_on_3_days_or_more": {
+  "share": 0.6132,
+  "range": [
+   0.5616,
+   0.6648
+  ],
+  "count": 214,
+  "of": 349
+ },
+ "worth_drawing_at": 0.25,
+ "worth_drawing": true,
+ "with_days_before_the_event": 60,
+ "with_days_during_the_event": 349,
+ "with_days_after_the_event": 64,
+ "only_during_the_event": 247,
+ "by_services": {
+  "1": 117,
+  "2": 88,
+  "3": 82,
+  "4": 43,
+  "5": 16,
+  "6": 3
+ },
+ "per_project": [
+  {
+   "project": 1,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 3,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 5,
+   "days": 7,
+   "before": 3,
+   "during": 4,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 6,
+   "days": 7,
+   "before": 1,
+   "during": 6,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 7,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 8,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 10,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 11,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 12,
+   "days": 8,
+   "before": 0,
+   "during": 6,
+   "after": 2,
+   "services": 5
+  },
+  {
+   "project": 15,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 17,
+   "days": 5,
+   "before": 0,
+   "during": 2,
+   "after": 3,
+   "services": 3
+  },
+  {
+   "project": 18,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 19,
+   "days": 4,
+   "before": 2,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 21,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 22,
+   "days": 11,
+   "before": 7,
+   "during": 3,
+   "after": 1,
+   "services": 2
+  },
+  {
+   "project": 23,
+   "days": 6,
+   "before": 0,
+   "during": 3,
+   "after": 3,
+   "services": 2
+  },
+  {
+   "project": 24,
+   "days": 4,
+   "before": 1,
+   "during": 2,
+   "after": 1,
+   "services": 3
+  },
+  {
+   "project": 25,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 26,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 3
+  },
+  {
+   "project": 29,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 30,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 31,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 33,
+   "days": 2,
+   "before": 1,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 34,
+   "days": 3,
+   "before": 1,
+   "during": 1,
+   "after": 1,
+   "services": 1
+  },
+  {
+   "project": 36,
+   "days": 4,
+   "before": 0,
+   "during": 2,
+   "after": 2,
+   "services": 1
+  },
+  {
+   "project": 37,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 39,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 40,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 41,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 42,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 45,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 46,
+   "days": 2,
+   "before": 0,
+   "during": 1,
+   "after": 1,
+   "services": 2
+  },
+  {
+   "project": 49,
+   "days": 4,
+   "before": 0,
+   "during": 3,
+   "after": 1,
+   "services": 1
+  },
+  {
+   "project": 52,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 53,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 1
+  },
+  {
+   "project": 54,
+   "days": 13,
+   "before": 5,
+   "during": 3,
+   "after": 5,
+   "services": 4
+  },
+  {
+   "project": 55,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 58,
+   "days": 0,
+   "before": 0,
+   "during": 0,
+   "after": 0,
+   "services": 0
+  },
+  {
+   "project": 69,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 70,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 72,
+   "days": 5,
+   "before": 1,
+   "during": 2,
+   "after": 2,
+   "services": 5
+  },
+  {
+   "project": 79,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 82,
+   "days": 7,
+   "before": 1,
+   "during": 3,
+   "after": 3,
+   "services": 5
+  },
+  {
+   "project": 84,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 94,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 95,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 96,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 4
+  },
+  {
+   "project": 98,
+   "days": 8,
+   "before": 0,
+   "during": 8,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 99,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 100,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 102,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 104,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 105,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 106,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 107,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 108,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 111,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 113,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 114,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 115,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 116,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 119,
+   "days": 35,
+   "before": 0,
+   "during": 5,
+   "after": 30,
+   "services": 3
+  },
+  {
+   "project": 121,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 122,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 123,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 124,
+   "days": 8,
+   "before": 0,
+   "during": 8,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 125,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 126,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 129,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 130,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 131,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 133,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 134,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 135,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 139,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 140,
+   "days": 5,
+   "before": 0,
+   "during": 3,
+   "after": 2,
+   "services": 3
+  },
+  {
+   "project": 141,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 142,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 143,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 144,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 145,
+   "days": 7,
+   "before": 1,
+   "during": 6,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 146,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 147,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 148,
+   "days": 4,
+   "before": 1,
+   "during": 1,
+   "after": 2,
+   "services": 4
+  },
+  {
+   "project": 149,
+   "days": 0,
+   "before": 0,
+   "during": 0,
+   "after": 0,
+   "services": 0
+  },
+  {
+   "project": 150,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 151,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 152,
+   "days": 7,
+   "before": 0,
+   "during": 5,
+   "after": 2,
+   "services": 4
+  },
+  {
+   "project": 155,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 156,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 157,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 159,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 160,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 161,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 162,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 163,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 164,
+   "days": 5,
+   "before": 0,
+   "during": 2,
+   "after": 3,
+   "services": 4
+  },
+  {
+   "project": 167,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 171,
+   "days": 6,
+   "before": 0,
+   "during": 5,
+   "after": 1,
+   "services": 3
+  },
+  {
+   "project": 172,
+   "days": 11,
+   "before": 0,
+   "during": 6,
+   "after": 5,
+   "services": 3
+  },
+  {
+   "project": 174,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 176,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 6
+  },
+  {
+   "project": 177,
+   "days": 13,
+   "before": 0,
+   "during": 7,
+   "after": 6,
+   "services": 4
+  },
+  {
+   "project": 180,
+   "days": 11,
+   "before": 0,
+   "during": 6,
+   "after": 5,
+   "services": 5
+  },
+  {
+   "project": 181,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 182,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 4
+  },
+  {
+   "project": 184,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 185,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 186,
+   "days": 10,
+   "before": 3,
+   "during": 7,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 187,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 190,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 191,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 192,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 193,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 194,
+   "days": 8,
+   "before": 1,
+   "during": 7,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 195,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 196,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 198,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 200,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 202,
+   "days": 5,
+   "before": 4,
+   "during": 1,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 204,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 205,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 206,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 207,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 209,
+   "days": 4,
+   "before": 0,
+   "during": 2,
+   "after": 2,
+   "services": 3
+  },
+  {
+   "project": 211,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 212,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 214,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 215,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 216,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 217,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 218,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 220,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 221,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 222,
+   "days": 12,
+   "before": 1,
+   "during": 6,
+   "after": 5,
+   "services": 4
+  },
+  {
+   "project": 223,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 224,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 225,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 226,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 228,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 229,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 230,
+   "days": 36,
+   "before": 12,
+   "during": 13,
+   "after": 11,
+   "services": 3
+  },
+  {
+   "project": 231,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 232,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 233,
+   "days": 28,
+   "before": 5,
+   "during": 7,
+   "after": 16,
+   "services": 3
+  },
+  {
+   "project": 234,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 235,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 236,
+   "days": 16,
+   "before": 5,
+   "during": 7,
+   "after": 4,
+   "services": 4
+  },
+  {
+   "project": 237,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 238,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 240,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 241,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 242,
+   "days": 5,
+   "before": 0,
+   "during": 4,
+   "after": 1,
+   "services": 2
+  },
+  {
+   "project": 246,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 247,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 248,
+   "days": 5,
+   "before": 1,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 249,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 250,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 3
+  },
+  {
+   "project": 252,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 253,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 254,
+   "days": 2,
+   "before": 1,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 257,
+   "days": 13,
+   "before": 2,
+   "during": 7,
+   "after": 4,
+   "services": 2
+  },
+  {
+   "project": 258,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 259,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 261,
+   "days": 6,
+   "before": 0,
+   "during": 5,
+   "after": 1,
+   "services": 3
+  },
+  {
+   "project": 262,
+   "days": 13,
+   "before": 0,
+   "during": 10,
+   "after": 3,
+   "services": 3
+  },
+  {
+   "project": 263,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 265,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 266,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 270,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 271,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 272,
+   "days": 8,
+   "before": 0,
+   "during": 8,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 273,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 274,
+   "days": 14,
+   "before": 0,
+   "during": 6,
+   "after": 8,
+   "services": 3
+  },
+  {
+   "project": 275,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 276,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 277,
+   "days": 0,
+   "before": 0,
+   "during": 0,
+   "after": 0,
+   "services": 0
+  },
+  {
+   "project": 278,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 279,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 280,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 281,
+   "days": 8,
+   "before": 0,
+   "during": 8,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 284,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 285,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 286,
+   "days": 37,
+   "before": 0,
+   "during": 10,
+   "after": 27,
+   "services": 5
+  },
+  {
+   "project": 287,
+   "days": 7,
+   "before": 3,
+   "during": 4,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 288,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 289,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 290,
+   "days": 8,
+   "before": 0,
+   "during": 7,
+   "after": 1,
+   "services": 1
+  },
+  {
+   "project": 291,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 292,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 294,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 295,
+   "days": 15,
+   "before": 0,
+   "during": 9,
+   "after": 6,
+   "services": 3
+  },
+  {
+   "project": 297,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 298,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 300,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 301,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 303,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 304,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 305,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 306,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 307,
+   "days": 6,
+   "before": 1,
+   "during": 5,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 308,
+   "days": 13,
+   "before": 0,
+   "during": 11,
+   "after": 2,
+   "services": 3
+  },
+  {
+   "project": 311,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 312,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 313,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 314,
+   "days": 5,
+   "before": 1,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 316,
+   "days": 17,
+   "before": 9,
+   "during": 8,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 317,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 318,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 319,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 320,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 321,
+   "days": 20,
+   "before": 0,
+   "during": 10,
+   "after": 10,
+   "services": 1
+  },
+  {
+   "project": 322,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 323,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 325,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 326,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 327,
+   "days": 9,
+   "before": 0,
+   "during": 8,
+   "after": 1,
+   "services": 3
+  },
+  {
+   "project": 328,
+   "days": 10,
+   "before": 2,
+   "during": 8,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 329,
+   "days": 16,
+   "before": 2,
+   "during": 12,
+   "after": 2,
+   "services": 5
+  },
+  {
+   "project": 330,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 332,
+   "days": 14,
+   "before": 6,
+   "during": 8,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 333,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 335,
+   "days": 7,
+   "before": 3,
+   "during": 4,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 336,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 338,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 339,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 341,
+   "days": 4,
+   "before": 0,
+   "during": 3,
+   "after": 1,
+   "services": 1
+  },
+  {
+   "project": 342,
+   "days": 10,
+   "before": 2,
+   "during": 8,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 345,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 346,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 347,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 350,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 351,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 352,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 354,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 355,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 356,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 357,
+   "days": 5,
+   "before": 0,
+   "during": 2,
+   "after": 3,
+   "services": 2
+  },
+  {
+   "project": 359,
+   "days": 2,
+   "before": 1,
+   "during": 1,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 360,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 361,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 362,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 365,
+   "days": 5,
+   "before": 1,
+   "during": 2,
+   "after": 2,
+   "services": 3
+  },
+  {
+   "project": 366,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 367,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 368,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 369,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 370,
+   "days": 4,
+   "before": 0,
+   "during": 3,
+   "after": 1,
+   "services": 2
+  },
+  {
+   "project": 371,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 373,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 374,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 377,
+   "days": 4,
+   "before": 1,
+   "during": 2,
+   "after": 1,
+   "services": 2
+  },
+  {
+   "project": 378,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 379,
+   "days": 5,
+   "before": 1,
+   "during": 3,
+   "after": 1,
+   "services": 2
+  },
+  {
+   "project": 381,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 382,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 383,
+   "days": 5,
+   "before": 1,
+   "during": 3,
+   "after": 1,
+   "services": 4
+  },
+  {
+   "project": 384,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 385,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 388,
+   "days": 10,
+   "before": 2,
+   "during": 2,
+   "after": 6,
+   "services": 2
+  },
+  {
+   "project": 394,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 395,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 396,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 6
+  },
+  {
+   "project": 398,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 399,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 400,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 401,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 402,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 1
+  },
+  {
+   "project": 404,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 405,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 406,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 407,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 408,
+   "days": 3,
+   "before": 1,
+   "during": 1,
+   "after": 1,
+   "services": 3
+  },
+  {
+   "project": 410,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 411,
+   "days": 9,
+   "before": 0,
+   "during": 3,
+   "after": 6,
+   "services": 2
+  },
+  {
+   "project": 412,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 416,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 418,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 420,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 421,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 423,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 425,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 426,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 428,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 430,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 436,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 437,
+   "days": 4,
+   "before": 1,
+   "during": 2,
+   "after": 1,
+   "services": 4
+  },
+  {
+   "project": 440,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 441,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 449,
+   "days": 4,
+   "before": 0,
+   "during": 2,
+   "after": 2,
+   "services": 2
+  },
+  {
+   "project": 450,
+   "days": 7,
+   "before": 0,
+   "during": 1,
+   "after": 6,
+   "services": 1
+  },
+  {
+   "project": 452,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 455,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 456,
+   "days": 0,
+   "before": 0,
+   "during": 0,
+   "after": 0,
+   "services": 0
+  },
+  {
+   "project": 458,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 465,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 468,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 471,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 479,
+   "days": 5,
+   "before": 0,
+   "during": 5,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 480,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 484,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 488,
+   "days": 0,
+   "before": 0,
+   "during": 0,
+   "after": 0,
+   "services": 0
+  },
+  {
+   "project": 491,
+   "days": 13,
+   "before": 6,
+   "during": 6,
+   "after": 1,
+   "services": 4
+  },
+  {
+   "project": 493,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 494,
+   "days": 5,
+   "before": 1,
+   "during": 4,
+   "after": 0,
+   "services": 5
+  },
+  {
+   "project": 498,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 499,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 502,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 503,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 504,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 505,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 508,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 509,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 510,
+   "days": 3,
+   "before": 1,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 513,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 516,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 518,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 519,
+   "days": 4,
+   "before": 0,
+   "during": 4,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 520,
+   "days": 24,
+   "before": 0,
+   "during": 15,
+   "after": 9,
+   "services": 4
+  },
+  {
+   "project": 525,
+   "days": 21,
+   "before": 9,
+   "during": 12,
+   "after": 0,
+   "services": 6
+  },
+  {
+   "project": 526,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 530,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 2
+  },
+  {
+   "project": 537,
+   "days": 3,
+   "before": 0,
+   "during": 2,
+   "after": 1,
+   "services": 4
+  },
+  {
+   "project": 543,
+   "days": 0,
+   "before": 0,
+   "during": 0,
+   "after": 0,
+   "services": 0
+  },
+  {
+   "project": 545,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 3
+  },
+  {
+   "project": 549,
+   "days": 8,
+   "before": 3,
+   "during": 3,
+   "after": 2,
+   "services": 3
+  },
+  {
+   "project": 552,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 559,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 563,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 565,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 566,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 569,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 575,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 578,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 582,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 583,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 587,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 594,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 597,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 600,
+   "days": 2,
+   "before": 1,
+   "during": 1,
+   "after": 0,
+   "services": 4
+  },
+  {
+   "project": 607,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 614,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 626,
+   "days": 7,
+   "before": 0,
+   "during": 3,
+   "after": 4,
+   "services": 1
+  },
+  {
+   "project": 630,
+   "days": 4,
+   "before": 1,
+   "during": 3,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 636,
+   "days": 3,
+   "before": 0,
+   "during": 3,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 638,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 640,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 2
+  },
+  {
+   "project": 642,
+   "days": 7,
+   "before": 0,
+   "during": 7,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 643,
+   "days": 6,
+   "before": 0,
+   "during": 6,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 644,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 649,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 650,
+   "days": 2,
+   "before": 0,
+   "during": 2,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 651,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 656,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  },
+  {
+   "project": 657,
+   "days": 1,
+   "before": 0,
+   "during": 1,
+   "after": 0,
+   "services": 1
+  }
+ ]
+}
