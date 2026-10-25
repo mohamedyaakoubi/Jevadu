@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, time
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 
 import psycopg
@@ -144,11 +144,15 @@ def reason_of(line: LedgerLine, window: Window | None) -> str:
     return STATUS_WORDS.get(line.status, line.status or "not checked yet")
 
 
+def life_line(ended: date | None) -> datetime | None:
+    """The moment after which a sign counts as a sign of life (design 7.4), or None."""
+    return datetime.combine(ended, time.max, tzinfo=UTC) + AFTER_THE_EVENT if ended else None
+
+
 def judged_of(facts: ResultCard) -> Judged:
     """The facts behind the proof and the activity of a project, for its card."""
-    ended = facts.event_ends_on
-    after = datetime.combine(ended, time.max, tzinfo=UTC) + AFTER_THE_EVENT if ended else None
-    return Judged(window_of(facts.event_starts_at, facts.event_ends_on), after)
+    return Judged(window_of(facts.event_starts_at, facts.event_ends_on),
+                  life_line(facts.event_ends_on))  # fmt: skip
 
 
 def hashscan(network: str | None, kind: str | None, entity_id: str) -> str | None:
