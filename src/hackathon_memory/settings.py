@@ -102,6 +102,11 @@ class Settings(BaseSettings):
     collect_africa_winners: bool = Field(False, json_schema_extra=_PUBLIC)
     # Hedera's own posts with the winners of its older hackathons (design 4.6).
     collect_hedera_posts: bool = Field(False, json_schema_extra=_PUBLIC)
+    # What changes after an event is asked again once its newest answer is this old: GitHub's
+    # answers and the facts of the ledger (design 7.3, 25 October 2026).
+    refresh_after_hours: float = Field(24.0, gt=0, json_schema_extra=_PUBLIC)
+    # While the website runs, the same work goes on in the background ("off" in tests).
+    refresh_in_background: bool = Field(False, json_schema_extra=_PUBLIC)
 
     @field_validator("llm_environment", mode="before")
     @classmethod

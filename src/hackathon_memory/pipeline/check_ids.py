@@ -46,11 +46,14 @@ def check_ids(
     *,
     max_age: timedelta = MAX_AGE,
     now: Callable[[], datetime] = _now,
+    projects: set[int] | None = None,
 ) -> None:
-    """Check every id of every project, and count what was done in `run`."""
+    """Check every id of every project, or of `projects` only, and count what was done in
+    `run`."""
     by_project: dict[int, list[IdToCheck]] = {}
     for item in ledger.ids_to_check():
-        by_project.setdefault(item.project_id, []).append(item)
+        if projects is None or item.project_id in projects:
+            by_project.setdefault(item.project_id, []).append(item)
     errors_in_a_row = 0
     for project_id, items in by_project.items():
         checks: dict[int, dict[str, str]] = {}

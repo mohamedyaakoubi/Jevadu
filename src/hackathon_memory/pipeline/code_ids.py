@@ -55,14 +55,18 @@ def give_code_ids(
     *,
     max_age: timedelta,
     now: Callable[[], datetime] = _now,
+    projects: set[int] | None = None,
 ) -> None:
-    """Give each project the IDs of its code that pass the rule, and count what was done."""
+    """Give each project, or each of `projects`, the IDs of its code that pass the rule, and count
+    what was done."""
     by_project: dict[int, list[Candidate]] = {}
     for one in store.candidates():
         by_project.setdefault(one.project_id, []).append(one)
     numbers = Numbers(ledger.dated_numbers())
     errors_in_a_row = 0
     for project_id in sorted(set(by_project) | store.projects_with_code_ids()):
+        if projects is not None and project_id not in projects:
+            continue
         given: dict[tuple[str, str], Given] = {}
         finished = True
         for one in by_project.get(project_id, []):

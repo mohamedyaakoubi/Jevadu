@@ -66,11 +66,15 @@ def read_readmes(
     run: Run,
     *,
     fetch: Callable[[list[str]], AnswersRun] | None = None,
+    only: set[str] | None = None,
 ) -> None:
     """Link each project to its repository, ask for the READMEs that are missing when `fetch` is
-    given, and keep the ids of every saved README. Counts what was done in `run`."""
+    given, and keep the ids of every saved README. With `only`, only these repositories and
+    their projects (the step `refresh`). Counts what was done in `run`."""
     of_project = link_repositories(repositories, run)
     wanted = sorted(set(of_project.values()))
+    if only is not None:
+        wanted = [one for one in wanted if one in only]
     if fetch is not None:
         count_the_fetch(fetch(wanted), run, "readmes")
 
