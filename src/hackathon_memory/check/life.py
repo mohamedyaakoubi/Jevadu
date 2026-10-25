@@ -13,13 +13,14 @@ the work is most likely still the work of the event, with its late fixes.
 | active | a sign of life in the last 90 days |
 | quiet | a sign of life, but none in the last 90 days |
 | stopped | no sign of life, and the event ended 90 days ago or more |
-| too early to tell | no sign of life yet, and the event ended less than 90 days ago |
+| too early to tell | no sign of life yet: the event is not over, or ended under 90 days ago |
 | unknown | no date of the code and no activity of an id, or no known end of the event |
 
 The 90 days follow the OpenSSF Scorecard: its check Maintained looks at the previous 90 days,
 and it calls a project younger than 90 days too new to assess. When the end of the event is not
 known, no sign can be told a sign of life, and the project is "unknown", with the reason. The
-rule guesses no end.
+rule guesses no end. A check of a submission can name a hackathon that is still running; its
+reason then says so (25 October 2026: it said "the event ended less than 90 days ago").
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ UNKNOWN = "unknown"
 
 RECENT = timedelta(days=90)
 AFTER_THE_EVENT = timedelta(days=30)
+NOT_OVER = "the event is not over yet"  # the reason of a check whose hackathon still runs
 
 
 @dataclass(frozen=True)
@@ -59,6 +61,8 @@ def life_of(
     if event_end is None:
         return Life(UNKNOWN, last, "the end of the event is not known")
     ended = datetime.combine(event_end, time.max, tzinfo=UTC)
+    if now <= ended:
+        return Life(TOO_EARLY, last, NOT_OVER)
     if last > ended + AFTER_THE_EVENT:
         if last >= now - RECENT:
             return Life(ACTIVE, last, "a sign of life in the last 90 days")

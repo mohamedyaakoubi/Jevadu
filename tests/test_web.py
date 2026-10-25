@@ -390,6 +390,9 @@ def test_the_card_says_how_its_proof_and_its_activity_were_judged(site) -> None:
     assert f'href="#life-{pebble}" data-scroll-to="life-{pebble}"' in panel
     life = panel[panel.index(f'id="life-{pebble}"') :]
     assert "ETHGlobal Sample Event ended on 8 March 2026, so a sign of life is a push" in life
+    # each sign says when it was read (design 7.4, 25 October 2026)
+    read = "Last activity of its own IDs: none, read from the mirror node on 22 October 2026."
+    assert read in life
     listed = client.get("/").text
     card = listed[listed.index(f'id="result-{pebble}"') :]
     card = card[: card.index("</li>")]
@@ -826,6 +829,25 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert len(client.github_site.seen) == 5  # GitHub was not asked again
     hidden = '<h2 class="visually-hidden">What the check found</h2>'
     assert hidden in page.text and hidden not in part.text
+
+
+def test_the_activity_of_a_check_names_its_hackathon_and_one_not_over(site) -> None:  # noqa: ANN001
+    """The line of the activity says which hackathon it is counted from, as the card does, and a
+    hackathon that is not over says so with its last day (design 7.4, 25 October 2026: it said
+    "the event ended less than 90 days ago")."""
+    client, _, _, database = site
+    event = checkable(database)
+
+    def life_line(asked: dict[str, str]) -> str:
+        part = client.get("/check", params={"repo": REPO, **asked}, headers=HX)
+        return part.text[part.text.index('id="check-life"') :].split("</p>")[0]
+
+    past = life_line({"event": event})
+    assert "ETHGlobal Sample Event ended on 8 March 2026, so a sign of life" in past
+    assert "after 7 April 2026." in past and "Last push: 8 March 2026, read from GitHub on " in past
+    future = life_line({"event": "other", "starts": "2099-01-01", "ends": "2099-01-05"})
+    assert "The hackathon of the days typed in ends on 5 January 2099, so" in future
+    assert "So: the event is not over yet." in future and "ended" not in future
 
 
 def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(site) -> None:  # noqa: ANN001

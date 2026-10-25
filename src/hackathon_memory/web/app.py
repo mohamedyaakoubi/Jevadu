@@ -37,6 +37,7 @@ from starlette.concurrency import run_in_threadpool
 from hackathon_memory import __version__
 from hackathon_memory.check import submission
 from hackathon_memory.check.history import MAX_EVENTS
+from hackathon_memory.check.life import NOT_OVER
 from hackathon_memory.check.proof import PROOF_FOUND
 from hackathon_memory.collect import github
 from hackathon_memory.collect.ethglobal import data_paths
@@ -850,8 +851,11 @@ def create_app(
             offer = (member.event_id, member.event)
             if one.by == "repository" and member.event_id is not None and offer not in offers:
                 offers.append(offer)
+        ends_on = days.ends_on if days is not None else None
         return 200, {
             "result": result, "closest": closest, "closest_note": note,
+            "life_after": data.life_line(ends_on),
+            "event_over": not (result.life and result.life.why == NOT_OVER),
             "seen_before": seen_before, "register": view, "register_offers": offers,
             "hedera_code": code_reading.view_of_read(repository, result.hedera_code),
             "readme_lines": (data.said_lines(submission.readme_prose(result.readme_text))

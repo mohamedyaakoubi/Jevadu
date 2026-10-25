@@ -75,6 +75,8 @@ class ResultCard:
     event_starts_at: datetime | None = None
     event_ends_on: date | None = None
     last_own_activity_at: datetime | None = None  # the last activity of its own IDs (design 7.4)
+    code_read_at: datetime | None = None  # when GitHub last answered about its repository
+    ledger_read_at: datetime | None = None  # the oldest answer of the mirror node about its IDs
 
     @property
     def proven_by_code_only(self) -> bool:
@@ -86,27 +88,32 @@ class ResultCard:
 # The signs of life of each project (design 7.4): the end of its event, the facts of its code,
 # and the last activity of its own ids. An id counts on a network where the proof rule found
 # it, and only when no project with other code names it too: a shared service is not a sign.
+# Each sign comes with the moment it was read: GitHub's facts, and the oldest answer of the mirror
+# node about those ids (design 7.4, 25 October 2026).
 _SIGNS = """
-SELECT p.id, e.ends_on, r.code_status, r.made_at, r.last_push_at,
-       (SELECT max(f.last_activity_at)
-        FROM hedera_ids h
-        JOIN id_checks c ON c.hedera_id = h.id AND c.status IN (
-            'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
-        JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network
-        WHERE h.project_id = p.id
-          AND NOT EXISTS (
-              SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
-              WHERE o.entity_id = h.entity_id
-                AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id)))
+SELECT p.id, e.ends_on, r.code_status, r.made_at, r.last_push_at, own.last_activity,
+       r.code_fetched_at, own.read_at
 FROM projects p JOIN events e ON e.id = p.event_id
 LEFT JOIN repositories r ON r.id = p.repository_id
+LEFT JOIN LATERAL (
+    SELECT max(f.last_activity_at) AS last_activity, min(f.asked_at) AS read_at
+    FROM hedera_ids h
+    JOIN id_checks c ON c.hedera_id = h.id AND c.status IN (
+        'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
+    JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network
+    WHERE h.project_id = p.id
+      AND NOT EXISTS (
+          SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
+          WHERE o.entity_id = h.entity_id
+            AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id))
+) own ON true
 WHERE p.id = ANY(%s)
 """
 
 
 def signs_of_life(conn: psycopg.Connection, ids: Sequence[int]) -> dict[int, tuple]:
-    """For each project: the end of its event, the status, start and last push of its code, and
-    the last activity of its own ids (design 7.4)."""
+    """For each project: the end of its event, the status, start and last push of its code, the
+    last activity of its own ids (design 7.4), and when GitHub and the mirror node were read."""
     return {row[0]: row[1:] for row in conn.execute(_SIGNS, (list(ids),)).fetchall()}
 
 
@@ -141,7 +148,9 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
     for rank, hit in enumerate(hits, start=1):
         if hit.project_id not in projects:
             continue
-        end, code_status, made_at, last_push, last_activity = signs[hit.project_id]
+        end, code_status, made_at, last_push, last_activity, code_read, ledger_read = signs[
+            hit.project_id
+        ]
         *facts, entry_kind, starts_at = projects[hit.project_id]
         life = life_of(
             event_end=end, last_push=last_push, last_ledger_activity=last_activity, now=now
@@ -160,6 +169,8 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
                 event_starts_at=starts_at,
                 event_ends_on=end,
                 last_own_activity_at=last_activity,
+                code_read_at=code_read,
+                ledger_read_at=ledger_read,
             )
         )
     return found

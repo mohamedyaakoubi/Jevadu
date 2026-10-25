@@ -97,6 +97,11 @@ class RepositoryFacts:
     fetched_at: str
     default_branch: str | None = None  # the branch that GitHub opens first, such as main
 
+    @property
+    def read_at(self) -> datetime:
+        """When GitHub gave this answer."""
+        return datetime.fromisoformat(self.fetched_at.replace("Z", "+00:00"))
+
 
 def _moment(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:

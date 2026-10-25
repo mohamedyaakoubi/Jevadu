@@ -134,7 +134,7 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
     found = []
     for (project_id, event_id, event_name, year, proof, category, prize, entry, kinds, code_read,
          services, packages) in rows:  # fmt: skip
-        end, _, _, last_push, last_activity = signs[project_id]
+        end, _, _, last_push, last_activity, *_ = signs[project_id]
         life = life_of(event_end=end, last_push=last_push, last_ledger_activity=last_activity,
                        now=now)  # fmt: skip
         kept = category and category.get("state") == KEPT and category.get("value")

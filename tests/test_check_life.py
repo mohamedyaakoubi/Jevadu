@@ -6,7 +6,15 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from hackathon_memory.check.life import ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN, life_of
+from hackathon_memory.check.life import (
+    ACTIVE,
+    NOT_OVER,
+    QUIET,
+    STOPPED,
+    TOO_EARLY,
+    UNKNOWN,
+    life_of,
+)
 
 NOW = datetime(2026, 10, 12, 12, tzinfo=UTC)
 END = date(2026, 3, 8)  # the last day of an invented event, long over
@@ -83,3 +91,17 @@ def test_with_no_end_of_the_event_no_sign_can_be_judged() -> None:
     old = life_of(event_end=None, last_push=at(60), last_ledger_activity=None, now=NOW)
     for life in (recent, old):
         assert (life.status, life.why) == (UNKNOWN, "the end of the event is not known")
+
+
+def test_a_hackathon_that_is_not_over_says_so() -> None:
+    """A check can name a hackathon that still runs: its reason never says that it ended (design
+    7.4, 25 October 2026)."""
+    later = life_of(event_end=(NOW + timedelta(days=12)).date(), last_push=NOW - timedelta(days=1),
+                    last_ledger_activity=None, now=NOW)  # fmt: skip
+    last_day = life_of(event_end=NOW.date(), last_push=NOW - timedelta(hours=2),
+                       last_ledger_activity=None, now=NOW)  # fmt: skip
+    ended = life_of(event_end=NOW.date() - timedelta(days=1), last_push=NOW - timedelta(hours=2),
+                    last_ledger_activity=None, now=NOW)  # fmt: skip
+    assert (later.status, later.why) == (TOO_EARLY, NOT_OVER)
+    assert last_day.why == NOT_OVER  # its last day runs until its end
+    assert (ended.status, ended.why != NOT_OVER) == (TOO_EARLY, True)

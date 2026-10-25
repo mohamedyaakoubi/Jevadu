@@ -158,6 +158,8 @@ class SubmissionCheck:
     ids_left_out: int = 0
     proof: str = NO_ID_GIVEN
     life: Life | None = None
+    last_own_activity: datetime | None = None  # the newest activity of its own IDs, a sign
+    ledger_read_at: datetime | None = None  # the oldest answer of the mirror node about them
     seen: list[SeenBefore] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
     story: Story | None = None  # the ledger story of its own IDs (design 7.5), or None
@@ -478,12 +480,14 @@ def check_submission(
     check.proof = best([one.status for one in check.ids if one.status != NOT_ASKED])
     if found and check.proof == NO_ID_GIVEN:
         check.proof = NOT_ASKED
-    own = [one.facts.last_activity_at for one in check.ids
-           if one.facts is not None and one.status in seen.CONFIRMED
-           and not one.named_elsewhere and one.facts.last_activity_at]  # fmt: skip
+    mine = [one.facts for one in check.ids if one.facts is not None
+            and one.status in seen.CONFIRMED and not one.named_elsewhere]  # fmt: skip
+    own = [facts.last_activity_at for facts in mine if facts.last_activity_at]
+    check.ledger_read_at = min((facts.asked_at for facts in mine), default=None)
     pushed = check.code.pushed_at if check.code and check.code.status == CODE_FOUND else None
+    check.last_own_activity = max(own) if own else None
     check.life = life_of(event_end=event.ends_on if event is not None else None, last_push=pushed,
-                         last_ledger_activity=max(own) if own else None, now=now())  # fmt: skip
+                         last_ledger_activity=check.last_own_activity, now=now())  # fmt: skip
     check.seen = [SeenBefore(pid, "repository") for pid in known.same_repository]
     for key, projects in known.same_id.items():
         for pid in projects:
