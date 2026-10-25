@@ -489,25 +489,40 @@ class StandInMirror:
 
     # Whole histories, oldest first, in self.lists[(what, id)] with what = "transactions",
     # "messages", "calls" or "nfts". Cut when the list reaches max_rows, as MirrorNode._all.
-    def _history(self, what: str, entity: str, max_rows: int) -> tuple[list[dict], bool]:
+    def _history(
+        self, what: str, entity: str, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
         self.asked.append((what, entity, "history"))
-        found = self.lists.get((what, entity), [])
+        found = [item for item in self.lists.get((what, entity), []) if what == "nfts"
+                 or since is None or _inside(item, since, None)]  # fmt: skip
         return found[:max_rows], len(found) >= max_rows
 
     def account_history(
         self, entity: str, *, max_rows: int, since: datetime | None = None
     ) -> tuple[list[dict], bool]:
         self.since[entity] = since
-        return self._history("transactions", entity, max_rows)
+        return self._history("transactions", entity, max_rows, since)
 
-    def topic_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
-        return self._history("messages", entity, max_rows)
+    def topic_history(
+        self, entity: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        self.since[entity] = since
+        return self._history("messages", entity, max_rows, since)
 
-    def contract_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
-        return self._history("calls", entity, max_rows)
+    def contract_history(
+        self, entity: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        self.since[entity] = since
+        return self._history("calls", entity, max_rows, since)
 
     def nft_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
         return self._history("nfts", entity, max_rows)
+
+    # The accounts that hold a token now, in self.lists[("holders", id)] as account IDs.
+    def token_holders(self, entity: str, *, max_rows: int) -> tuple[list[str], bool]:
+        self.asked.append(("holders", entity))
+        found = [str(one) for one in self.lists.get(("holders", entity), [])]
+        return found[:max_rows], len(found) > max_rows
 
     # The messages of the register's topic, in self.lists[("register", topic)].
     def topic_messages_from(self, topic_id: str, first: int, *, limit: int = 100) -> list[dict]:

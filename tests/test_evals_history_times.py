@@ -21,7 +21,9 @@ def topic(entity: str) -> history_times.OwnId:
 
 
 class AwayMirror(StandInMirror):
-    def topic_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
+    def topic_history(
+        self, entity: str, *, max_rows: int, since: object = None
+    ) -> tuple[list[dict], bool]:
         raise MirrorError("the node is away")
 
 

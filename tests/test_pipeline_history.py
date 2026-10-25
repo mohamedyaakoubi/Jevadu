@@ -32,7 +32,10 @@ class StandInStore:
         self.todo = list(todo)
         self.saved: dict[tuple[str, str], tuple[str, History, datetime]] = {}
 
-    def ids_to_read(self) -> list[IdToRead]:
+    def ids_to_read(
+        self, *, again: bool = False, projects: set[int] | None = None
+    ) -> list[IdToRead]:
+        del again, projects  # the stand-in holds no history of before, and no project
         return [one for one in self.todo if (one.entity_id, one.network) not in self.saved]
 
     def save(
@@ -84,7 +87,9 @@ def test_an_id_on_a_network_that_is_not_asked_is_counted_and_left() -> None:
 
 
 class AwayNode(StandInMirror):
-    def topic_history(self, entity: str, *, max_rows: int) -> tuple[list[dict], bool]:
+    def topic_history(
+        self, entity: str, *, max_rows: int, since: object = None
+    ) -> tuple[list[dict], bool]:
         self.asked.append(("messages", entity, "history"))
         raise MirrorError("mirror node answered 503 for /topics")
 

@@ -19,6 +19,8 @@
     python -m hackathon_memory.pipeline check --max-age-days 0   ask the ledger about every id again
     python -m hackathon_memory.pipeline history            the history of each own Hedera id on
                                                            the ledger, read once (--limit N)
+    python -m hackathon_memory.pipeline history --again    read again, once, the histories read
+                                                           before the depth of use
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
     python -m hackathon_memory.pipeline all                parse, readmes, code, hedera_code,
@@ -174,8 +176,10 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         raise ValueError("--no-requests and --wait go with readmes, code or hedera_code")
     if arguments.no_requests and (arguments.repos is not None or arguments.wait):
         raise ValueError("--no-requests sends nothing, so --repos and --wait do not go with it")
-    if arguments.again and (arguments.step != hedera_code.STEP or arguments.no_requests):
-        raise ValueError("--again goes with hedera_code alone, and asks GitHub")
+    if arguments.again and arguments.step not in (hedera_code.STEP, history.STEP):
+        raise ValueError("--again goes with hedera_code or history alone")
+    if arguments.again and arguments.no_requests:
+        raise ValueError("--again asks again, so --no-requests does not go with it")
     return arguments
 
 
@@ -370,7 +374,8 @@ def _run_step(
             )
         elif step == history.STEP:
             mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
-            history.read_histories(HistoryStore(conninfo), mirrors, run, limit=arguments.limit)
+            history.read_histories(HistoryStore(conninfo), mirrors, run, limit=arguments.limit,
+                                   again=arguments.again)  # fmt: skip
         else:
             mirrors = services.mirrors
             if mirrors is None:

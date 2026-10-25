@@ -336,15 +336,29 @@ class MirrorNode:
         )
         return self._all(path, "transactions", max_rows)
 
-    def topic_history(self, topic_id: str, *, max_rows: int) -> tuple[list[dict], bool]:
-        """Every message of a topic, oldest first (see _all)."""
-        return self._all(f"/topics/{self._entity(topic_id)}/messages?limit=100&order=asc",
-                         "messages", max_rows)  # fmt: skip
+    def topic_history(
+        self, topic_id: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        """Every message of a topic, oldest first, from `since` on when it is given (see _all)."""
+        path = f"/topics/{self._entity(topic_id)}/messages?limit=100&order=asc"
+        return self._all(path + self._range(since, None), "messages", max_rows)
 
-    def contract_history(self, contract: str, *, max_rows: int) -> tuple[list[dict], bool]:
-        """Every call of a contract, oldest first (see _all)."""
+    def contract_history(
+        self, contract: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        """Every call of a contract, oldest first, from `since` on when it is given (see _all).
+        Read on 25 October 2026: the first result of a contract is its creation, whose
+        "created_contract_ids" names the contract itself."""
         path = f"/contracts/{self._entity_or_address(contract)}/results?limit=100&order=asc"
-        return self._all(path, "results", max_rows)
+        return self._all(path + self._range(since, None), "results", max_rows)
+
+    def token_holders(self, token_id: str, *, max_rows: int) -> tuple[list[str], bool]:
+        """The accounts that hold a token now, with a balance above zero, at most `max_rows`,
+        and True when there are more. Read on 25 October 2026: /tokens/{id}/balances takes the
+        filter account.balance=gt:0, and each row names its "account"."""
+        path = f"/tokens/{self._entity(token_id)}/balances?account.balance=gt:0&limit=100"
+        rows, cut = self._all(path, "balances", max_rows)
+        return [str(row["account"]) for row in rows if row.get("account")], cut
 
     def nft_history(self, token_id: str, *, max_rows: int) -> tuple[list[dict], bool]:
         """Every NFT of a token, the first minted first (see _all). A fungible token has none."""
