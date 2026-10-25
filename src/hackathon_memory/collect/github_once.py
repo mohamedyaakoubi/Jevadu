@@ -102,6 +102,8 @@ def fetch_once(
     def ask(address: str) -> str:
         fetch = client.get(address)
         body, facts, taken_out = keep(fetch)
+        if fetch.etag:  # for a conditional request when it is asked again (collect/answers.py)
+            facts = {**facts, "etag": fetch.etag}
         saved = store.save(
             fetch,
             body,

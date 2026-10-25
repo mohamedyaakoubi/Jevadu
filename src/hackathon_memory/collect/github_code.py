@@ -20,6 +20,10 @@ A repository read by an older reader is read again, once, when asked for (fetch_
 the check of a submission). A saved reading is never edited, so a reading made again is saved in
 a folder of its own, one for each version of the reader, and the newest reading that holds code
 is the one used.
+
+A repository whose newest commit is not the commit of its newest reading is read again too
+(read_new_commits, 25 October 2026): its reading is saved with the answers asked again
+(collect/answers.py), and the newest reading counts by its time.
 """
 
 from __future__ import annotations
@@ -27,7 +31,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from hackathon_memory.collect.answers import AgainRun, Answers
 from hackathon_memory.collect.github import GitHubClient, api_message, archive_address
+from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
+from hackathon_memory.collect.github_commits import saved_version
 from hackathon_memory.collect.github_once import AnswersRun, ask_each
 from hackathon_memory.collect.polite import FetchFailed, FetchResult, StopCollecting
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
@@ -82,16 +89,18 @@ def again_store(store: RawStore, version: int = FORMAT) -> RawStore:
 
 
 def saved_code(store: RawStore, repository: str) -> CodeRead | None:
-    """The newest saved reading of a repository that holds its code, else its first reading, or
-    None when it was never read."""
+    """The newest saved reading of a repository that holds its code, else its newest reading, or
+    None when it was never read. The readings made again for a newer reader and those of a newer
+    commit (with Answers as `store`) count by their time."""
     address = archive_address(repository)
-    for version in range(FORMAT, FIRST_READ_AGAIN - 1, -1):
-        saved = again_store(store, version).load(address, SUFFIX)
-        read = read_saved(saved) if saved is not None else None
-        if read is not None and read.scan is not None:
-            return read
-    saved = store.load(address, SUFFIX)
-    return read_saved(saved) if saved is not None else None
+    found = [again_store(store, version).load(address, SUFFIX)
+             for version in range(FORMAT, FIRST_READ_AGAIN - 1, -1)]  # fmt: skip
+    found.append(store.load(address, SUFFIX))
+    readings = [read_saved(saved) for saved in found if saved is not None]
+    if not readings:
+        return None
+    with_code = [one for one in readings if one.scan is not None]
+    return max(with_code or readings, key=lambda one: one.fetched_at)
 
 
 def is_older(read: CodeRead | None) -> bool:
@@ -175,13 +184,17 @@ def read_code_now(
     repository: str,
     *,
     collector: str,
+    commit: str | None = None,
 ) -> tuple[CodeRead | None, str | None]:
     """The reading of one repository for the check of a submission: the saved one, or read now
     within the limits of a check. With no client, only the saved one. Returns it with what went
     wrong, in plain words. A reading that a limit cut is shown and not saved. A reading that an
-    older reader made is made again now, and kept when that fails."""
+    older reader made is made again now, and kept when that fails; so is a reading of another
+    commit than `commit`, the newest one, when `store` keeps the answers asked again."""
     known = saved_code(store, repository)
-    older = is_older(known)
+    stale = (isinstance(store, Answers) and commit is not None and known is not None
+             and known.scan is not None and known.scan.commit not in (None, commit))  # fmt: skip
+    older = is_older(known) or stale
     if (known is not None and not older) or client is None:
         return known, None
     address = archive_address(repository)
@@ -201,5 +214,54 @@ def read_code_now(
     if scan is not None and scan.partial == BROKE_OFF:
         return None, BROKE_OFF_NOW
     took = client.clock() - started
-    target = again_store(store) if older else store
+    if stale and isinstance(store, Answers):  # a reading of a newer commit
+        target: RawStore = store.store_for(fetch)
+    else:
+        target = again_store(store) if older else store
     return save_reading(target, fetch, scan, collector, seconds=took), None
+
+
+def read_new_commits(
+    client: GitHubClient,
+    answers: Answers,
+    repositories: list[str],
+    *,
+    collector: str,
+    limit: int | None = None,
+) -> AgainRun:
+    """Read again, whole, the archive of every repository whose newest commit (its saved
+    version) is not the commit of its newest reading, and save the reading with the answers
+    asked again. A repository with no saved version, or with no code, is left alone. With
+    `limit`, at most that many archives in this run."""
+    run = AgainRun(repositories=len(repositories), by_status=dict.fromkeys(STATUSES, 0))
+    for repository in repositories:
+        version, known = saved_version(answers, repository), saved_code(answers, repository)
+        if version is None or version.status != VERSION_FOUND or version.sha is None:
+            run.never_asked += 1
+            continue
+        if known is not None and known.scan is not None and known.scan.commit == version.sha:
+            run.fresh += 1
+            continue
+        if run.stopped is not None or (limit is not None and run.asked >= limit):
+            run.left_for_later += 1
+            continue
+        started = client.clock()
+        try:
+            fetch, scan = client.read_archive(archive_address(repository), scan_archive)
+        except FetchFailed:
+            run.asked += 1
+            run.failed += 1
+            continue
+        except StopCollecting as stop:
+            run.stopped = str(stop)
+            run.left_for_later += 1
+            continue
+        run.asked += 1
+        if scan is not None and scan.partial == BROKE_OFF:
+            run.failed += 1  # not saved: a later run asks again
+            continue
+        took = client.clock() - started
+        read = save_reading(answers.store_for(fetch), fetch, scan, collector, seconds=took)
+        run.by_status[read.status] = run.by_status.get(read.status, 0) + 1
+        run.changed.append(repository)
+    return run
