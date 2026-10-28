@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 from hackathon_memory.check.history import HBAR, NETWORK_ACCOUNTS, SERVICES, Act
+from hackathon_memory.check.setup import Setup, read_on, setup_words
 from hackathon_memory.check.story import OwnId, time_of
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
 
@@ -117,6 +118,8 @@ class Depth:
     strip: Strip | None  # None when the days of the event are not known
     total: int = 0  # the transactions in the time of the table, each moment once
     more_count: int = 0  # the transactions of the kinds not named in `did`
+    setup: tuple[str, ...] = ()  # how the own IDs are set up, each a sentence (check/setup.py)
+    setup_read_at: datetime | None = None  # the day of the check that it comes from
 
 
 def merged(done: Sequence[Done]) -> list[Done]:
@@ -228,12 +231,14 @@ def depth_of(
     has_package: bool = False,
     shared_only: bool = False,
     read: bool = True,
+    setups: Sequence[Setup] = (),
 ) -> Depth:
     """The depth of use of one project. `own` are its own IDs on their network (the story's),
     `done` the transactions of those that were read, with what each was, `holders` the accounts
     that hold each own token now, `named` every ID that the project names, `in_code` and
-    `set_up` what its code calls and sets up for (check/story.py), and `read` whether every own
-    ID was read with what its transactions were."""
+    `set_up` what its code calls and sets up for (check/story.py), `read` whether every own
+    ID was read with what its transactions were, and `setups` what the check kept about how each
+    own ID is set up."""
     span = time_of(starts_at, ends_on)
     moments = merged(done)
     inside = [one for one in moments if span is None or span[0] <= one.at <= span[1]]
@@ -261,4 +266,6 @@ def depth_of(
         if span is not None and starts_at is not None and ends_on is not None else None,
         len(inside),
         len(inside) - failed - sum(count for _, count in did),
+        setup_words(setups),
+        read_on(setups),
     )  # fmt: skip

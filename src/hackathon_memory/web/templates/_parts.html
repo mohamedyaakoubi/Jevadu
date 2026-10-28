@@ -246,6 +246,10 @@
     <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
   </dl>
   {% endif %}
+  {% if depth.setup %}
+  <p class="hm-depth-title">How they are set up{% if depth.setup_read_at %}, read on {{ depth.setup_read_at | day }}{% endif %}</p>
+  <ul class="hm-depth-list">{% for line in depth.setup %}<li>{{ line }}</li>{% endfor %}</ul>
+  {% endif %}
   {% if depth.on_paper %}
   <p class="hm-depth-title">Signs that stay on paper</p>
   <ul class="hm-depth-list">{% for one in depth.on_paper %}<li>{{ one }}</li>{% endfor %}</ul>

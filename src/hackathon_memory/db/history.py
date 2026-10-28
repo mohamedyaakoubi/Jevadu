@@ -22,6 +22,7 @@ import psycopg
 from hackathon_memory.check.depth import Depth, Done, depth_of
 from hackathon_memory.check.history import Act, History
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
+from hackathon_memory.check.setup import Setup
 from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of
 from hackathon_memory.parse.hedera_ids import ACCOUNT
 
@@ -284,6 +285,13 @@ def depth_of_project(
                 act = Act(name, ok, payer, tuple(parties or ()))
                 done.append(Done(stamp, at, service, entity, kind, network, act))
     all_read = len(read) == len(own_ids) and all(depths.get(key, 0) >= DEPTH for key in kinds)
+    # how each own ID is set up, as the check of the IDs kept it (design 7.5)
+    wanted = {(one.entity_id, one.network) for one in own_ids}
+    setups = [Setup(entity, network, kind, details or {}, asked_at)
+              for entity, network, kind, details, asked_at in conn.execute(
+                  "SELECT entity_id, network, kind, details, asked_at FROM ledger_facts "
+                  "WHERE found AND entity_id = ANY(%s)", ([one.entity_id for one in own_ids],))
+              if (entity, network) in wanted]  # fmt: skip
     return depth_of(own_ids, done, holders, named, starts_at=starts_at, ends_on=ends_on,
                     in_code=in_code, set_up=set_up, has_package=has_package,
-                    shared_only=shared_only, read=all_read)  # fmt: skip
+                    shared_only=shared_only, read=all_read, setups=setups)  # fmt: skip

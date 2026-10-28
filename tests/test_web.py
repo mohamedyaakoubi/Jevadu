@@ -524,6 +524,24 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     assert "Ctrl and the mouse wheel, or the buttons + and −, widen the days." in block
 
 
+def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
+    """The kind, the custom fees and the keys of its own token, from the check of the IDs, with
+    the day of that check (design 7.5, 28 October 2026)."""
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4515", "token")
+    setup = {"type": "NON_FUNGIBLE_UNIQUE", "supply_type": "INFINITE", "keys": ["admin", "supply"],
+             "fees": {"royalty": [[1, 20]]}}  # fmt: skip
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE ledger_facts SET details = %s WHERE entity_id = '0.0.4515'",
+                     (json.dumps(setup),))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+    assert '<p class="hm-depth-title">How they are set up, read on 22 October 2026</p>' in block
+    assert ("Its token 0.0.4515: an NFT collection with no supply limit; a royalty of 5% on each "
+            "sale; keys for admin and supply.") in block  # fmt: skip
+
+
 def a_card_with_days(database: str, pebble: int) -> None:
     """Pebble Pay with an own topic and two messages on 7 March 2026, in its event of 6 to 8
     March: a card with a strip of days."""

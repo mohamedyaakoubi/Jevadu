@@ -54,6 +54,15 @@ REFERENCES = (
     Reference("sdk", "SDKs", "Hedera", f"{DOCS}/sdks-and-apis/sdks"),  # read on 22 October 2026
     Reference("ward", "Ward's method", "Wikipedia",
               "https://en.wikipedia.org/wiki/Ward%27s_method"),  # read on 24 October 2026
+    # read on 28 October 2026
+    Reference("fees", "Custom fee schedule", "Hedera",
+              f"{DOCS}/core-concepts/tokens/hedera-token-service-hts-native-tokenization/"
+              "custom-fee-schedule"),
+    Reference("topickeys", "Create a topic: its keys and its fees", "Hedera",
+              f"{DOCS}/sdks-and-apis/sdks/consensus-service/create-a-topic"),
+    Reference("keys", "Keys and signatures", "Hedera", f"{DOCS}/core-concepts/keys-and-signatures"),
+    Reference("system", "System smart contracts", "Hedera",
+              f"{DOCS}/core-concepts/smart-contracts/system-smart-contracts"),
 )  # fmt: skip
 BY_KEY = {reference.key: reference for reference in REFERENCES}
 NUMBER = {reference.key: number for number, reference in enumerate(REFERENCES, start=1)}
