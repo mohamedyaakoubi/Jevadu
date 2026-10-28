@@ -137,6 +137,34 @@ def test_an_id_of_the_code_that_another_project_names_later_is_taken_back(databa
     assert statuses(database)["quartz-notes-q3w4e"] == "no_id_given"
 
 
+def test_an_address_of_the_code_for_an_id_that_a_page_names_is_not_given(database: str) -> None:
+    """The second project's code names an account by its EVM address; the first project's page
+    names the same account by its 0.0 ID. One thing of the ledger, so it is not the code's own:
+    left out once the ledger's answer shows it, and after that before it is asked (28 October
+    2026)."""
+    address = "0x" + "c3" * 20
+    RepositoryStore(database).save_code(
+        QUARTZ_CODE, reading("0.0.7000003", "0.0.7000004", "0.0.7000006", address)
+    )
+    with psycopg.connect(database) as conn:
+        conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) SELECT id, '0.0.7000008', 'testnet', 'account', "
+            "'page', 'our account', false FROM projects WHERE site_key = 'pebble-pay-x1y2z'"
+        )
+    mirrors = nodes()
+    mirrors["testnet"].things["account"][address] = {
+        "account": "0.0.7000008",
+        "evm_address": address,
+        "created_timestamp": DURING,
+    }
+    run = run_both(database, mirrors)
+    assert [row[:2] for row in code_rows(database)] == [
+        ("pebble-pay-x1y2z", "0.0.7000001"), ("quartz-notes-q3w4e", "0.0.7000006")]  # fmt: skip
+    assert run.counts["code_ids_named_elsewhere_in_another_form"] == 1
+    assert address not in {one.entity_id for one in CodeIdStore(database).candidates()}
+
+
 def test_the_check_asks_only_about_the_candidates_in_the_most_files(
     database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:

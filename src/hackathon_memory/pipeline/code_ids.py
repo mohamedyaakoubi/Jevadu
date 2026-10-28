@@ -3,8 +3,9 @@
 The code of a repository names many IDs that are not the team's own: a public token, the account
 of a service, a number from a tutorial. So an ID of the code counts only when all of these hold:
 
-* no page and no README of the collection names it, and the code of no other repository: it is
-  the project's own (db/code_ids.py);
+* no page and no README of the collection names it, and the code of no other repository, in any
+  of its forms: it is the project's own (db/code_ids.py). An EVM address and the 0.0 ID of one
+  contract are one ID, which the ledger's answer shows: an ID is looked at again after it;
 * the ledger knows it on a network as something that the proof rule finds, not empty, and made
   inside the window of the project's event: the team most likely made it for this event
   (counts_from_the_code, check/proof.py).
@@ -103,6 +104,15 @@ def give_code_ids(
         if not finished:
             run.counts["projects_whose_code_ids_were_not_all_asked"] += 1
             continue
+        if given:
+            # The answers are in the table now, so an address that stands for a thing that the
+            # collection names by its 0.0 ID shows (28 October 2026).
+            repository = by_project[project_id][0].repository
+            elsewhere = store.named_elsewhere([one.entity_id for one in given.values()], repository)
+            run.counts["code_ids_named_elsewhere_in_another_form"] += len(
+                [one for one in given.values() if one.entity_id in elsewhere]
+            )
+            given = {key: one for key, one in given.items() if one.entity_id not in elsewhere}
         store.replace(project_id, list(given.values()))
         run.counts["code_ids_given"] += len(given)
         run.counts["projects_with_code_ids"] += bool(given)
