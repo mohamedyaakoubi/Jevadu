@@ -518,6 +518,26 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     assert f'href="https://hashscan.io/testnet/transaction/{first}"' in block
     assert 'data-note="7 March 2026: 3 Consensus Service transactions"' in block
     assert "<summary>The days as a table</summary>" in block
+    # the days widen, with two small buttons, the narrower one off at first (28 October 2026)
+    assert 'aria-label="Widen the days"' in block and 'data-zoom="in"' in block
+    assert 'data-zoom="out" aria-label="Narrow the days" title="Narrow the days" disabled' in block
+    assert "Ctrl and the mouse wheel, or the buttons + and −, widen the days." in block
+
+
+def a_card_with_days(database: str, pebble: int) -> None:
+    """Pebble Pay with an own topic and two messages on 7 March 2026, in its event of 6 to 8
+    March: a card with a strip of days."""
+    from hackathon_memory.check.history import CONSENSUS, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    own_id(database, pebble, "0.0.4511", "topic")
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+    messages = {stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), n): CONSENSUS for n in (1, 2)}
+    acts = {key: Act("CONSENSUSSUBMITMESSAGE", True, "0.0.7001", ("0.0.7001",))
+            for key in messages}  # fmt: skip
+    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, False, acts),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
 
 
 def test_the_card_counts_the_transactions_of_the_kinds_it_does_not_name(site) -> None:  # noqa: ANN001
@@ -2213,6 +2233,56 @@ def test_an_info_mark_explains_its_term(site, chromium) -> None:  # noqa: ANN001
     assert box and box["y"] + box["height"] > 700  # a card at the bottom, where the thumb is
     page.context.close()
     phone.context.close()
+
+
+STRIP_STATE = """() => {
+  const days = document.querySelector('[data-strip] .hm-strip-svg');
+  const names = document.querySelector('[data-strip] .hm-strip-names').getBoundingClientRect();
+  const box = days.getBoundingClientRect();
+  return {zoom: Number(days.getAttribute('data-zoom') || 1), width: box.width,
+          height: box.height, namesHeight: names.height,
+          font: getComputedStyle(days.querySelector('.hm-strip-mark')).fontSize,
+          ticks: days.querySelector('.hm-strip-ticks').getAttribute('display') === 'none' ? 0
+            : days.querySelectorAll('.hm-strip-ticks text[display="inline"]').length,
+          narrower: !document.querySelector('[data-strip] [data-zoom="out"]').disabled,
+          wider: !document.querySelector('[data-strip] [data-zoom="in"]').disabled};
+}"""
+
+
+@pytest.mark.browser
+def test_the_days_of_the_strip_widen_and_their_words_keep_their_size(site, chromium) -> None:  # noqa: ANN001
+    """+ and -, and Ctrl with the mouse wheel over the strip, widen and narrow its days; the
+    names stay in line with the days, the words keep their size, and dates come under the days
+    (design 12.1, S2, 28 October 2026)."""
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    a_card_with_days(database, pebble)
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(f"http://site.test/project/{pebble}")
+    strip = page.locator("[data-strip]")
+    first = page.evaluate(STRIP_STATE)
+    assert first["zoom"] == 1 and not first["narrower"] and first["wider"] and first["ticks"] == 0
+    assert abs(first["height"] - first["namesHeight"]) < 1  # the rows of the names and the days
+    strip.locator('[data-zoom="in"]').click()
+    wider = page.evaluate(STRIP_STATE)
+    assert wider["zoom"] == 2 and abs(wider["width"] - 2 * first["width"]) < 1
+    assert (wider["height"], wider["font"]) == (first["height"], first["font"])
+    assert wider["narrower"] and wider["ticks"] > 0
+    box = strip.locator(".hm-strip-scroll").bounding_box()
+    page.mouse.move(box["x"] + 40, box["y"] + 10)
+    page.keyboard.down("Control")
+    page.mouse.wheel(0, -300)  # up, with Ctrl: wider, as a pinch of a touchpad would
+    page.keyboard.up("Control")
+    page.wait_for_function("Number(document.querySelector('[data-strip] .hm-strip-svg')"
+                           ".getAttribute('data-zoom')) > 2")  # fmt: skip
+    assert page.evaluate("() => window.devicePixelRatio") == 1  # the page itself did not zoom
+    for _ in range(6):
+        if strip.locator('[data-zoom="out"]').is_enabled():
+            strip.locator('[data-zoom="out"]').click()
+    back = page.evaluate(STRIP_STATE)
+    assert back["zoom"] == 1 and abs(back["width"] - first["width"]) < 1 and back["ticks"] == 0
+    assert problems(page) == []
+    page.context.close()
 
 
 @pytest.mark.browser

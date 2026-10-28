@@ -135,4 +135,11 @@ def test_the_strip_draws_each_service_on_its_row_with_its_shade() -> None:
     assert [mark.text for mark in view.marks] == ["4 March 2026", "the event", "5 May 2026"]
     assert [row.name for row in view.rows] == ["Consensus", "Tokens"]
     assert len(view.table) == 3
+    # the days are a drawing of their own, placed from 0, with a short date for each day; at
+    # most a week across the strip (28 October 2026)
+    assert (view.marks[0].x, view.marks[-1].x) == (0, view.days_width)
+    assert view.days == 63 and len(view.ticks) == 63
+    assert (view.ticks[0].text, view.ticks[-1].text) == ("4 Mar", "5 May")
+    assert view.most_zoom == 9.0 and view.names_share == 18.0
+    assert all(0 <= square.x < view.days_width for row in view.rows for square in row.squares)
     assert strip_view(None) is None

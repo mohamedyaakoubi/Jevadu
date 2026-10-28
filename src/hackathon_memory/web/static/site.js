@@ -328,6 +328,104 @@
   document.addEventListener("mouseover", stripNote);
   document.addEventListener("focusin", stripNote);
 
+  // The days widen (design 12.1, S2, 28 October 2026): Ctrl and the mouse wheel over the strip
+  // (a pinch of a touchpad comes as the same) widen or narrow them around the pointer, and the
+  // buttons + and - around the middle of what is in view. Only the places and the widths of the
+  // shapes stretch, with the width of the drawing, so its words keep their size; the days scroll
+  // sideways. Wide enough, a short date stands under every few days.
+  var TICK_ROOM = 56; // pixels between two dates under the days
+  var TICK_HALF = 22; // pixels from the middle of a date to its end
+  var TICK_STEPS = [1, 2, 7, 14, 28]; // every day, every second day, every week...
+
+  // The dates under the days, for what is in view: none at the first width, else every few days,
+  // whole, and clear of "the event".
+  function stripTicks(scroller) {
+    var svg = scroller.querySelector(".hm-strip-svg");
+    var group = svg && svg.querySelector(".hm-strip-ticks");
+    if (!group) return;
+    var zoom = Number(svg.getAttribute("data-zoom") || 1);
+    var width = Number(svg.getAttribute("data-width"));
+    var unit = scroller.clientWidth / width; // pixels of one unit of the drawing
+    var day = width / Number(svg.getAttribute("data-days")) * zoom * unit; // pixels of one day
+    var every = TICK_STEPS[TICK_STEPS.length - 1];
+    for (var n = 0; n < TICK_STEPS.length; n++) {
+      if (TICK_STEPS[n] * day >= TICK_ROOM) { every = TICK_STEPS[n]; break; }
+    }
+    var wide = zoom > 1;
+    group.setAttribute("display", wide ? "inline" : "none");
+    svg.querySelectorAll(".hm-strip-end").forEach(function (end) {
+      end.setAttribute("display", wide ? "none" : "inline");
+    });
+    if (!wide) return;
+    var label = svg.querySelector(".hm-strip-event-mark");
+    var box = label ? label.getBBox() : null;
+    var half = TICK_HALF / unit; // drawing units
+    var from = scroller.scrollLeft / unit + half;
+    var to = (scroller.scrollLeft + scroller.clientWidth) / unit - half;
+    group.querySelectorAll("text").forEach(function (tick, number) {
+      var x = Number(tick.getAttribute("data-x")) * zoom;
+      var clear = !box || Math.abs(x - (box.x + box.width / 2)) > box.width / 2 + 2 * half;
+      var whole = x >= from && x <= to;
+      tick.setAttribute("display", number % every === 0 && clear && whole ? "inline" : "none");
+    });
+  }
+
+  var ticking = null;
+  document.addEventListener("scroll", function (event) { // scroll does not bubble: caught early
+    var scroller = event.target;
+    if (!scroller.classList || !scroller.classList.contains("hm-strip-scroll") || ticking) return;
+    ticking = window.requestAnimationFrame(function () { ticking = null; stripTicks(scroller); });
+  }, true);
+
+  function widenStrip(figure, factor, at) {
+    var scroller = figure && figure.querySelector(".hm-strip-scroll");
+    var svg = scroller && scroller.querySelector(".hm-strip-svg");
+    if (!svg) return false;
+    var before = Number(svg.getAttribute("data-zoom") || 1);
+    var most = Number(svg.getAttribute("data-most")) || 1;
+    var zoom = Math.min(most, Math.max(1, before * factor));
+    if (Math.abs(zoom - before) < 0.001) return false;
+    if (at === undefined) at = scroller.clientWidth / 2;
+    var share = (scroller.scrollLeft + at) / scroller.scrollWidth; // the place under `at` stays
+    var width = Number(svg.getAttribute("data-width"));
+    svg.setAttribute("data-zoom", String(zoom));
+    svg.setAttribute("viewBox", "0 0 " + width * zoom + " " + svg.getAttribute("data-height"));
+    svg.style.width = zoom * 100 + "%";
+    svg.querySelectorAll("[data-x]").forEach(function (shape) {
+      shape.setAttribute("x", Number(shape.getAttribute("data-x")) * zoom);
+      var wide = shape.getAttribute("data-w");
+      if (wide === null) return;
+      var day = shape.classList.contains("hm-strip-day"); // a day keeps its gap of one unit
+      shape.setAttribute("width", day ? Math.max((Number(wide) + 1) * zoom - 1, 1.5)
+        : Number(wide) * zoom);
+    });
+    svg.querySelectorAll(".hm-strip-base").forEach(function (line) {
+      line.setAttribute("x2", width * zoom);
+    });
+    scroller.scrollLeft = share * scroller.scrollWidth - at;
+    stripTicks(scroller);
+    figure.querySelector('[data-zoom="out"]').disabled = zoom <= 1;
+    figure.querySelector('[data-zoom="in"]').disabled = zoom >= most;
+    return true;
+  }
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest && event.target.closest("[data-strip] .hm-strip-zoom");
+    if (button) widenStrip(button.closest("[data-strip]"),
+                           button.getAttribute("data-zoom") === "in" ? 2 : 0.5);
+  });
+  document.addEventListener("wheel", function (event) {
+    if (!event.ctrlKey) return;
+    var frame = event.target.closest && event.target.closest("[data-strip] .hm-strip-frame");
+    if (!frame) return;
+    event.preventDefault(); // over the strip, the wheel with Ctrl widens its days, not the page
+    var scroller = frame.querySelector(".hm-strip-scroll");
+    var lines = event.deltaMode === 1 ? 33 : (event.deltaMode === 2 ? 400 : 1);
+    var box = scroller.getBoundingClientRect();
+    var at = Math.min(Math.max(event.clientX - box.left, 0), scroller.clientWidth);
+    widenStrip(frame.closest("[data-strip]"), Math.exp(-event.deltaY * lines / 300), at);
+  }, { passive: false });
+
   var LESS_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-said-word]");

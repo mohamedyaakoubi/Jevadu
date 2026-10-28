@@ -185,23 +185,35 @@
 
 {# The days of the time of the ledger story (design 7.5): one row for each service, one square
    for each day with a transaction, darker for more; the days of the event marked. A square links
-   to the first
-   transaction of its day on HashScan and names its day and its number; the same numbers stand in
-   a table. `view` is a StripView of web/strips.py. #}
+   to the first transaction of its day on HashScan and names its day and its number; the same
+   numbers stand in a table. The names stay and the days widen (S2, 28 October 2026): the page's
+   script stretches what carries data-x, and shows a tick of every few days. `view` is a
+   StripView of web/strips.py. #}
 {% macro strip(view, pid) -%}
 <figure class="hm-strip" data-strip>
-  <svg class="hm-strip-svg" viewBox="0 0 {{ view.width }} {{ view.height }}" role="group" aria-labelledby="strip-{{ pid }}-title" preserveAspectRatio="xMinYMin meet">
-    <title id="strip-{{ pid }}-title">{{ view.summary }}</title>
-    <rect class="hm-strip-event" x="{{ view.event_x }}" y="0" width="{{ view.event_width }}" height="{{ view.rows_bottom }}"></rect>
-    {% for row in view.rows %}
-    <text class="hm-strip-name" x="0" y="{{ row.y + 12 }}">{{ row.name }}</text>
-    <line class="hm-strip-base" x1="{{ view.left }}" x2="{{ view.right }}" y1="{{ row.y + 15.5 }}" y2="{{ row.y + 15.5 }}"></line>
-    {% for square in row.squares %}
-    <a href="{{ hashscan_moment(square.network, square.first) }}" target="_blank" rel="noopener" data-note="{{ square.note }}" aria-label="{{ square.note }}, the first on HashScan (opens in a new tab)"><rect class="hm-strip-day" x="{{ square.x }}" y="{{ row.y + 2 }}" width="{{ square.width }}" height="13" fill-opacity="{{ square.ink }}"><title>{{ square.note }}</title></rect></a>
-    {% endfor %}
-    {% endfor %}
-    {% for mark in view.marks %}<text class="hm-strip-mark" x="{{ mark.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="{{ mark.anchor }}">{{ mark.text }}</text>{% endfor %}
-  </svg>
+  <div class="hm-strip-tools" role="group" aria-label="The width of the days">
+    <button type="button" class="hm-strip-zoom" data-zoom="out" aria-label="Narrow the days" title="Narrow the days" disabled>&minus;</button>
+    <button type="button" class="hm-strip-zoom" data-zoom="in" aria-label="Widen the days" title="Widen the days (or Ctrl and the mouse wheel)">+</button>
+  </div>
+  <div class="hm-strip-frame">
+    <svg class="hm-strip-names" viewBox="0 0 {{ view.left }} {{ view.height }}" style="width: {{ view.names_share }}%" aria-hidden="true" focusable="false">
+      {% for row in view.rows %}<text class="hm-strip-name" x="0" y="{{ row.y + 12 }}">{{ row.name }}</text>{% endfor %}
+    </svg>
+    <div class="hm-strip-scroll">
+    <svg class="hm-strip-svg" viewBox="0 0 {{ view.days_width }} {{ view.height }}" role="group" aria-labelledby="strip-{{ pid }}-title" preserveAspectRatio="xMinYMin meet" data-width="{{ view.days_width }}" data-height="{{ view.height }}" data-days="{{ view.days }}" data-most="{{ view.most_zoom }}">
+      <title id="strip-{{ pid }}-title">{{ view.summary }}</title>
+      <rect class="hm-strip-event" x="{{ view.event_x }}" y="0" width="{{ view.event_width }}" height="{{ view.rows_bottom }}" data-x="{{ view.event_x }}" data-w="{{ view.event_width }}"></rect>
+      {% for row in view.rows %}
+      <line class="hm-strip-base" x1="0" x2="{{ view.days_width }}" y1="{{ row.y + 15.5 }}" y2="{{ row.y + 15.5 }}"></line>
+      {% for square in row.squares %}
+      <a href="{{ hashscan_moment(square.network, square.first) }}" target="_blank" rel="noopener" data-note="{{ square.note }}" aria-label="{{ square.note }}, the first on HashScan (opens in a new tab)"><rect class="hm-strip-day" x="{{ square.x }}" y="{{ row.y + 2 }}" width="{{ square.width }}" height="13" fill-opacity="{{ square.ink }}" data-x="{{ square.x }}" data-w="{{ square.width }}"><title>{{ square.note }}</title></rect></a>
+      {% endfor %}
+      {% endfor %}
+      {% for mark in view.marks %}<text class="hm-strip-mark{{ ' hm-strip-end' if mark.anchor != 'middle' else ' hm-strip-event-mark' }}" x="{{ mark.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="{{ mark.anchor }}" data-x="{{ mark.x }}">{{ mark.text }}</text>{% endfor %}
+      <g class="hm-strip-ticks" display="none" aria-hidden="true">{% for tick in view.ticks %}<text class="hm-strip-mark" x="{{ tick.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="middle" data-x="{{ tick.x }}">{{ tick.text }}</text>{% endfor %}</g>
+    </svg>
+    </div>
+  </div>
   <figcaption class="hm-small">
     <span class="hm-strip-note" aria-live="polite">{{ view.hint }}</span>
   </figcaption>

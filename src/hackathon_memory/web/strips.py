@@ -13,13 +13,19 @@ of each square is in its note and in the table under the strip.
 The drawing is about as wide as the column of a card (WIDTH), so that its words keep their size:
 at 640 units in a column of about 370 pixels they shrank to 6 pixels (seen on 25 October 2026).
 The rows carry short names; the table under the strip gives the full ones.
+
+The days widen (design 12.1, S2, 28 October 2026): the names of the rows are a drawing of their own
+that stays in place, and the days are a second drawing, whose shapes are placed from the start of
+the days, inside a band that scrolls sideways. The page's script stretches only their places and
+widths, so the words keep their size; it shows one short date of every few days when they are wide
+enough (ticks), up to MOST_DAYS_IN_VIEW days across the strip.
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from hackathon_memory.check.depth import Day, Strip
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
@@ -33,8 +39,10 @@ TOP = 4
 ROW = 20  # the height of one row
 FOOT = 20  # room for the days under the rows
 LIGHTEST = 0.25  # the shade of one transaction; the most transactions of a day get 1
+MOST_DAYS_IN_VIEW = 7  # the widest the days get: a week across the strip
 HINT = ("Point at a square, or move to it with the keyboard, to see its day and its number. "
-        "A click opens its first transaction on HashScan.")  # fmt: skip
+        "A click opens its first transaction on HashScan. Ctrl and the mouse wheel, or the "
+        "buttons + and \u2212, widen the days.")  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -63,6 +71,12 @@ class Mark:
 
 
 @dataclass(frozen=True)
+class Tick:
+    x: float  # the middle of its day, from the start of the days
+    text: str  # its day, short: "7 Mar"
+
+
+@dataclass(frozen=True)
 class TableRow:
     day: date
     service: str
@@ -71,10 +85,10 @@ class TableRow:
 
 @dataclass(frozen=True)
 class StripView:
-    width: int
+    width: int  # the names and the days
     height: int
-    left: int
-    right: int
+    left: int  # the names
+    days_width: int  # the days, whose shapes are placed from 0
     rows: tuple[Row, ...]
     rows_bottom: float
     event_x: float
@@ -83,6 +97,14 @@ class StripView:
     summary: str
     hint: str
     table: tuple[TableRow, ...]
+    days: int = 0  # the days of the strip, one tick each
+    ticks: tuple[Tick, ...] = ()
+    most_zoom: float = 1.0  # how many times wider the days can get
+
+    @property
+    def names_share(self) -> float:
+        """The part of the strip's width that the names take, in percent."""
+        return round(self.left / self.width * 100, 4)
 
 
 def in_words(day: date) -> str:
@@ -107,8 +129,8 @@ def strip_view(strip: Strip | None) -> StripView | None:
         return None
     step = (WIDTH - LEFT) / strip.days
 
-    def x_of(day: date) -> float:
-        return LEFT + (day - strip.first).days * step
+    def x_of(day: date) -> float:  # from the start of the days
+        return (day - strip.first).days * step
 
     rows = []
     for number, (service, days) in enumerate(strip.rows):
@@ -124,10 +146,13 @@ def strip_view(strip: Strip | None) -> StripView | None:
     event_x = x_of(strip.event_first)
     event_width = ((strip.event_last - strip.event_first).days + 1) * step
     marks = (
-        Mark(LEFT, in_words(strip.first), "start"),
+        Mark(0, in_words(strip.first), "start"),
         Mark(round(event_x + event_width / 2, 2), "the event", "middle"),
-        Mark(WIDTH, in_words(strip.last), "end"),
+        Mark(WIDTH - LEFT, in_words(strip.last), "end"),
     )
+    every_day = (strip.first + timedelta(days=number) for number in range(strip.days))
+    ticks = tuple(Tick(round((number + 0.5) * step, 2), f"{day.day} {day:%b}")
+                  for number, day in enumerate(every_day))  # fmt: skip
     active = len({one.day for _, days in strip.rows for one in days})
     summary = (f"The days of its transactions from {in_words(strip.first)} to "
                f"{in_words(strip.last)}: {active} day{'s' if active != 1 else ''} with a "
@@ -135,9 +160,10 @@ def strip_view(strip: Strip | None) -> StripView | None:
     table = tuple(sorted((TableRow(one.day, service, one.count)
                           for service, days in strip.rows for one in days),
                          key=lambda row: (row.day, row.service)))  # fmt: skip
-    return StripView(WIDTH, int(bottom + FOOT), LEFT, WIDTH, tuple(rows), bottom,
-                     round(event_x, 2), round(event_width, 2), marks, summary, HINT,
-                     table)  # fmt: skip
+    return StripView(WIDTH, int(bottom + FOOT), LEFT, WIDTH - LEFT, tuple(rows), bottom,
+                     round(event_x, 2), round(event_width, 2), marks, summary, HINT, table,
+                     strip.days, ticks,
+                     round(max(2.0, strip.days / MOST_DAYS_IN_VIEW), 2))  # fmt: skip
 
 
 __all__ = ["Day", "StripView", "strip_view"]

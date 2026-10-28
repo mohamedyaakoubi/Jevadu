@@ -548,6 +548,16 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 /* The days of a card's ledger story (design 7.5): one colour, darker for more transactions,
    and a border in the full colour, so that a light square still stands out from the page. */
 .hm-strip { margin: 0 0 0.75rem; }
+/* The names stay and the days widen (S2, 28 October 2026): two drawings side by side, the
+   days in a band that scrolls sideways; the script sets the width of the days. The two small
+   buttons keep a target of 24 pixels (WCAG 2.5.8). */
+.hm-strip-tools { display: flex; justify-content: flex-end; gap: 4px; margin: 0 0 2px; }
+.hm-strip-zoom { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; font-size: 15px; line-height: 1; color: var(--tblr-body-color); background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color); border-radius: 4px; cursor: pointer; }
+.hm-strip-zoom:hover:not(:disabled) { color: var(--tblr-primary); border-color: var(--tblr-primary); }
+.hm-strip-zoom:disabled { opacity: 0.4; cursor: default; }
+.hm-strip-frame { display: flex; align-items: flex-start; }
+.hm-strip-names { display: block; flex: none; min-width: 0; height: auto; overflow: visible; }
+.hm-strip-scroll { flex: 1 1 0; min-width: 0; overflow-x: auto; overflow-y: hidden; }
 .hm-strip-svg { display: block; width: 100%; height: auto; overflow: visible; }
 .hm-strip-event { fill: var(--tblr-primary); fill-opacity: 0.09; }
 .hm-strip-day { fill: var(--tblr-primary); stroke: var(--tblr-primary); stroke-width: 1; }
