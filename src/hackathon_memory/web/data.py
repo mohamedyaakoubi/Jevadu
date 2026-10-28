@@ -123,6 +123,23 @@ def a_or_an(word: str) -> str:
     return f"{'an' if word[:1].lower() in 'aeiou' else 'a'} {word}"
 
 
+# The results of an ID that the ledger knows on the network that was asked.
+KNOWN_THERE = frozenset({PROOF_FOUND, DATES_DO_NOT_FIT, ANOTHER_KIND, FOUND_BUT_EMPTY,
+                         WINDOW_NOT_KNOWN})  # fmt: skip
+
+
+def lines_to_show(ledger: Sequence[LedgerLine]) -> list[LedgerLine]:
+    """The lines of "On the ledger" (design 12.1, S2): each network that was asked about an ID,
+    but not the "not found" of an ID that its page or README names with no network, when the
+    other network knows it. Both networks were asked only because the network was not said."""
+    known = {line.entity_id for line in ledger if line.status in KNOWN_THERE}
+
+    def left_out(line: LedgerLine) -> bool:
+        return line.status == NOT_FOUND and line.named_network is None and line.entity_id in known
+
+    return [line for line in ledger if line.network and not left_out(line)]
+
+
 def reason_of(line: LedgerLine, window: Window | None) -> str:
     """Why the result of one ID is what it is, from its facts, in plain words."""
     where = "README" if line.found_in == "readme" else "page"

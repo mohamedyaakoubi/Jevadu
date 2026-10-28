@@ -54,6 +54,7 @@ class LedgerLine:
     outcome: str | None = None  # for a transaction: SUCCESS, or why it failed
     found_at: str | None = None  # an ID of the code: the file where it stands
     said_kind: str | None = None  # what the page or the README calls it
+    named_network: str | None = None  # the network that the page or the README names with it
 
 
 @dataclass(frozen=True)
@@ -136,7 +137,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         for row in conn.execute(
             "SELECT h.project_id, h.entity_id, h.found_in, c.network, c.status, f.kind, "
             "f.created_at, f.last_activity_at, f.asked_at, f.details ->> 'name', "
-            "f.details ->> 'result', h.found_at, h.said_kind "
+            "f.details ->> 'result', h.found_at, h.said_kind, h.network "
             "FROM hedera_ids h LEFT JOIN id_checks c ON c.hedera_id = h.id "
             "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "
             "WHERE h.project_id = ANY(%s) ORDER BY h.project_id, h.id, c.network",

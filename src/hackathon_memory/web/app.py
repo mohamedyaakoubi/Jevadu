@@ -1270,6 +1270,7 @@ def create_app(
         "hashscan_moment": hashscan_transaction,
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
         "reason_of": data.reason_of,
+        "lines_to_show": data.lines_to_show,
         "NETWORK_WORDS": data.NETWORK_WORDS,
         "ACTION_WORDS": data.ACTION_WORDS,
         "KIND_WORDS": data.KIND_WORDS,

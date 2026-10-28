@@ -1863,6 +1863,28 @@ def test_each_id_says_why_it_counts_in_plain_words() -> None:
     )
 
 
+def test_a_network_that_does_not_know_an_id_is_left_out_when_the_other_knows_it() -> None:
+    """An ID named with no network is asked on both networks; the card does not say "Not found"
+    beside the proof of the same ID (28 October 2026)."""
+    from hackathon_memory.search.listing import LedgerLine
+    from hackathon_memory.web.data import lines_to_show
+
+    made = datetime(2026, 9, 8, tzinfo=UTC)
+    deal = "0.0.7-1788884980-415990532"
+    main = LedgerLine(deal, "readme", "mainnet", "not_found", None, None, None, made)
+    test = LedgerLine(deal, "readme", "testnet", "proof_found", "transaction", made, None, made)
+    assert lines_to_show([main, test]) == [test]
+    # the page names the main network: what that network says stays, beside the other row
+    said = LedgerLine("0.0.8", "page", "mainnet", "not_found", None, None, None, made,
+                      named_network="mainnet")  # fmt: skip
+    elsewhere = LedgerLine("0.0.8", "readme", "testnet", "proof_found", "topic", made, None, made)
+    # known by no network: both answers stay; not asked yet: no line
+    nowhere = [LedgerLine("0.0.9", "readme", network, "not_found", None, None, None, made)
+               for network in ("mainnet", "testnet")]  # fmt: skip
+    waiting = LedgerLine("0.0.10", "readme", None, None, None, None, None, None)
+    assert lines_to_show([said, elsewhere, *nowhere, waiting]) == [said, elsewhere, *nowhere]
+
+
 def test_a_date_is_written_as_the_pages_write_it() -> None:
     from hackathon_memory.web.app import day, iso_day
 
