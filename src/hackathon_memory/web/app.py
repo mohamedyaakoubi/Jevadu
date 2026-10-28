@@ -1270,6 +1270,7 @@ def create_app(
         "strip_view": strips.strip_view,
         "hashscan_moment": hashscan_transaction,
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
+        "REFRESH_IN_BACKGROUND": settings.refresh_in_background,
         "reason_of": data.reason_of,
         "lines_to_show": data.lines_to_show,
         "NETWORK_WORDS": data.NETWORK_WORDS,

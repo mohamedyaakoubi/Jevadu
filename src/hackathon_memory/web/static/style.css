@@ -207,6 +207,8 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-line { margin: 0; font-size: 0.875rem; color: var(--tblr-secondary); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 .hm-matched { margin: 0; font-size: 0.8125rem; color: var(--tblr-secondary); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .hm-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.125rem 0 0; }
+/* A tag and its own (i) stay together when the tags wrap (design 12.2). */
+.hm-tag { display: inline-flex; align-items: center; gap: 0.125rem; }
 .hm-card-foot { display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; padding: 0.5rem 1rem; margin-top: auto; }
 .hm-status { font-size: 0.75rem; }
 .hm-compare { position: relative; z-index: 1; padding: 0.625rem 1rem 0.75rem; border-top: 1px solid var(--tblr-border-color); font-size: 0.8125rem; }

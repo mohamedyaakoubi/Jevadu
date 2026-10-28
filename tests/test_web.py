@@ -606,6 +606,33 @@ def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site)
     assert "Mainnet" not in named("mainnet", datetime(2021, 9, 20, tzinfo=UTC))  # long before
 
 
+def test_each_tag_of_a_card_has_its_own_note(site) -> None:  # noqa: ANN001
+    """An (i) explains only its tag: a winners' list entry gets the note of that tag, not the
+    notes of the prizes or of the main network (design 12.2, 28 October 2026)."""
+    client, _, ids, database = site
+    fern = ids["Fern Vote"]
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET entry_kind = 'winner_entry', "
+                     "prize_state = 'hedera_prize' WHERE id = %s", (fern,))  # fmt: skip
+    head = client.get(f"/project/{fern}/panel").text.split("</header>", 1)[0]
+    assert 'data-tip="tip-hedera-prize"' in head and 'data-tip="tip-winners-list"' in head
+    assert 'data-tip="tip-mainnet"' not in head and 'data-tip="tip-event"' not in head
+    page = client.get("/").text
+    for key in ("event", "event-chart", "hedera-prize", "other-prize", "winners-list", "mainnet"):
+        assert f'id="tip-{key}"' in page, key
+    event = page.split('id="tip-event"', 1)[1].split("</div>", 1)[0]
+    assert "prize" not in event and "Mainnet" not in event  # the note of the events only
+
+
+def test_the_note_of_reading_again_says_what_the_website_does(site) -> None:  # noqa: ANN001
+    """With the rounds off, the note does not say that the website reads again while it runs
+    (design 12.2, 28 October 2026)."""
+    client, _, _, _ = site
+    note = client.get("/").text.split('id="tip-fresh"', 1)[1].split("</div>", 1)[0]
+    assert "while the website runs" not in note and "when the collection is read again" in note
+    assert "what the calls of its contracts reached" in note
+
+
 def a_card_with_days(database: str, pebble: int) -> None:
     """Pebble Pay with an own topic and two messages on 7 March 2026, in its event of 6 to 8
     March: a card with a strip of days."""
