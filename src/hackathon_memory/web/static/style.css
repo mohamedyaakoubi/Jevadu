@@ -574,6 +574,10 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
    10 (review layer 1, 28 October 2026). */
 .hm-strip-name, .hm-strip-mark { font-size: 13px; fill: var(--tblr-secondary); }
 .hm-strip-base { stroke: var(--tblr-border-color); stroke-width: 1; }
+/* A time cut out of the strip (design 7.5): hatched over the page's own ground, so that the
+   lines of the rows stop at it. */
+.hm-strip-cut-ground { fill: var(--tblr-bg-surface); }
+.hm-strip-hatch { stroke: var(--tblr-secondary); stroke-opacity: 0.45; stroke-width: 1.5; }
 .hm-strip-note { display: block; }
 .hm-strip-note { min-height: 1.4em; }
 .hm-strip-table { margin-top: 0.25rem; }

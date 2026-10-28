@@ -190,8 +190,9 @@
    for each day with a transaction, darker for more; the days of the event marked. A square links
    to the first transaction of its day on HashScan and names its day and its number; the same
    numbers stand in a table. The names stay and the days widen (S2, 28 October 2026): the page's
-   script stretches what carries data-x, and shows a tick of every few days. `view` is a
-   StripView of web/strips.py. #}
+   script stretches what carries data-x, and shows a tick of every few days. A time of more than
+   30 days with no transaction is cut out: a hatched band with its length under it (28 October
+   2026, night). `view` is a StripView of web/strips.py. #}
 {% macro strip(view, pid) -%}
 <figure class="hm-strip" data-strip>
   <div class="hm-strip-tools" role="group" aria-label="The width of the days">
@@ -203,22 +204,28 @@
       {% for row in view.rows %}<text class="hm-strip-name" x="0" y="{{ row.y + 12 }}">{{ row.name }}</text>{% endfor %}
     </svg>
     <div class="hm-strip-scroll">
-    <svg class="hm-strip-svg" viewBox="0 0 {{ view.days_width }} {{ view.height }}" role="group" aria-labelledby="strip-{{ pid }}-title" preserveAspectRatio="xMinYMin meet" data-width="{{ view.days_width }}" data-height="{{ view.height }}" data-days="{{ view.days }}" data-most="{{ view.most_zoom }}">
+    <svg class="hm-strip-svg" viewBox="0 0 {{ view.days_width }} {{ view.height }}" role="group" aria-labelledby="strip-{{ pid }}-title" preserveAspectRatio="xMinYMin meet" data-width="{{ view.days_width }}" data-height="{{ view.height }}" data-step="{{ view.step }}" data-most="{{ view.most_zoom }}">
       <title id="strip-{{ pid }}-title">{{ view.summary }}</title>
+      {% if view.cuts %}<defs><pattern id="strip-{{ pid }}-cut" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect class="hm-strip-cut-ground" width="6" height="6"></rect><line class="hm-strip-hatch" x1="0" y1="0" x2="0" y2="6"></line></pattern></defs>{% endif %}
       <rect class="hm-strip-event" x="{{ view.event_x }}" y="0" width="{{ view.event_width }}" height="{{ view.rows_bottom }}" data-x="{{ view.event_x }}" data-w="{{ view.event_width }}"></rect>
       {% for row in view.rows %}
       <line class="hm-strip-base" x1="0" x2="{{ view.days_width }}" y1="{{ row.y + 15.5 }}" y2="{{ row.y + 15.5 }}"></line>
+      {% endfor %}
+      {% for cut in view.cuts %}<rect class="hm-strip-cut" x="{{ cut.x }}" y="0" width="{{ cut.width }}" height="{{ view.rows_bottom }}" fill="url(#strip-{{ pid }}-cut)" data-x="{{ cut.x }}" data-w="{{ cut.width }}"><title>{{ cut.note }}</title></rect>{% endfor %}
+      {% for row in view.rows %}
       {% for square in row.squares %}
       <a href="{{ hashscan_moment(square.network, square.first) }}" target="_blank" rel="noopener" data-note="{{ square.note }}" aria-label="{{ square.note }}, the first on HashScan (opens in a new tab)"><rect class="hm-strip-day" x="{{ square.x }}" y="{{ row.y + 2 }}" width="{{ square.width }}" height="13" fill-opacity="{{ square.ink }}" data-x="{{ square.x }}" data-w="{{ square.width }}"><title>{{ square.note }}</title></rect></a>
       {% endfor %}
       {% endfor %}
-      {% for mark in view.marks %}<text class="hm-strip-mark{{ ' hm-strip-end' if mark.anchor != 'middle' else ' hm-strip-event-mark' }}" x="{{ mark.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="{{ mark.anchor }}" data-x="{{ mark.x }}">{{ mark.text }}</text>{% endfor %}
+      {% for mark in view.marks %}<text class="hm-strip-mark{{ ' hm-strip-event-mark' if mark.event else ' hm-strip-end' }}" x="{{ mark.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="{{ mark.anchor }}" data-x="{{ mark.x }}">{{ mark.text }}</text>{% endfor %}
+      {% for mark in view.cut_marks %}<text class="hm-strip-mark hm-strip-cut-mark" x="{{ mark.x }}" y="{{ view.rows_bottom + 30 }}" text-anchor="middle" data-x="{{ mark.x }}">{{ mark.text }}</text>{% endfor %}
       <g class="hm-strip-ticks" display="none" aria-hidden="true">{% for tick in view.ticks %}<text class="hm-strip-mark" x="{{ tick.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="middle" data-x="{{ tick.x }}">{{ tick.text }}</text>{% endfor %}</g>
     </svg>
     </div>
   </div>
   <figcaption class="hm-small">
     <span class="hm-strip-note" aria-live="polite">{{ view.hint }}</span>
+    {% if view.cuts %}<span class="d-block">A hatched band is a time of more than 30 days with no transaction, left out of the strip; its length stands under it.</span>{% endif %}
   </figcaption>
   <details class="hm-strip-table">
     <summary>The days as a table</summary>
@@ -239,14 +246,14 @@
   {% if not depth.read %}<p class="text-secondary">Some of its IDs were read before the tool kept what each transaction was. They are read again with the next reading.</p>{% endif %}
   {% if view %}{{ strip(view, pid) }}{{ story_time(story) }}{% endif %}
   {% if depth.did or depth.others is not none or depth.days %}
-  {% set within = " in that time" if view else "" %}
+  {% set within = " from " ~ (story.starts_on | day) ~ " to " ~ (story.ends_on | day) if view and story and story.starts_on else "" %}
   <dl class="hm-depth">
     <dt>What its IDs did{{ within }}</dt>
     <dd>{% if depth.did %}{% for words, count in depth.did %}{{ "{:,}".format(count) }} {{ words }}{{ ", " if not loop.last }}{% endfor %}{% if depth.more_kinds %}, and {{ "{:,}".format(depth.more_count) }} more of {{ "another kind" if depth.more_kinds == 1 else depth.more_kinds ~ " other kinds" }}{% endif %}{% else %}no transaction{% endif %}{% if depth.failed %}. Failed: {{ "{:,}".format(depth.failed) }}{% endif %}.</dd>
     <dt>Who took part</dt>
     <dd>{% if depth.others is none %}not known{% elif depth.others == 0 %}only accounts that the {{ source }} names{% else %}{{ "{:,}".format(depth.others) }} account{{ "s" if depth.others != 1 }} that the {{ source }} does not name{% endif %}{% if depth.held_by_others == 0 %}. No account that it does not name holds its tokens now{% elif depth.held_by_others is not none %}. Its tokens are held now by {{ "{:,}".format(depth.held_by_others) }} account{{ "s" if depth.held_by_others != 1 }} that it does not name{% endif %}.</dd>
     <dt>On how many days</dt>
-    <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
+    <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{{ within }}{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
   </dl>
   {% endif %}
   {% if depth.setup %}

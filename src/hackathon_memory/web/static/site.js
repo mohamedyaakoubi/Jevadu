@@ -340,7 +340,7 @@
   var TICK_STEPS = [1, 2, 7, 14, 28]; // every day, every second day, every week...
 
   // The dates under the days, for what is in view: none at the first width, else every few days,
-  // whole, and clear of "the event".
+  // whole, and clear of "the event". A time cut out of the strip has no date (28 October 2026).
   function stripTicks(scroller) {
     var svg = scroller.querySelector(".hm-strip-svg");
     var group = svg && svg.querySelector(".hm-strip-ticks");
@@ -348,7 +348,7 @@
     var zoom = Number(svg.getAttribute("data-zoom") || 1);
     var width = Number(svg.getAttribute("data-width"));
     var unit = scroller.clientWidth / width; // pixels of one unit of the drawing
-    var day = width / Number(svg.getAttribute("data-days")) * zoom * unit; // pixels of one day
+    var day = Number(svg.getAttribute("data-step")) * zoom * unit; // pixels of one day
     var every = TICK_STEPS[TICK_STEPS.length - 1];
     for (var n = 0; n < TICK_STEPS.length; n++) {
       if (TICK_STEPS[n] * day >= TICK_ROOM) { every = TICK_STEPS[n]; break; }

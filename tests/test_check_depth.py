@@ -13,7 +13,7 @@ from hackathon_memory.check.depth import (
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, HBAR, TOKENS, Act
 from hackathon_memory.check.story import OwnId
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
-from hackathon_memory.web.strips import LIGHTEST, strip_view
+from hackathon_memory.web.strips import LIGHTEST, Mark, apart, length, strip_view
 
 STARTS = datetime(2026, 4, 3, 9, tzinfo=UTC)  # an invented event of three days
 ENDS = date(2026, 4, 5)
@@ -87,11 +87,15 @@ def test_the_days_are_counted_during_before_and_after_the_event() -> None:
              message(STARTS + timedelta(days=1), n=2), message(STARTS + timedelta(hours=1), n=3),
              message(datetime(2026, 4, 20, tzinfo=UTC), n=4),
              message(datetime(2026, 9, 1, tzinfo=UTC), n=5)]  # fmt: skip
-    result = depth(own((TOPIC_ID, TOPIC)), items)
+    items.append(done(datetime(2026, 8, 1, tzinfo=UTC), TEAM, ACCOUNT, HBAR,
+                      Act("CRYPTOTRANSFER", True, TEAM, ()), 6))  # fmt: skip
+    result = depth(own((TOPIC_ID, TOPIC), (TEAM, ACCOUNT)), items)
     assert (result.days, result.days_during, result.days_before, result.days_after) == (4, 2, 1, 1)
-    assert result.strip is not None  # it draws the days of the time of the table only
+    assert result.strip is not None
+    # it draws the days of its topic outside the time of the table too, and not those of its
+    # account there: an account is often kept for years (28 October 2026)
     drawn = {one.day for _, days in result.strip.rows for one in days}
-    assert date(2026, 4, 20) in drawn and date(2026, 9, 1) not in drawn
+    assert {date(2026, 4, 20), date(2026, 9, 1)} <= drawn and date(2026, 8, 1) not in drawn
 
 
 def test_the_signs_that_stay_on_paper_are_facts() -> None:
@@ -132,7 +136,7 @@ def test_the_strip_draws_each_service_on_its_row_with_its_shade() -> None:
     assert (busiest.ink, quiet.ink) == (1.0, LIGHTEST)
     assert busiest.note == "3 April 2026: 9 Consensus Service transactions"
     assert view.rows[1].squares[0].note == "3 April 2026: 1 Token Service transaction"
-    assert [mark.text for mark in view.marks] == ["4 March 2026", "the event", "5 May 2026"]
+    assert [mark.text for mark in view.marks] == ["4 Mar 2026", "the event", "5 May 2026"]
     assert [row.name for row in view.rows] == ["Consensus", "Tokens"]
     assert len(view.table) == 3
     # the days are a drawing of their own, placed from 0, with a short date for each day; at
@@ -141,5 +145,55 @@ def test_the_strip_draws_each_service_on_its_row_with_its_shade() -> None:
     assert view.days == 63 and len(view.ticks) == 63
     assert (view.ticks[0].text, view.ticks[-1].text) == ("4 Mar", "5 May")
     assert view.most_zoom == 9.0 and view.names_share == 18.0
+    assert view.cuts == () and view.step == round(view.days_width / 63, 4)
     assert all(0 <= square.x < view.days_width for row in view.rows for square in row.squares)
     assert strip_view(None) is None
+
+
+def test_a_long_time_without_a_transaction_is_cut_out_of_the_strip() -> None:
+    """A contract busy a year before the event and a topic busy 40 days after the time of the
+    table: two times without a transaction are cut out, each a band with its length, and the
+    days around the event keep their width (28 October 2026)."""
+    long_before = datetime(2025, 3, 10, tzinfo=UTC)
+    items = [done(long_before + timedelta(days=n), CONTRACT_ID, CONTRACT, CONTRACTS,
+                  Act("CONTRACTCALL", True, TEAM, ()), n) for n in range(3)]  # fmt: skip
+    items += [message(STARTS, n=10), message(datetime(2026, 6, 14, tzinfo=UTC), n=11)]
+    view = strip_view(depth(own((TOPIC_ID, TOPIC), (CONTRACT_ID, CONTRACT)), items).strip)
+    assert [cut.text for cut in view.cuts] == ["1 yr", "39 days"]
+    assert view.cuts[0].note == ("No transaction for 1 year, from 13 March 2025 to 3 March "
+                                 "2026: left out of the strip.")  # fmt: skip
+    assert view.days == 3 + 63 + 1  # the days drawn: three, the time of the table, one
+    assert view.step == round((view.days_width - 2 * 14) / 67, 4)
+    first, second = view.cuts
+    squares = {row.service: [square.x for square in row.squares] for row in view.rows}
+    assert squares[CONTRACTS][0] == 0 and squares[CONTRACTS][-1] < first.x < view.event_x
+    assert view.event_x < second.x < squares[CONSENSUS][-1] < view.days_width
+    assert [mark.text for mark in view.cut_marks] == ["1 yr", "39 days"]
+    assert view.height == 4 + 2 * 20 + 20 + 16  # one more line, for the lengths
+
+
+def test_an_event_with_no_transaction_is_drawn_beside_the_days_after_it() -> None:
+    """Its things were used only a year after its event, as when the dates do not fit: the strip
+    draws the event, empty, and the days of its things after a cut (28 October 2026). Before, it
+    drew no strip at all."""
+    later = datetime(2027, 4, 14, tzinfo=UTC)
+    items = [done(later + timedelta(days=n), CONTRACT_ID, CONTRACT, CONTRACTS,
+                  Act("CONTRACTCALL", True, TEAM, ()), n) for n in range(3)]  # fmt: skip
+    result = depth(own((CONTRACT_ID, CONTRACT)), items)
+    assert (result.days, result.total) == (0, 0)  # nothing in the time of the table
+    view = strip_view(result.strip)
+    assert view is not None and [cut.text for cut in view.cuts] == ["11 mo"]
+    assert 0 < view.event_x < view.cuts[0].x
+    assert [mark.text for mark in view.marks][:2] == ["4 Mar 2026", "the event"]
+
+
+def test_the_lengths_and_the_marks_of_the_strip() -> None:
+    assert length(31) == ("31 days", "31 days")
+    assert length(365) == ("1 yr", "1 year")
+    assert length(437) == ("1 yr 2 mo", "1 year and 2 months")
+    assert length(250) == ("8 mo", "8 months")
+    # a mark that would touch one before it in the list is left out; one of the middle stays
+    # inside the drawing
+    marks = apart([Mark(320, "the event", "middle", event=True), Mark(0, "4 Mar 2026", "start"),
+                   Mark(328, "5 May 2026", "end")], 328)  # fmt: skip
+    assert [(mark.text, mark.x) for mark in marks] == [("4 Mar 2026", 0), ("the event", 295.6)]

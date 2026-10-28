@@ -507,8 +507,10 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
     assert "3 messages to a topic." in block
     assert "2 accounts that the page does not name." in block
-    assert ("1 day with a transaction: 1 during the event, 0 in the 30 days before it, 0 in the "
-            "30 days after it.") in block  # fmt: skip
+    # the numbers say their dates, since the strip can draw more days (28 October 2026)
+    assert "<dt>What its IDs did from 4 February 2026 to 7 April 2026</dt>" in block
+    assert ("1 day with a transaction from 4 February 2026 to 7 April 2026: 1 during the event, 0 "
+            "in the 30 days before it, 0 in the 30 days after it.") in block  # fmt: skip
     # one card (28 October 2026): the depth of use inside the card of the Hedera services, the
     # page's words marked once in its table, and the time before and after said once
     story = part.split('class="card project-section story-section"', 1)[1].split("</section>", 1)[0]
@@ -522,6 +524,33 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     assert 'aria-label="Widen the days"' in block and 'data-zoom="in"' in block
     assert 'data-zoom="out" aria-label="Narrow the days" title="Narrow the days" disabled' in block
     assert "Ctrl and the mouse wheel, or the buttons + and −, widen the days." in block
+
+
+def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # noqa: ANN001
+    """The strip draws the messages of its topic a year before the event too, and cuts out the
+    time between them, a hatched band with its length (design 7.5, 28 October 2026). Before, it
+    stopped 30 days before the event."""
+    from hackathon_memory.check.history import CONSENSUS, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4511", "topic")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+    messages = {stamp(datetime(2025, 3, 7, 12, tzinfo=UTC), 1): CONSENSUS,
+                stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 2): CONSENSUS}  # fmt: skip
+    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, False, {}),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+    assert 'data-note="7 March 2025: 1 Consensus Service transaction"' in block
+    assert '<rect class="hm-strip-cut" ' in block and f'fill="url(#strip-{pebble}-cut)"' in block
+    assert ("<title>No transaction for 11 months, from 8 March 2025 to 3 February 2026: left out "
+            "of the strip.</title>") in block  # fmt: skip
+    assert 'class="hm-strip-mark hm-strip-cut-mark"' in block and ">11 mo</text>" in block
+    assert ("A hatched band is a time of more than 30 days with no transaction, left out of the "
+            "strip; its length stands under it.") in block  # fmt: skip
 
 
 def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
