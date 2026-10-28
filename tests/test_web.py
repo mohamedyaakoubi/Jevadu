@@ -574,6 +574,38 @@ def test_the_card_counts_the_calls_of_its_contracts_for_the_service_they_reached
             "with more calls in that time, the first 100 were read.") in after  # fmt: skip
 
 
+def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site) -> None:  # noqa: ANN001
+    """An own ID that the page names on the main network, known there as that kind and made in
+    the time of the event or later; not an ID named with no network, nor one made years before
+    (design 7.5, 28 October 2026)."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+
+    def named(network: str | None, made: datetime) -> str:
+        LedgerStore(database).save_facts(LedgerFacts(
+            "0.0.4517", "mainnet", datetime(2026, 10, 28, tzinfo=UTC), found=True, kind="topic",
+            ledger_id="0.0.4517", created_at=made))  # fmt: skip
+        with psycopg.connect(database) as conn:
+            conn.execute("DELETE FROM hedera_ids WHERE entity_id = '0.0.4517'")
+            (hedera_id,) = conn.execute(
+                "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+                "words_around, in_hashscan_link) VALUES (%s, '0.0.4517', %s, 'topic', 'page', "
+                "'invented', false) RETURNING id", (pebble, network)).fetchone()  # fmt: skip
+            conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                         "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
+        return client.get(f"/project/{pebble}/panel").text
+
+    during = datetime(2026, 3, 7, tzinfo=UTC)  # the event: from 6 March 2026
+    assert '<span class="badge bg-green-lt">Mainnet</span>' in named("mainnet", during)
+    found = client.get("/", params={"idea": "help a street vendor get paid with a coin"}).text
+    assert '<span class="badge bg-green-lt">Mainnet</span>' in found  # and on the result
+    assert "Mainnet" not in named(None, during)  # named with no network
+    assert "Mainnet" not in named("mainnet", datetime(2021, 9, 20, tzinfo=UTC))  # long before
+
+
 def a_card_with_days(database: str, pebble: int) -> None:
     """Pebble Pay with an own topic and two messages on 7 March 2026, in its event of 6 to 8
     March: a card with a strip of days."""

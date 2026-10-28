@@ -17,6 +17,7 @@ from datetime import UTC, date, datetime
 import psycopg
 
 from hackathon_memory.check.life import Life, life_of
+from hackathon_memory.check.story import WINDOW_BEFORE
 from hackathon_memory.parse.project import FULL_CARD, WINNER_ENTRY
 from hackathon_memory.search.engine import Hit
 
@@ -78,6 +79,7 @@ class ResultCard:
     last_own_activity_at: datetime | None = None  # the last activity of its own IDs (design 7.4)
     code_read_at: datetime | None = None  # when GitHub last answered about its repository
     ledger_read_at: datetime | None = None  # the oldest answer of the mirror node about its IDs
+    mainnet: bool = False  # its team put an own ID on the main network (design 7.5)
 
     @property
     def proven_by_code_only(self) -> bool:
@@ -110,6 +112,30 @@ LEFT JOIN LATERAL (
 ) own ON true
 WHERE p.id = ANY(%s)
 """
+
+
+# The projects whose team put an own ID on the main network (design 7.5, 28 October 2026): an
+# ID that its page, its README or its code names on the main network, that the main network knows
+# as that kind, made in the time of the event or later (from WINDOW_BEFORE before its start). An
+# ID named with no network does not count: nearly every number of an account also exists on the
+# main network as somebody else's. The own rule is that of the signs of life.
+_MAINNET = """
+SELECT DISTINCT h.project_id FROM hedera_ids h
+JOIN projects p ON p.id = h.project_id JOIN events e ON e.id = p.event_id
+JOIN id_checks c ON c.hedera_id = h.id AND c.network = 'mainnet' AND c.status IN (
+    'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
+JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = 'mainnet'
+WHERE h.project_id = ANY(%s) AND h.network = 'mainnet' AND f.created_at >= e.starts_at - %s
+  AND NOT EXISTS (
+      SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
+      WHERE o.entity_id = h.entity_id
+        AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id))
+"""
+
+
+def on_mainnet(conn: psycopg.Connection, ids: Sequence[int]) -> set[int]:
+    """The projects among `ids` whose team put an own ID on the main network."""
+    return {row[0] for row in conn.execute(_MAINNET, (list(ids), WINDOW_BEFORE)).fetchall()}
 
 
 def signs_of_life(conn: psycopg.Connection, ids: Sequence[int]) -> dict[int, tuple]:
@@ -145,6 +171,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         ).fetchall():
             ledger.setdefault(row[0], []).append(LedgerLine(*row[1:]))
         signs = signs_of_life(conn, ids)
+        mainnet = on_mainnet(conn, ids)
     found: list[ResultCard] = []
     for rank, hit in enumerate(hits, start=1):
         if hit.project_id not in projects:
@@ -172,6 +199,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
                 last_own_activity_at=last_activity,
                 code_read_at=code_read,
                 ledger_read_at=ledger_read,
+                mainnet=hit.project_id in mainnet,
             )
         )
     return found
