@@ -2399,7 +2399,16 @@ def test_the_days_of_the_strip_widen_and_their_words_keep_their_size(site, chrom
     page.wait_for_function("Number(document.querySelector('[data-strip] .hm-strip-svg')"
                            ".getAttribute('data-zoom')) > 2")  # fmt: skip
     assert page.evaluate("() => window.devicePixelRatio") == 1  # the page itself did not zoom
-    for _ in range(6):
+    # a pinch of a touchpad over the strip, as Chrome sends it: the days follow the fingers
+    before = page.evaluate(STRIP_STATE)["zoom"]
+    page.context.new_cdp_session(page).send(
+        "Input.synthesizePinchGesture",
+        {"x": box["x"] + 40, "y": box["y"] + 10, "scaleFactor": 1.5, "gestureSourceType": "mouse"},
+    )
+    page.wait_for_function("Number(document.querySelector('[data-strip] .hm-strip-svg')"
+                           f".getAttribute('data-zoom')) > {before} * 1.4")  # fmt: skip
+    assert page.evaluate("() => window.devicePixelRatio") == 1
+    for _ in range(8):
         if strip.locator('[data-zoom="out"]').is_enabled():
             strip.locator('[data-zoom="out"]').click()
     back = page.evaluate(STRIP_STATE)
