@@ -132,7 +132,7 @@ The tests (1,848 of them on 24 October 2026) run before every commit, and again 
 | **Test 2**, the search (design 13.3) | Whether the known similar projects are in the first 10 results | 34 of 57 (59.7%) | 80%, **not met** | [report](evals/test2/report-2026-10.md) |
 | **Test 3**, the Hedera IDs (design 13.4) | 50 pages and their READMEs, against every ID written down by a second reader | Found 163 of 163 (100%), the same status for 94.5%, 1 of 164 counted as the project's when it is not (0.6%) | 95%, 90%, at most 2%: **all met** | [report](evals/test3/report-2026-10.md) |
 
-- **Test 2.** Most misses are tools for AI agents, a theme with many projects close to each other.
+- **Test 2.** Most misses are tools for AI agents, a theme with many projects close to each other. The result above is the first run, on 14 October 2026. Measured again with Gemini's order on the same cases: 42 of 57 (73.7%) on 24 October 2026 (`evals/results/20261024T051625Z-search-fallback.json`), still under the mark of 80%.
 - **Test 3.** The second reader is a language model that is not part of the tool, and each ID was checked against the mirror node. The one ID counted wrongly is a number of a local test network. The first run, on 18 October 2026, counted 22 of 178 (12.4%). Three changes of the reader on 22 October brought it to 8 of 164 (4.9%), and 7 of those 8 were scheduled transactions, a kind of Hedera ID that the first guideline did not list. The maintainer then added schedules to the guideline, after that run, so the report gives both results.
 
 ### The website
