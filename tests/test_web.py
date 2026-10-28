@@ -1885,6 +1885,23 @@ def test_a_network_that_does_not_know_an_id_is_left_out_when_the_other_knows_it(
     assert lines_to_show([said, elsewhere, *nowhere, waiting]) == [said, elsewhere, *nowhere]
 
 
+def test_a_card_with_nothing_to_read_again_has_no_block_of_the_readings(site) -> None:  # noqa: ANN001
+    """A winners' list entry has no repository and no Hedera ID: nothing to read again, so no
+    block and no "Read again now" (28 October 2026)."""
+    client, _, ids, database = site
+    fern = ids["Fern Vote"]
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET entry_kind = 'winner_entry', repository_id = NULL "
+                     "WHERE id = %s", (fern,))  # fmt: skip
+        conn.execute("DELETE FROM hedera_ids WHERE project_id = %s", (fern,))
+    panel = client.get(f"/project/{fern}/panel").text
+    assert f'id="read-{fern}"' not in panel and "Read again now" not in panel
+    assert '<header class="project-head">' in panel
+    checkable(database)  # Pebble Pay keeps the code of REPO: it has something to read again
+    pebble = client.get(f"/project/{ids['Pebble Pay']}/panel").text
+    assert "Read again now" in pebble and 'class="project-head has-readings"' in pebble
+
+
 def test_a_date_is_written_as_the_pages_write_it() -> None:
     from hackathon_memory.web.app import day, iso_day
 
