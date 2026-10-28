@@ -34,6 +34,16 @@ def test_the_prose_of_a_readme_keeps_its_words_and_drops_the_marks() -> None:
     ]
 
 
+def test_a_quote_and_the_marks_of_emphasis_are_dropped_too() -> None:
+    """The README's own words in the depth of use kept a quote's '>' and the stars around a phrase
+    (review layer 1, 28 October 2026). A name such as token_id and a sum such as 5 * 3 stay."""
+    text = "> Hedera *records* what happened.\n> > _Nested_ quote, with token_id and 5 * 3.\n"
+    assert readme_prose(text).splitlines() == [
+        "Hedera records what happened.",
+        "Nested quote, with token_id and 5 * 3.",
+    ]
+
+
 def test_a_word_in_an_address_or_in_code_names_no_service() -> None:
     hidden = "Docs: https://docs.hedera.com/hts/ and\n```\nconst HCS = 1\n```\n"
     assert named_services(hidden) == {CONSENSUS, TOKENS}  # in the raw text, they would count

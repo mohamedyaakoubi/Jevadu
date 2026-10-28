@@ -132,6 +132,12 @@ _HEADING = re.compile(r"^\s{0,3}#{1,6}\s*")
 _LIST_MARK = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 _CELL = re.compile(r"\s*\|\s*")
 _RULE = re.compile(r"^[\s:·-]*$")  # a row of dashes, such as the one under a table's head
+_QUOTE = re.compile(r"^\s{0,3}(?:>\s?)+")  # the marks of a quote, also of a quote in a quote
+# A word or a phrase between single stars or underscores; not a name such as token_id, nor 5 * 3
+_EMPHASIS = re.compile(
+    r"(?<![\w*])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![\w*])"
+    r"|(?<![\w_])_(?!\s)([^_\n]+?)(?<!\s)_(?![\w_])"
+)
 
 
 @dataclass(frozen=True)
@@ -495,16 +501,17 @@ def story_of_check(check: SubmissionCheck, own: list[OwnId], events: list[tuple]
 def readme_prose(text: str) -> str:
     """The prose of a README, line by line, for the ledger story (design 7.5): no code, no images,
     no addresses, no HTML, links as their words, and none of the marks of Markdown (headings,
-    lists, bold, code quotes, the bars of a table). A word in an address or a block of code does
-    not name a service."""
+    lists, quotes, bold and emphasis, code quotes, the bars of a table). A word in an address or a
+    block of code does not name a service."""
     text = _FENCE.sub(" ", text)
     text = _IMAGE.sub(" ", text)
     text = _LINK.sub(r"\1", text)
     text = _ADDRESS.sub(" ", _TAG.sub(" ", text))
     lines = []
     for line in text.splitlines():
-        line = _LIST_MARK.sub("", _HEADING.sub("", line))
+        line = _LIST_MARK.sub("", _HEADING.sub("", _QUOTE.sub("", line)))
         line = line.replace("**", "").replace("__", "").replace("`", "")
+        line = _EMPHASIS.sub(lambda found: found.group(1) or found.group(2), line)
         line = _CELL.sub(" · ", line.strip().strip("|"))
         lines.append("" if _RULE.match(line) else " ".join(line.split()))
     return "\n".join(lines)
