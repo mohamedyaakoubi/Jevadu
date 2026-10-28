@@ -905,6 +905,26 @@ def test_a_rehearsal_says_so_at_the_top_of_every_page(site) -> None:  # noqa: AN
         assert f"goes to the practice topic {REGISTER} on Hedera testnet" in band
 
 
+def test_a_rehearsal_names_the_practice_topic_above_the_button_and_on_the_receipt(site) -> None:  # noqa: ANN001
+    """The band scrolls away with the page, so the box of the register and its receipt say again
+    where the record goes (design 9.3, review layer 1 of 28 October 2026)."""
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": "github.com/sample-org/pebble-pay", "event": event}
+    real = client.get("/check", params=asked, headers=HX).text
+    assert "The button writes one record to the public register on Hedera testnet" in real
+    rehearsal = client.make({"rehearsal": True})
+    check = rehearsal.get("/check", params=asked, headers=HX).text
+    box = check.split('id="register-box"', 1)[1].split("</section>", 1)[0]
+    assert (f'the button writes one record to the practice topic <span class="id">{REGISTER}'
+            "</span> on Hedera testnet, not to the register") in box  # fmt: skip
+    assert "The button writes one record to the public register" not in box
+    with_line(client, check)
+    form = {**asked, "starts": "", "ends": "", "account": ""}
+    done = rehearsal.post("/register", data=form, headers=HX)
+    assert done.status_code == 200 and "Registered on the practice topic" in done.text
+
+
 def test_a_card_is_read_again_at_the_press_of_its_button(site) -> None:  # noqa: ANN001
     """ "Read again now" asks GitHub and the mirror node again about one project, and the card
     shows itself again, in its window or as its page (design 7.3, S2, 25 October 2026)."""
