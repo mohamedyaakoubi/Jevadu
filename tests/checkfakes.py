@@ -21,7 +21,7 @@ from hackathon_memory.collect.github import (
 from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
 from hackathon_memory.collect.polite import CollectorIdentity, RequestCount
-from hackathon_memory.hedera.register import MessageSubmitted
+from hackathon_memory.hedera.register import MessageSubmitted, RegisterError
 
 REPO = "https://github.com/sample-org/pebble-pay"
 REGISTER = "0.0.7654329"  # the invented topic of the register
@@ -122,8 +122,11 @@ class RegisterWrites:
 
     mirror: StandInMirror
     written: list[bytes] = field(default_factory=list)
+    refused: str | None = None  # the network's status of a refusal, such as BUSY
 
     def __call__(self, payload: bytes) -> MessageSubmitted:
+        if self.refused:
+            raise RegisterError(f"The network refused the message: {self.refused}", self.refused)
         messages = self.mirror.lists.setdefault(("register", REGISTER), [])
         number = len(messages) + 1
         messages.append(

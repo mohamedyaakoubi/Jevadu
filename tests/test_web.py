@@ -4,6 +4,7 @@ Google, GitHub and the mirror node faked."""
 
 from __future__ import annotations
 
+import html
 import json
 import re
 from datetime import UTC, date, datetime
@@ -977,6 +978,32 @@ def test_the_block_of_the_readings_shows_its_steps_and_a_failure_in_words(site) 
     assert "every 1s" not in failed and "Try again" in failed
 
 
+def test_errors_say_what_happened_and_what_to_do(site) -> None:  # noqa: ANN001
+    """An address or a project that does not exist, a refusal of the register, and a repository
+    that GitHub does not show each say so in words a person can act on (28 October 2026)."""
+    client, _, _, database = site
+    page = client.get("/nothing-here")
+    assert page.status_code == 404 and "This page does not exist." in page.text
+    assert '"detail"' not in page.text  # not the framework's JSON
+    assert client.get("/nothing-here", headers=HX).status_code == 404
+    opened = client.get("/", params={"open": "999999"}).text
+    body = opened.split('id="viewer-body">', 1)[1].split("</dialog>", 1)[0]
+    assert "There is no project with this ID." in body and 'class="project"' in body
+    gone = client.get("/check", params={"repo": "github.com/sample-org/no-such-thing"}, headers=HX)
+    assert gone.status_code == 404 and "GitHub has no public repository at this link" in gone.text
+    assert "Proof:" not in gone.text  # no page of empty facts around it
+    event = checkable(database)
+    asked = {"repo": "github.com/sample-org/pebble-pay", "event": event}
+    with_line(client, client.get("/check", params=asked, headers=HX).text)
+    client.writes.refused = "INSUFFICIENT_PAYER_BALANCE"
+    refused = client.post("/register", data={**asked, "starts": "", "ends": "", "account": ""},
+                          headers=HX)  # fmt: skip
+    shown = html.unescape(refused.text)  # as a person reads it
+    assert refused.status_code == 503 and "INSUFFICIENT_PAYER_BALANCE" not in shown
+    assert ("Nothing was registered: the site's Hedera account has run out of HBAR. Try again "
+            "in a minute.") in shown  # fmt: skip
+
+
 def test_the_activity_of_a_check_names_its_hackathon_and_one_not_over(site) -> None:  # noqa: ANN001
     """The line of the activity says which hackathon it is counted from, as the card does, and a
     hackathon that is not over says so with its last day (design 7.4, 25 October 2026: it said
@@ -1295,10 +1322,12 @@ def test_a_request_that_fails_leaves_no_waiting_state(site, chromium) -> None:  
     page.unroute("**/project/*/panel*")
     page.route("**/project/*/panel*", lambda route: route.fulfill(
         status=503, body=client.get("/project/999999/panel").text.replace(
-            "There is no project with this ID", "The database is not running"),
+            "There is no project with this ID", "The database of this site is not answering"),
         headers={"content-type": "text/html; charset=utf-8"}))  # fmt: skip
     page.locator(".result-link").first.click()
-    page.wait_for_selector("#viewer[open] #viewer-body:has-text('The database is not running')")
+    page.wait_for_selector(
+        "#viewer[open] #viewer-body:has-text('The database of this site is not answering')"
+    )
     page.keyboard.press("Escape")
     page.route(lambda url: "/check?" in url, lambda route: route.abort())
     page.fill("#check-repo", "github.com/sample-org/pebble-pay")

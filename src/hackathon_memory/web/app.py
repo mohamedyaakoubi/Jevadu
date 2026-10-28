@@ -16,6 +16,7 @@ are searched and the page says so.
 
 from __future__ import annotations
 
+import logging
 import math
 import time
 from collections.abc import Callable, Mapping
@@ -33,6 +34,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.conninfo import make_conninfo
 from starlette.concurrency import run_in_threadpool
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from hackathon_memory import __version__
 from hackathon_memory.check import submission
@@ -44,6 +46,7 @@ from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
+from hackathon_memory.collect.github_facts import GONE as CODE_GONE
 from hackathon_memory.collect.github_facts import saved_facts
 from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
 from hackathon_memory.collect.github_readmes import saved_readme
@@ -86,6 +89,7 @@ from hackathon_memory.web import (
 from hackathon_memory.web import refresher as refreshing
 
 HERE = Path(__file__).parent
+LOG = logging.getLogger(__name__)
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
 SHOWN = 50  # a search shows its 50 closest projects
 # Without a limit, a connection to a database that does not answer waits 130 seconds (the
@@ -167,8 +171,9 @@ SERVER_FAILED = (
     "Something went wrong on the server, so this cannot be shown. Please try again in a minute."
 )
 DATABASE_DOWN = (
-    "The database is not running. Start Docker Desktop, run "
-    '"docker compose up -d --wait db" in the project folder, then reload this page.'
+    "The database of this site is not answering, so this cannot be shown. Try again in a minute. "
+    'If you run the site: start Docker Desktop, run "docker compose up -d --wait db" in the '
+    "project folder, then reload this page."
 )
 # What the page says when Gemini gives no order (design 8.2). Before 24 October 2026 it said "did
 # not respond in time" also for errors that came back in 5 seconds.
@@ -201,6 +206,7 @@ GOOGLE_AWAY_CHECK = (
 )
 NO_PAGE_EMBEDDINGS = "The projects have no embeddings yet, so these are keyword results."
 UNKNOWN_SHEET = "Page not found. Close this window."
+NO_SUCH_PAGE = "This page does not exist. The search is on the start page."
 NOT_A_REPOSITORY = (
     "This is not a GitHub repository link. Paste one such as github.com/owner/project, "
     "then try again."
@@ -241,6 +247,18 @@ NOT_LISTED = (
 REGISTER_CLOSED = (
     "The public register is not open yet: its topic on Hedera testnet has not been created."
 )
+# What a refusal of the network means for the register, by the name of Hedera's status
+# (hedera/register.py, RegisterError.status); any other says that the network refused it.
+REGISTER_REFUSED = {
+    "INSUFFICIENT_PAYER_BALANCE": "the site's Hedera account has run out of HBAR",
+    "INVALID_SIGNATURE": "the network did not accept the site's key",
+    "INVALID_TOPIC_ID": "the register's topic was not found on the network",
+    "TOPIC_EXPIRED": "the register's topic has expired",
+    "BUSY": "Hedera testnet was busy",
+    "PLATFORM_NOT_ACTIVE": "Hedera testnet was not ready",
+    "PLATFORM_TRANSACTION_NOT_CREATED": "Hedera testnet was not ready",
+}
+REGISTER_FAILED = "Nothing was registered: {why}. Try again in a minute."
 REGISTER_UNREAD = (
     "The register could not be read from the mirror node just now, so nothing can be "
     "written. Try again in a moment."
@@ -678,7 +696,7 @@ def create_app(
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
                 "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,
-                "panel_card": None, "search_query": ""}  # fmt: skip
+                "panel_card": None, "panel_problem": None, "search_query": ""}  # fmt: skip
         try:
             conninfo = database()
             every = filtering.choices(project_facts(conninfo))
@@ -709,6 +727,8 @@ def create_app(
         try:
             panel_card = card_of(conninfo, open_id) if open_id else None
             shown["panel_linked"] = linked_to(conninfo, open_id) if panel_card else []
+            # a link to a project that is not in the collection opens the window with that sentence
+            shown["panel_problem"] = NO_SUCH_PROJECT if open_id and panel_card is None else None
             if not idea:
                 total = len(only) if only is not None else every.projects
                 if view == CHARTS:
@@ -896,6 +916,8 @@ def create_app(
                 collector=f"{settings.collector_name.strip()}/{__version__}",
                 mirrors=mirror_nodes(), problems=[why] if why else [], progress=progress,
             )  # fmt: skip
+            if result.code is not None and result.code.status == CODE_GONE and not result.seen:
+                return 404, {"problem": submission.NO_SUCH_CODE}
             progress(checks.COLLECTION, checks.RUNNING)
             closest, note = closest_to(conninfo, result)
             groups = [[one.project_id] for one in result.seen]
@@ -1042,7 +1064,13 @@ def create_app(
             done = registry.register_submission(write, mirror_nodes()[view.network],
                                                 view.topic_id, payload)  # fmt: skip
         except RegisterError as error:
-            return render(request, name, 503, problem=f"Nothing was registered. {error}")
+            why = (
+                REGISTER_REFUSED.get(error.status, "the network refused the message")
+                if error.status
+                else "the site could not write the record"
+            )
+            LOG.warning("the register refused a record: %s", error)
+            return render(request, name, 503, problem=REGISTER_FAILED.format(why=why))
         except MirrorError:
             return render(request, name, 202, problem=NOT_YET_VISIBLE)
         return render(request, name, done=done, already=False, **values)
@@ -1191,6 +1219,14 @@ def create_app(
     def method(request: Request) -> HTMLResponse:
         """How the search works, and what the tests measured (design 12.1, S6)."""
         return about(request, "how")
+
+    @app.exception_handler(StarletteHTTPException)
+    def no_such_page(request: Request, error: StarletteHTTPException) -> HTMLResponse:
+        """An address that the website does not have, or a method that it does not take: a page
+        in plain words, not the framework's JSON."""
+        name = "_problem.html" if request.headers.get("HX-Request") == "true" else "problem.html"
+        problem = NO_SUCH_PAGE if error.status_code == 404 else SERVER_FAILED
+        return render(request, name, error.status_code, problem=problem)
 
     @app.exception_handler(Exception)
     def unexpected(request: Request, error: Exception) -> HTMLResponse:

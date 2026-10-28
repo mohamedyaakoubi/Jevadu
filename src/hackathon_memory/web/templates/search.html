@@ -156,4 +156,4 @@
 </div>
 </div>
 {% endblock %}
-{% block viewer %}{% if panel_card %}{% with card = panel_card, back_query = search_query, linked = panel_linked %}{% include "_panel.html" %}{% endwith %}{% endif %}{% endblock %}
+{% block viewer %}{% if panel_card %}{% with card = panel_card, back_query = search_query, linked = panel_linked %}{% include "_panel.html" %}{% endwith %}{% elif panel_problem %}{% with problem = panel_problem %}{% include "_problem.html" %}{% endwith %}{% endif %}{% endblock %}
