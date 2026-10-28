@@ -65,3 +65,19 @@ def test_one_new_transaction_and_a_first_reading() -> None:
     first = changes_of(ProjectState(), BEFORE)  # read for the first time
     assert "Last push on GitHub: 8 March 2026." in first and "A README was found." in first
     assert "Its code now calls Consensus Service (topics)." in first
+
+
+def test_a_change_of_setup_and_new_calls_of_its_contracts_are_said() -> None:
+    """How an own ID is set up, and the calls of its contracts that reached Hedera's services
+    (design 7.5, 28 October 2026); an ID read for the first time compares with nothing."""
+    token = {"keys": ["admin", "supply"], "fees": {}, "supply_type": "INFINITE"}
+    before = ProjectState(**{**BEFORE.__dict__, "setups": {"0.0.7001": token},
+                             "system_calls": 30})  # fmt: skip
+    changed = {**token, "keys": ["supply"], "fees": {"royalty": [[1, 10]]}}
+    after = ProjectState(**{**before.__dict__, "setups": {"0.0.7001": changed,
+                                                          "0.0.7002": token},
+                            "system_calls": 34})  # fmt: skip
+    assert changes_of(before, after) == (
+        "0.0.7001 on the ledger: its custom fees and its keys changed.",
+        "4 more calls of its contracts reached Hedera's services.",
+    )

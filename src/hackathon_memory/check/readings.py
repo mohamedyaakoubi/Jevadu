@@ -35,6 +35,13 @@ class ProjectState:
     ids: frozenset[str] = frozenset()  # the Hedera IDs that it names
     statuses: Mapping[str, str] = field(default_factory=dict)  # an ID and its status
     own_events: int = 0  # the transactions of its own IDs that its histories hold
+    setups: Mapping[str, Mapping] = field(default_factory=dict)  # an own ID -> its SETUP_FIELDS
+    system_calls: int = 0  # the calls of its own contracts that reached Hedera's services
+
+
+# What the check keeps of how an own ID is set up (check/ledger.py), with the words of a change.
+SETUP_FIELDS = {"keys": "its keys", "fees": "its custom fees", "supply_type": "its supply",
+                "max_supply": "its supply", "key_type": "its kind of key"}  # fmt: skip
 
 
 def in_words(moment: datetime) -> str:
@@ -81,4 +88,16 @@ def changes_of(before: ProjectState, after: ProjectState) -> tuple[str, ...]:
     new = after.own_events - before.own_events
     if new > 0:
         found.append(f"{new:,} new transaction{'s' if new != 1 else ''} of its own IDs.")
+    for entity, setup in sorted(after.setups.items()):
+        old_setup = before.setups.get(entity)
+        if old_setup is None:  # read for the first time: nothing to compare with
+            continue
+        parts = sorted({words for name, words in SETUP_FIELDS.items()
+                        if setup.get(name) != old_setup.get(name)})  # fmt: skip
+        if parts:
+            found.append(f"{entity} on the ledger: {listed(parts)} changed.")
+    calls = after.system_calls - before.system_calls
+    if calls > 0:
+        found.append(f"{calls:,} more call{'s' if calls != 1 else ''} of its contracts reached "
+                     "Hedera's services.")  # fmt: skip
     return tuple(found)

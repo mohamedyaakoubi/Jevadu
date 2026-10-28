@@ -15,7 +15,7 @@ from datetime import datetime
 
 import psycopg
 
-from hackathon_memory.check.readings import ProjectState
+from hackathon_memory.check.readings import SETUP_FIELDS, ProjectState
 from hackathon_memory.db.history import OWN
 
 BUTTON, ROUND, REFRESH = "button", "round", "refresh"  # who read: the card, the website, the step
@@ -75,10 +75,32 @@ class ReadingStore:
                 "JOIN ledger_events e ON e.entity_id = h.entity_id" + of_ids + " GROUP BY 1",
                 args,
             ).fetchall())  # fmt: skip
+            # how its own tokens, topics and accounts are set up (design 7.5, 28 October 2026)
+            setups: dict[int, dict[str, dict]] = defaultdict(dict)
+            for project_id, entity, details in conn.execute(
+                OWN  # noqa: S608  (fixed text)
+                + "SELECT DISTINCT h.project_id, f.entity_id, f.details FROM (SELECT DISTINCT "
+                "project_id, entity_id FROM hedera_ids) h JOIN own USING (entity_id) "
+                "JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.found "
+                "AND f.kind IN ('token', 'topic', 'account')" + of_ids,
+                args,
+            ):
+                kept = {name: details[name] for name in SETUP_FIELDS if name in (details or {})}
+                if kept:
+                    setups[project_id][entity] = kept
+            calls = dict(conn.execute(
+                OWN  # noqa: S608  (fixed text)
+                + "SELECT h.project_id, sum(r.value::int) FROM (SELECT DISTINCT project_id, "
+                "entity_id FROM hedera_ids) h JOIN own USING (entity_id) "
+                "JOIN contract_calls k ON k.entity_id = h.entity_id "
+                "CROSS JOIN LATERAL jsonb_each_text(k.reached) AS r" + of_ids + " GROUP BY 1",
+                args,
+            ).fetchall())  # fmt: skip
         return {
             project_id: ProjectState(code_status, last_push_at, readme, commit,
                                      frozenset(services[project_id]), frozenset(ids[project_id]),
-                                     dict(statuses[project_id]), events.get(project_id, 0))
+                                     dict(statuses[project_id]), events.get(project_id, 0),
+                                     dict(setups[project_id]), int(calls.get(project_id) or 0))
             for project_id, code_status, last_push_at, readme, commit in rows
         }  # fmt: skip
 
