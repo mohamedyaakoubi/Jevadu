@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 import psycopg
 
@@ -38,10 +38,19 @@ class ContractCallStore:
     def __init__(self, conninfo: str) -> None:
         self._conninfo = conninfo
 
-    def to_read(self, *, projects: set[int] | None = None) -> list[ContractToRead]:
+    def to_read(
+        self,
+        *,
+        projects: set[int] | None = None,
+        older_than: timedelta | None = None,
+        now: datetime | None = None,
+    ) -> list[ContractToRead]:
         """The own contracts to read, each in the time of the story of each project that names
-        it: those not read in that time yet, and those read before that time was over. A project
-        whose days of the event are not known has no such time."""
+        it: those not read in that time yet, and those read before that time was over; with
+        `older_than`, of the latter only those read longer ago than that. A contract read after
+        its time is never read again: its calls in that time cannot change. A project whose days
+        of the event are not known has no such time."""
+        now = now or datetime.now(UTC)
         only = " AND h.project_id = ANY(%s)" if projects is not None else ""
         values: list[object] = [list(KINDS_THAT_FIT)]
         values += [sorted(projects)] if projects is not None else []
@@ -56,7 +65,9 @@ class ContractCallStore:
             if span is None:
                 continue
             asked = kept.get((entity, network, *span))
-            if asked is None or asked < span[1]:
+            open_then = asked is not None and asked < span[1]
+            old = older_than is None or (asked is not None and now - asked >= older_than)
+            if asked is None or (open_then and old):
                 todo[(entity, network, *span)] = ContractToRead(entity, network, ledger_id, *span)
         return sorted(todo.values(), key=lambda one: (one.entity_id, one.network, one.starts_at))
 

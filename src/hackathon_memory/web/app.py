@@ -142,6 +142,7 @@ READING_STEP_WORDS = {
     refresh_step.CODE: "The code, when its commit is new",
     refresh_step.LEDGER: "Its Hedera IDs on the ledger",
     refresh_step.HISTORIES: "The new transactions of its own IDs",
+    refresh_step.CONTRACTS: "What the calls of its contracts reached",
 }
 READING_PROBLEMS = {
     "CollectorRefused": "GitHub refused the reading, or its limit for today is reached.",

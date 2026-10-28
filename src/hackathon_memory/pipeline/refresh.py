@@ -17,10 +17,13 @@ A repository lives on after its event, and so do the Hedera IDs of a project. In
    the age, else from the mirror node; the proof rule judges them again.
 5. The histories of the own IDs: those never read or read before the depth of use (design 7.5),
    whole, and the new transactions of the others, from their newest event on.
-6. What changed for each project, compared with what the tool held before the reading, is kept
+6. What the calls of the own contracts reached among Hedera's system contracts (design 7.5): a
+   contract never read, or read while its time was open and longer ago than the age; with a
+   limit of requests (a round of the website), CONTRACTS_A_ROUND at most.
+7. What changed for each project, compared with what the tool held before the reading, is kept
    (db/readings.py): always for a reading by the button of a card, else only when something did.
 
-GitHub is asked only when the switch COLLECT_GITHUB is on; without it, steps 3 to 5 run on what
+GitHub is asked only when the switch COLLECT_GITHUB is on; without it, steps 3 to 6 run on what
 is saved. The pages of the sites that were asked for permission are never read again (design
 5.7). It is safe to stop and to run again: an answer is saved as it comes, and a later run asks
 only for what is older than the age. The website runs the same work in the background, and for
@@ -41,6 +44,7 @@ from hackathon_memory.collect.github_facts import FOUND, facts_again, fetch_fact
 from hackathon_memory.collect.github_once import AnswersRun
 from hackathon_memory.collect.github_readmes import fetch_readmes, readmes_again
 from hackathon_memory.db.code_ids import CodeIdStore
+from hackathon_memory.db.contract_calls import ContractCallStore
 from hackathon_memory.db.history import HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.projects import ProjectStore
@@ -48,14 +52,26 @@ from hackathon_memory.db.readings import BUTTON, REFRESH, ReadingStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.db.runs import Run
 from hackathon_memory.hedera.mirror import MirrorNode
-from hackathon_memory.pipeline import check_ids, code, code_ids, hedera_code, history, readmes
+from hackathon_memory.pipeline import (
+    check_ids,
+    code,
+    code_ids,
+    contract_calls,
+    hedera_code,
+    history,
+    readmes,
+)
 
 STEP = "refresh"
 AGE = timedelta(hours=24)  # REFRESH_AFTER_HOURS in .env (design 7.3)
 KINDS = ("facts", "readmes", "versions", "archives")
 # The steps of a reading, said as each starts (web/refresher.py shows them on the card).
 GITHUB, CODE, LEDGER, HISTORIES = "github", "code", "ledger", "histories"
-STEPS = (GITHUB, CODE, LEDGER, HISTORIES)
+CONTRACTS = "contracts"
+STEPS = (GITHUB, CODE, LEDGER, HISTORIES, CONTRACTS)
+# The contracts read in one round of the website: up to a hundred requests each, so about five
+# hundred requests, two minutes at the mirror node's pace.
+CONTRACTS_A_ROUND = 5
 Step = Callable[[str], None]
 
 
@@ -172,6 +188,11 @@ def refresh(
                            projects=projects)  # fmt: skip
     history.read_histories_on(histories, mirrors, run, older_than=older_than, limit=limit,
                               now=now, projects=projects)  # fmt: skip
+    step(CONTRACTS)
+    contract_calls.read_contract_calls(
+        ContractCallStore(conninfo), mirrors, run, now=now, projects=projects,
+        older_than=older_than, limit=min(limit, CONTRACTS_A_ROUND) if limit is not None else None,
+    )  # fmt: skip
     run.counts["repositories_answered"] = len(answered)
     after = readings.states(projects)
     moment = now()
@@ -208,4 +229,6 @@ def refresh_lines(run: Run) -> list[str]:
         f"{counts['ids_read']}, with {counts['events']:,} events; read on: "
         f"{counts['histories_read_on']}, with {counts['events_new']:,} new events."
     )
+    lines.append(f"Contracts whose calls were read: {counts['contracts_read']}, with "
+                 f"{counts['calls_read']:,} calls.")  # fmt: skip
     return lines

@@ -63,3 +63,15 @@ def test_a_contract_read_before_its_time_was_over_is_read_again(database: str) -
     early = ContractCalls("0.0.5003", "testnet", *SPAN, 1, False, {})
     store.save(early, SPAN[1] - timedelta(days=2))
     assert [one.entity_id for one in store.to_read()] == ["0.0.5003"]
+
+
+def test_a_reading_again_waits_for_the_age_while_the_time_is_open(database: str) -> None:
+    """The step `refresh` and the rounds of the website read again a contract read while its time
+    was open only when that reading is older than their age (design 7.5, 28 October 2026)."""
+    store = ContractCallStore(database)
+    assert SPAN is not None
+    asked = SPAN[1] - timedelta(days=2)
+    store.save(ContractCalls("0.0.5003", "testnet", *SPAN, 1, False, {}), asked)
+    day = timedelta(days=1)
+    assert store.to_read(older_than=day, now=asked + timedelta(hours=2)) == []
+    assert len(store.to_read(older_than=day, now=asked + timedelta(days=2))) == 1

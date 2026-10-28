@@ -30,8 +30,9 @@ class StandInStore:
         self.todo = list(todo)
         self.saved: dict[tuple[str, str], tuple[ContractCalls, datetime]] = {}
 
-    def to_read(self, *, projects: set[int] | None = None) -> list[ContractToRead]:
-        del projects  # the stand-in holds no project
+    def to_read(self, *, projects: set[int] | None = None, older_than: object = None,
+                now: object = None) -> list[ContractToRead]:  # fmt: skip
+        del projects, older_than, now  # the stand-in holds no project and no time
         return [one for one in self.todo if (one.entity_id, one.network) not in self.saved]
 
     def save(self, calls: ContractCalls, asked_at: datetime) -> None:
@@ -78,7 +79,7 @@ def test_each_contract_is_read_once_by_the_id_that_the_ledger_gives() -> None:
 def test_the_limit_and_a_network_that_is_not_asked_leave_contracts() -> None:
     other = ContractToRead("0.0.5004", "testnet", "0.0.5004", SINCE, UNTIL)
     run = run_once(StandInStore(CONTRACT, other), {"testnet": Node()}, limit=1)
-    assert (run.counts["contracts_read"], run.counts["left_for_later"]) == (1, 1)
+    assert (run.counts["contracts_read"], run.counts["contracts_left_for_later"]) == (1, 1)
     elsewhere = run_once(StandInStore(CONTRACT), {"mainnet": Node()})
     assert elsewhere.counts["on_a_network_that_is_not_asked"] == 1
 

@@ -14,7 +14,7 @@ next run. Five errors in a row stop the step, because then the node is away (des
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from hackathon_memory.check.system_calls import read_calls
 from hackathon_memory.db.contract_calls import ContractCallStore
@@ -38,12 +38,14 @@ def read_contract_calls(
     limit: int | None = None,
     now: Callable[[], datetime] = _now,
     projects: set[int] | None = None,
+    older_than: timedelta | None = None,
 ) -> None:
     """Read the calls of every own contract that is to be read, at most `limit` of them; with
-    `projects`, of these projects only."""
-    todo = store.to_read(projects=projects)
+    `projects`, of these projects only; with `older_than`, a contract read while its time was
+    open only when that reading is older (the step `refresh`)."""
+    todo = store.to_read(projects=projects, older_than=older_than, now=now())
     if limit is not None and len(todo) > limit:
-        run.counts["left_for_later"] = len(todo) - limit
+        run.counts["contracts_left_for_later"] = len(todo) - limit
         todo = todo[:limit]
     errors_in_a_row = 0
     for item in todo:
@@ -78,8 +80,9 @@ def contract_call_lines(run: Run) -> list[str]:
         f"Cut by the limit of calls: {counts['contracts_cut']}. Contracts whose calls reached "
         f"one of Hedera's system contracts: {counts['contracts_that_reached_one']}."
     ]
-    if counts["left_for_later"]:
-        lines.append(f"Left for a later run, because of the limit: {counts['left_for_later']}.")
+    if counts["contracts_left_for_later"]:
+        lines.append("Left for a later run, because of the limit: "
+                     f"{counts['contracts_left_for_later']}.")  # fmt: skip
     if counts["errors_of_the_node"]:
         lines.append(f"Not read, because the mirror node failed: {counts['errors_of_the_node']}.")
     return lines
