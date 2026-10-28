@@ -4,8 +4,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from evals.depth import SIGNS, measure
+from evals.depth import SIGNS, accounts_of, measure
 from hackathon_memory.check.depth import Depth
+
+# A transfer by the invented account 0.0.7001, taken by the node 0.0.3: HBAR to the node and to
+# the network's account of fees, and a token from 0.0.7002 to 0.0.7003.
+TRANSFER = {
+    "transaction_id": "0.0.7001-1772884790-000000001",
+    "consensus_timestamp": "1772884800.000000001",
+    "nonce": 0,
+    "node": "0.0.3",
+    "transfers": [
+        {"account": "0.0.3", "amount": 1},
+        {"account": "0.0.98", "amount": 2},
+        {"account": "0.0.7001", "amount": -3},
+    ],
+    "token_transfers": [
+        {"account": "0.0.7002", "token_id": "0.0.5001", "amount": -10},
+        {"account": "0.0.7003", "token_id": "0.0.5001", "amount": 10},
+    ],
+}
 
 
 @dataclass(frozen=True)
@@ -41,3 +59,12 @@ def test_the_counts_follow_the_depth_of_each_card() -> None:
     assert result["per_project"][1]["signs"] == ["topic_with_no_message"]
     assert [one["transactions"] for one in result["per_project"]] == [4, 9, 0]
     assert set(SIGNS) == set(every["signs_on_paper"])
+
+
+def test_the_accounts_of_a_transaction_are_its_payer_and_its_transfers() -> None:
+    # the network's account of fees is left out later, with the other accounts of the network
+    assert accounts_of(TRANSFER) == {"0.0.7001", "0.0.98", "0.0.7002", "0.0.7003"}
+    sent = {"sender_account_id": "0.0.7005", "receiver_account_id": "0.0.7006"}
+    nft = {"transaction_id": "0.0.7004-1772884790-000000002", "node": "0.0.4",
+           "nft_transfers": [sent]}  # fmt: skip
+    assert accounts_of(nft) == {"0.0.7004", "0.0.7005", "0.0.7006"}

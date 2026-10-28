@@ -173,13 +173,7 @@ def recount(
             for row in plain_rows(session, network, f"/transactions?account.id={entity}&"
                                   f"limit=100&{window}", "transactions"):  # fmt: skip
                 moments.add(row["consensus_timestamp"])
-                accounts.add(str(row.get("transaction_id") or "").split("-", 1)[0])
-                for part in (row.get("transfers") or []) + (row.get("token_transfers") or []):
-                    accounts.add(str(part.get("account") or ""))
-                for part in row.get("nft_transfers") or []:
-                    accounts.update(str(part.get(side) or "") for side in
-                                    ("sender_account_id", "receiver_account_id"))  # fmt: skip
-                accounts.discard(str(row.get("node") or ""))
+                accounts |= accounts_of(row)
         elif one.kind == TOKEN:
             time.sleep(PAUSE)
             answer = session.get(f"{MIRROR_URLS[network]}/api/v1/tokens/{entity}", timeout=30)
@@ -212,6 +206,19 @@ def recount(
                 moments.add(parent["consensus_timestamp"])
     accounts -= NETWORK_ACCOUNTS | {""}
     return len(moments), accounts
+
+
+def accounts_of(transaction: dict) -> set[str]:
+    """The accounts of one transaction of the mirror node: the one that paid, and those of its
+    transfers of HBAR, tokens and NFTs, without the node that took it."""
+    accounts = {str(transaction.get("transaction_id") or "").split("-", 1)[0]}
+    for part in (transaction.get("transfers") or []) + (transaction.get("token_transfers") or []):
+        accounts.add(str(part.get("account") or ""))
+    for part in transaction.get("nft_transfers") or []:
+        accounts.update(str(part.get(side) or "") for side in
+                        ("sender_account_id", "receiver_account_id"))  # fmt: skip
+    accounts.discard(str(transaction.get("node") or ""))
+    return accounts
 
 
 def _account_of(address: object) -> str:
