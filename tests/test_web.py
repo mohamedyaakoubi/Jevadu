@@ -606,6 +606,20 @@ def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site)
     assert "Mainnet" not in named("mainnet", datetime(2021, 9, 20, tzinfo=UTC))  # long before
 
 
+def test_the_sites_own_files_are_never_run_old(site) -> None:  # noqa: ANN001
+    """The script and the styles are linked with a fingerprint of their content, and a browser
+    checks its copy each time (design 12.2, 28 October 2026)."""
+    client, _, _, _ = site
+    page = client.get("/").text
+    script = re.search(r'src="(/static/site\.js\?v=[0-9a-f]{12})"', page)
+    style = re.search(r'href="(/static/style\.css\?v=[0-9a-f]{12})"', page)
+    assert script and style
+    answer = client.get(script.group(1))
+    assert answer.status_code == 200 and answer.headers["cache-control"] == "no-cache"
+    again = client.get(script.group(1), headers={"If-None-Match": answer.headers["etag"]})
+    assert again.status_code == 304 and again.headers["cache-control"] == "no-cache"
+
+
 def test_each_tag_of_a_card_has_its_own_note(site) -> None:  # noqa: ANN001
     """An (i) explains only its tag: a winners' list entry gets the note of that tag, not the
     notes of the prizes or of the main network (design 12.2, 28 October 2026)."""
