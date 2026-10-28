@@ -544,6 +544,8 @@ def test_the_card_counts_the_transactions_of_the_kinds_it_does_not_name(site) ->
         part = client.get(f"/project/{pebble}/panel").text
         block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
         assert "2 transfers, " in block and f", and {said}." in block
+        # its own IDs are accounts only: the time around the table is said once
+        assert block.count("not counted, since its own IDs are accounts only") == 1
 
 
 def test_the_places_of_the_page_are_marked_and_the_rest_stays_text() -> None:

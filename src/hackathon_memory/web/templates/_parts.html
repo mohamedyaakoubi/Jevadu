@@ -173,7 +173,9 @@
 {# The transactions of its own things before and after the time of the ledger story, when the
    days of the event are known. #}
 {% macro story_time(story) -%}
-{% if story and story.starts_on %}
+{% if story and story.starts_on and story.before is none and story.after is none %}
+<p class="hm-story-time-none">Before {{ story.starts_on | day }} and after {{ story.ends_on | day }}: not counted, since its own IDs are accounts only.</p>
+{% elif story and story.starts_on %}
 <dl class="hm-story-time">
   <dt>Before {{ story.starts_on | day }}</dt><dd>{{ outside(story.before, "first") }}</dd>
   <dt>After {{ story.ends_on | day }}</dt><dd>{{ outside(story.after, "last") }}</dd>
