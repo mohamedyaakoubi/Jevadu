@@ -49,7 +49,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --tb=short"
 markers = [
     "integration: needs the local PostgreSQL that docker compose starts",
     "browser: needs Playwright and its Chromium (python -m playwright install chromium)",
