@@ -16,6 +16,7 @@ are searched and the page says so.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
 import time
@@ -89,6 +90,34 @@ from hackathon_memory.web import (
 from hackathon_memory.web import refresher as refreshing
 
 HERE = Path(__file__).parent
+
+
+class Revalidated(StaticFiles):
+    """The files of /static, with an answer that asks a browser to check its copy each time it uses
+    one: "not modified" when it is the newest, which costs nothing (design 12.2, 28 October 2026: a
+    browser that kept an earlier site.js showed the buttons of the strip of days, which did
+    nothing). The hook is StaticFiles.file_response of Starlette 1.8.0 (staticfiles.py)."""
+
+    def file_response(self, *args: Any, **kwargs: Any) -> Any:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+_FINGERPRINTS: dict[tuple[str, int, int], str] = {}
+
+
+def static_url(name: str) -> str:
+    """The address of one of the site's own files, with a fingerprint of its content: a browser
+    asks for it again as soon as it changes."""
+    path = HERE / "static" / name
+    stat = path.stat()
+    key = (name, stat.st_mtime_ns, stat.st_size)
+    if key not in _FINGERPRINTS:
+        _FINGERPRINTS[key] = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    return f"/static/{name}?v={_FINGERPRINTS[key]}"
+
+
 LOG = logging.getLogger(__name__)
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
 SHOWN = 50  # a search shows its 50 closest projects
@@ -142,6 +171,7 @@ READING_STEP_WORDS = {
     refresh_step.CODE: "The code, when its commit is new",
     refresh_step.LEDGER: "Its Hedera IDs on the ledger",
     refresh_step.HISTORIES: "The new transactions of its own IDs",
+    refresh_step.CONTRACTS: "What the calls of its contracts reached",
 }
 READING_PROBLEMS = {
     "CollectorRefused": "GitHub refused the reading, or its limit for today is reached.",
@@ -395,7 +425,7 @@ def create_app(
     # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
     # 6 is zlib's own default: almost as small as 9, and faster.
     app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
-    app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
+    app.mount("/static", Revalidated(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
     jobs = checks.CheckJobs()  # the checks that run while their page waits
     app.state.check_jobs = jobs
@@ -1269,7 +1299,9 @@ def create_app(
         "strip_view": strips.strip_view,
         "hashscan_moment": hashscan_transaction,
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
+        "REFRESH_IN_BACKGROUND": settings.refresh_in_background,
         "reason_of": data.reason_of,
+        "static_url": static_url,
         "lines_to_show": data.lines_to_show,
         "NETWORK_WORDS": data.NETWORK_WORDS,
         "ACTION_WORDS": data.ACTION_WORDS,

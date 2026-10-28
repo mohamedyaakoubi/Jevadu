@@ -84,12 +84,28 @@
 <p>The closest to your idea comes first.</p>
 {% endcall %}
 
-{% call tip("event", "Event and prizes") %}
-<p>The hackathon the project was submitted to.</p>
-<ul>
-  <li><b>Won a Hedera prize:</b> it took a Hedera prize at that event.</li>
-  <li><b>Winners' list only:</b> its own page is no longer public, so it comes from the organiser's list of winners and has fewer details. Every project on such a list won a prize, but most winners still have their own page.</li>
-</ul>
+{% call tip("event", "Event") %}
+<p>The hackathon the project was submitted to. Each one links to its own page.</p>
+{% endcall %}
+
+{% call tip("event-chart", "Projects and Hedera prizes by event") %}
+<p>For each hackathon, the projects of the collection and those among them that took a Hedera prize: on ETHGlobal, the block &ldquo;Winner of&rdquo; on the project's own page; for the other hackathons, the organisers' lists of winners.</p>
+{% endcall %}
+
+{% call tip("hedera-prize", "Won a Hedera prize") %}
+<p>The project took a Hedera prize at its hackathon: on ETHGlobal, the block &ldquo;Winner of&rdquo; on its own page names Hedera; for the other hackathons, it is on the organisers' list of winners.</p>
+{% endcall %}
+
+{% call tip("other-prize", "Won another sponsor's prize") %}
+<p>The project took a prize of another sponsor at its hackathon, and no Hedera prize. The block &ldquo;Winner of&rdquo; on its own page names that sponsor.</p>
+{% endcall %}
+
+{% call tip("winners-list", "Winners' list only") %}
+<p>Its own page is no longer public, or never was, so it comes from the organiser's list of winners and has fewer details: a name and a line, no full card. Every project on such a list won a prize, but most winners still have their own page.</p>
+{% endcall %}
+
+{% call tip("mainnet", "Mainnet") %}
+<p>The team names one of its own Hedera IDs on the main network{{ parts.ref("mainnet") }}, where real value moves, and the main network knows it as that kind, made from 30 days before the event or later. The test network{{ parts.ref("testnet") }} is free and is emptied from time to time. An ID named with no network does not count, since nearly every number also exists on the main network as somebody else's.</p>
 {% endcall %}
 
 {% call tip("category", "Category") %}
@@ -113,13 +129,14 @@
 {% call tip("winner", "Prize") %}
 <ul>
   <li><b>Won a Hedera prize:</b> the projects that the organisers gave a Hedera prize: on ETHGlobal, the block "Winner of" on the project's own page; for the other hackathons, the organisers' lists of winners.</li>
-  <li><b>Winners' list only:</b> among them, the projects that are known only from such a list, because their own page is gone or was never public. They have a name and a line, no full card.</li>
+  <li><b>Won another sponsor's prize:</b> the projects that took a prize of another sponsor at their hackathon, and no Hedera prize: the block "Winner of" on the project's own page names that sponsor.</li>
+  <li><b>Winners' list only:</b> among the Hedera prizes, the projects that are known only from such a list, because their own page is gone or was never public. They have a name and a line, no full card.</li>
 </ul>
 {% endcall %}
 
 
 {% call tip("fresh", "Read again") %}
-<p>A repository and its Hedera IDs change after the event: a team pushes code, rewrites its README, or makes its repository private. So GitHub and the mirror node are asked again once their answers are a day old, while the website runs.</p>
+<p>A repository and its Hedera IDs change after the event: a team pushes code, rewrites its README, or makes its repository private, and its IDs take new transactions. So GitHub and the mirror node are asked again once their answers are a day old{% if REFRESH_IN_BACKGROUND %}, while the website runs{% else %}, when the collection is read again{% endif %}: the code, the IDs on the ledger and how they are set up, their new transactions, and what the calls of its contracts reached.</p>
 <p><b>Read again now</b> asks them at once for this project. GitHub answers "not modified" when nothing changed, which costs it nothing. The pages of the hackathon sites are never read again: a submission does not change after its event.</p>
 {% endcall %}
 
@@ -146,11 +163,13 @@
   <li><b>Page:</b> the words of the project page that name the service, such as &ldquo;HCS&rdquo; or &ldquo;topic ID&rdquo; for the Consensus Service{{ parts.ref("topic") }}, &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}, or &ldquo;smart contract&rdquo; and &ldquo;Solidity&rdquo; for smart contracts{{ parts.ref("contract") }}. Each word is a button that marks where the page says it.</li>
   <li><b>Code:</b> whether a source file names one of the service's SDK classes, such as TokenCreateTransaction. A package alone does not count. &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
   <li><b>Ledger:</b> the transactions of its own Hedera IDs, read from a mirror node{{ parts.ref("mirror") }}, from 30 days before the event to 30 days after it.</li>
+  <li><b>From its contracts:</b> the calls of its own smart contracts that reached one of Hedera's system contracts, which give a contract the Token Service, the Account Service, the Schedule Service, random numbers and the exchange rate{{ parts.ref("system") }}. They count for their service beside the transactions. Of a contract with many calls, the first 100 in that time are read.</li>
 </ul>
 <p>Its own IDs are those whose kind fits the page and that no other team names: an ID that several teams name is often a shared service. The entries of one team's code at several hackathons share their IDs. HBAR is not compared, since nearly every project moves HBAR to set itself up. A team can also use a service through an ID that its page does not give.</p>
 <ul>
   <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or reach it with the keyboard, to see its number; a click opens its first transaction on HashScan{{ parts.ref("explorer") }}. Before and after that time, only its topics, tokens, contracts and schedules count: an account often lives on for years and across projects.</li>
   <li><b>Who took part:</b> the accounts that the page does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. One of them can be the team's own, such as a test account. The network's own accounts are left out.</li>
+  <li><b>How they are set up:</b> what the mirror node said on the day of the check, since keys and fees can change. A token is fungible or a collection of NFTs, with a supply limit or none; its keys are what can still act on it (admin, supply, freeze, KYC, wipe, pause, fee schedule, metadata); its custom fees are those that Hedera itself takes on each transfer for the token's collector: a fixed fee, a share of a transfer, or a royalty on the sale of an NFT{{ parts.ref("fees") }}. A topic takes messages from anyone, or only from the holder of its submit key, and an admin key can change or delete it{{ parts.ref("topickeys") }}. An account has one key, ED25519 or ECDSA, the kind that EVM wallets use, or a key made of several keys{{ parts.ref("keys") }}.</li>
   <li><b>Signs that stay on paper:</b> a topic with no message, a token held only by the project's own accounts, a contract never called, accounts that only moved HBAR, a Hedera package that nothing calls, or IDs that other projects name too.</li>
 </ul>
 {% endcall %}

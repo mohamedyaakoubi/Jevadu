@@ -5,7 +5,8 @@ category of its card when the model wrote one, the result of the proof rule, its
 rule of design 7.4, and its prize. A filter keeps the projects whose fact matches it, and the
 search then ranks only those (search/engine.py). With no filter set, every project is searched.
 The prize is the one fact with two values at once: a project known only from a winners' list
-also won a Hedera prize, so each of the two choices keeps the projects that have it.
+also won a Hedera prize, so each of the choices keeps the projects that have it. A prize of
+another sponsor and no Hedera prize is a choice of its own (28 October 2026).
 
 The choices that the page offers are the values that the projects really have, each with its
 number of projects. A value that a request names but no project has is left out, and the page
@@ -30,8 +31,9 @@ NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
 KINDS = ("account", "topic", "token", "contract", "schedule")
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
 # The choices of the prize filter, and their words, which the tags of a card use too.
-HEDERA_PRIZE, WINNERS_LIST = "hedera_prize", "winners_list"
-WINNER_WORDS = {HEDERA_PRIZE: "Won a Hedera prize", WINNERS_LIST: "Winners' list only"}
+HEDERA_PRIZE, OTHER_PRIZE, WINNERS_LIST = "hedera_prize", "other_prize", "winners_list"
+WINNER_WORDS = {HEDERA_PRIZE: "Won a Hedera prize", OTHER_PRIZE: "Won another sponsor's prize",
+                WINNERS_LIST: "Winners' list only"}  # fmt: skip
 PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
 PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
                NOT_CHECKED: listing.STATUS_WORDS[None]}  # fmt: skip
@@ -76,7 +78,7 @@ class Facts:
     @property
     def winner(self) -> tuple[str, ...]:
         """The choices of the prize filter that keep the project."""
-        won = (HEDERA_PRIZE,) if self.prize == HEDERA_PRIZE else ()
+        won = (self.prize,) if self.prize in (HEDERA_PRIZE, OTHER_PRIZE) else ()
         return won + ((WINNERS_LIST,) if self.entry_kind == "winner_entry" else ())
 
 
@@ -198,7 +200,8 @@ def choices(rows: Sequence[Facts]) -> Choices:
         winner=[
             Choice(v, WINNER_WORDS[v], n)
             for v, n in _counted(
-                (tag for row in rows for tag in row.winner), (HEDERA_PRIZE, WINNERS_LIST)
+                (tag for row in rows for tag in row.winner),
+                (HEDERA_PRIZE, OTHER_PRIZE, WINNERS_LIST),
             )
         ],  # fmt: skip
         projects=len(rows),

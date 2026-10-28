@@ -524,6 +524,129 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     assert "Ctrl and the mouse wheel, or the buttons + and −, widen the days." in block
 
 
+def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
+    """The kind, the custom fees and the keys of its own token, from the check of the IDs, with
+    the day of that check (design 7.5, 28 October 2026)."""
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4515", "token")
+    setup = {"type": "NON_FUNGIBLE_UNIQUE", "supply_type": "INFINITE", "keys": ["admin", "supply"],
+             "fees": {"royalty": [[1, 20]]}}  # fmt: skip
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE ledger_facts SET details = %s WHERE entity_id = '0.0.4515'",
+                     (json.dumps(setup),))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+    assert '<p class="hm-depth-title">How they are set up, read on 22 October 2026</p>' in block
+    assert ("Its token 0.0.4515: an NFT collection with no supply limit; a royalty of 5% on each "
+            "sale; keys for admin and supply.") in block  # fmt: skip
+
+
+def test_the_card_counts_the_calls_of_its_contracts_for_the_service_they_reached(site) -> None:  # noqa: ANN001
+    """The calls of its own contract that reached the Token Service count in its row, and the
+    other system contracts and the limit are said under the table (design 7.5, 28 October
+    2026)."""
+    from hackathon_memory.check.history import CONTRACTS, Act, History
+    from hackathon_memory.check.story import time_of
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble, escrow = ids["Pebble Pay"], "0.0.4516"
+    own_id(database, pebble, escrow, "contract")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+        (starts_at,) = conn.execute("SELECT starts_at FROM events").fetchone()
+        span = time_of(starts_at, date(2026, 3, 8))
+        conn.execute("INSERT INTO contract_calls (entity_id, network, starts_at, ends_at, read, "
+                     "cut, reached, asked_at) VALUES (%s, 'testnet', %s, %s, 100, true, %s, %s)",
+                     (escrow, *span, json.dumps({"0.0.359": 34, "0.0.361": 2}),
+                      datetime(2026, 10, 28, tzinfo=UTC)))  # fmt: skip
+    call = stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 1)
+    HistoryStore(database).save(escrow, "testnet", "contract",
+                                History({call: CONTRACTS}, False,
+                                        {call: Act("CONTRACTCALL", True, "0.0.7001", ())}),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    story = part.split('class="card project-section story-section"', 1)[1].split("</table>", 2)
+    table, after = story[0], story[1]
+    assert '<span class="hm-from-contracts">+ 34 from its contracts</span>' in table
+    assert ("Its contracts also reached random numbers in 2 calls in that time. Of a contract "
+            "with more calls in that time, the first 100 were read.") in after  # fmt: skip
+
+
+def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site) -> None:  # noqa: ANN001
+    """An own ID that the page names on the main network, known there as that kind and made in
+    the time of the event or later; not an ID named with no network, nor one made years before
+    (design 7.5, 28 October 2026)."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+
+    def named(network: str | None, made: datetime) -> str:
+        LedgerStore(database).save_facts(LedgerFacts(
+            "0.0.4517", "mainnet", datetime(2026, 10, 28, tzinfo=UTC), found=True, kind="topic",
+            ledger_id="0.0.4517", created_at=made))  # fmt: skip
+        with psycopg.connect(database) as conn:
+            conn.execute("DELETE FROM hedera_ids WHERE entity_id = '0.0.4517'")
+            (hedera_id,) = conn.execute(
+                "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+                "words_around, in_hashscan_link) VALUES (%s, '0.0.4517', %s, 'topic', 'page', "
+                "'invented', false) RETURNING id", (pebble, network)).fetchone()  # fmt: skip
+            conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                         "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
+        return client.get(f"/project/{pebble}/panel").text
+
+    during = datetime(2026, 3, 7, tzinfo=UTC)  # the event: from 6 March 2026
+    assert '<span class="badge bg-green-lt">Mainnet</span>' in named("mainnet", during)
+    found = client.get("/", params={"idea": "help a street vendor get paid with a coin"}).text
+    assert '<span class="badge bg-green-lt">Mainnet</span>' in found  # and on the result
+    assert "Mainnet" not in named(None, during)  # named with no network
+    assert "Mainnet" not in named("mainnet", datetime(2021, 9, 20, tzinfo=UTC))  # long before
+
+
+def test_the_sites_own_files_are_never_run_old(site) -> None:  # noqa: ANN001
+    """The script and the styles are linked with a fingerprint of their content, and a browser
+    checks its copy each time (design 12.2, 28 October 2026)."""
+    client, _, _, _ = site
+    page = client.get("/").text
+    script = re.search(r'src="(/static/site\.js\?v=[0-9a-f]{12})"', page)
+    style = re.search(r'href="(/static/style\.css\?v=[0-9a-f]{12})"', page)
+    assert script and style
+    answer = client.get(script.group(1))
+    assert answer.status_code == 200 and answer.headers["cache-control"] == "no-cache"
+    again = client.get(script.group(1), headers={"If-None-Match": answer.headers["etag"]})
+    assert again.status_code == 304 and again.headers["cache-control"] == "no-cache"
+
+
+def test_each_tag_of_a_card_has_its_own_note(site) -> None:  # noqa: ANN001
+    """An (i) explains only its tag: a winners' list entry gets the note of that tag, not the
+    notes of the prizes or of the main network (design 12.2, 28 October 2026)."""
+    client, _, ids, database = site
+    fern = ids["Fern Vote"]
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET entry_kind = 'winner_entry', "
+                     "prize_state = 'hedera_prize' WHERE id = %s", (fern,))  # fmt: skip
+    head = client.get(f"/project/{fern}/panel").text.split("</header>", 1)[0]
+    assert 'data-tip="tip-hedera-prize"' in head and 'data-tip="tip-winners-list"' in head
+    assert 'data-tip="tip-mainnet"' not in head and 'data-tip="tip-event"' not in head
+    page = client.get("/").text
+    for key in ("event", "event-chart", "hedera-prize", "other-prize", "winners-list", "mainnet"):
+        assert f'id="tip-{key}"' in page, key
+    event = page.split('id="tip-event"', 1)[1].split("</div>", 1)[0]
+    assert "prize" not in event and "Mainnet" not in event  # the note of the events only
+
+
+def test_the_note_of_reading_again_says_what_the_website_does(site) -> None:  # noqa: ANN001
+    """With the rounds off, the note does not say that the website reads again while it runs
+    (design 12.2, 28 October 2026)."""
+    client, _, _, _ = site
+    note = client.get("/").text.split('id="tip-fresh"', 1)[1].split("</div>", 1)[0]
+    assert "while the website runs" not in note and "when the collection is read again" in note
+    assert "what the calls of its contracts reached" in note
+
+
 def a_card_with_days(database: str, pebble: int) -> None:
     """Pebble Pay with an own topic and two messages on 7 March 2026, in its event of 6 to 8
     March: a card with a strip of days."""
@@ -836,6 +959,16 @@ def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list(sit
     page = client.get("/").text
     assert '<option value="hedera_prize">Won a Hedera prize (2)</option>' in page
     assert '<option value="winners_list">Winners&#39; list only (1)</option>' in page
+    assert 'value="other_prize"' not in page  # no project won another sponsor's prize here
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET prize_state = 'other_prize' WHERE id = %s",
+                     (ids["Pebble Pay"],))  # fmt: skip
+    fresh = client.make()  # a running site reads the facts of its filters once a minute at most
+    other = fresh.get("/").text
+    assert '<option value="other_prize">Won another sponsor&#39;s prize (1)</option>' in other
+    assert order_of(fresh.get("/", params={"winner": "other_prize"}).text) == [
+        str(ids["Pebble Pay"])
+    ]
     won = client.get("/", params={"winner": "hedera_prize"}).text
     assert set(order_of(won)) == {str(ids["Cedar Post"]), str(ids["Fern Vote"])}
     listed = client.get("/", params={"winner": "winners_list"}).text
@@ -2276,11 +2409,67 @@ def test_the_days_of_the_strip_widen_and_their_words_keep_their_size(site, chrom
     page.wait_for_function("Number(document.querySelector('[data-strip] .hm-strip-svg')"
                            ".getAttribute('data-zoom')) > 2")  # fmt: skip
     assert page.evaluate("() => window.devicePixelRatio") == 1  # the page itself did not zoom
-    for _ in range(6):
+    # a pinch of a touchpad over the strip, as Chrome sends it: the days follow the fingers
+    before = page.evaluate(STRIP_STATE)["zoom"]
+    page.context.new_cdp_session(page).send(
+        "Input.synthesizePinchGesture",
+        {"x": box["x"] + 40, "y": box["y"] + 10, "scaleFactor": 1.5, "gestureSourceType": "mouse"},
+    )
+    page.wait_for_function("Number(document.querySelector('[data-strip] .hm-strip-svg')"
+                           f".getAttribute('data-zoom')) > {before} * 1.4")  # fmt: skip
+    assert page.evaluate("() => window.devicePixelRatio") == 1
+    for _ in range(8):
         if strip.locator('[data-zoom="out"]').is_enabled():
             strip.locator('[data-zoom="out"]').click()
     back = page.evaluate(STRIP_STATE)
     assert back["zoom"] == 1 and abs(back["width"] - first["width"]) < 1 and back["ticks"] == 0
+    assert problems(page) == []
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_the_table_of_the_services_stays_inside_a_narrow_card(site, chromium) -> None:  # noqa: ANN001
+    """The words of the table stay whole and the table stays inside its card, in the window over
+    the results of a narrow screen (28 October 2026: "Consen sus", and a table past the border)."""
+    from hackathon_memory.check.story import time_of
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    a_card_with_days(database, pebble)  # an own topic, with messages during the event
+    escrow = "0.0.4516"
+    own_id(database, pebble, escrow, "contract")
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET short_line = %s WHERE id = %s",
+                     ("Each sale goes to the Hedera Consensus Service, and the Hedera Token "
+                      "Service mints its receipts from Solidity.", pebble))  # fmt: skip
+        (starts_at,) = conn.execute("SELECT starts_at FROM events").fetchone()
+        span = time_of(starts_at, date(2026, 3, 8))
+        conn.execute("INSERT INTO contract_calls (entity_id, network, starts_at, ends_at, read, "
+                     "cut, reached, asked_at) VALUES (%s, 'testnet', %s, %s, 40, false, %s, %s)",
+                     (escrow, *span, json.dumps({"0.0.359": 28}),
+                      datetime(2026, 10, 28, tzinfo=UTC)))  # fmt: skip
+    page = served(chromium, client, viewport={"width": 1024, "height": 800})
+    page.goto(f"http://site.test/?open={pebble}")
+    page.wait_for_selector("#viewer .story-section table.hm-story")
+    measured = page.evaluate("""() => {
+      const body = document.querySelector('#viewer .story-section .card-body');
+      const style = getComputedStyle(body);
+      const sides = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const inner = body.clientWidth - sides;
+      const table = body.querySelector('table.hm-story');
+      const first = table.querySelector('tbody th');
+      const probe = document.createElement('span');
+      probe.textContent = 'Consensus';
+      first.appendChild(probe);
+      const word = probe.getBoundingClientRect().width;
+      probe.remove();
+      return {inner, table: table.getBoundingClientRect().width,
+              first: first.clientWidth - 6, word,
+              note: !!table.querySelector('.hm-from-contracts')};
+    }""")
+    assert measured["note"]  # the calls of its contract, in the row of the Token Service
+    assert measured["table"] <= measured["inner"] + 1  # inside its card
+    assert measured["first"] >= measured["word"]  # "Consensus" stays whole
     assert problems(page) == []
     page.context.close()
 

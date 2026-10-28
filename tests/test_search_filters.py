@@ -107,8 +107,10 @@ def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list() -
     assert allowed(rows, Filters(winner="hedera_prize")) == [1, 2]  # both won a Hedera prize
     assert allowed(rows, Filters(winner="winners_list")) == [2]
     assert allowed(rows, Filters(winner="winners_list", life="stopped")) == []
+    assert allowed(rows, Filters(winner="other_prize")) == [3]  # another sponsor's prize only
     offered = choices(rows).winner
     assert [(one.value, one.words, one.count) for one in offered] == [
         ("hedera_prize", "Won a Hedera prize", 2),
+        ("other_prize", "Won another sponsor's prize", 1),
         ("winners_list", "Winners' list only", 1),
     ]

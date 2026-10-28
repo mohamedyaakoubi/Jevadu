@@ -126,6 +126,7 @@
     {% elif story %}
     {% set within = " in that time" if story.starts_on else "" %}
     {% if story.lines %}
+    <div class="hm-story-scroll" tabindex="0" role="region" aria-label="The table of the Hedera services, which scrolls sideways when the card is narrow">
     <table class="table table-sm hm-story">
       <caption>{% if story.starts_on %}Ledger: the transactions of its own IDs from {{ story.starts_on | day }} to {{ story.ends_on | day }}, the event and 30 days on each side.{% else %}Ledger: every transaction of its own IDs. {{ no_days }}{% endif %}</caption>
       <thead><tr><th scope="col">Service</th><th scope="col">{{ source_title }}</th>{% if story.code_read %}<th scope="col">Code</th>{% endif %}<th scope="col" class="text-end">Ledger</th></tr></thead>
@@ -135,12 +136,14 @@
           <th scope="row">{{ SERVICE_NAMES[line.service] }}</th>
           <td>{% if not line.compared %}<span class="text-secondary">not compared</span>{% elif line.words %}{{ said_words(line, listed=true, source=source) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
           {% if story.code_read %}<td>{% if line.in_code %}yes{% elif line.set_up %}EVM setup{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
-          <td class="text-end">{{ "{:,}".format(line.count) }}</td>
+          <td class="text-end">{{ "{:,}".format(line.count) }}{% if line.from_contracts %}<span class="hm-from-contracts">+ {{ "{:,}".format(line.from_contracts) }} from its contracts</span>{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
+    </div>
     {% if not story.code_read %}<p class="hm-small">Its code was not read, so the table leaves it out.</p>{% endif %}
+    {% if story.contract_others or story.calls_cut %}<p class="hm-small">{% if story.contract_others %}Its contracts also reached {{ story.contract_others | join(", ") }}{{ within }}.{% endif %}{% if story.calls_cut %} Of a contract with more calls in that time, the first 100 were read.{% endif %}</p>{% endif %}
     {% else %}
     <p class="text-secondary">Its IDs show no transaction{{ within }}, and the {{ source }} names none of the services that are looked for.</p>
     {% endif %}
@@ -148,7 +151,7 @@
     <ul class="hm-story-facts">
       {% for service in story.named_not_seen %}<li>The {{ source }} names {{ SERVICE_SUBJECTS[service] }} {{ said_words(story.lines | selectattr("service", "equalto", service) | first, source=source, before="(", after=")") }}, and its IDs show no {{ SERVICE_TRANSACTIONS[service] }}{{ within }}.</li>{% endfor %}
       {% for service, count in story.seen_not_named %}<li>Its IDs show {{ transactions(service, count) }}{{ within }}, and the {{ source }} does not name {{ SERVICE_SUBJECTS[service] }}.</li>{% endfor %}
-      {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{{ within }}.</li>{% endif %}
+      {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{% if story.lines | selectattr("from_contracts") | list %} or calls of its contracts{% endif %}{{ within }}.</li>{% endif %}
     </ul>
     {% if story.named_not_seen %}<p class="hm-small">A team can also use a service through an ID that the {{ source }} does not give.</p>{% endif %}
     {% endif %}
@@ -245,6 +248,10 @@
     <dt>On how many days</dt>
     <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
   </dl>
+  {% endif %}
+  {% if depth.setup %}
+  <p class="hm-depth-title">How they are set up{% if depth.setup_read_at %}, read on {{ depth.setup_read_at | day }}{% endif %}</p>
+  <ul class="hm-depth-list">{% for line in depth.setup %}<li>{{ line }}</li>{% endfor %}</ul>
   {% endif %}
   {% if depth.on_paper %}
   <p class="hm-depth-title">Signs that stay on paper</p>

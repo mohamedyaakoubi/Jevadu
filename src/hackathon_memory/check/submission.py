@@ -56,6 +56,7 @@ from hackathon_memory.check.proof import (
     judge,
     window_of,
 )
+from hackathon_memory.check.setup import Setup
 from hackathon_memory.check.story import (
     OwnId,
     Story,
@@ -473,13 +474,19 @@ def depth_of_check(check: SubmissionCheck, read: Read) -> Depth | None:
     if not read.own and not shared_only and not has_package:
         return None
     event = check.event
+    own = {(one.entity_id, one.network) for one in read.own}
+    setups = [Setup(one.found.entity_id, one.network, one.facts.kind, one.facts.details,
+                    one.facts.asked_at)
+              for one in check.ids if one.facts is not None and one.network is not None
+              and (one.found.entity_id, one.network) in own]  # fmt: skip
     return depth_of(read.own, read.done, read.holders, {one.found.entity_id for one in check.ids},
                     starts_at=event.starts_at if event is not None else None,
                     ends_on=event.ends_on if event is not None else None,
                     in_code=services_in_code(found) if found is not None else None,
                     set_up=set_up_in_code(found or []), has_package=has_package,
                     shared_only=shared_only,
-                    read=all(one.asked_at is not None for one in read.own))  # fmt: skip
+                    read=all(one.asked_at is not None for one in read.own),
+                    setups=setups)  # fmt: skip
 
 
 def story_of_check(check: SubmissionCheck, own: list[OwnId], events: list[tuple]) -> Story | None:

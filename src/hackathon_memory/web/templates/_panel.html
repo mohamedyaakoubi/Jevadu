@@ -23,7 +23,7 @@
     <div class="project-marks">
       <a class="hm-mark-link" href="#ledger-{{ pid }}" data-scroll-to="ledger-{{ pid }}">{{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
       {% if facts.life %}<a class="hm-mark-link" href="#life-{{ pid }}" data-scroll-to="life-{{ pid }}">{{ marks.life(facts.life) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("life", "life") }}{% endif %}
-      {{ marks.tags(facts) }}{% if facts.prize_state in ("hedera_prize", "other_prize") or facts.entry_kind == WINNER_ENTRY %}{{ parts.info("event", "the prize and the winners' list") }}{% endif %}
+      {{ marks.tags(facts, info=parts.info) }}
     </div>
     <p class="project-links">
       <a class="btn btn-sm" href="{{ facts.page_url }}" rel="noopener" target="_blank">Project page<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>

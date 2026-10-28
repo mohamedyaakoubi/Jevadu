@@ -24,6 +24,10 @@ What "happened on it" means depends on the kind, because the node shows differen
 
 Of an answer only a few named fields are kept. The code of a contract is big and not needed, and
 a memo, a key or the text of a message is nothing that the check uses.
+
+How a token, a topic or an account is set up is kept too (design 7.5, 28 October 2026), from the
+same answer: which keys are set, never the keys themselves; a token's custom fees, by their kind
+and share; its supply; an account's kind of key.
 """
 
 from __future__ import annotations
@@ -43,6 +47,35 @@ from hackathon_memory.parse.hedera_ids import (
 )
 
 KINDS = (TOKEN, TOPIC, CONTRACT, ACCOUNT, SCHEDULE)  # the order in which the kinds are asked
+# The keys that can still act on a token or a topic, by the names of the mirror node's fields
+# without "_key" (read on 28 October 2026).
+TOKEN_KEYS = ("admin", "supply", "freeze", "kyc", "wipe", "pause", "fee_schedule", "metadata")
+TOPIC_KEYS = ("admin", "submit", "fee_schedule")
+
+
+def keys_of(entity: dict, names: tuple[str, ...]) -> list[str]:
+    """The keys that are set on a token or a topic, by their short names."""
+    return [name for name in names if entity.get(f"{name}_key")]
+
+
+def fees_of(custom: object) -> dict:
+    """The custom fees of a token or a topic: how many fixed fees, and the share of each
+    fractional fee and royalty as [numerator, denominator]. Nothing when it has none."""
+    found: dict = {}
+    if not isinstance(custom, dict):
+        return found
+    if custom.get("fixed_fees"):
+        found["fixed"] = len(custom["fixed_fees"])
+    for kind in ("fractional", "royalty"):
+        amounts = [fee.get("amount") for fee in custom.get(f"{kind}_fees") or []]
+        shares = [
+            [int(one["numerator"]), int(one["denominator"])]
+            for one in amounts
+            if isinstance(one, dict) and one.get("denominator")
+        ]
+        if shares:
+            found[kind] = shares
+    return found
 
 
 @dataclass(frozen=True)
@@ -146,9 +179,13 @@ def _token(mirror: MirrorNode, entity_id: str) -> dict | None:
         "last_activity_at": _time(token.get("modified_timestamp")) or created,
         "empty": str(token.get("total_supply", "")) == "0",
         "details": {
-            key: token.get(key)
-            for key in ("type", "total_supply", "name", "symbol")
-            if token.get(key) is not None
+            **{
+                key: token.get(key)
+                for key in ("type", "total_supply", "name", "symbol", "supply_type", "max_supply")
+                if token.get(key) is not None
+            },
+            "keys": keys_of(token, TOKEN_KEYS),
+            "fees": fees_of(token.get("custom_fees")),
         },
     }
 
@@ -168,6 +205,7 @@ def _topic(mirror: MirrorNode, entity_id: str) -> dict | None:
         "last_activity_at": _time(newest[0].get("consensus_timestamp")) if newest else None,
         "activity_count": count,
         "empty": count == 0,
+        "details": {"keys": keys_of(topic, TOPIC_KEYS), "fees": fees_of(topic.get("custom_fees"))},
     }
 
 
@@ -241,12 +279,16 @@ def _account(mirror: MirrorNode, entity_id: str) -> dict | None:
         if isinstance(ledger_id, str)
         else []
     )
-    address = account.get("evm_address")
+    key = account.get("key")
+    found = {
+        "evm_address": account.get("evm_address"),
+        "key_type": key.get("_type") if isinstance(key, dict) else None,  # ED25519, ECDSA_SECP256K1
+    }
     return {
         "ledger_id": ledger_id,
         "created_at": created,
         "deleted": account.get("deleted") is True,
         "first_activity_at": created,
         "last_activity_at": (_time(newest[0].get("consensus_timestamp")) if newest else created),
-        "details": {"evm_address": address} if address else {},
+        "details": {name: value for name, value in found.items() if value},
     }

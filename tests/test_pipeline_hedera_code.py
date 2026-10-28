@@ -159,4 +159,5 @@ def test_the_command_reads_the_saved_readings_and_says_what_it_did(
 
 def test_the_options_of_github_go_with_the_step(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["hedera_code", "--limit", "3"], Settings(_env_file=None)) == 2
-    assert "--limit goes with parse, embed, cards or history" in capsys.readouterr().out
+    said = capsys.readouterr().out
+    assert "--limit goes with parse, embed, cards, history or contract_calls" in said

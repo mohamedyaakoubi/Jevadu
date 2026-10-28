@@ -333,6 +333,8 @@
   // buttons + and - around the middle of what is in view. Only the places and the widths of the
   // shapes stretch, with the width of the drawing, so its words keep their size; the days scroll
   // sideways. Wide enough, a short date stands under every few days.
+  var WHEEL_NOTCH = 50; // a step of the wheel this big or more is a notch of a mouse wheel
+  var NOTCH_STEP = 1.5; // how much one notch widens the days
   var TICK_ROOM = 56; // pixels between two dates under the days
   var TICK_HALF = 22; // pixels from the middle of a date to its end
   var TICK_STEPS = [1, 2, 7, 14, 28]; // every day, every second day, every week...
@@ -420,10 +422,14 @@
     if (!frame) return;
     event.preventDefault(); // over the strip, the wheel with Ctrl widens its days, not the page
     var scroller = frame.querySelector(".hm-strip-scroll");
-    var lines = event.deltaMode === 1 ? 33 : (event.deltaMode === 2 ? 400 : 1);
+    var delta = event.deltaY * (event.deltaMode === 1 ? 33 : (event.deltaMode === 2 ? 400 : 1));
+    // A notch of a mouse wheel moves by about 100; a pinch of a touchpad sends many small steps,
+    // and the days follow the fingers: Chrome sends a pinch of a scale s as -100 ln(s) in all.
+    var factor = Math.abs(delta) >= WHEEL_NOTCH ? (delta < 0 ? NOTCH_STEP : 1 / NOTCH_STEP)
+      : Math.exp(-delta / 100);
     var box = scroller.getBoundingClientRect();
     var at = Math.min(Math.max(event.clientX - box.left, 0), scroller.clientWidth);
-    widenStrip(frame.closest("[data-strip]"), Math.exp(-event.deltaY * lines / 300), at);
+    widenStrip(frame.closest("[data-strip]"), factor, at);
   }, { passive: false });
 
   var LESS_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");

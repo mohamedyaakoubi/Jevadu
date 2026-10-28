@@ -14,6 +14,7 @@ history is then read on from its newest event (design 7.3), unless the limit of 
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -22,8 +23,10 @@ import psycopg
 from hackathon_memory.check.depth import Depth, Done, depth_of
 from hackathon_memory.check.history import Act, History
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
-from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of
-from hackathon_memory.parse.hedera_ids import ACCOUNT
+from hackathon_memory.check.setup import Setup
+from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of, time_of
+from hackathon_memory.check.system_calls import ContractCalls
+from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT
 
 KINDS_THAT_FIT = (PROOF_FOUND, DATES_DO_NOT_FIT, FOUND_BUT_EMPTY)
 DEPTH = 1  # what a history keeps: 1 since 25 October 2026, each act and a token's holders
@@ -226,8 +229,29 @@ def story_of_project(
         "WHERE p.id = %s",
         (project_id,),
     ).fetchone() or (None, None)
+    contracts = [(one.entity_id, one.network) for one in ids.values() if one.kind == CONTRACT]
+    span = time_of(starts_at, ends_on)
+    calls = calls_of(conn, contracts, span) if span is not None else []
     return story_of(tuple(ids.values()), merged(seen), words, in_code,
-                    starts_at=starts_at, ends_on=ends_on, set_up=set_up)  # fmt: skip
+                    starts_at=starts_at, ends_on=ends_on, set_up=set_up, calls=calls)  # fmt: skip
+
+
+def calls_of(
+    conn: psycopg.Connection, keys: Sequence[tuple[str, str]], span: tuple[datetime, datetime]
+) -> list[ContractCalls]:
+    """What the calls of these contracts (ID, network) reached among Hedera's system contracts
+    in the time `span` (db/contract_calls.py); only those that were read in that time."""
+    wanted = set(keys)
+    if not wanted:
+        return []
+    rows = conn.execute(
+        "SELECT entity_id, network, starts_at, ends_at, read, cut, reached FROM contract_calls "
+        "WHERE entity_id = ANY(%s) AND starts_at = %s AND ends_at = %s",
+        ([entity for entity, _ in wanted], *span),
+    ).fetchall()
+    return [ContractCalls(entity, network, starts, ends, read, cut, dict(reached or {}))
+            for entity, network, starts, ends, read, cut, reached in rows
+            if (entity, network) in wanted]  # fmt: skip
 
 
 def depth_of_project(
@@ -284,6 +308,13 @@ def depth_of_project(
                 act = Act(name, ok, payer, tuple(parties or ()))
                 done.append(Done(stamp, at, service, entity, kind, network, act))
     all_read = len(read) == len(own_ids) and all(depths.get(key, 0) >= DEPTH for key in kinds)
+    # how each own ID is set up, as the check of the IDs kept it (design 7.5)
+    wanted = {(one.entity_id, one.network) for one in own_ids}
+    setups = [Setup(entity, network, kind, details or {}, asked_at)
+              for entity, network, kind, details, asked_at in conn.execute(
+                  "SELECT entity_id, network, kind, details, asked_at FROM ledger_facts "
+                  "WHERE found AND entity_id = ANY(%s)", ([one.entity_id for one in own_ids],))
+              if (entity, network) in wanted]  # fmt: skip
     return depth_of(own_ids, done, holders, named, starts_at=starts_at, ends_on=ends_on,
                     in_code=in_code, set_up=set_up, has_package=has_package,
-                    shared_only=shared_only, read=all_read)  # fmt: skip
+                    shared_only=shared_only, read=all_read, setups=setups)  # fmt: skip

@@ -457,3 +457,16 @@ def test_an_account_history_starts_at_the_moment_the_account_was_made() -> None:
     mirror, site, _ = node({path: transactions_page([row], None)})
     assert mirror.account_history("0.0.1235", max_rows=10, since=made) == ([row], False)
     assert site.urls == [path]
+
+
+def test_the_actions_of_a_contract_call_are_read_by_its_hash() -> None:
+    # read on 28 October 2026: the actions of one call, a call to a system contract among them
+    hashed = "0x" + "ab" * 32
+    actions = {"actions": [{"call_type": "CALL", "recipient": "0.0.6092626"},
+                           {"call_type": "SYSTEM", "recipient": "0.0.359"}]}  # fmt: skip
+    mirror, site, _ = node({f"{BASE}/contracts/results/{hashed}/actions?limit=100": reply(actions)})
+    recipients = [one["recipient"] for one in mirror.contract_actions(hashed)]
+    assert recipients == ["0.0.6092626", "0.0.359"]
+    with pytest.raises(MirrorError):
+        mirror.contract_actions("0.0.6092626")  # not a hash: never sent
+    assert len(site.seen) == 1
