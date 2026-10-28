@@ -27,7 +27,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from hackathon_memory.check.history import HBAR, SERVICES, Act
+from hackathon_memory.check.history import HBAR, NETWORK_ACCOUNTS, SERVICES, Act
 from hackathon_memory.check.story import OwnId, places_in, time_of
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
 
@@ -125,6 +125,8 @@ class Depth:
     said: tuple[str, ...]  # the page's own sentences that name Hedera or a service
     read: bool  # every own ID was read with what its transactions were
     strip: Strip | None  # None when the days of the event are not known
+    total: int = 0  # the transactions in the time of the table, each moment once
+    more_count: int = 0  # the transactions of the kinds not named in `did`
 
 
 def merged(done: Sequence[Done]) -> list[Done]:
@@ -268,8 +270,10 @@ def depth_of(
     moments = merged(done)
     inside = [one for one in moments if span is None or span[0] <= one.at <= span[1]]
     did, more_kinds, failed = kinds_in_words(inside)
+    # the network's own accounts can pay too: the treasury makes the accounts of Hedera's portal
+    left_out = named | NETWORK_ACCOUNTS
     others = {account for one in inside for account in (one.act.payer, *one.act.parties)
-              if account and account not in named}  # fmt: skip
+              if account and account not in left_out}  # fmt: skip
     known_acts = any(one.act.name for one in inside)
     held = [accounts for accounts in holders.values() if accounts is not None]
     days = {one.at.date() for one in inside}
@@ -288,4 +292,6 @@ def depth_of(
         read,
         strip_of(moments, own, span, starts_at, ends_on)
         if span is not None and starts_at is not None and ends_on is not None else None,
+        len(inside),
+        len(inside) - failed - sum(count for _, count in did),
     )  # fmt: skip

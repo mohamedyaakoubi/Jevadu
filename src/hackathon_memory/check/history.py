@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from hackathon_memory.hedera.mirror import MirrorNode
 from hackathon_memory.parse.hedera_ids import (
@@ -45,6 +45,10 @@ NETWORK_ACCOUNTS = frozenset({"0.0.2", "0.0.98", "0.0.800", "0.0.801", "0.0.802"
 # The made-up kinds of what the mirror node does not name: a minted NFT, a schedule that ran.
 MINTED, RAN = "TOKENMINT", "SCHEDULED"
 _LONG_ZERO = re.compile(r"^0x0{24}([0-9a-f]{16})$")  # an EVM address made from an account number
+# The moment an account was made is kept to the microsecond and rounded, and its own creation is
+# a transaction of its history at that moment to the nanosecond: an account is read from a little
+# before (found by the second counting of evals/depth.py, 25 October 2026).
+BEFORE_ITS_MAKING = timedelta(milliseconds=1)
 
 
 @dataclass(frozen=True)
@@ -149,7 +153,8 @@ def read_history(
     holders: tuple[str, ...] | None = None
     holders_cut = False
     if kind == ACCOUNT:
-        start = max((one for one in (made_at, since) if one is not None), default=None)
+        made = made_at - BEFORE_ITS_MAKING if made_at is not None else None
+        start = max((one for one in (made, since) if one is not None), default=None)
         rows, cut = mirror.account_history(entity_id, max_rows=max_events, since=start)
         for row in rows:
             events[row["consensus_timestamp"]] = service_of(row)

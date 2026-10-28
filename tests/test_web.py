@@ -513,6 +513,32 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     assert "<summary>The days as a table</summary>" in block
 
 
+def test_the_card_counts_the_transactions_of_the_kinds_it_does_not_name(site) -> None:  # noqa: ANN001
+    """A card names six kinds of transaction; the rest are counted together, by their number of
+    transactions and of kinds (25 October 2026)."""
+    from hackathon_memory.check.history import HBAR, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble, team = ids["Pebble Pay"], "0.0.4512"
+    own_id(database, pebble, team, "account")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+    named = ["CRYPTOTRANSFER", "TOKENMINT", "TOKENBURN", "TOKENASSOCIATE", "CRYPTOCREATEACCOUNT",
+             "SCHEDULECREATE"]  # fmt: skip
+    for others, said in ((["TOKENCREATION", "CRYPTOAPPROVEALLOWANCE"], "2 more of 2 other kinds"),
+                         (["TOKENCREATION"], "1 more of another kind")):  # fmt: skip
+        names = [*named, *named, *others]  # two of each named kind, one of each other
+        moments = [stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), n) for n in range(len(names))]
+        acts = {at: Act(name, True, team, (team,)) for at, name in zip(moments, names, strict=True)}
+        HistoryStore(database).save(team, "testnet", "account",
+                                    History(dict.fromkeys(moments, HBAR), False, acts),
+                                    datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+        part = client.get(f"/project/{pebble}/panel").text
+        block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+        assert "2 transfers, " in block and f", and {said}." in block
+
+
 def test_the_places_of_the_page_are_marked_and_the_rest_stays_text() -> None:
     from hackathon_memory.web.data import said
 

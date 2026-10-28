@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 import pytest
 
 from fakes import StandInMirror
-from hackathon_memory.check.history import CONSENSUS, History
+from hackathon_memory.check.history import BEFORE_ITS_MAKING, CONSENSUS, History
 from hackathon_memory.db.history import IdToRead
 from hackathon_memory.db.runs import Run
 from hackathon_memory.hedera.mirror import MirrorError
@@ -125,4 +125,4 @@ def test_an_account_is_asked_from_the_moment_the_ledger_says_it_was_made() -> No
         StandInStore(IdToRead("0.0.5010", "mainnet", ACCOUNT, "0.0.5010", made)),
         {"mainnet": mirror},
     )
-    assert mirror.since == {"0.0.5010": made}
+    assert mirror.since == {"0.0.5010": made - BEFORE_ITS_MAKING}

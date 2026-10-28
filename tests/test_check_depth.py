@@ -63,6 +63,8 @@ def test_more_kinds_than_are_named_are_counted_together() -> None:
              for n, name in enumerate(names)]  # fmt: skip
     did, more, _ = kinds_in_words(items)
     assert len(did) == 6 and more == 2 and ("other transaction", 1) not in did
+    every = depth(own((TEAM, ACCOUNT)), items)
+    assert (every.total, every.more_count) == (8, 2)  # all of them, and those of the 2 kinds
     unread = [done(day, TEAM, ACCOUNT, HBAR, Act(None, None, None), n) for n in range(2)]
     assert kinds_in_words(unread)[0] == (("transactions not read in detail yet", 2),)
 
@@ -71,6 +73,9 @@ def test_who_took_part_leaves_out_the_ids_that_the_project_names() -> None:
     day = STARTS
     items = [message(day, payer=TEAM), message(day, payer="0.0.8001", n=1),
              message(day, payer="0.0.8002", n=2), message(day, payer="0.0.8002", n=3)]  # fmt: skip
+    # the network's treasury paid for one: it makes the accounts of Hedera's portal, and it is no
+    # one who took part (found by the second counting of evals/depth.py, 25 October 2026)
+    items.append(message(day, payer="0.0.2", n=4))
     holders = {(TOKEN_ID, "testnet"): (TEAM, "0.0.8003", "0.0.8004")}
     result = depth(own((TOPIC_ID, TOPIC), (TOKEN_ID, TOKEN)), items, holders=holders)
     assert (result.others, result.held_by_others) == (2, 2)

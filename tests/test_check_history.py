@@ -7,6 +7,7 @@ import pytest
 
 from fakes import StandInMirror
 from hackathon_memory.check.history import (
+    BEFORE_ITS_MAKING,
     CONSENSUS,
     CONTRACTS,
     FILES,
@@ -110,4 +111,6 @@ def test_an_account_is_read_from_the_moment_it_was_made() -> None:
     made = datetime(2025, 11, 6, 17, 58, tzinfo=UTC)
     mirror = StandInMirror()
     read_history(mirror, "0.0.5001", ACCOUNT, made_at=made)
-    assert mirror.since == {"0.0.5001": made}
+    # a little before: the moment is rounded to the microsecond, and the account's own creation
+    # is a transaction of its history (found on 25 October 2026)
+    assert mirror.since == {"0.0.5001": made - BEFORE_ITS_MAKING}
