@@ -354,6 +354,12 @@ def judge_ids(
     return results
 
 
+def thing_of(one: IdResult) -> str:
+    """The ID that the ledger gives the thing that an ID of the README names: the 0.0 ID of a
+    contract that the README names by its EVM address (design 8.4)."""
+    return (one.facts.ledger_id if one.facts is not None else None) or one.found.entity_id
+
+
 def judge_code_ids(
     scan: CodeScan | None,
     readme: list[FoundId],
@@ -585,13 +591,14 @@ def check_submission(
     )  # fmt: skip
     if found or (scan and scan.ids):
         progress(LEDGER, DONE if asked_node["answers_from_the_node"] else SAVED)
-    keys = [f"{one.network}:{one.found.entity_id}" for one in judged
-            if one.network and one.status in seen.CONFIRMED]  # fmt: skip
-    known = seen.submission_matches(conninfo, repository, keys)
+    confirmed = [(one.network, one.found.entity_id, thing_of(one)) for one in judged
+                 if one.network and one.status in seen.CONFIRMED]  # fmt: skip
+    known = seen.submission_matches(conninfo, repository, confirmed)
     check.ids = [
         IdResult(one.found, one.status, one.network, one.facts,
-                 shared=f"{one.network}:{one.found.entity_id}" in known.shared,
-                 named_elsewhere=one.found.entity_id in known.named_by_other_code)
+                 shared=f"{one.network}:{thing_of(one)}" in known.shared,
+                 named_elsewhere=bool({one.found.entity_id, thing_of(one)}
+                                      & known.named_by_other_code))
         for one in judged
     ] + from_code  # fmt: skip
     if found and all(one.status == NOT_ASKED for one in check.ids):

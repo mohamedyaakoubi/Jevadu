@@ -1,10 +1,13 @@
 """Projects that came back: the same project at two events or more (design 8.4).
 
 Two projects are the same when they share a repository, or a Hedera ID on the same network that
-the ledger found. An ID that more than three projects with other code name is a shared service,
-such as a popular token, and joins nothing. So is an ID that two projects with other code name at
-one event: teams of one hackathon that use one ID most likely use a service, such as a public
-payment address, and are not one team. A returning name is only a hint and joins nothing.
+the ledger found. An ID counts by the ID that the ledger gives the thing on that network, so that
+an EVM address and the 0.0 ID of one contract are one ID (28 October 2026: a README that named a
+contract by its address was not matched with a page that named its 0.0 ID). An ID that more than
+three projects with other code name is a shared service, such as a popular token, and joins
+nothing. So is an ID that two projects with other code name at one event: teams of one hackathon
+that use one ID most likely use a service, such as a public payment address, and are not one
+team. A returning name is only a hint and joins nothing.
 Exact matching, with no AI.
 """
 
@@ -20,20 +23,26 @@ import psycopg
 CONFIRMED = ("proof_found", "window_not_known", "dates_do_not_fit", "found_but_empty")
 SHARED_AFTER = 3  # projects with other code that may name one ID before it is a shared service
 
-# The (project, network:ID) pairs that the ledger found as the kind the project gave.
+# The (project, network:ID) pairs that the ledger found as the kind the project gave. An ID is the
+# one that the ledger gives the thing on that network where it found it (coalesce), and the name
+# itself where it found nothing.
 _FOUND = (
-    "SELECT DISTINCT h.project_id, c.network || ':' || h.entity_id FROM hedera_ids h "
-    "JOIN id_checks c ON c.hedera_id = h.id AND c.status = ANY(%s)"
+    "SELECT DISTINCT h.project_id, c.network || ':' || coalesce(f.ledger_id, h.entity_id) "
+    "FROM hedera_ids h "
+    "JOIN id_checks c ON c.hedera_id = h.id AND c.status = ANY(%s) "
+    "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network AND f.found"
 )
 # Every (project, network:ID) pair that a page or a README names, found or not, on each network
 # it was asked on; an ID never asked counts on both networks. With the repository and the event of
-# the project.
+# the project, and the name that the text writes.
 _NAMED = (
-    "SELECT DISTINCT h.project_id, n.network || ':' || h.entity_id, p.repository_id, p.event_id "
-    "FROM hedera_ids h JOIN projects p ON p.id = h.project_id "
+    "SELECT DISTINCT h.project_id, n.network || ':' || coalesce(f.ledger_id, h.entity_id), "
+    "p.repository_id, p.event_id, h.entity_id FROM hedera_ids h "
+    "JOIN projects p ON p.id = h.project_id "
     "LEFT JOIN id_checks c ON c.hedera_id = h.id "
     "CROSS JOIN LATERAL (SELECT unnest(CASE WHEN c.network IS NULL "
-    "THEN ARRAY['mainnet', 'testnet'] ELSE ARRAY[c.network] END) AS network) n"
+    "THEN ARRAY['mainnet', 'testnet'] ELSE ARRAY[c.network] END) AS network) n "
+    "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = n.network AND f.found"
 )
 
 
@@ -115,7 +124,7 @@ def _collection(conn: psycopg.Connection) -> tuple[list[Member], list, list]:
                conn.execute("SELECT p.id, e.site, e.slug, p.repository_id FROM projects p "
                             "JOIN events e ON e.id = p.event_id").fetchall()]  # fmt: skip
     ids = conn.execute(_FOUND, (list(CONFIRMED),)).fetchall()
-    named = [(pid, key) for pid, key, _, _ in conn.execute(_NAMED).fetchall()]
+    named = [(pid, key) for pid, key, _, _, _ in conn.execute(_NAMED).fetchall()]
     return members, ids, named
 
 
@@ -171,28 +180,36 @@ class Matches:
     same_repository: list[int]  # the projects with the same repository
     same_id: dict[str, list[int]]  # network:ID -> the projects whose ID the ledger found too
     shared: set[str]  # the network:IDs that are shared services, which join nothing
-    named_by_other_code: set[str]  # the IDs, on any network, that a project with other code names
+    # the IDs, on any network, that a project with other code names: as its text writes them,
+    # and as the ledger gives them
+    named_by_other_code: set[str]
 
 
-def submission_matches(conninfo: str, repository: str, keys: Sequence[str]) -> Matches:
+def submission_matches(
+    conninfo: str, repository: str, ids: Sequence[tuple[str, str, str]]
+) -> Matches:
     """The projects that one submission shares its repository or an ID with, by the rule of
-    `groups`. `keys` are the network:IDs of the submission that the ledger found as the kind
-    its README gives. The submission counts as one more user of each of them."""
-    entity_ids = sorted({key.split(":", 1)[1] for key in keys})
+    `groups`. `ids` are the IDs of the submission that the ledger found as the kind its README
+    gives, each as (network, the name that the README writes, the ID that the ledger gives the
+    thing). The submission counts as one more user of each of them."""
+    keys = [f"{network}:{thing}" for network, _, thing in ids]
+    names = sorted({name for _, name, _ in ids} | {thing for _, _, thing in ids})
     with psycopg.connect(conninfo) as conn:
         row = conn.execute("SELECT id FROM repositories WHERE url = %s", (repository,)).fetchone()
         own_code = row[0] if row else None
         same_repository = [pid for (pid,) in conn.execute(
             "SELECT id FROM projects WHERE repository_id = %s ORDER BY id", (own_code,)
         ).fetchall()] if own_code is not None else []  # fmt: skip
-        found = conn.execute(_FOUND + " WHERE h.entity_id = ANY(%s)",
-                             (list(CONFIRMED), entity_ids)).fetchall()  # fmt: skip
-        named = conn.execute(_NAMED + " WHERE h.entity_id = ANY(%s)", (entity_ids,)).fetchall()
+        found = conn.execute(_FOUND + " WHERE coalesce(f.ledger_id, h.entity_id) = ANY(%s)",
+                             (list(CONFIRMED), names)).fetchall()  # fmt: skip
+        named = conn.execute(_NAMED + " WHERE h.entity_id = ANY(%s) "
+                             "OR coalesce(f.ledger_id, h.entity_id) = ANY(%s)",
+                             (names, names)).fetchall()  # fmt: skip
     other_code: set[str] = set()
-    for _, key, repository_id, _ in named:
+    for _, key, repository_id, _, name in named:
         if own_code is None or repository_id != own_code:
-            other_code.add(key.split(":", 1)[1])
-    users = [(key, repository_id or -pid, event) for pid, key, repository_id, event in named]
+            other_code |= {name, key.split(":", 1)[1]}
+    users = [(key, repository_id or -pid, event) for pid, key, repository_id, event, _ in named]
     # The submission, with no event of the collection; 0 is no project's number.
     users += [(key, own_code or 0, None) for key in keys]
     shared = shared_services(users) & set(keys)
