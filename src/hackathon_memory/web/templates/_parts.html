@@ -229,7 +229,7 @@
     <dt>What its IDs did{{ within }}</dt>
     <dd>{% if depth.did %}{% for words, count in depth.did %}{{ "{:,}".format(count) }} {{ words }}{{ ", " if not loop.last }}{% endfor %}{% if depth.more_kinds %}, and {{ "{:,}".format(depth.more_count) }} more of {{ "another kind" if depth.more_kinds == 1 else depth.more_kinds ~ " other kinds" }}{% endif %}{% else %}no transaction{% endif %}{% if depth.failed %}. Failed: {{ "{:,}".format(depth.failed) }}{% endif %}.</dd>
     <dt>Who took part</dt>
-    <dd>{% if depth.others is none %}not known{% elif depth.others == 0 %}only accounts that the {{ source }} names{% else %}{{ "{:,}".format(depth.others) }} account{{ "s" if depth.others != 1 }} that the {{ source }} does not name{% endif %}{% if depth.held_by_others is not none %}. Its tokens are held now by {{ "{:,}".format(depth.held_by_others) }} account{{ "s" if depth.held_by_others != 1 }} that it does not name{% endif %}.</dd>
+    <dd>{% if depth.others is none %}not known{% elif depth.others == 0 %}only accounts that the {{ source }} names{% else %}{{ "{:,}".format(depth.others) }} account{{ "s" if depth.others != 1 }} that the {{ source }} does not name{% endif %}{% if depth.held_by_others == 0 %}. No account that it does not name holds its tokens now{% elif depth.held_by_others is not none %}. Its tokens are held now by {{ "{:,}".format(depth.held_by_others) }} account{{ "s" if depth.held_by_others != 1 }} that it does not name{% endif %}.</dd>
     <dt>On how many days</dt>
     <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
   </dl>

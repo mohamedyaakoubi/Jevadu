@@ -548,6 +548,32 @@ def test_the_card_counts_the_transactions_of_the_kinds_it_does_not_name(site) ->
         assert block.count("not counted, since its own IDs are accounts only") == 1
 
 
+def test_the_card_says_who_holds_its_tokens_in_words(site) -> None:  # noqa: ANN001
+    """The accounts that hold its tokens now and that it does not name: "no account" in words,
+    not a 0 (28 October 2026)."""
+    from hackathon_memory.check.history import TOKENS, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble, coin, team = ids["Pebble Pay"], "0.0.4513", "0.0.4514"
+    own_id(database, pebble, coin, "token")
+    own_id(database, pebble, team, "account")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+    minted = stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 1)
+    for holders, said in (((team,), "No account that it does not name holds its tokens now."),
+                          ((team, "0.0.9001"), "Its tokens are held now by 1 account that it "
+                                               "does not name.")):  # fmt: skip
+        HistoryStore(database).save(coin, "testnet", "token",
+                                    History({minted: TOKENS}, False,
+                                            {minted: Act("TOKENMINT", True, team, (team,))},
+                                            holders),
+                                    datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+        part = client.get(f"/project/{pebble}/panel").text
+        block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+        assert said in block and "held now by 0" not in block
+
+
 def test_the_places_of_the_page_are_marked_and_the_rest_stays_text() -> None:
     from hackathon_memory.web.data import said
 
