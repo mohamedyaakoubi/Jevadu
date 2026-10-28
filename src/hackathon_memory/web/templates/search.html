@@ -22,10 +22,10 @@
         <fieldset class="hm-way">
           <legend class="hm-way-legend">Search</legend>
           <div class="btn-group" role="group">
-            <input type="radio" class="btn-check" name="mode" value="meaning" id="mode-meaning"{% if mode == "meaning" %} checked{% endif %}>
-            <label class="btn btn-sm" for="mode-meaning">Semantic</label>
             <input type="radio" class="btn-check" name="mode" value="words" id="mode-words"{% if mode == "words" %} checked{% endif %}>
             <label class="btn btn-sm" for="mode-words">Keyword</label>
+            <input type="radio" class="btn-check" name="mode" value="meaning" id="mode-meaning"{% if mode == "meaning" %} checked{% endif %}>
+            <label class="btn btn-sm" for="mode-meaning">Semantic</label>
           </div>{{ parts.info("quick", "the search modes") }}
         </fieldset>
         <div class="hm-actions">

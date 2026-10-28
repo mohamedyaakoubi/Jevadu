@@ -114,6 +114,9 @@ STAND_IN_RERANK_SECONDS = 10
 STAND_IN_COMPARE_SECONDS = COMPARE_SECONDS
 MEANING, WORDS = engine.MEANING, engine.WORDS
 MODES = (MEANING, WORDS)
+# The page opens on keyword search (design 12.1, S1, 28 October 2026): it needs no call to
+# Google, so it answers when Google does not; semantic search is one click away.
+DEFAULT_MODE = WORDS
 FILTERS = ("event", "year", "category", "proof", "life", "winner")
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 CHARTS = "charts"
@@ -305,7 +308,7 @@ def search_query(values: dict[str, str], *, drop: tuple[str, ...] = ()) -> str:
     """The part of an address that repeats a search: the idea, the way, Gemini's order when it was
     asked for, the filters and the view. The defaults need no word in the address."""
     kept = {k: v for k, v in values.items() if k in SEARCH_PARAMS and v and k not in drop}
-    if kept.get("mode") == MEANING:
+    if kept.get("mode") == DEFAULT_MODE:
         del kept["mode"]
     if kept.get("ai") != "1":
         kept.pop("ai", None)
@@ -625,7 +628,7 @@ def create_app(
     def search(
         request: Request,
         idea: str = "",
-        mode: str = MEANING,
+        mode: str = "",
         ai: str = "",
         event: str = "",
         year: str = "",
@@ -642,7 +645,9 @@ def create_app(
         idea = idea[:LONGEST_IDEA]
         if mode == "ai":  # the address of the second version of the page
             mode, ai = MEANING, "1"
-        mode = mode if mode in MODES else MEANING
+        if not mode and ai == "1":  # Gemini orders the semantic results; an address of before
+            mode = MEANING  # 28 October 2026 asked for its order with no mode
+        mode = mode if mode in MODES else DEFAULT_MODE
         with_ai = ai == "1" and mode == MEANING and bool(idea)
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1

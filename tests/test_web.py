@@ -177,7 +177,7 @@ def test_the_numbers_of_the_pages_leave_out_the_middle() -> None:
 def test_quick_results_ask_no_model_that_writes(site) -> None:  # noqa: ANN001
     client, fake, ids, _ = site
     before = len(fake.requests)
-    page = client.get("/", params={"idea": VENDOR})
+    page = client.get("/", params={"idea": VENDOR, "mode": "meaning"})
     assert page.status_code == 200
     assert model_calls(fake, before) == 0  # only the embedding of the idea
     assert 'id="results-title">Results</h2>' in page.text and "closest by meaning" in page.text
@@ -216,9 +216,11 @@ def test_the_ways_to_search(site) -> None:  # noqa: ANN001
     for mode in ("meaning", "words"):
         page = client.get("/", params={"idea": VENDOR, "mode": mode})
         assert f'id="mode-{mode}" checked' in page.text
-    for old in ("both", "magic"):  # a way of an older page, or none: the default
+    for old in ("both", "magic", ""):  # a way of an older page, or none: the default
         page = client.get("/", params={"idea": VENDOR, "mode": old})
-        assert 'id="mode-meaning" checked' in page.text
+        assert 'id="mode-words" checked' in page.text  # keyword (28 October 2026)
+    page = client.get("/", params={"idea": VENDOR, "ai": "1"})  # an address of before
+    assert 'id="mode-meaning" checked' in page.text  # Gemini orders the semantic results
     before = len(fake.requests)
     words = client.get("/", params={"idea": "parcel", "mode": "words"})
     assert len(fake.requests) == before  # by words only, the idea is not embedded
@@ -228,7 +230,7 @@ def test_the_ways_to_search(site) -> None:  # noqa: ANN001
 
 def test_the_button_orders_with_gemini_and_the_same_search_asks_nothing_again(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
-    by_meaning = order_of(client.get("/", params={"idea": VENDOR}).text)
+    by_meaning = order_of(client.get("/", params={"idea": VENDOR, "mode": "meaning"}).text)
     fake.answer_queue = [json.dumps({"closest": [2, 99]})]  # 99 is not in the list
     before = len(fake.requests)
     page = client.get("/", params={"idea": VENDOR, "ai": "1"})
@@ -249,7 +251,7 @@ def test_the_button_orders_with_gemini_and_the_same_search_asks_nothing_again(si
 
 def test_a_wrong_answer_of_gemini_keeps_the_order_of_meaning_and_says_so(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
-    by_meaning = order_of(client.get("/", params={"idea": VENDOR}).text)
+    by_meaning = order_of(client.get("/", params={"idea": VENDOR, "mode": "meaning"}).text)
     fake.answer_text = "{}"  # not a list of numbers
     page = client.get("/", params={"idea": VENDOR, "ai": "1"})
     assert order_of(page.text) == by_meaning
@@ -262,7 +264,7 @@ def test_a_wrong_answer_of_gemini_keeps_the_order_of_meaning_and_says_so(site) -
 
 def test_after_five_failures_of_gemini_its_stand_in_orders_and_compares(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
-    by_meaning = order_of(client.get("/", params={"idea": VENDOR}).text)
+    by_meaning = order_of(client.get("/", params={"idea": VENDOR, "mode": "meaning"}).text)
     fake.fail_writing = (503, "unavailable")  # Gemini fails; the embeddings still answer
     client.stand_in.content = json.dumps({"closest": [2]})
     for left in ("4 more failures", "3 more failures", "2 more failures", "1 more failure"):
@@ -280,7 +282,7 @@ def test_after_five_failures_of_gemini_its_stand_in_orders_and_compares(site) ->
     gemini = model_calls(fake)
     client.stand_in.content = compare_answer((1, ["short_line"]))
     first = order_of(page.text)[0]
-    part = client.get("/compare", params={"idea": VENDOR, "ids": first})
+    part = client.get("/compare", params={"idea": VENDOR, "ids": first, "mode": "meaning"})
     assert part.status_code == 200 and "By DeepSeek V4.1 Flash, from" in part.text
     assert model_calls(fake) == gemini  # while the stand-in has its turn, Gemini is not asked
 
@@ -593,7 +595,7 @@ def test_an_unknown_project_is_not_found(site) -> None:  # noqa: ANN001
 def test_without_google_the_words_are_searched_and_the_page_says_so(site) -> None:  # noqa: ANN001
     client, fake, ids, _ = site
     fake.fail_with = (503, "unavailable")
-    page = client.get("/", params={"idea": "a vendor and a coin"})
+    page = client.get("/", params={"idea": "a vendor and a coin", "mode": "meaning"})
     assert page.status_code == 200
     assert "so these are keyword results" in page.text
     assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
@@ -1390,7 +1392,7 @@ def test_the_charts_count_the_list_on_the_screen(site) -> None:  # noqa: ANN001
     assert page.text.count("<canvas data-chart=") >= 3 and "Linked across events" in page.text
     assert 'href="https://ethglobal.com/events/sample-event"' in page.text  # the event's page
     assert 'class="result"' not in page.text and len(fake.requests) == before
-    search = client.get("/", params={"idea": VENDOR, "view": "charts"})
+    search = client.get("/", params={"idea": VENDOR, "view": "charts", "mode": "meaning"})
     assert "for 3 projects, the closest to your idea" in search.text
     assert model_calls(fake, before) == 0  # charts call no model that writes
 
@@ -1539,7 +1541,7 @@ def test_the_view_beside_the_cards_stays_when_the_search_changes(site) -> None: 
 
 def test_the_graph_says_when_its_numbers_follow_another_order_than_meaning(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
-    plain = client.get("/", params={"idea": VENDOR, "view": "graph"}).text
+    plain = client.get("/", params={"idea": VENDOR, "view": "graph", "mode": "meaning"}).text
     assert "the closer the project is in meaning" in plain and "in the list, which is" not in plain
     fake.answer_queue = [json.dumps({"closest": [3, 2, 1]})]
     ordered = client.get("/", params={"idea": VENDOR, "ai": "1", "view": "graph"}).text
@@ -1553,7 +1555,7 @@ def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None
 
     client, fake, ids, _ = site
     before = len(fake.requests)
-    page = client.get("/", params={"idea": VENDOR, "view": "graph"}).text
+    page = client.get("/", params={"idea": VENDOR, "view": "graph", "mode": "meaning"}).text
     assert 'class="hm-graph-idea"' in page and page.count('<a class="hm-dot ') == 3
     first = re.search(r'<a class="hm-dot[^>]*data-graph-id="(\d+)"[^>]*data-rank="1"', page)
     assert first and int(first.group(1)) == ids["Pebble Pay"]  # the vendor's project
@@ -1562,7 +1564,7 @@ def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None
     switch = re.search(r'href="/\?([^"]*)"[^>]*>Graph</a>', page)
     assert switch and "view=graph" in switch.group(1) and "idea=" in switch.group(1)
     monkeypatch.setattr(graph, "MOST", 2)
-    many = client.get("/", params={"idea": VENDOR, "view": "graph"}).text
+    many = client.get("/", params={"idea": VENDOR, "view": "graph", "mode": "meaning"}).text
     assert "the graph draws at most 2" in many and '<a class="hm-dot ' not in many
 
 
@@ -1734,6 +1736,7 @@ def test_the_graph_stays_while_the_idea_changes_and_after_clear(site, chromium) 
     page = served(chromium, client, viewport={"width": 1280, "height": 900})
     page.goto("http://site.test/?view=graph")
     page.wait_for_timeout(1600)  # the first screen of the visit has gone
+    page.locator('label[for="mode-meaning"]').click()
     page.locator("#idea").fill(VENDOR)
     page.wait_for_function("new URL(location.href).searchParams.get('idea')")
     page.wait_for_selector(".hm-graph-idea")  # the graph of the search, around the idea
@@ -1824,7 +1827,7 @@ def chromium():  # noqa: ANN201
         browser.close()
 
 
-SEARCH = "http://site.test/?idea=help+a+street+vendor+get+paid+with+a+coin"
+SEARCH = "http://site.test/?idea=help+a+street+vendor+get+paid+with+a+coin&mode=meaning"
 
 
 def served(chromium, client, before_compare=lambda: None, **context):  # noqa: ANN001, ANN201
@@ -1903,6 +1906,8 @@ def test_quick_results_come_while_typing_and_ask_no_model(site, chromium) -> Non
     client, fake, _, _ = site
     page = served(chromium, client, viewport={"width": 1440, "height": 900})
     page.goto("http://site.test/")
+    assert page.locator("#mode-words").is_checked()  # the page opens on Keyword
+    page.locator('label[for="mode-meaning"]').click()
     before = len(fake.requests)
     page.locator("#idea").fill(VENDOR)
     page.wait_for_function("new URL(location.href).searchParams.get('idea')")
