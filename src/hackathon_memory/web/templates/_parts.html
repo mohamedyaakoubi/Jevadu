@@ -181,7 +181,7 @@
     <title id="strip-{{ pid }}-title">{{ view.summary }}</title>
     <rect class="hm-strip-event" x="{{ view.event_x }}" y="0" width="{{ view.event_width }}" height="{{ view.rows_bottom }}"></rect>
     {% for row in view.rows %}
-    <text class="hm-strip-name" x="0" y="{{ row.y + 12 }}">{{ SERVICE_NAMES[row.service] }}</text>
+    <text class="hm-strip-name" x="0" y="{{ row.y + 12 }}">{{ row.name }}</text>
     <line class="hm-strip-base" x1="{{ view.left }}" x2="{{ view.right }}" y1="{{ row.y + 15.5 }}" y2="{{ row.y + 15.5 }}"></line>
     {% for square in row.squares %}
     <a href="{{ hashscan_moment(square.network, square.first) }}" target="_blank" rel="noopener" data-note="{{ square.note }}" aria-label="{{ square.note }}, the first on HashScan (opens in a new tab)"><rect class="hm-strip-day" x="{{ square.x }}" y="{{ row.y + 2 }}" width="{{ square.width }}" height="13" fill-opacity="{{ square.ink }}"><title>{{ square.note }}</title></rect></a>
@@ -191,7 +191,7 @@
   </svg>
   <figcaption class="hm-small">
     <span class="hm-strip-note" aria-live="polite">{{ view.hint }}</span>
-    <span class="hm-strip-ends">Before that time: {{ view.before }}. After it: {{ view.after }}.</span>
+    <span class="hm-strip-ends">{{ view.outside }}</span>
   </figcaption>
   <details class="hm-strip-table">
     <summary>The days as a table</summary>

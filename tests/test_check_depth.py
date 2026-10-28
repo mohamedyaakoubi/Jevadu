@@ -137,5 +137,6 @@ def test_the_strip_draws_each_service_on_its_row_with_its_shade() -> None:
     assert busiest.note == "3 April 2026: 9 Consensus Service transactions"
     assert view.rows[1].squares[0].note == "3 April 2026: 1 Token Service transaction"
     assert [mark.text for mark in view.marks] == ["4 March 2026", "the event", "5 May 2026"]
-    assert len(view.table) == 3 and view.before == "none"
+    assert [row.name for row in view.rows] == ["Consensus", "Tokens"]
+    assert len(view.table) == 3 and view.outside == "Before that time: none. After it: none."
     assert strip_view(None) is None

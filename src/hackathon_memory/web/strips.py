@@ -9,6 +9,10 @@ made on the server, as the graph's are (web/graph.py), so the page needs no char
 One colour: the shade tells how many, and every square also has a border in the full colour, so
 that a light square still stands out from the page (WCAG 1.4.11, non-text contrast). The number
 of each square is in its note and in the table under the strip.
+
+The drawing is about as wide as the column of a card (WIDTH), so that its words keep their size:
+at 640 units in a column of about 370 pixels they shrank to 6 pixels (seen on 25 October 2026).
+The rows carry short names; the table under the strip gives the full ones.
 """
 
 from __future__ import annotations
@@ -18,10 +22,13 @@ from dataclasses import dataclass
 from datetime import date
 
 from hackathon_memory.check.depth import Day, Strip
+from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
 from hackathon_memory.web.data import SERVICE_TRANSACTIONS
 
-WIDTH = 640  # the units of the drawing; the picture takes the width of its card
-LEFT = 136  # room for the names of the services
+WIDTH = 400  # the units of the drawing, about the pixels of a card's column
+LEFT = 72  # room for the short names of the services
+SHORT_NAMES = {CONSENSUS: "Consensus", TOKENS: "Tokens", CONTRACTS: "Contracts",
+               SCHEDULED: "Schedules", FILES: "Files", HBAR: "HBAR"}  # fmt: skip
 TOP = 4
 ROW = 20  # the height of one row
 FOOT = 20  # room for the days under the rows
@@ -43,6 +50,7 @@ class Square:
 @dataclass(frozen=True)
 class Row:
     service: str
+    name: str  # its short name
     y: float
     squares: tuple[Square, ...]
 
@@ -74,8 +82,7 @@ class StripView:
     marks: tuple[Mark, ...]
     summary: str
     hint: str
-    before: str
-    after: str
+    outside: str  # the transactions before and after the time, in words
     table: tuple[TableRow, ...]
 
 
@@ -119,7 +126,7 @@ def strip_view(strip: Strip | None) -> StripView | None:
                    one.first)
             for one in days
         )  # fmt: skip
-        rows.append(Row(service, TOP + number * ROW, squares))
+        rows.append(Row(service, SHORT_NAMES[service], TOP + number * ROW, squares))
     bottom = TOP + len(rows) * ROW
     event_x = x_of(strip.event_first)
     event_width = ((strip.event_last - strip.event_first).days + 1) * step
@@ -135,10 +142,14 @@ def strip_view(strip: Strip | None) -> StripView | None:
     table = tuple(sorted((TableRow(one.day, service, one.count)
                           for service, days in strip.rows for one in days),
                          key=lambda row: (row.day, row.service)))  # fmt: skip
+    if strip.outside_counted:
+        around = (f"Before that time: {outside(strip.before, True)}. "
+                  f"After it: {outside(strip.after, True)}.")  # fmt: skip
+    else:
+        around = "Before and after that time: not counted, since its IDs are accounts only."
     return StripView(WIDTH, int(bottom + FOOT), LEFT, WIDTH, tuple(rows), bottom,
-                     round(event_x, 2), round(event_width, 2), marks, summary, HINT,
-                     outside(strip.before, strip.outside_counted),
-                     outside(strip.after, strip.outside_counted), table)  # fmt: skip
+                     round(event_x, 2), round(event_width, 2), marks, summary, HINT, around,
+                     table)  # fmt: skip
 
 
 __all__ = ["Day", "StripView", "strip_view"]
