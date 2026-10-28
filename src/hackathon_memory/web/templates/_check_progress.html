@@ -6,5 +6,5 @@
   <p class="project-meta">{{ repository | replace("https://github.com/", "github.com/") }}{% if event_name %} &middot; {{ event_name }}{% endif %}</p>
   {% include "_check_steps.html" %}
   <p id="check-said" class="visually-hidden" aria-live="polite"></p>
-  <p class="hm-small">No model writes anything. What the tool read before comes from its own tables, so a second check of the same code is faster.</p>
+  <p class="hm-small">What was read before is reused, so a second check of the same code is faster.</p>
 </div>

@@ -7,11 +7,11 @@
 {% macro range(numbers) %}{% if numbers and numbers.range %}{{ "%.0f" | format(100 * numbers.range[0]) }}% to {{ "%.0f" | format(100 * numbers.range[1]) }}%{% endif %}{% endmacro %}
 <article class="about" aria-labelledby="sheet-title">
   <h2 id="sheet-title" class="about-title" tabindex="-1">How it works</h2>
-  <p class="about-lede">How the search works, and how well. Every number here comes from a dated test result in the repository. The (i) next to each part of the page explains that part.</p>
+  <p class="about-lede">How the search works, and how well it did in our tests. The (i) next to each part of the page explains that part.</p>
 
   <h3>The search, step by step</h3>
   <ol>
-    <li><b>Results as you type.</b> Semantic search with Google's embedding model{{ parts.ref("embedding") }}, or keyword search (BM25{{ parts.ref("bm25") }}) when you choose Keyword. No generative AI.</li>
+    <li><b>Results as you type.</b> Keyword search (BM25{{ parts.ref("bm25") }}), or semantic search with Google's embedding model{{ parts.ref("embedding") }} at one click.</li>
     <li><b>Gemini on request.</b> "Sort and compare with Gemini" sends the 30 closest projects to Gemini 3.8 Flash{{ parts.ref("gemini") }}, which puts the 10 most similar first and writes, for each, what is the same as your idea and what differs. It only sees the projects of step 1, and it never scores a project.</li>
     <li><b>Cached for a day.</b> The models' answers are cached for one day under a hash of the idea, so the same search never calls them twice. Your browser keeps your last search until you clear it.</li>
   </ol>

@@ -115,9 +115,9 @@
    did, who took part, and the signs that stay on paper. `story` is a Story of check/story.py, or
    none when the project has no own ID that fits; `depth` a Depth of check/depth.py and `view` the
    strip of its days; `source` names the text whose words it compares (the page, or the README of a
-   check) and `own` which IDs it reads; `lines` are the lines of a text that the card does not
+   check); `lines` are the lines of a text that the card does not
    show, such as a README, that name a service. #}
-{% macro ledger_story(story, pid, source="page", source_title="Page", own="those that no other project names and whose kind fits the page", no_days="The days of the event are not known.", tip="story", lines=none, depth=none, view=none) -%}
+{% macro ledger_story(story, pid, source="page", source_title="Page", no_days="The days of the event are not known.", tip="story", lines=none, depth=none, view=none) -%}
 <section class="card project-section story-section" aria-labelledby="story-{{ pid }}-title" data-said-in="{{ "in the " if source == "README" else "on the " }}{{ source }}">
   <div class="card-body">
     <h3 id="story-{{ pid }}-title">Hedera services: {{ source }}, code and ledger{{ info(tip, "Hedera services: " ~ source ~ ", code and ledger") }}</h3>
@@ -150,7 +150,7 @@
       {% for service, count in story.seen_not_named %}<li>Its IDs show {{ transactions(service, count) }}{{ within }}, and the {{ source }} does not name {{ SERVICE_SUBJECTS[service] }}.</li>{% endfor %}
       {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{{ within }}.</li>{% endif %}
     </ul>
-    {% if story.named_not_seen %}<p class="hm-small">The ledger shows only the IDs that the {{ source }} gives. A team can use a service through an ID that it never names.</p>{% endif %}
+    {% if story.named_not_seen %}<p class="hm-small">A team can also use a service through an ID that the {{ source }} does not give.</p>{% endif %}
     {% endif %}
     {% if lines %}
     <details class="hm-said-lines">
@@ -164,7 +164,7 @@
     {% if depth %}{{ depth_block(depth, view, pid, source, story) }}{% endif %}
     {% if story and story.read %}
     {% set first, last = story.read_on %}
-    <p class="hm-small">Read from the mirror node {% if first == last %}on {{ first | day }}{% else %}from {{ first | day }} to {{ last | day }}{% endif %}: {{ story.read | length }} of its IDs, {{ own }}.{% if story.cut %} {{ story.cut }} of them {{ "was" if story.cut == 1 else "were" }} cut by the limit of the reading, {{ "{:,}".format(MAX_EVENTS) }} transactions, so later transactions may be missing.{% endif %}{% if story.not_read %} {{ story.not_read }} more {{ "is" if story.not_read == 1 else "are" }} not read yet.{% endif %}</p>
+    <p class="hm-small">Read from the mirror node {% if first == last %}on {{ first | day }}{% else %}from {{ first | day }} to {{ last | day }}{% endif %}: {{ story.read | length }} of its own IDs.{% if story.cut %} {{ story.cut }} of them {{ "was" if story.cut == 1 else "were" }} cut by the limit of the reading, {{ "{:,}".format(MAX_EVENTS) }} transactions, so later transactions may be missing.{% endif %}{% if story.not_read %} {{ story.not_read }} more {{ "is" if story.not_read == 1 else "are" }} not read yet.{% endif %}</p>
     {% endif %}
   </div>
 </section>
@@ -175,10 +175,9 @@
 {% macro story_time(story) -%}
 {% if story and story.starts_on %}
 <dl class="hm-story-time">
-  <dt>Before that time</dt><dd>{{ outside(story.before, "first") }}</dd>
-  <dt>After that time</dt><dd>{{ outside(story.after, "last") }}</dd>
+  <dt>Before {{ story.starts_on | day }}</dt><dd>{{ outside(story.before, "first") }}</dd>
+  <dt>After {{ story.ends_on | day }}</dt><dd>{{ outside(story.after, "last") }}</dd>
 </dl>
-<p class="hm-small">Before and after, only its own topics, tokens, contracts and schedules count, not its accounts: an account is often kept for years and across projects.</p>
 {% endif %}
 {%- endmacro %}
 

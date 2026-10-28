@@ -476,10 +476,10 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
     assert '<mark class="hm-said" data-said="consensus" data-word="hcs">HCS</mark>' in tagline
     assert ("Its IDs show 3 smart contract transactions in that time, and the page does not name "
             "smart contracts.") in block  # fmt: skip
-    assert "<dt>Before that time</dt><dd>none</dd>" in block
+    assert re.search(r"<dt>Before \d+ \w+ \d{4}</dt><dd>none</dd>", block)  # by its date
     # after that time: the topic's message counts, and the account's transfer does not
     assert "<dd>1 Consensus Service transaction, the last on 1 June 2026</dd>" in block
-    assert "Read from the mirror node on 23 October 2026: 2 of its IDs" in block
+    assert "Read from the mirror node on 23 October 2026: 2 of its own IDs." in block
 
 
 def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> None:  # noqa: ANN001
@@ -512,7 +512,7 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     # page's words marked once in its table, and the time before and after said once
     story = part.split('class="card project-section story-section"', 1)[1].split("</section>", 1)[0]
     assert f'id="depth-{pebble}"' in story and "depth-section" not in part
-    assert "<q>" not in block and story.count("Before that time") == 1
+    assert "<q>" not in block and story.count("<dt>Before ") == 1
     first = sorted(messages)[0]
     assert f'href="https://hashscan.io/testnet/transaction/{first}"' in block
     assert 'data-note="7 March 2026: 3 Consensus Service transactions"' in block
@@ -875,7 +875,7 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     part = client.get("/check", params=asked, headers=HX)
     assert part.status_code == 200 and '<h2 id="viewer-title"' in part.text
     assert "github.com/sample-org/pebble-pay</h2>" in part.text
-    assert "Proof: found" in part.text and "No AI-generated text." in part.text
+    assert "Proof: found" in part.text
     assert f'href="https://hashscan.io/testnet/topic/{TOPIC}"' in part.text
     assert "Seen before" in part.text and "Same repository." in part.text
     assert "Most similar past projects" in part.text and "Cedar Post" in part.text
@@ -995,7 +995,7 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
     assert named and 'data-said-word="hts"' in named.group(1)
     assert "Where the README names them (2 lines)" in block
     assert '<mark class="hm-said" data-said="tokens" data-word="hts">HTS</mark>' in block
-    assert "those of the README whose kind fits it, without a shared service" in block
+    assert "of its own IDs." in block  # what its own IDs are is in the (i)
     depth = part.split('id="depth-check"', 1)[1].split("</section>", 1)[0]  # design 7.5
     assert "1 message to a topic." in depth
     assert "<q>" not in depth  # the README's words are marked in its lines, not quoted again

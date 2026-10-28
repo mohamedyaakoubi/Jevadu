@@ -33,7 +33,7 @@
       </section>
       {% endif %}
 
-      {% if result.story or result.depth %}{{ parts.ledger_story(result.story, "check", source="README", source_title="README", own="those of the README whose kind fits it, without a shared service", no_days=("No hackathon was chosen." if no_dates else "The days of the hackathon are not known yet."), tip="story-readme", lines=readme_lines, depth=result.depth, view=strip_view(result.depth.strip) if result.depth else none) }}{% endif %}
+      {% if result.story or result.depth %}{{ parts.ledger_story(result.story, "check", source="README", source_title="README", no_days=("No hackathon was chosen." if no_dates else "The days of the hackathon are not known yet."), tip="story-readme", lines=readme_lines, depth=result.depth, view=strip_view(result.depth.strip) if result.depth else none) }}{% endif %}
       {# The proof mark leads here (design 12.1, S3), to a first sentence that says what it says. #}
       <section class="card project-section ledger-section" id="check-ledger" tabindex="-1" data-pointable aria-labelledby="check-ledger-title">
         <div class="card-body">
@@ -58,7 +58,7 @@
           {% if result.ids_left_out %}<p class="hm-small">The README names {{ result.ids_left_out }} more ID{{ "s" if result.ids_left_out != 1 }}. Only the first {{ MAX_IDS }} are checked, to keep the check fast.</p>{% endif %}
           {% if result.code_ids_not_judged %}<p class="hm-small">The code names {{ result.code_ids_not_judged }} Hedera ID{{ "s" if result.code_ids_not_judged != 1 }} that no other project names. Choose the hackathon to see which were made during it.</p>{% endif %}
           {% else %}
-          <p class="text-secondary">{% if result.readme_text %}No Hedera ID in the README.{% else %}No README to read Hedera IDs from.{% endif %} That is common, and says nothing bad about the project.</p>
+          <p class="text-secondary">{% if result.readme_text %}No Hedera ID in the README.{% else %}No README to read Hedera IDs from.{% endif %} That is common.</p>
           {% if result.code_ids_not_judged %}<p class="hm-small">The code names {{ result.code_ids_not_judged }} Hedera ID{{ "s" if result.code_ids_not_judged != 1 }} that no other project names. Choose the hackathon to see which were made during it.</p>{% endif %}
           {% endif %}
         </div>
@@ -84,7 +84,7 @@
     <header class="project-head">
       <p class="project-meta">Submission check &middot; {% if no_dates %}no hackathon selected{% elif event.typed %}{{ event.starts_at | day }} to {{ event.ends_on | day }}{% else %}{{ event.name }}{% endif %}</p>
       <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ short }}</{{ level }}>
-      <p class="project-lede">Facts from GitHub, the Hedera ledger and the collection. <span class="hm-tiny">No AI-generated text.</span></p>
+      <p class="project-lede">Facts from GitHub, the Hedera ledger and the collection.</p>
       <div class="project-marks">
         <a class="hm-mark-link" href="#check-ledger" data-scroll-to="check-ledger">{{ marks.proof(proof_shown, result.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
         {% if result.life and not no_dates %}<a class="hm-mark-link" href="#check-life" data-scroll-to="check-life">{{ marks.life(result.life) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("life", "life") }}{% endif %}
@@ -107,7 +107,7 @@
               <span class="hm-small d-block">{{ parts.link_reason(one.by) }}</span></li>
           {% endfor %}
           </ul>
-          <p class="hm-small">A link is only a fact: a team may have built on earlier work, or reused an account. People judge.</p>
+          <p class="hm-small">A link can mean earlier work of the same team, or a reused account.</p>
           {% else %}
           <p class="text-secondary">No project in the collection shares this repository or one of its Hedera IDs. A shared name alone links nothing.</p>
           {% endif %}
