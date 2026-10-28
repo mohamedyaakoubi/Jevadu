@@ -119,6 +119,17 @@
 <p>A prize is the organisers' decision, not a judgement of this tool.</p>
 {% endcall %}
 
+{% call tip("depth", "Depth of use") %}
+<p>Judges of a Hedera hackathon look for a meaningful use of Hedera. That is a judgment, so the tool gives no score. It shows what the ledger says the project's own IDs did, for a person to weigh:</p>
+<ul>
+  <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or move to it with the keyboard, to see its number; a click opens its first transaction on HashScan.</li>
+  <li><b>What its IDs did:</b> the kinds of transaction, as the mirror node names them, in plain words.</li>
+  <li><b>Who took part:</b> accounts that the project does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. An account that it does not name can still be the team's, such as one made for a test.</li>
+  <li><b>Signs that stay on paper:</b> a topic with no message, a token held only by the project's own accounts, a contract never called, accounts that only moved HBAR, a Hedera package that nothing calls, IDs that other projects name too.</li>
+</ul>
+<p>The network's own accounts (its nodes, and the accounts of fees and rewards) are left out.</p>
+{% endcall %}
+
 {% call tip("fresh", "Read again") %}
 <p>A repository and its Hedera IDs change after the event: a team pushes code, rewrites its README, or makes its repository private. So GitHub and the mirror node are asked again once their answers are a day old, while the website runs.</p>
 <p><b>Read again now</b> asks them at once for this project. GitHub answers "not modified" when nothing changed, which costs it nothing. The pages of the hackathon sites are never read again: a submission does not change after its event.</p>

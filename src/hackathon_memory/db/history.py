@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 
 import psycopg
 
+from hackathon_memory.check.depth import Depth, Done, depth_of
 from hackathon_memory.check.history import Act, History
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
 from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of
@@ -222,3 +223,63 @@ def story_of_project(
     ).fetchone() or (None, None)
     return story_of(tuple(ids.values()), merged(seen), words, in_code,
                     starts_at=starts_at, ends_on=ends_on, set_up=set_up)  # fmt: skip
+
+
+def depth_of_project(
+    conn: psycopg.Connection,
+    project_id: int,
+    story: Story | None,
+    *,
+    words: str,
+    in_code: frozenset[str] | None,
+    set_up: frozenset[str] = frozenset(),
+    has_package: bool = False,
+) -> Depth | None:
+    """The depth of use of one project (design 7.5), from the own IDs of its ledger story and
+    what their transactions were; None when there is nothing to say. With no own ID, it says only
+    what stays on paper: a Hedera package with no call, and IDs that other projects name too."""
+    rows = conn.execute("SELECT DISTINCT entity_id FROM hedera_ids WHERE project_id = %s",
+                        (project_id,)).fetchall()  # fmt: skip
+    named = {row[0] for row in rows}
+    (confirmed,) = conn.execute(
+        "SELECT count(*) FROM hedera_ids h JOIN id_checks c ON c.hedera_id = h.id "
+        "WHERE h.project_id = %s AND c.status = ANY(%s)",
+        (project_id, list(KINDS_THAT_FIT)),
+    ).fetchone()
+    own_ids = story.ids if story is not None else ()
+    shared_only = bool(confirmed) and not own_ids
+    starts_at, ends_on = conn.execute(
+        "SELECT e.starts_at, e.ends_on FROM projects p JOIN events e ON e.id = p.event_id "
+        "WHERE p.id = %s",
+        (project_id,),
+    ).fetchone() or (None, None)
+    if not own_ids and not shared_only and not has_package:
+        return None
+    read = [one for one in own_ids if one.asked_at is not None]
+    entities = [one.entity_id for one in read]
+    kinds = {(one.entity_id, one.network): one.kind or "" for one in read}
+    done: list[Done] = []
+    depths: dict[tuple[str, str], int] = {}
+    holders: dict[tuple[str, str], tuple[str, ...] | None] = {}
+    if entities:
+        for entity, network, depth, kept in conn.execute(
+            "SELECT entity_id, network, depth, holders FROM ledger_histories "
+            "WHERE entity_id = ANY(%s)",
+            (entities,),
+        ):
+            if (entity, network) in kinds:
+                depths[(entity, network)] = depth
+                holders[(entity, network)] = tuple(kept) if kept is not None else None
+        for entity, network, stamp, at, service, name, ok, payer, parties in conn.execute(
+            "SELECT entity_id, network, stamp, at, service, name, ok, payer, parties "
+            "FROM ledger_events WHERE entity_id = ANY(%s)",
+            (entities,),
+        ):
+            kind = kinds.get((entity, network))
+            if kind is not None:
+                act = Act(name, ok, payer, tuple(parties or ()))
+                done.append(Done(stamp, at, service, entity, kind, network, act))
+    all_read = len(read) == len(own_ids) and all(depths.get(key, 0) >= DEPTH for key in kinds)
+    return depth_of(own_ids, done, holders, named, starts_at=starts_at, ends_on=ends_on,
+                    words=words, in_code=in_code, set_up=set_up, has_package=has_package,
+                    shared_only=shared_only, read=all_read)  # fmt: skip

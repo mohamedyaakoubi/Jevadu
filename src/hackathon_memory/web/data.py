@@ -23,6 +23,7 @@ from pathlib import Path
 import psycopg
 from markupsafe import Markup, escape
 
+from hackathon_memory.check.depth import Depth
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
 from hackathon_memory.check.life import AFTER_THE_EVENT
 from hackathon_memory.check.proof import (
@@ -38,7 +39,8 @@ from hackathon_memory.check.proof import (
 )
 from hackathon_memory.check.story import Story, places_in, services_in_code, set_up_in_code
 from hackathon_memory.collect.rawstore import RawStore
-from hackathon_memory.db.history import story_of_project
+from hackathon_memory.db.history import depth_of_project, story_of_project
+from hackathon_memory.parse.hedera_code import PACKAGE
 from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
 from hackathon_memory.search.engine import LANGUAGE, Hit
@@ -223,6 +225,7 @@ class ProjectCard:
     event_link: str | None = None  # the page of the event (event_page)
     code_reading: CodeView | None = None  # what the code says about Hedera (design 7.3)
     story: Story | None = None  # the ledger story (design 7.5), or None when it has none
+    depth: Depth | None = None  # the depth of use of its own IDs (design 7.5), or None
 
 
 def first_sentence(text: str) -> str:
@@ -305,6 +308,10 @@ def project_card(
         words = "\n".join([short_line, *(one.body for one in sections)])
         story = story_of_project(conn, project_id, words=words, in_code=services_of(code_reading),
                                  set_up=set_up_of(code_reading))  # fmt: skip
+        depth = depth_of_project(conn, project_id, story, words=words,
+                                 in_code=services_of(code_reading),
+                                 set_up=set_up_of(code_reading),
+                                 has_package=has_a_package(code_reading))  # fmt: skip
     card = None
     if row is not None:
         fields, made_at = row
@@ -315,7 +322,8 @@ def project_card(
         ))  # fmt: skip
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
                        collected_at(raw_dir, found[0].page_url), language, card,
-                       event_page(site, slug, found[0].page_url), code_reading, story)  # fmt: skip
+                       event_page(site, slug, found[0].page_url), code_reading, story,
+                       depth)  # fmt: skip
 
 
 def said(text: str) -> Markup:
@@ -345,6 +353,13 @@ def services_of(view: CodeView | None) -> frozenset[str] | None:
     if view is None or view.status in ("gone", "blocked"):
         return None
     return services_in_code((one.kind, one.name) for one in view.found)
+
+
+def has_a_package(view: CodeView | None) -> bool:
+    """Whether a reading of the code found a Hedera package in a package file (design 7.3)."""
+    if view is None or view.status in ("gone", "blocked"):
+        return False
+    return any(one.kind == PACKAGE for one in view.found)
 
 
 def set_up_of(view: CodeView | None) -> frozenset[str]:

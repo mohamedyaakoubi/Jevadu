@@ -170,6 +170,72 @@
 </section>
 {%- endmacro %}
 
+{# The days of the time of the ledger story (design 7.5): one row for each service, one square
+   for each day with a transaction, darker for more; the days of the event marked; the
+   transactions before and after that time counted at its two ends. A square links to the first
+   transaction of its day on HashScan and names its day and its number; the same numbers stand in
+   a table. `view` is a StripView of web/strips.py. #}
+{% macro strip(view, pid) -%}
+<figure class="hm-strip" data-strip>
+  <svg class="hm-strip-svg" viewBox="0 0 {{ view.width }} {{ view.height }}" role="group" aria-labelledby="strip-{{ pid }}-title" preserveAspectRatio="xMinYMin meet">
+    <title id="strip-{{ pid }}-title">{{ view.summary }}</title>
+    <rect class="hm-strip-event" x="{{ view.event_x }}" y="0" width="{{ view.event_width }}" height="{{ view.rows_bottom }}"></rect>
+    {% for row in view.rows %}
+    <text class="hm-strip-name" x="0" y="{{ row.y + 12 }}">{{ SERVICE_NAMES[row.service] }}</text>
+    <line class="hm-strip-base" x1="{{ view.left }}" x2="{{ view.right }}" y1="{{ row.y + 15.5 }}" y2="{{ row.y + 15.5 }}"></line>
+    {% for square in row.squares %}
+    <a href="{{ hashscan_moment(square.network, square.first) }}" target="_blank" rel="noopener" data-note="{{ square.note }}" aria-label="{{ square.note }}, the first on HashScan (opens in a new tab)"><rect class="hm-strip-day" x="{{ square.x }}" y="{{ row.y + 2 }}" width="{{ square.width }}" height="13" fill-opacity="{{ square.ink }}"><title>{{ square.note }}</title></rect></a>
+    {% endfor %}
+    {% endfor %}
+    {% for mark in view.marks %}<text class="hm-strip-mark" x="{{ mark.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="{{ mark.anchor }}">{{ mark.text }}</text>{% endfor %}
+  </svg>
+  <figcaption class="hm-small">
+    <span class="hm-strip-note" aria-live="polite">{{ view.hint }}</span>
+    <span class="hm-strip-ends">Before that time: {{ view.before }}. After it: {{ view.after }}.</span>
+  </figcaption>
+  <details class="hm-strip-table">
+    <summary>The days as a table</summary>
+    <table class="table table-sm">
+      <thead><tr><th scope="col">Day</th><th scope="col">Service</th><th scope="col" class="text-end">Transactions</th></tr></thead>
+      <tbody>{% for row in view.table %}<tr><td>{{ row.day | day }}</td><td>{{ SERVICE_NAMES[row.service] }}</td><td class="text-end">{{ "{:,}".format(row.count) }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </details>
+</figure>
+{%- endmacro %}
+
+{# The depth of use of a project's own IDs (design 7.5): what they did, who took part, on how many
+   days, the signs that stay on paper, and the page's own words about Hedera. Facts counted by
+   code, never a score. `depth` is a Depth of check/depth.py; `view` the strip of its days. #}
+{% macro depth_of_use(depth, view, pid, source="page") -%}
+<section class="card project-section depth-section" aria-labelledby="depth-{{ pid }}-title" id="depth-{{ pid }}">
+  <div class="card-body">
+    <h3 id="depth-{{ pid }}-title">Depth of use{{ info("depth", "Depth of use") }}</h3>
+    {% if not depth.read %}<p class="text-secondary">Some of its IDs were read before the tool kept what each transaction was. They are read again with the next reading.</p>{% endif %}
+    {% if view %}{{ strip(view, pid) }}{% endif %}
+    {% if depth.did or depth.others is not none or depth.days %}
+    {% set within = " in that time" if view else "" %}
+    <dl class="hm-depth">
+      <dt>What its IDs did{{ within }}</dt>
+      <dd>{% if depth.did %}{% for words, count in depth.did %}{{ "{:,}".format(count) }} {{ words }}{{ ", " if not loop.last }}{% endfor %}{% if depth.more_kinds %}, and {{ depth.more_kinds }} other kind{{ "s" if depth.more_kinds != 1 }}{% endif %}{% else %}no transaction{% endif %}{% if depth.failed %}. Failed: {{ "{:,}".format(depth.failed) }}{% endif %}.</dd>
+      <dt>Who took part</dt>
+      <dd>{% if depth.others is none %}not known{% elif depth.others == 0 %}only accounts that the {{ source }} names{% else %}{{ "{:,}".format(depth.others) }} account{{ "s" if depth.others != 1 }} that the {{ source }} does not name{% endif %}{% if depth.held_by_others is not none %}. Its tokens are held now by {{ "{:,}".format(depth.held_by_others) }} account{{ "s" if depth.held_by_others != 1 }} that it does not name{% endif %}.</dd>
+      <dt>On how many days</dt>
+      <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
+    </dl>
+    {% endif %}
+    {% if depth.on_paper %}
+    <p class="hm-depth-title">Signs that stay on paper</p>
+    <ul class="hm-depth-list">{% for one in depth.on_paper %}<li>{{ one }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if depth.said %}
+    <p class="hm-depth-title">In the {{ source }}'s own words</p>
+    <ul class="hm-depth-said">{% for one in depth.said %}<li><q>{{ one }}</q></li>{% endfor %}</ul>
+    {% endif %}
+    <p class="hm-small">Facts of the ledger, the code and the {{ source }}, counted by code, with no score. An account that the {{ source }} does not name can still be the team's, such as one made for a test.</p>
+  </div>
+</section>
+{%- endmacro %}
+
 {# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
 {% macro link_reason(by) -%}
 {% if by == "repository" %}Same repository.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}

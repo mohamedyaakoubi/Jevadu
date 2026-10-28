@@ -530,6 +530,25 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
   .hm-step.is-running .hm-step-mark { animation: none; border-right-color: var(--tblr-primary); }
   .hm-progress-bar { transition: none; }
 }
+/* The days of a card's ledger story (design 7.5): one colour, darker for more transactions,
+   and a border in the full colour, so that a light square still stands out from the page. */
+.hm-strip { margin: 0 0 0.75rem; }
+.hm-strip-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.hm-strip-event { fill: var(--tblr-primary); fill-opacity: 0.09; }
+.hm-strip-day { fill: var(--tblr-primary); stroke: var(--tblr-primary); stroke-width: 1; }
+.hm-strip a:hover .hm-strip-day, .hm-strip a:focus .hm-strip-day { stroke: var(--tblr-body-color); stroke-width: 2; }
+.hm-strip a:focus { outline: none; }
+.hm-strip-name, .hm-strip-mark { font-size: 11px; fill: var(--tblr-secondary); }
+.hm-strip-base { stroke: var(--tblr-border-color); stroke-width: 1; }
+.hm-strip-note, .hm-strip-ends { display: block; }
+.hm-strip-note { min-height: 1.4em; }
+.hm-strip-table { margin-top: 0.25rem; }
+.hm-depth { margin: 0 0 0.5rem; }
+.hm-depth dt { font-weight: 600; }
+.hm-depth dd { margin: 0 0 0.5rem; }
+.hm-depth-title { font-weight: 600; margin: 0.75rem 0 0.25rem; }
+.hm-depth-list, .hm-depth-said { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+
 /* Started with --rehearsal (design 9.3): a band at the top of every page, in the colour of a
    warning, so that a rehearsal is never taken for the register. */
 .hm-rehearsal { margin: 0; padding: 0.5rem 1rem; text-align: center; background: var(--tblr-warning-lt, #fff3cd); color: var(--tblr-body-color); border-bottom: 2px solid var(--tblr-warning); }

@@ -316,6 +316,18 @@
   // A word of the page in the ledger story is a button (design 7.5): it marks each place where the
   // page's texts on the card say it, and brings the next one into view at each press, as a search
   // of the page would.
+  // ------------------------------------------------------------- the days of the ledger
+  // A square of the strip of days (design 7.5) names its day and its number in the line under
+  // the strip, when the pointer rests on it or when it has the focus of the keyboard.
+  function stripNote(event) {
+    var square = event.target.closest && event.target.closest("[data-strip] a[data-note]");
+    if (!square) return;
+    var note = square.closest("[data-strip]").querySelector(".hm-strip-note");
+    if (note) note.textContent = square.getAttribute("data-note");
+  }
+  document.addEventListener("mouseover", stripNote);
+  document.addEventListener("focusin", stripNote);
+
   var LESS_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-said-word]");

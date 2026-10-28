@@ -34,6 +34,7 @@
       {% endif %}
 
       {% if result.story %}{{ parts.ledger_story(result.story, "check", source="README", source_title="README", own="those of the README whose kind fits it, without a shared service", no_days=("No hackathon was chosen." if no_dates else "The days of the hackathon are not known yet."), tip="story-readme", lines=readme_lines) }}{% endif %}
+      {% if result.depth %}{{ parts.depth_of_use(result.depth, strip_view(result.depth.strip), "check", source="README") }}{% endif %}
       {# The proof mark leads here (design 12.1, S3), to a first sentence that says what it says. #}
       <section class="card project-section ledger-section" id="check-ledger" tabindex="-1" data-pointable aria-labelledby="check-ledger-title">
         <div class="card-body">

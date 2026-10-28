@@ -23,7 +23,8 @@ Programs read everything here, and no model writes anything:
   ID is a shared service.
 * The ledger story (design 7.5): the history of the README's own IDs whose kind fits, read from
   the mirror node and kept, so that a second check within MAX_AGE reads it from the table, set
-  side by side with the README's words and what the code calls.
+  side by side with the README's words and what the code calls; and the depth of use of the same
+  IDs, with the README in the place of the page (check/depth.py, 25 October 2026).
 
 At most MAX_IDS IDs are asked about, the first ones of the README: each one takes up to eight
 questions of the mirror node, and a person waits for the answer.
@@ -39,7 +40,8 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from hackathon_memory.check import asking
-from hackathon_memory.check.history import read_history
+from hackathon_memory.check.depth import Depth, Done, depth_of
+from hackathon_memory.check.history import Act, read_history
 from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.life import Life, life_of
 from hackathon_memory.check.numbers import Numbers
@@ -183,6 +185,7 @@ class SubmissionCheck:
     seen: list[SeenBefore] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
     story: Story | None = None  # the ledger story of its own IDs (design 7.5), or None
+    depth: Depth | None = None  # the depth of use of the same IDs (design 7.5), or None
     code_ids_not_judged: int = 0  # own IDs of the code, not weighed for want of a hackathon
 
     @property
@@ -399,13 +402,15 @@ def histories(
     *,
     now: Callable[[], datetime],
     counts: Counter[str] | None = None,
-) -> tuple[list[OwnId], list[tuple[str, datetime, str, bool]]]:
+) -> Read:
     """The own IDs of a README whose kind fits, each on the network of its status, and the
     events of their histories: kept ones younger than MAX_AGE, or read now and kept. An ID that
     a project with other code names, or a shared service, is not the team's own (design 8.4)."""
     counts = Counter() if counts is None else counts
     own: list[OwnId] = []
     events: list[tuple[str, datetime, str, bool]] = []
+    done: list[Done] = []
+    holders: dict[tuple[str, str], tuple[str, ...] | None] = {}
     for one in ids:
         if (one.status not in STORY_STATUSES or one.network is None or one.facts is None
                 or one.shared or one.named_elsewhere):  # fmt: skip
@@ -430,9 +435,46 @@ def histories(
             counts["histories_from_the_table"] += 1
         history, asked_at = kept
         own.append(OwnId(entity, network, kind, asked_at, history.cut))
-        events += [(stamp, datetime.fromtimestamp(float(stamp), tz=UTC), service, kind == ACCOUNT)
-                   for stamp, service in history.events.items()]  # fmt: skip
-    return own, events
+        for stamp, service in history.events.items():
+            at = datetime.fromtimestamp(float(stamp), tz=UTC)
+            events.append((stamp, at, service, kind == ACCOUNT))
+            act = history.acts.get(stamp) or Act(None, None, None)
+            done.append(Done(stamp, at, service, entity, kind or "", network, act))
+        holders[(entity, network)] = history.holders
+    return Read(own, events, done, holders)
+
+
+@dataclass(frozen=True)
+class Read:
+    """What `histories` read: the own IDs, their events for the ledger story, the same events
+    with what each was, and the accounts that hold each own token (design 7.5)."""
+
+    own: list[OwnId]
+    events: list[tuple[str, datetime, str, bool]]
+    done: list[Done]
+    holders: dict[tuple[str, str], tuple[str, ...] | None]
+
+
+def depth_of_check(check: SubmissionCheck, read: Read) -> Depth | None:
+    """The depth of use of a checked submission (design 7.5): its README's own IDs, with the
+    README's prose in the place of the page; None when there is nothing to say."""
+    scan = check.hedera_code.scan if check.hedera_code is not None else None
+    found = [(one.kind, one.name) for one in scan.found()] if scan is not None else None
+    has_package = scan is not None and bool(scan.packages)
+    shared_only = not read.own and any(
+        one.status in seen.CONFIRMED and (one.shared or one.named_elsewhere) for one in check.ids
+    )
+    if not read.own and not shared_only and not has_package:
+        return None
+    event = check.event
+    return depth_of(read.own, read.done, read.holders, {one.found.entity_id for one in check.ids},
+                    starts_at=event.starts_at if event is not None else None,
+                    ends_on=event.ends_on if event is not None else None,
+                    words=readme_prose(check.readme_text),
+                    in_code=services_in_code(found) if found is not None else None,
+                    set_up=set_up_in_code(found or []), has_package=has_package,
+                    shared_only=shared_only,
+                    read=all(one.asked_at is not None for one in read.own))  # fmt: skip
 
 
 def story_of_check(check: SubmissionCheck, own: list[OwnId], events: list[tuple]) -> Story | None:
@@ -559,7 +601,8 @@ def check_submission(
                 check.seen.append(SeenBefore(pid, key))
     progress(HISTORY, RUNNING)
     read: Counter[str] = Counter()
-    own, events = histories(check.ids, mirrors, HistoryStore(conninfo), now=now, counts=read)
-    progress(HISTORY, SKIPPED if not own else DONE if read["histories_read_now"] else SAVED)
-    check.story = story_of_check(check, own, events)
+    found = histories(check.ids, mirrors, HistoryStore(conninfo), now=now, counts=read)
+    progress(HISTORY, SKIPPED if not found.own else DONE if read["histories_read_now"] else SAVED)
+    check.story = story_of_check(check, found.own, found.events)
+    check.depth = depth_of_check(check, found)
     return check

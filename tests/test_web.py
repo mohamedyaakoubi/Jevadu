@@ -480,6 +480,39 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
     assert "Read from the mirror node on 23 October 2026: 2 of its IDs" in block
 
 
+def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> None:  # noqa: ANN001
+    """Depth of use (design 7.5, 25 October 2026): what its IDs did, who took part, on how many
+    days, the page's own words about Hedera, and a strip of days whose squares open HashScan."""
+    from hackathon_memory.check.history import CONSENSUS, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4511", "topic")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+        conn.execute("UPDATE projects SET short_line = %s WHERE id = %s",
+                     ("Each sale is a message on HCS.", pebble))  # fmt: skip
+    sale = datetime(2026, 3, 7, 12, tzinfo=UTC)
+    messages = {stamp(sale, n): CONSENSUS for n in (1, 2, 3)}
+    payers = ("0.0.7001", "0.0.8001", "0.0.8001")
+    acts = {key: Act("CONSENSUSSUBMITMESSAGE", True, payer, (payer,))
+            for key, payer in zip(sorted(messages), payers, strict=True)}  # fmt: skip
+    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, False, acts),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+    assert "3 messages to a topic." in block
+    assert "2 accounts that the page does not name." in block
+    assert ("1 day with a transaction: 1 during the event, 0 in the 30 days before it, 0 in the "
+            "30 days after it.") in block  # fmt: skip
+    assert "<q>Each sale is a message on HCS.</q>" in block
+    first = sorted(messages)[0]
+    assert f'href="https://hashscan.io/testnet/transaction/{first}"' in block
+    assert 'data-note="7 March 2026: 3 Consensus Service transactions"' in block
+    assert "<summary>The days as a table</summary>" in block
+
+
 def test_the_places_of_the_page_are_marked_and_the_rest_stays_text() -> None:
     from hackathon_memory.web.data import said
 
@@ -911,6 +944,8 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
     assert "Where the README names them (2 lines)" in block
     assert '<mark class="hm-said" data-said="tokens" data-word="hts">HTS</mark>' in block
     assert "those of the README whose kind fits it, without a shared service" in block
+    depth = part.split('id="depth-check"', 1)[1].split("</section>", 1)[0]  # design 7.5
+    assert "1 message to a topic." in depth and "In the README's own words" in depth
     with psycopg.connect(database) as conn:
         first = conn.execute("SELECT asked_at FROM ledger_histories WHERE entity_id = %s",
                              (TOPIC,)).fetchall()  # fmt: skip

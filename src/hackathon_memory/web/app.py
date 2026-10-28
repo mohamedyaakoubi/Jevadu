@@ -54,7 +54,13 @@ from hackathon_memory.db.runs import recorded_run
 from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.hedera import listed, registry
-from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode, hashscan_topic
+from hackathon_memory.hedera.mirror import (
+    MIRROR_URLS,
+    MirrorError,
+    MirrorNode,
+    hashscan_topic,
+    hashscan_transaction,
+)
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.pipeline import refresh as refresh_step
@@ -74,6 +80,7 @@ from hackathon_memory.web import (
     hackathons,
     insights,
     references,
+    strips,
 )
 from hackathon_memory.web import refresher as refreshing
 
@@ -1185,6 +1192,8 @@ def create_app(
         "hashscan": data.hashscan,
         "file_link": code_reading.file_link,
         "judged_of": data.judged_of,
+        "strip_view": strips.strip_view,
+        "hashscan_moment": hashscan_transaction,
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
         "reason_of": data.reason_of,
         "NETWORK_WORDS": data.NETWORK_WORDS,
