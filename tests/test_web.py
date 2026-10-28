@@ -2418,6 +2418,53 @@ def test_the_days_of_the_strip_widen_and_their_words_keep_their_size(site, chrom
 
 
 @pytest.mark.browser
+def test_the_table_of_the_services_stays_inside_a_narrow_card(site, chromium) -> None:  # noqa: ANN001
+    """The words of the table stay whole and the table stays inside its card, in the window over
+    the results of a narrow screen (28 October 2026: "Consen sus", and a table past the border)."""
+    from hackathon_memory.check.story import time_of
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    a_card_with_days(database, pebble)  # an own topic, with messages during the event
+    escrow = "0.0.4516"
+    own_id(database, pebble, escrow, "contract")
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET short_line = %s WHERE id = %s",
+                     ("Each sale goes to the Hedera Consensus Service, and the Hedera Token "
+                      "Service mints its receipts from Solidity.", pebble))  # fmt: skip
+        (starts_at,) = conn.execute("SELECT starts_at FROM events").fetchone()
+        span = time_of(starts_at, date(2026, 3, 8))
+        conn.execute("INSERT INTO contract_calls (entity_id, network, starts_at, ends_at, read, "
+                     "cut, reached, asked_at) VALUES (%s, 'testnet', %s, %s, 40, false, %s, %s)",
+                     (escrow, *span, json.dumps({"0.0.359": 28}),
+                      datetime(2026, 10, 28, tzinfo=UTC)))  # fmt: skip
+    page = served(chromium, client, viewport={"width": 1024, "height": 800})
+    page.goto(f"http://site.test/?open={pebble}")
+    page.wait_for_selector("#viewer .story-section table.hm-story")
+    measured = page.evaluate("""() => {
+      const body = document.querySelector('#viewer .story-section .card-body');
+      const style = getComputedStyle(body);
+      const sides = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const inner = body.clientWidth - sides;
+      const table = body.querySelector('table.hm-story');
+      const first = table.querySelector('tbody th');
+      const probe = document.createElement('span');
+      probe.textContent = 'Consensus';
+      first.appendChild(probe);
+      const word = probe.getBoundingClientRect().width;
+      probe.remove();
+      return {inner, table: table.getBoundingClientRect().width,
+              first: first.clientWidth - 6, word,
+              note: !!table.querySelector('.hm-from-contracts')};
+    }""")
+    assert measured["note"]  # the calls of its contract, in the row of the Token Service
+    assert measured["table"] <= measured["inner"] + 1  # inside its card
+    assert measured["first"] >= measured["word"]  # "Consensus" stays whole
+    assert problems(page) == []
+    page.context.close()
+
+
+@pytest.mark.browser
 def test_the_last_search_comes_back_until_it_is_cleared(site, chromium) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1440, "height": 900})

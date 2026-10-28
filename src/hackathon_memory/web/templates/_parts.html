@@ -126,6 +126,7 @@
     {% elif story %}
     {% set within = " in that time" if story.starts_on else "" %}
     {% if story.lines %}
+    <div class="hm-story-scroll" tabindex="0" role="region" aria-label="The table of the Hedera services, which scrolls sideways when the card is narrow">
     <table class="table table-sm hm-story">
       <caption>{% if story.starts_on %}Ledger: the transactions of its own IDs from {{ story.starts_on | day }} to {{ story.ends_on | day }}, the event and 30 days on each side.{% else %}Ledger: every transaction of its own IDs. {{ no_days }}{% endif %}</caption>
       <thead><tr><th scope="col">Service</th><th scope="col">{{ source_title }}</th>{% if story.code_read %}<th scope="col">Code</th>{% endif %}<th scope="col" class="text-end">Ledger</th></tr></thead>
@@ -140,6 +141,7 @@
       {% endfor %}
       </tbody>
     </table>
+    </div>
     {% if not story.code_read %}<p class="hm-small">Its code was not read, so the table leaves it out.</p>{% endif %}
     {% if story.contract_others or story.calls_cut %}<p class="hm-small">{% if story.contract_others %}Its contracts also reached {{ story.contract_others | join(", ") }}{{ within }}.{% endif %}{% if story.calls_cut %} Of a contract with more calls in that time, the first 100 were read.{% endif %}</p>{% endif %}
     {% else %}

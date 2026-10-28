@@ -482,7 +482,12 @@ body:has(dialog[open]) { overflow: hidden; }
 /* the ledger story (design 7.5): a plain table of the services, then sentences and the time */
 .hm-story { margin: 0 0 0.5rem; }
 .hm-story caption { caption-side: top; padding: 0 0 0.375rem; color: var(--tblr-secondary); font-size: 0.8125rem; }
-.hm-story th, .hm-story td { overflow-wrap: anywhere; vertical-align: top; }
+/* A word breaks only when it is wider than its whole column: "anywhere" let the browser squeeze a
+   column below its words ("Consen sus", 28 October 2026). On a narrow card the table scrolls
+   sideways inside it rather than spill past its border. */
+.hm-story-scroll { overflow-x: auto; }
+.hm-story th, .hm-story td { overflow-wrap: break-word; vertical-align: top; }
+.hm-story > :not(caption) > * > * { padding-inline: 0.1875rem; }
 .hm-story tbody th { font-weight: 600; }
 .hm-story .text-end { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hm-story-facts { padding-left: 1.1rem; margin: 0.5rem 0; }
@@ -493,7 +498,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-story-time-none { margin: 0.5rem 0 0.375rem; }
 /* a word of the page is a button that looks like a link; its marks in the page's texts show only
    when it is pressed, and the place in view is outlined */
-.hm-said-word { padding: 0.1875rem 0; border: 0; background: none; font: inherit; text-align: start; color: var(--tblr-link-color); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.hm-said-word { padding: 0.1875rem 0; border: 0; background: none; font: inherit; text-align: start; color: var(--tblr-link-color); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; white-space: normal; }
 .hm-said-list { display: flex; flex-direction: column; align-items: flex-start; }
 .hm-keep { white-space: nowrap; } /* a bracket stays with its word */
 .hm-said-word:hover { color: var(--tblr-link-hover-color); }
@@ -579,7 +584,7 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 .hm-depth-list { margin: 0 0 0.5rem; padding-left: 1.25rem; }
 .hm-depth-block { margin-top: 0.75rem; }
 /* The calls of a project's contracts that reached a service, under its transactions (7.5). */
-.hm-from-contracts { display: block; font-size: 0.8125rem; color: var(--tblr-secondary); }
+.hm-from-contracts { display: block; font-size: 0.8125rem; color: var(--tblr-secondary); white-space: normal; }
 
 /* Started with --rehearsal (design 9.3): a band at the top of every page, in the colour of a
    warning, so that a rehearsal is never taken for the register. */
