@@ -117,6 +117,15 @@ def test_a_token() -> None:
                 "modified_timestamp": CHANGED,
                 "deleted": False,
                 "admin_key": {"_type": "ED25519", "key": "ab" * 32},
+                "supply_key": {"_type": "ECDSA_SECP256K1", "key": "cd" * 33},
+                "freeze_key": None,
+                "supply_type": "FINITE",
+                "max_supply": "2000000",
+                "custom_fees": {
+                    "created_timestamp": MADE,
+                    "fixed_fees": [{"amount": 5, "collector_account_id": "0.0.5678902"}],
+                    "fractional_fees": [{"amount": {"numerator": 1, "denominator": 100}}],
+                },
                 "memo": "an invented memo",
             }
         }
@@ -139,6 +148,11 @@ def test_a_token() -> None:
             "total_supply": "1000000",
             "name": "Pebble",
             "symbol": "PBL",
+            "supply_type": "FINITE",
+            "max_supply": "2000000",
+            # which keys are set, never a key, and the custom fees by kind and share
+            "keys": ["admin", "supply"],
+            "fees": {"fixed": 1, "fractional": [[1, 100]]},
         },
     )
     assert mirror.asked == [(TOKEN, "0.0.2345671")]  # one question was enough
@@ -153,7 +167,15 @@ def test_a_token_of_which_no_unit_exists_is_empty() -> None:
 
 def test_a_topic_with_messages() -> None:
     mirror = StandInMirror(
-        topic={"0.0.3456781": {"topic_id": "0.0.3456781", "created_timestamp": MADE, "memo": "x"}}
+        topic={
+            "0.0.3456781": {
+                "topic_id": "0.0.3456781",
+                "created_timestamp": MADE,
+                "memo": "x",
+                "submit_key": {"_type": "ED25519", "key": "ab" * 32},
+                "custom_fees": {"created_timestamp": MADE, "fixed_fees": [{"amount": 50}]},
+            }
+        }
     )
     mirror.lists[("messages", "0.0.3456781")] = [
         {"sequence_number": 1, "consensus_timestamp": FIRST, "message": "aGVsbG8="},
@@ -163,7 +185,8 @@ def test_a_topic_with_messages() -> None:
     assert (facts.kind, facts.activity_count, facts.empty) == (TOPIC, 49, False)
     assert (facts.first_activity_at, facts.last_activity_at) == (when(FIRST), when(LAST))
     assert facts.created_at == when(MADE)
-    assert facts.details == {}  # no memo and no text of a message is kept
+    # no memo and no text of a message is kept: only which keys are set, and its fees
+    assert facts.details == {"keys": ["submit"], "fees": {"fixed": 1}}
 
 
 def test_a_topic_with_no_message_is_empty_and_its_first_message_is_not_asked() -> None:
@@ -223,7 +246,7 @@ def test_an_account_with_its_last_transaction() -> None:
     facts = facts_of(mirror, "0.0.5678902", ACCOUNT)
     assert facts.kind == ACCOUNT
     assert (facts.first_activity_at, facts.last_activity_at) == (when(MADE), when(LAST))
-    assert facts.details == {"evm_address": ADDRESS}  # no key and no memo
+    assert facts.details == {"evm_address": ADDRESS, "key_type": "ED25519"}  # no key, no memo
     # The contract was asked first, and the search went back to the day the account was made.
     assert mirror.asked == [
         (CONTRACT, "0.0.5678902"),
@@ -343,3 +366,11 @@ def test_a_token_has_no_such_question() -> None:
     facts = LedgerFacts("0.0.2345671", "testnet", NOW, found=True, kind=TOKEN)
     assert was_used_inside(mirror, facts, BEFORE_ALL, AFTER_ALL) is False  # type: ignore[arg-type]
     assert mirror.asked == []  # and the node is not asked
+
+
+def test_the_royalty_of_an_nft_collection_is_kept_by_its_share() -> None:
+    from hackathon_memory.check.ledger import fees_of
+
+    royalty = {"amount": {"numerator": 1, "denominator": 10}, "fallback_fee": None}
+    assert fees_of({"fixed_fees": [], "royalty_fees": [royalty]}) == {"royalty": [[1, 10]]}
+    assert fees_of(None) == {} and fees_of({"fixed_fees": []}) == {}
