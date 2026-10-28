@@ -494,7 +494,7 @@ For each repository: does it exist, when was it created, when was the first and 
 
 **The Hedera IDs of the code (24 October 2026).** The page and the README say which IDs a team claims. The code names more: in 40 repositories drawn at random from the collection, 20 named an ID in their code that their page and README do not, mostly in settings files and in source code (`evals/ids_in_code.py`, `evals/results/20261023T224559Z-ids-in-code.json`). Most of these prove nothing, because code also names things that many teams use, such as a public token, the account of a service or a number from a tutorial. So the reader of the code (format 3) keeps every ID that a file names, by the rules of the page (section 6.1), with the files where it stands and never the words around it (in a file of example settings the next line can hold a key), and the check gives a project only the IDs of its code for which all of these hold:
 
-- no page and no README of the collection names it, and the code of no other repository: it is the project's own;
+- no page and no README of the collection names it, and the code of no other repository, in any of its forms: it is the project's own. An EVM address and the 0.0 ID of one contract are one ID, and only the ledger's answer shows that an address stands for a 0.0 ID, so an ID of the code is looked at again after that answer (28 October 2026: five projects held one contract twice, by its address in the README and by its 0.0 ID in the code);
 - the ledger finds it as the proof rule does for an ID whose kind nobody gave: not empty, and used inside the window of the project's event (section 7.2);
 - it was made on the ledger inside that window: the team most likely made it for this event.
 
@@ -666,7 +666,7 @@ For the first results, the LLM reads the cards and the user's idea. For each pro
 
 ### 8.4 "Seen before"
 
-Two entries are the same project when they share the same repository link, or the same Hedera ID on the same network. This is exact matching, with no AI.
+Two entries are the same project when they share the same repository link, or the same Hedera ID on the same network. This is exact matching, with no AI. An ID counts by the ID that the ledger gives the thing on that network, so an EVM address and the 0.0 ID of one contract are one ID (28 October 2026: a README that named a contract by its address was not matched with a page that named its 0.0 ID; the groups of the collection stayed the same).
 
 One trap: some IDs are services that many projects use, like a popular token. An ID that appears in more than three projects with different repositories, or in two projects with different repositories at one event, is treated as a shared service. It is shown as such and is not used for "seen before".
 
