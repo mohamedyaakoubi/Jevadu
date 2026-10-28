@@ -86,12 +86,12 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
 
     stand_in = FakeOpenModels()  # the stand-in of the search model (search/stand_in.py)
 
-    def make(**changes: object) -> TestClient:
+    def make(app_options: dict | None = None, **changes: object) -> TestClient:
         changed = settings.model_copy(update=changes)
         return TestClient(
             create_app(changed, google=client, llm=client, github_client=asker, mirrors=mirrors,
                        register_writer=writes, stand_in_client=open_client(stand_in),
-                       refresh_inline=True)
+                       refresh_inline=True, **(app_options or {}))
         )  # fmt: skip
 
     served = make()
@@ -833,6 +833,17 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert len(client.github_site.seen) == 10
     hidden = '<h2 class="visually-hidden">What the check found</h2>'
     assert hidden in page.text and hidden not in part.text
+
+
+def test_a_rehearsal_says_so_at_the_top_of_every_page(site) -> None:  # noqa: ANN001
+    """Started with --rehearsal, the website writes to the topic for rehearsals, and a band says
+    so, so that a rehearsal is never taken for the register (design 9.3, 25 October 2026)."""
+    client, _, ids, _ = site
+    assert "hm-rehearsal" not in client.get("/").text
+    rehearsal = client.make({"rehearsal": True})
+    for page in ("/", f"/project/{ids['Pebble Pay']}"):
+        band = rehearsal.get(page).text.split('class="hm-rehearsal"', 1)[1].split("</p>")[0]
+        assert f"goes to the practice topic {REGISTER} on Hedera testnet" in band
 
 
 def test_a_card_is_read_again_at_the_press_of_its_button(site) -> None:  # noqa: ANN001

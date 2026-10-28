@@ -329,6 +329,7 @@ def create_app(
     register_writer: Any = None,
     stand_in_client: Any = None,
     refresh_inline: bool = False,
+    rehearsal: bool = False,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
@@ -337,7 +338,8 @@ def create_app(
     one record to the register (hedera/registry.py); by default it is made when first needed.
     `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
     is made, counted by the meter, when it is first needed. `refresh_inline` reads a card again
-    on the thread of its request, for the tests (web/refresher.py)."""
+    on the thread of its request, for the tests (web/refresher.py). With `rehearsal`, the topic of
+    `settings` is the one for rehearsals, and every page says so (design 9.3)."""
     settings = settings or Settings()
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
@@ -1183,6 +1185,7 @@ def create_app(
         "hashscan": data.hashscan,
         "file_link": code_reading.file_link,
         "judged_of": data.judged_of,
+        "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
         "reason_of": data.reason_of,
         "NETWORK_WORDS": data.NETWORK_WORDS,
         "ACTION_WORDS": data.ACTION_WORDS,

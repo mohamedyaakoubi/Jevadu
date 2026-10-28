@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     hedera_operator_id: str = Field("", json_schema_extra=_PUBLIC)
     hedera_operator_key: SecretStr = SecretStr("")
     hedera_topic_id: str = Field("", json_schema_extra=_PUBLIC)
+    # A second topic, for rehearsals of a registration: the website writes to it only when it
+    # is started with --rehearsal (design 9.3, 25 October 2026).
+    hedera_rehearsal_topic_id: str = Field("", json_schema_extra=_PUBLIC)
 
     # GitHub (step 2)
     github_token: SecretStr = SecretStr("")

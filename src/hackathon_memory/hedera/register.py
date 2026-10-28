@@ -36,6 +36,7 @@ from hiero_sdk_python.exceptions import MaxAttemptsError, PrecheckError, Receipt
 from hiero_sdk_python.response_code import ResponseCode
 
 REGISTER_MEMO = "Jevadu register"  # a topic memo holds 100 bytes at most
+REHEARSAL_MEMO = "Jevadu rehearsal"  # the topic for rehearsals of a registration (design 9.3)
 MAX_RECORD_BYTES = 1024  # one message; a longer one is cut into pieces (design 9.3)
 
 AUTORENEW_NOT_ALLOWED = "AUTORENEW_ACCOUNT_NOT_ALLOWED"

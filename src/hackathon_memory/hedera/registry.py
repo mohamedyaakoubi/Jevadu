@@ -28,6 +28,12 @@ the first version (hedera/register.py, require_testnet).
     python -m hackathon_memory.hedera.registry open
 
 creates the topic once, checks its keys on the mirror node, and says which line to put in .env.
+
+    python -m hackathon_memory.hedera.registry open --rehearsal
+
+creates, in the same way, a second topic for rehearsals of a registration, with the memo
+"Jevadu rehearsal": a first record can never be undone, so a press is rehearsed there. The
+website writes to it only when it is started with --rehearsal (design 9.3, 25 October 2026).
 """
 
 from __future__ import annotations
@@ -227,22 +233,27 @@ def open_register(
     settings: Settings,
     mirror: MirrorNode,
     *,
+    rehearsal: bool = False,
     new_client: Callable[..., object] = register.new_testnet_client,
     create_topic: Callable[..., register.TopicCreated] = register.create_topic,
 ) -> str:
-    """Create the topic of the register (design 9.5) and check its keys on the mirror node."""
+    """Create the topic of the register (design 9.5), or the one for rehearsals (design 9.3),
+    and check its keys on the mirror node."""
     register.require_testnet(settings.hedera_network)
-    if settings.hedera_topic_id.strip():
-        raise RegisterError(f"The register is open already: {settings.hedera_topic_id.strip()}.")
+    kept = (settings.hedera_rehearsal_topic_id if rehearsal else settings.hedera_topic_id).strip()
+    if kept:
+        what = "The rehearsal topic" if rehearsal else "The register"
+        raise RegisterError(f"{what} is open already: {kept}.")
     key = operator_key(settings, mirror)
     client = new_client(settings.hedera_operator_id.strip(), key)
+    memo = register.REHEARSAL_MEMO if rehearsal else register.REGISTER_MEMO
     try:
-        created = create_topic(client, key.public_key(), auto_renew=True)
+        created = create_topic(client, key.public_key(), memo=memo, auto_renew=True)
     except RegisterError as error:
         if error.status != register.AUTORENEW_NOT_ALLOWED:
             raise
         # The older rule of the network: no auto-renew account without an admin key.
-        created = create_topic(client, key.public_key(), auto_renew=False)
+        created = create_topic(client, key.public_key(), memo=memo, auto_renew=False)
     topic = mirror.wait_for_topic(created.topic_id)
     submit = str((topic.get("submit_key") or {}).get("key", "")).lower()
     if topic.get("admin_key") is not None or submit != public_key_hex(key):
@@ -254,19 +265,22 @@ def open_register(
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    if argv != ["open"]:
+    if argv not in (["open"], ["open", "--rehearsal"]):
         print(__doc__)
         return 2
+    rehearsal = argv == ["open", "--rehearsal"]
     settings = Settings()
     try:
-        topic_id = open_register(settings, MirrorNode(settings.hedera_network))
+        topic_id = open_register(settings, MirrorNode(settings.hedera_network), rehearsal=rehearsal)
     except (RegisterError, MirrorError) as error:
         print(f"Not opened: {error}")
         return 1
     network = settings.hedera_network
-    print(f"The register is open: topic {topic_id} on the {network} network.")
+    what = "The rehearsal topic" if rehearsal else "The register"
+    print(f"{what} is open: topic {topic_id} on the {network} network.")
     print(f"It has no admin key and one submit key: {hashscan_topic(network, topic_id)}")
-    print(f"Put this line in .env: HEDERA_TOPIC_ID={topic_id}")
+    name = "HEDERA_REHEARSAL_TOPIC_ID" if rehearsal else "HEDERA_TOPIC_ID"
+    print(f"Put this line in .env: {name}={topic_id}")
     return 0
 
 

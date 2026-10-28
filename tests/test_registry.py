@@ -167,14 +167,21 @@ def test_the_register_opens_with_no_admin_key_and_our_submit_key() -> None:
     mirror = RegisterMirror(key)
     made: list[dict] = []
 
-    def create(client: object, submit_key: object, *, auto_renew: bool) -> TopicCreated:
-        made.append({"submit_key": submit_key.to_string_raw(), "auto_renew": auto_renew})
+    def create(client: object, submit_key: object, *, memo: str, auto_renew: bool) -> TopicCreated:
+        made.append({"submit_key": submit_key.to_string_raw(), "memo": memo,
+                     "auto_renew": auto_renew})  # fmt: skip
         return TopicCreated(TOPIC, "0.0.1234561@1.2", auto_renew)
 
     topic = registry.open_register(settings_with(key), mirror, new_client=lambda *_: object(),
                                    create_topic=create)  # fmt: skip
     assert topic == TOPIC
-    assert made == [{"submit_key": key.public_key().to_string_raw(), "auto_renew": True}]
+    assert made == [{"submit_key": key.public_key().to_string_raw(), "memo": "Jevadu register",
+                     "auto_renew": True}]  # fmt: skip
+    # the register is open, and the rehearsal topic is not yet
+    rehearsal = registry.open_register(settings_with(key, topic=TOPIC), mirror, rehearsal=True,
+                                       new_client=lambda *_: object(),
+                                       create_topic=create)  # fmt: skip
+    assert rehearsal == TOPIC and made[-1]["memo"] == "Jevadu rehearsal"
 
 
 def test_a_topic_with_an_admin_key_is_refused() -> None:
@@ -191,6 +198,9 @@ def test_the_register_opens_once_on_the_test_network_only() -> None:
     key = PrivateKey.generate_ecdsa()
     with pytest.raises(RegisterError, match="open already"):
         registry.open_register(settings_with(key, topic=TOPIC), RegisterMirror(key))
+    with pytest.raises(RegisterError, match="The rehearsal topic is open already"):
+        opened = settings_with(key).model_copy(update={"hedera_rehearsal_topic_id": TOPIC})
+        registry.open_register(opened, RegisterMirror(key), rehearsal=True)
     with pytest.raises(RegisterError, match="mainnet"):
         registry.open_register(settings_with(key, network="mainnet"), RegisterMirror(key))
     with pytest.raises(RegisterError, match="not the key"):

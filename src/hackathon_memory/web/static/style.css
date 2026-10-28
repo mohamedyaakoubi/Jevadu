@@ -530,6 +530,10 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
   .hm-step.is-running .hm-step-mark { animation: none; border-right-color: var(--tblr-primary); }
   .hm-progress-bar { transition: none; }
 }
+/* Started with --rehearsal (design 9.3): a band at the top of every page, in the colour of a
+   warning, so that a rehearsal is never taken for the register. */
+.hm-rehearsal { margin: 0; padding: 0.5rem 1rem; text-align: center; background: var(--tblr-warning-lt, #fff3cd); color: var(--tblr-body-color); border-bottom: 2px solid var(--tblr-warning); }
+
 /* A card read again (design 7.3, S2): the line under its links, with a small turning ring while
    the reading runs; a full ring that stands still when the computer asks for less motion. */
 .hm-read-line { margin: 0.5rem 0 0; color: var(--tblr-secondary); }
