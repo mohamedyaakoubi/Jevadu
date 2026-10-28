@@ -959,7 +959,9 @@ What the look avoids, after the same test: the common look of generated websites
 
 ### 12.2 Marks and their legend
 
-The statuses and the labels are shown as small marks. Each mark has one meaning, defined once, and a small (i) next to it that explains it, wherever it is shown. A mark is never only a colour: it always has words.
+The statuses and the labels are shown as small marks. Each mark has one meaning, defined once, and a small (i) next to it that explains it, wherever it is shown. A mark is never only a colour: it always has words. An (i) explains only the mark or the title it stands next to: each tag at the head of a card has its own (28 October 2026, night: one (i) for all the tags explained the event, both prizes, the winners' lists and the main network at once, on a card with one tag), and the filter of the events and the chart of the events have their own too.
+
+**The site's own files (28 October 2026, night).** The page links its own script and styles with a fingerprint of their content, and the server asks a browser to check its copy each time it uses one (an answer "not modified" when it is the newest), so a change of the site never runs with an older script. A browser that kept the earlier script showed the buttons of the strip of days, which did nothing.
 
 ### 12.3 Two review layers
 
