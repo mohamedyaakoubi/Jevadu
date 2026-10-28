@@ -508,7 +508,11 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     assert "2 accounts that the page does not name." in block
     assert ("1 day with a transaction: 1 during the event, 0 in the 30 days before it, 0 in the "
             "30 days after it.") in block  # fmt: skip
-    assert "<q>Each sale is a message on HCS.</q>" in block
+    # one card (28 October 2026): the depth of use inside the card of the Hedera services, the
+    # page's words marked once in its table, and the time before and after said once
+    story = part.split('class="card project-section story-section"', 1)[1].split("</section>", 1)[0]
+    assert f'id="depth-{pebble}"' in story and "depth-section" not in part
+    assert "<q>" not in block and story.count("Before that time") == 1
     first = sorted(messages)[0]
     assert f'href="https://hashscan.io/testnet/transaction/{first}"' in block
     assert 'data-note="7 March 2026: 3 Consensus Service transactions"' in block
@@ -993,7 +997,8 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
     assert '<mark class="hm-said" data-said="tokens" data-word="hts">HTS</mark>' in block
     assert "those of the README whose kind fits it, without a shared service" in block
     depth = part.split('id="depth-check"', 1)[1].split("</section>", 1)[0]  # design 7.5
-    assert "1 message to a topic." in depth and "In the README's own words" in depth
+    assert "1 message to a topic." in depth
+    assert "<q>" not in depth  # the README's words are marked in its lines, not quoted again
     with psycopg.connect(database) as conn:
         first = conn.execute("SELECT asked_at FROM ledger_histories WHERE entity_id = %s",
                              (TOPIC,)).fetchall()  # fmt: skip

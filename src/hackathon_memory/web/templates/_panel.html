@@ -53,8 +53,7 @@
         </div>
       </section>
       {% endif %}
-      {% if card.story %}{{ parts.ledger_story(card.story, pid) }}{% endif %}
-      {% if card.depth %}{{ parts.depth_of_use(card.depth, strip_view(card.depth.strip), pid) }}{% endif %}
+      {% if card.story or card.depth %}{{ parts.ledger_story(card.story, pid, depth=card.depth, view=strip_view(card.depth.strip) if card.depth else none) }}{% endif %}
       {# The proof mark leads here (design 12.1, S2): the window of the event, then each ID with
          why it counts or not, in sentences made by code. #}
       <section class="card project-section ledger-section" id="ledger-{{ pid }}" tabindex="-1" data-pointable aria-labelledby="ledger-{{ pid }}-title">

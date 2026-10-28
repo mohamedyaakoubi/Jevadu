@@ -119,16 +119,6 @@
 <p>A prize is the organisers' decision, not a judgement of this tool.</p>
 {% endcall %}
 
-{% call tip("depth", "Depth of use") %}
-<p>Judges of a Hedera hackathon look for a meaningful use of Hedera. That is a judgment, so the tool gives no score. It shows what the ledger says the project's own IDs did, for a person to weigh:</p>
-<ul>
-  <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or move to it with the keyboard, to see its number; a click opens its first transaction on HashScan.</li>
-  <li><b>What its IDs did:</b> the kinds of transaction, as the mirror node names them, in plain words.</li>
-  <li><b>Who took part:</b> accounts that the project does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. An account that it does not name can still be the team's, such as one made for a test.</li>
-  <li><b>Signs that stay on paper:</b> a topic with no message, a token held only by the project's own accounts, a contract never called, accounts that only moved HBAR, a Hedera package that nothing calls, IDs that other projects name too.</li>
-</ul>
-<p>The network's own accounts (its nodes, and the accounts of fees and rewards) are left out.</p>
-{% endcall %}
 
 {% call tip("fresh", "Read again") %}
 <p>A repository and its Hedera IDs change after the event: a team pushes code, rewrites its README, or makes its repository private. So GitHub and the mirror node are asked again once their answers are a day old, while the website runs.</p>
@@ -153,24 +143,33 @@
 {% endcall %}
 
 {% call tip("story", "Hedera services: page, code and ledger") %}
-<p>For each Hedera service, three sources side by side, with no AI:</p>
+<p>For each Hedera service, what the project page says, what the code calls, and what its own IDs did on the ledger:</p>
 <ul>
-  <li><b>Page:</b> the words of the project page that name the service, such as &ldquo;HCS&rdquo; or &ldquo;topic ID&rdquo; for the Consensus Service{{ parts.ref("topic") }}, &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}, or &ldquo;smart contract&rdquo; and &ldquo;Solidity&rdquo; for smart contracts{{ parts.ref("contract") }}. Never the AI summary. Each word is a button: it marks where the page says it.</li>
-  <li><b>Code:</b> whether its code calls the service, from the reading of the code below: a source file that names one of the service's SDK classes, such as TokenCreateTransaction. A package alone never counts. &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, as most Solidity projects do; that is not a call by itself.</li>
+  <li><b>Page:</b> the words of the project page that name the service, such as &ldquo;HCS&rdquo; or &ldquo;topic ID&rdquo; for the Consensus Service{{ parts.ref("topic") }}, &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}, or &ldquo;smart contract&rdquo; and &ldquo;Solidity&rdquo; for smart contracts{{ parts.ref("contract") }}. Each word is a button that marks where the page says it.</li>
+  <li><b>Code:</b> whether a source file names one of the service's SDK classes, such as TokenCreateTransaction. A package alone does not count. &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
   <li><b>Ledger:</b> the transactions of its own Hedera IDs, read from a mirror node{{ parts.ref("mirror") }}, from 30 days before the event to 30 days after it.</li>
 </ul>
-<p>Its own IDs are those whose kind fits the page and that no other project names: an ID that several projects name is often a shared service. HBAR is not compared: nearly every project moves HBAR to set itself up.</p>
-<p>The ledger shows only the IDs that the page gives, and a team can use a service through an ID that it never names. A difference is a fact to look at, not a fault.</p>
+<p>Its own IDs are those whose kind fits the page and that no other project names: an ID that several projects name is often a shared service. HBAR is not compared, since nearly every project moves HBAR to set itself up. A team can also use a service through an ID that its page does not give.</p>
+<ul>
+  <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or reach it with the keyboard, to see its number; a click opens its first transaction on HashScan{{ parts.ref("explorer") }}.</li>
+  <li><b>Who took part:</b> the accounts that the page does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. One of them can be the team's own, such as a test account. The network's own accounts are left out.</li>
+  <li><b>Signs that stay on paper:</b> a topic with no message, a token held only by the project's own accounts, a contract never called, accounts that only moved HBAR, a Hedera package that nothing calls, or IDs that other projects name too.</li>
+</ul>
 {% endcall %}
 
 {% call tip("story-readme", "Hedera services: README, code and ledger") %}
 <p>The same comparison as on the card of a project, for the submission:</p>
 <ul>
-  <li><b>README:</b> the words of its README that name a Hedera service, such as &ldquo;HCS&rdquo; for the Consensus Service{{ parts.ref("topic") }} or &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}. Each word is a button: it marks where the README says it, in the lines under the table.</li>
-  <li><b>Code:</b> whether its code calls the service, from the reading of the code below. A package alone never counts, and &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
+  <li><b>README:</b> the words of its README that name a Hedera service, such as &ldquo;HCS&rdquo; for the Consensus Service{{ parts.ref("topic") }} or &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}. Each word is a button that marks where the README says it, in the lines under the table.</li>
+  <li><b>Code:</b> whether its code calls the service, from the reading of the code below. A package alone does not count, and &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
   <li><b>Ledger:</b> the transactions of the README's IDs whose kind fits, read from a mirror node{{ parts.ref("mirror") }} during the check and kept for 7 days: in the time of the hackathon and 30 days on each side, or every transaction when no hackathon is chosen.</li>
 </ul>
-<p>The ledger shows only the IDs that the README gives, and a team can use a service through an ID that it never names. A difference is a fact to look at, not a fault.</p>
+<p>A team can also use a service through an ID that its README does not give.</p>
+<ul>
+  <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or reach it with the keyboard, to see its number; a click opens its first transaction on HashScan{{ parts.ref("explorer") }}.</li>
+  <li><b>Who took part:</b> the accounts that the README does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. One of them can be the team's own, such as a test account. The network's own accounts are left out.</li>
+  <li><b>Signs that stay on paper:</b> a topic with no message, a token held only by the project's own accounts, a contract never called, accounts that only moved HBAR, a Hedera package that nothing calls, or IDs that other projects name too.</li>
+</ul>
 {% endcall %}
 
 {% call tip("code", "Code") %}

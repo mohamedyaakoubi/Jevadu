@@ -542,14 +542,15 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
    10 (review layer 1, 28 October 2026). */
 .hm-strip-name, .hm-strip-mark { font-size: 13px; fill: var(--tblr-secondary); }
 .hm-strip-base { stroke: var(--tblr-border-color); stroke-width: 1; }
-.hm-strip-note, .hm-strip-ends { display: block; }
+.hm-strip-note { display: block; }
 .hm-strip-note { min-height: 1.4em; }
 .hm-strip-table { margin-top: 0.25rem; }
 .hm-depth { margin: 0 0 0.5rem; }
 .hm-depth dt { font-weight: 600; }
 .hm-depth dd { margin: 0 0 0.5rem; }
 .hm-depth-title { font-weight: 600; margin: 0.75rem 0 0.25rem; }
-.hm-depth-list, .hm-depth-said { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.hm-depth-list { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.hm-depth-block { margin-top: 0.75rem; }
 
 /* Started with --rehearsal (design 9.3): a band at the top of every page, in the colour of a
    warning, so that a rehearsal is never taken for the register. */
