@@ -542,6 +542,38 @@ def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
             "sale; keys for admin and supply.") in block  # fmt: skip
 
 
+def test_the_card_counts_the_calls_of_its_contracts_for_the_service_they_reached(site) -> None:  # noqa: ANN001
+    """The calls of its own contract that reached the Token Service count in its row, and the
+    other system contracts and the limit are said under the table (design 7.5, 28 October
+    2026)."""
+    from hackathon_memory.check.history import CONTRACTS, Act, History
+    from hackathon_memory.check.story import time_of
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble, escrow = ids["Pebble Pay"], "0.0.4516"
+    own_id(database, pebble, escrow, "contract")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+        (starts_at,) = conn.execute("SELECT starts_at FROM events").fetchone()
+        span = time_of(starts_at, date(2026, 3, 8))
+        conn.execute("INSERT INTO contract_calls (entity_id, network, starts_at, ends_at, read, "
+                     "cut, reached, asked_at) VALUES (%s, 'testnet', %s, %s, 100, true, %s, %s)",
+                     (escrow, *span, json.dumps({"0.0.359": 34, "0.0.361": 2}),
+                      datetime(2026, 10, 28, tzinfo=UTC)))  # fmt: skip
+    call = stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 1)
+    HistoryStore(database).save(escrow, "testnet", "contract",
+                                History({call: CONTRACTS}, False,
+                                        {call: Act("CONTRACTCALL", True, "0.0.7001", ())}),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    story = part.split('class="card project-section story-section"', 1)[1].split("</table>", 2)
+    table, after = story[0], story[1]
+    assert '<span class="hm-from-contracts">+ 34 from its contracts</span>' in table
+    assert ("Its contracts also reached random numbers in 2 calls in that time. Of a contract "
+            "with more calls in that time, the first 100 were read.") in after  # fmt: skip
+
+
 def a_card_with_days(database: str, pebble: int) -> None:
     """Pebble Pay with an own topic and two messages on 7 March 2026, in its event of 6 to 8
     March: a card with a strip of days."""

@@ -166,6 +166,23 @@ def test_a_named_service_with_no_transaction_in_that_time_stands_out() -> None:
     assert not a_story(Event(DURING, CONSENSUS, False)).all_named_seen  # the page names none
 
 
+def test_the_calls_of_its_contracts_count_for_the_service_they_reached() -> None:
+    """A contract that reaches the Token Service uses it: the table counts its calls beside the
+    transactions, and the page's Token Service is not said to show nothing (28 October 2026)."""
+    from hackathon_memory.check.system_calls import ContractCalls
+
+    span = (STARTS - timedelta(days=30), STARTS + timedelta(days=60))
+    calls = (ContractCalls("0.0.4513", "testnet", *span, 100, True,
+                           {"0.0.359": 34, "0.0.361": 2}),)  # fmt: skip
+    words = "We use the Hedera Token Service (HTS) from Solidity."
+    story = story_of((TOPIC_ID,), (Event(DURING, CONTRACTS, False),), words, frozenset(),
+                     starts_at=STARTS, ends_on=ENDS, calls=calls)  # fmt: skip
+    tokens = next(line for line in story.lines if line.service == TOKENS)
+    assert (tokens.count, tokens.from_contracts) == (0, 34)
+    assert story.named_not_seen == () and story.all_named_seen
+    assert story.contract_others == ("random numbers in 2 calls",) and story.calls_cut
+
+
 def test_a_service_of_three_transactions_that_the_page_does_not_name_stands_out() -> None:
     calls = [Event(DURING, CONTRACTS, True)] * 3
     assert a_story(*calls).seen_not_named == ((CONTRACTS, 3),)

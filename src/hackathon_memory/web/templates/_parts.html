@@ -135,12 +135,13 @@
           <th scope="row">{{ SERVICE_NAMES[line.service] }}</th>
           <td>{% if not line.compared %}<span class="text-secondary">not compared</span>{% elif line.words %}{{ said_words(line, listed=true, source=source) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
           {% if story.code_read %}<td>{% if line.in_code %}yes{% elif line.set_up %}EVM setup{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
-          <td class="text-end">{{ "{:,}".format(line.count) }}</td>
+          <td class="text-end">{{ "{:,}".format(line.count) }}{% if line.from_contracts %}<span class="hm-from-contracts">+ {{ "{:,}".format(line.from_contracts) }} from its contracts</span>{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
     {% if not story.code_read %}<p class="hm-small">Its code was not read, so the table leaves it out.</p>{% endif %}
+    {% if story.contract_others or story.calls_cut %}<p class="hm-small">{% if story.contract_others %}Its contracts also reached {{ story.contract_others | join(", ") }}{{ within }}.{% endif %}{% if story.calls_cut %} Of a contract with more calls in that time, the first 100 were read.{% endif %}</p>{% endif %}
     {% else %}
     <p class="text-secondary">Its IDs show no transaction{{ within }}, and the {{ source }} names none of the services that are looked for.</p>
     {% endif %}
@@ -148,7 +149,7 @@
     <ul class="hm-story-facts">
       {% for service in story.named_not_seen %}<li>The {{ source }} names {{ SERVICE_SUBJECTS[service] }} {{ said_words(story.lines | selectattr("service", "equalto", service) | first, source=source, before="(", after=")") }}, and its IDs show no {{ SERVICE_TRANSACTIONS[service] }}{{ within }}.</li>{% endfor %}
       {% for service, count in story.seen_not_named %}<li>Its IDs show {{ transactions(service, count) }}{{ within }}, and the {{ source }} does not name {{ SERVICE_SUBJECTS[service] }}.</li>{% endfor %}
-      {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{{ within }}.</li>{% endif %}
+      {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{% if story.lines | selectattr("from_contracts") | list %} or calls of its contracts{% endif %}{{ within }}.</li>{% endif %}
     </ul>
     {% if story.named_not_seen %}<p class="hm-small">A team can also use a service through an ID that the {{ source }} does not give.</p>{% endif %}
     {% endif %}

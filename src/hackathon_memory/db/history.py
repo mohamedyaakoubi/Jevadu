@@ -24,9 +24,9 @@ from hackathon_memory.check.depth import Depth, Done, depth_of
 from hackathon_memory.check.history import Act, History
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
 from hackathon_memory.check.setup import Setup
-from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of
+from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of, time_of
 from hackathon_memory.check.system_calls import ContractCalls
-from hackathon_memory.parse.hedera_ids import ACCOUNT
+from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT
 
 KINDS_THAT_FIT = (PROOF_FOUND, DATES_DO_NOT_FIT, FOUND_BUT_EMPTY)
 DEPTH = 1  # what a history keeps: 1 since 25 October 2026, each act and a token's holders
@@ -229,8 +229,11 @@ def story_of_project(
         "WHERE p.id = %s",
         (project_id,),
     ).fetchone() or (None, None)
+    contracts = [(one.entity_id, one.network) for one in ids.values() if one.kind == CONTRACT]
+    span = time_of(starts_at, ends_on)
+    calls = calls_of(conn, contracts, span) if span is not None else []
     return story_of(tuple(ids.values()), merged(seen), words, in_code,
-                    starts_at=starts_at, ends_on=ends_on, set_up=set_up)  # fmt: skip
+                    starts_at=starts_at, ends_on=ends_on, set_up=set_up, calls=calls)  # fmt: skip
 
 
 def calls_of(

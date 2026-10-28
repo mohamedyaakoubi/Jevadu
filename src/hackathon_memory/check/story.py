@@ -26,6 +26,7 @@ from hackathon_memory.check.history import (
     TOKENS,
 )
 from hackathon_memory.check.proof import ORDER
+from hackathon_memory.check.system_calls import ContractCalls, by_service, others_in_words
 from hackathon_memory.parse.hedera_code import (
     CHAIN_ID,
     EVM_NETWORK,
@@ -174,6 +175,7 @@ class ServiceLine:
     count: int  # the transactions of the project's IDs in the time of the table
     places: tuple[int, ...] = ()  # for each word, how many places of the page say it
     set_up: bool = False  # no call, but an EVM project set up for Hedera (smart contracts only)
+    from_contracts: int = 0  # the calls of its own contracts that reached it (system_calls.py)
 
     @property
     def compared(self) -> bool:
@@ -204,6 +206,9 @@ class Story:
     all_named_seen: bool  # the page names a service, and every one it names has a transaction
     before: Outside | None  # None: not counted, because its IDs are accounts only
     after: Outside | None
+    contract_others: tuple[str, ...] = ()  # the system contracts with no row that its contracts
+    #                                        reached, in words: "random numbers in 2 calls"
+    calls_cut: bool = False  # a contract had more calls in that time than were read
 
     @property
     def read(self) -> tuple[OwnId, ...]:
@@ -250,11 +255,14 @@ def story_of(
     starts_at: datetime | None,
     ends_on: date | None,
     set_up: frozenset[str] = frozenset(),
+    calls: Sequence[ContractCalls] = (),
 ) -> Story:
     """The ledger story of one project. `ids` are its own IDs on their network, `events` the
     transactions of those that were read, each moment once (merged), `words` the page's own
-    words, `in_code` the services that its code calls, None when the code was not read, and
-    `set_up` the services that it only sets up for (set_up_in_code).
+    words, `in_code` the services that its code calls, None when the code was not read,
+    `set_up` the services that it only sets up for (set_up_in_code), and `calls` what the calls
+    of its own contracts in that time reached among Hedera's system contracts: a call that
+    reached the Token Service counts for it beside the transactions.
 
     The table counts the transactions of every ID in the time around the event. Before and after
     that time, only the project's own things count, not its accounts: an account is often kept
@@ -265,14 +273,17 @@ def story_of(
     named = words_found(words)
     per_word = Counter(words[start:end].casefold() for start, end, _ in places_in(words))
     code = in_code or frozenset()
+    through = by_service(calls)
     lines = tuple(
         ServiceLine(service, named.get(service, ()), service in code, counts[service],
                     tuple(per_word[word.casefold()] for word in named.get(service, ())),
-                    service in set_up and service not in code)
+                    service in set_up and service not in code, through.get(service, 0))
         for service in SERVICES
         if service in named or service in code or service in set_up or counts[service]
+        or through.get(service)
     )  # fmt: skip
-    named_not_seen = tuple(service for service in WORDS if service in named and not counts[service])
+    seen = {service for service in SERVICES if counts[service] or through.get(service)}
+    named_not_seen = tuple(service for service in WORDS if service in named and service not in seen)
     seen_not_named = tuple(
         (service, counts[service])
         for service in WORDS
@@ -294,4 +305,6 @@ def story_of(
         bool(named) and not named_not_seen,
         before,
         after,
+        others_in_words(calls),
+        any(one.cut for one in calls),
     )
