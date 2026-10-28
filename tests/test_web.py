@@ -959,6 +959,16 @@ def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list(sit
     page = client.get("/").text
     assert '<option value="hedera_prize">Won a Hedera prize (2)</option>' in page
     assert '<option value="winners_list">Winners&#39; list only (1)</option>' in page
+    assert 'value="other_prize"' not in page  # no project won another sponsor's prize here
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET prize_state = 'other_prize' WHERE id = %s",
+                     (ids["Pebble Pay"],))  # fmt: skip
+    fresh = client.make()  # a running site reads the facts of its filters once a minute at most
+    other = fresh.get("/").text
+    assert '<option value="other_prize">Won another sponsor&#39;s prize (1)</option>' in other
+    assert order_of(fresh.get("/", params={"winner": "other_prize"}).text) == [
+        str(ids["Pebble Pay"])
+    ]
     won = client.get("/", params={"winner": "hedera_prize"}).text
     assert set(order_of(won)) == {str(ids["Cedar Post"]), str(ids["Fern Vote"])}
     listed = client.get("/", params={"winner": "winners_list"}).text
