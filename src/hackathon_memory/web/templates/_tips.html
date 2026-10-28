@@ -105,7 +105,7 @@
   <li><b>Empty ID:</b> nothing ever happened with it, or the transaction failed.</li>
   <li><b>ID not found:</b> the ledger does not know it.</li>
   <li><b>No ID given:</b> neither the page nor the README names one. That is common.</li>
-  <li><b>Found in the code:</b> the code of the project names one of the team's own IDs, which no other project names, made on the ledger during the event, such as the account that runs its program. Code also names IDs that many teams use, such as a public token, so the code only counts in this strict way.</li>
+  <li><b>Found in the code:</b> the code of the project names one of the team's own IDs, which no other team names, made on the ledger during the event, such as the account that runs its program. Code also names IDs that many teams use, such as a public token, so the code only counts in this strict way.</li>
 </ul>
 <p>Every ID links to HashScan{{ parts.ref("explorer") }}, a public explorer of the same records.</p>
 {% endcall %}
@@ -147,7 +147,7 @@
   <li><b>Code:</b> whether a source file names one of the service's SDK classes, such as TokenCreateTransaction. A package alone does not count. &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
   <li><b>Ledger:</b> the transactions of its own Hedera IDs, read from a mirror node{{ parts.ref("mirror") }}, from 30 days before the event to 30 days after it.</li>
 </ul>
-<p>Its own IDs are those whose kind fits the page and that no other project names: an ID that several projects name is often a shared service. HBAR is not compared, since nearly every project moves HBAR to set itself up. A team can also use a service through an ID that its page does not give.</p>
+<p>Its own IDs are those whose kind fits the page and that no other team names: an ID that several teams name is often a shared service. The entries of one team's code at several hackathons share their IDs. HBAR is not compared, since nearly every project moves HBAR to set itself up. A team can also use a service through an ID that its page does not give.</p>
 <ul>
   <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or reach it with the keyboard, to see its number; a click opens its first transaction on HashScan{{ parts.ref("explorer") }}. Before and after that time, only its topics, tokens, contracts and schedules count: an account often lives on for years and across projects.</li>
   <li><b>Who took part:</b> the accounts that the page does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. One of them can be the team's own, such as a test account. The network's own accounts are left out.</li>

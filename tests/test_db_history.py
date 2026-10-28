@@ -76,6 +76,31 @@ def test_only_an_own_id_whose_kind_fits_is_given(database: str) -> None:
     assert HistoryStore(database).ids_to_read() == []
 
 
+def test_an_id_that_only_the_entries_of_one_repository_name_is_theirs(database: str) -> None:
+    # One team's code sent to two hackathons: both entries name the coin, and it is their own.
+    with psycopg.connect(database) as conn:
+        conn.execute(
+            "INSERT INTO repositories (url) VALUES ('https://github.com/sample-org/pebble'), "
+            "('https://github.com/sample-org/quartz')"
+        )
+        conn.execute(
+            "UPDATE projects SET repository_id = (SELECT id FROM repositories "
+            "WHERE url = 'https://github.com/sample-org/pebble')"
+        )
+    coin = IdToRead("0.0.2345671", "testnet", TOKEN, "0.0.2345671", MADE)
+    topic = IdToRead("0.0.3456781", "testnet", TOPIC, "0.0.3456781", MADE)
+    assert HistoryStore(database).ids_to_read() == [coin, topic]
+    # Another team's code names it too, or an entry with no repository, which may be another team.
+    for other in ("https://github.com/sample-org/quartz", None):
+        with psycopg.connect(database) as conn:
+            conn.execute(
+                "UPDATE projects SET repository_id = (SELECT id FROM repositories WHERE url = %s) "
+                "WHERE name = 'Quartz Notes'",
+                (other,),
+            )
+        assert HistoryStore(database).ids_to_read() == [topic]
+
+
 def test_a_history_is_kept_with_its_events_and_read_once(database: str) -> None:
     store = HistoryStore(database)
     store.save(

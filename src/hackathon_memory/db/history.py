@@ -1,7 +1,9 @@
 """Where the history of each own Hedera ID is kept (migrations 0016 and 0018, check/history.py).
 
-An own ID is named by one project only: an ID that several projects name is often a shared
-service (design 8.4), and its history would say nothing about one team. Only an ID whose kind
+An own ID is named by one project only, or only by projects that share one repository: an ID
+that several teams name is often a shared service (design 8.4), and its history would say nothing
+about one team; the entries of one team's code at several hackathons share its IDs (28 October
+2026). Only an ID whose kind
 fits what its page says is read: the statuses of the proof rule "proof found", "the dates do not
 fit" and "found, but empty" (design 7.2).
 
@@ -25,10 +27,13 @@ from hackathon_memory.parse.hedera_ids import ACCOUNT
 
 KINDS_THAT_FIT = (PROOF_FOUND, DATES_DO_NOT_FIT, FOUND_BUT_EMPTY)
 DEPTH = 1  # what a history keeps: 1 since 25 October 2026, each act and a token's holders
-# The own IDs, as the first part of a query that joins `own` (design 8.4).
+# The own IDs, as the first part of a query that joins `own` (design 8.4): named by one project,
+# or only by projects with one same repository.
 OWN = (
-    "WITH own AS (SELECT entity_id FROM hedera_ids GROUP BY entity_id "
-    "             HAVING count(DISTINCT project_id) = 1) "
+    "WITH own AS (SELECT h.entity_id FROM hedera_ids h JOIN projects p ON p.id = h.project_id "
+    "             GROUP BY h.entity_id HAVING count(DISTINCT h.project_id) = 1 "
+    "             OR (count(DISTINCT p.repository_id) = 1 "
+    "                 AND bool_and(p.repository_id IS NOT NULL))) "
 )
 
 
