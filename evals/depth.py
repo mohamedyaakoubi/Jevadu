@@ -204,6 +204,7 @@ def recount(
             parent = next((item for item in items if not item.get("nonce")), None)
             if parent and inside(parent["consensus_timestamp"]):
                 moments.add(parent["consensus_timestamp"])
+                accounts |= accounts_of(parent)
     accounts -= NETWORK_ACCOUNTS | {""}
     return len(moments), accounts
 

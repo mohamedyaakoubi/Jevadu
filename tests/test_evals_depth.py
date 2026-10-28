@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
+from types import SimpleNamespace
 
-from evals.depth import SIGNS, accounts_of, measure
+import pytest
+
+import evals.depth
+from evals.depth import SIGNS, accounts_of, measure, recount
 from hackathon_memory.check.depth import Depth
+from hackathon_memory.parse.hedera_ids import TRANSACTION
 
 # A transfer by the invented account 0.0.7001, taken by the node 0.0.3: HBAR to the node and to
 # the network's account of fees, and a token from 0.0.7002 to 0.0.7003.
@@ -68,3 +74,35 @@ def test_the_accounts_of_a_transaction_are_its_payer_and_its_transfers() -> None
     nft = {"transaction_id": "0.0.7004-1772884790-000000002", "node": "0.0.4",
            "nft_transfers": [sent]}  # fmt: skip
     assert accounts_of(nft) == {"0.0.7004", "0.0.7005", "0.0.7006"}
+
+
+class Answers:
+    """A stand-in for the requests session of the second counting: one answer of the mirror node."""
+
+    def __init__(self, body: dict) -> None:
+        self.status_code, self._body = 200, body
+
+    def get(self, url: str, timeout: int) -> Answers:
+        return self
+
+    def json(self) -> dict:
+        return self._body
+
+
+def test_the_second_counting_takes_the_accounts_of_a_single_transaction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # An own ID that is one transaction: its payer and the accounts of its transfers took part,
+    # as the card counts them (found by the run of 28 October 2026, 19 of 20).
+    monkeypatch.setattr(evals.depth, "PAUSE", 0)
+    read = datetime(2026, 10, 25, tzinfo=UTC)
+    own = SimpleNamespace(entity_id=TRANSFER["transaction_id"], network="testnet",
+                          kind=TRANSACTION, asked_at=read)  # fmt: skip
+    card = SimpleNamespace(
+        story=SimpleNamespace(ids=[own]),
+        facts=SimpleNamespace(event_starts_at=datetime(2026, 3, 6, tzinfo=UTC),
+                              event_ends_on=date(2026, 3, 8)),
+    )  # fmt: skip
+    session = Answers({"transactions": [TRANSFER]})
+    took_part = {"0.0.7001", "0.0.7002", "0.0.7003"}  # not the node, not the account of fees
+    assert recount(session, card, {}) == (1, took_part)  # type: ignore[arg-type]
