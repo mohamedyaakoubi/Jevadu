@@ -94,6 +94,7 @@ class Cut:
     width: float
     text: str  # how long it is, short: "1 yr 2 mo"
     note: str  # its first and last day, and how long, in words
+    days: int = 0  # how many days it leaves out
 
 
 @dataclass(frozen=True)
@@ -122,7 +123,8 @@ class StripView:
     most_zoom: float = 1.0  # how many times wider the days can get
     step: float = 0.0  # the width of one day
     cuts: tuple[Cut, ...] = ()
-    cut_marks: tuple[Mark, ...] = ()  # the lengths of the cuts that keep clear of each other
+    # the lengths of the cuts that keep clear of each other, the longest cuts first
+    cut_marks: tuple[Mark, ...] = ()
 
     @property
     def names_share(self) -> float:
@@ -229,11 +231,12 @@ def strip_view(strip: Strip | None) -> StripView | None:
     cuts = []
     for number in range(len(parts) - 1):
         (first, last), after = parts[number], parts[number + 1][0]
-        brief, words = length((after - last).days - 1)
+        empty = (after - last).days - 1
+        brief, words = length(empty)
         x = starts[number] + ((last - first).days + 1) * step
         since, until = in_words(last + timedelta(days=1)), in_words(after - timedelta(days=1))
-        cuts.append(Cut(round(x, 2), CUT, brief, f"No transaction for {words}, from {since} to "
-                                                 f"{until}: left out of the strip."))  # fmt: skip
+        note = f"No transaction for {words}, from {since} to {until}: left out of the strip."
+        cuts.append(Cut(round(x, 2), CUT, brief, note, empty))
     first_day, last_day = parts[0][0], parts[-1][1]
     marks = apart([Mark(event_x + event_width / 2, "the event", "middle", event=True),
                    Mark(0, short(first_day), "start"), Mark(width, short(last_day), "end")],
@@ -254,7 +257,8 @@ def strip_view(strip: Strip | None) -> StripView | None:
                      bottom, round(event_x, 2), round(event_width, 2), marks, summary, HINT,
                      table, drawn, ticks, round(max(2.0, drawn / MOST_DAYS_IN_VIEW), 2),
                      round(step, 4), tuple(cuts),
-                     apart([Mark(cut.x + cut.width / 2, cut.text, "middle") for cut in cuts],
+                     apart([Mark(cut.x + cut.width / 2, cut.text, "middle")
+                            for cut in sorted(cuts, key=lambda one: -one.days)],
                            width))  # fmt: skip
 
 

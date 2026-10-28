@@ -187,6 +187,18 @@ def test_an_event_with_no_transaction_is_drawn_beside_the_days_after_it() -> Non
     assert [mark.text for mark in view.marks][:2] == ["4 Mar 2026", "the event"]
 
 
+def test_of_two_close_cuts_the_longer_one_says_its_length() -> None:
+    """Two cuts too close for both lengths: the longer one keeps its length, under itself, and
+    the other says it in its note (28 October 2026, seen on a real card)."""
+    items = [message(STARTS, n=1), message(datetime(2026, 6, 12, tzinfo=UTC), n=2),
+             message(datetime(2026, 9, 11, tzinfo=UTC), n=3)]  # fmt: skip
+    view = strip_view(depth(own((TOPIC_ID, TOPIC)), items).strip)
+    assert [cut.text for cut in view.cuts] == ["37 days", "3 mo"]
+    assert [mark.text for mark in view.cut_marks] == ["3 mo"]
+    longer = view.cuts[1]
+    assert abs(view.cut_marks[0].x - (longer.x + longer.width / 2)) < 15
+
+
 def test_the_lengths_and_the_marks_of_the_strip() -> None:
     assert length(31) == ("31 days", "31 days")
     assert length(365) == ("1 yr", "1 year")
