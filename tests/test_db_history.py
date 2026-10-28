@@ -12,12 +12,12 @@ from fakes import PROJECT_PAGE, project_page
 from hackathon_memory.check.history import CONSENSUS, TOKENS, History
 from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.proof import ANOTHER_KIND, PROOF_FOUND
-from hackathon_memory.db.history import HistoryStore, IdToRead, story_of_project
+from hackathon_memory.db.history import OWN, HistoryStore, IdToRead, story_of_project
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.parse.ethglobal_page import read_project_page
-from hackathon_memory.parse.hedera_ids import TOKEN, TOPIC
+from hackathon_memory.parse.hedera_ids import CONTRACT, TOKEN, TOPIC
 
 pytestmark = pytest.mark.integration
 
@@ -99,6 +99,26 @@ def test_an_id_that_only_the_entries_of_one_repository_name_is_theirs(database: 
                 (other,),
             )
         assert HistoryStore(database).ids_to_read() == [topic]
+
+
+def test_one_contract_named_in_its_two_forms_by_two_teams_is_shared(database: str) -> None:
+    """The first project names a contract by its EVM address, the second by its 0.0 ID: one thing
+    of the ledger that two teams name, so neither owns it (28 October 2026)."""
+    address = "0x8004a818bfb912233c491871b3d84c89a494bd9e"
+    with psycopg.connect(database) as conn:
+        first, second = [row[0] for row in conn.execute("SELECT id FROM projects ORDER BY id")]
+        conn.execute("INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+                     "words_around, in_hashscan_link) VALUES (%s, %s, 'testnet', 'contract', "
+                     "'page', 'invented', false), (%s, '0.0.7919997', 'testnet', 'contract', "
+                     "'page', 'invented', false)", (first, address, second))  # fmt: skip
+    ledger = LedgerStore(database)
+    for entity in (address, "0.0.7919997"):
+        ledger.save_facts(LedgerFacts(entity, "testnet", ASKED, found=True, kind=CONTRACT,
+                                      ledger_id="0.0.7919997", created_at=MADE))  # fmt: skip
+    judge_every_id(database, PROOF_FOUND)
+    owned = {row[0] for row in rows(database, OWN + "SELECT entity_id FROM own")}  # noqa: S608
+    assert address not in owned and "0.0.7919997" not in owned
+    assert "0.0.3456781" in owned  # the first project's topic stays its own
 
 
 def test_a_history_is_kept_with_its_events_and_read_once(database: str) -> None:

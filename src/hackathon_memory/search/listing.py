@@ -18,6 +18,7 @@ import psycopg
 
 from hackathon_memory.check.life import Life, life_of
 from hackathon_memory.check.story import WINDOW_BEFORE
+from hackathon_memory.db.history import OWN
 from hackathon_memory.parse.project import FULL_CARD, WINNER_ENTRY
 from hackathon_memory.search.engine import Hit
 
@@ -90,26 +91,23 @@ class ResultCard:
 
 # The signs of life of each project (design 7.4): the end of its event, the facts of its code,
 # and the last activity of its own ids. An id counts on a network where the proof rule found
-# it, and only when no project with other code names it too: a shared service is not a sign.
+# it, and only when it is the project's own (OWN of db/history.py): a shared service is not a
+# sign.
 # Each sign comes with the moment it was read: GitHub's facts, and the oldest answer of the mirror
 # node about those ids (design 7.4, 25 October 2026).
 _SIGNS = """
-SELECT p.id, e.ends_on, r.code_status, r.made_at, r.last_push_at, own.last_activity,
-       r.code_fetched_at, own.read_at
+SELECT p.id, e.ends_on, r.code_status, r.made_at, r.last_push_at, mine.last_activity,
+       r.code_fetched_at, mine.read_at
 FROM projects p JOIN events e ON e.id = p.event_id
 LEFT JOIN repositories r ON r.id = p.repository_id
 LEFT JOIN LATERAL (
     SELECT max(f.last_activity_at) AS last_activity, min(f.asked_at) AS read_at
-    FROM hedera_ids h
+    FROM hedera_ids h JOIN own USING (entity_id)
     JOIN id_checks c ON c.hedera_id = h.id AND c.status IN (
         'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
     JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network
     WHERE h.project_id = p.id
-      AND NOT EXISTS (
-          SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
-          WHERE o.entity_id = h.entity_id
-            AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id))
-) own ON true
+) mine ON true
 WHERE p.id = ANY(%s)
 """
 
@@ -118,30 +116,28 @@ WHERE p.id = ANY(%s)
 # ID that its page, its README or its code names on the main network, that the main network knows
 # as that kind, made in the time of the event or later (from WINDOW_BEFORE before its start). An
 # ID named with no network does not count: nearly every number of an account also exists on the
-# main network as somebody else's. The own rule is that of the signs of life.
+# main network as somebody else's. The own rule is OWN of db/history.py.
 _MAINNET = """
-SELECT DISTINCT h.project_id FROM hedera_ids h
+SELECT DISTINCT h.project_id FROM hedera_ids h JOIN own USING (entity_id)
 JOIN projects p ON p.id = h.project_id JOIN events e ON e.id = p.event_id
 JOIN id_checks c ON c.hedera_id = h.id AND c.network = 'mainnet' AND c.status IN (
     'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
 JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = 'mainnet'
 WHERE h.project_id = ANY(%s) AND h.network = 'mainnet' AND f.created_at >= e.starts_at - %s
-  AND NOT EXISTS (
-      SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
-      WHERE o.entity_id = h.entity_id
-        AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id))
 """
 
 
 def on_mainnet(conn: psycopg.Connection, ids: Sequence[int]) -> set[int]:
     """The projects among `ids` whose team put an own ID on the main network."""
-    return {row[0] for row in conn.execute(_MAINNET, (list(ids), WINDOW_BEFORE)).fetchall()}
+    rows = conn.execute(OWN + _MAINNET, (list(ids), WINDOW_BEFORE)).fetchall()  # noqa: S608
+    return {row[0] for row in rows}
 
 
 def signs_of_life(conn: psycopg.Connection, ids: Sequence[int]) -> dict[int, tuple]:
     """For each project: the end of its event, the status, start and last push of its code, the
     last activity of its own ids (design 7.4), and when GitHub and the mirror node were read."""
-    return {row[0]: row[1:] for row in conn.execute(_SIGNS, (list(ids),)).fetchall()}
+    rows = conn.execute(OWN + _SIGNS, (list(ids),)).fetchall()  # noqa: S608  (fixed text)
+    return {row[0]: row[1:] for row in rows}
 
 
 def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) -> list[ResultCard]:

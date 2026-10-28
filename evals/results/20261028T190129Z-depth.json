@@ -1,0 +1,4618 @@
+{
+ "test": "depth",
+ "made_on": "2026-10-28",
+ "all": {
+  "projects": 457,
+  "read_with_what_each_transaction_was": 457,
+  "with_transactions_in_the_time": 355,
+  "others_took_part": {
+   "share": 0.8873,
+   "range": [
+    0.8535,
+    0.9183
+   ],
+   "count": 315,
+   "of": 355
+  },
+  "tokens_held_by_others": {
+   "share": 0.1183,
+   "range": [
+    0.0845,
+    0.1521
+   ],
+   "count": 42,
+   "of": 355
+  },
+  "active_on_3_days_or_more": {
+   "share": 0.6254,
+   "range": [
+    0.5746,
+    0.6761
+   ],
+   "count": 222,
+   "of": 355
+  },
+  "with_a_failed_transaction": {
+   "share": 0.4169,
+   "range": [
+    0.3662,
+    0.4676
+   ],
+   "count": 148,
+   "of": 355
+  },
+  "with_a_sign_on_paper": {
+   "share": 0.2013,
+   "range": [
+    0.1663,
+    0.2385
+   ],
+   "count": 92,
+   "of": 457
+  },
+  "signs_on_paper": {
+   "topic_with_no_message": 3,
+   "contract_never_called": 27,
+   "token_held_only_by_its_own": 31,
+   "token_held_by_nobody": 1,
+   "accounts_only_moved_hbar": 17,
+   "package_with_no_call": 14,
+   "no_id_of_its_own": 4
+  },
+  "with_a_setup_said": 293,
+  "setup": {
+   "token_with_custom_fees": 21,
+   "token_with_no_key": 10,
+   "topic_with_a_submit_key": 57,
+   "topic_with_a_fee": 1,
+   "account_with_an_ecdsa_key": 238,
+   "account_with_several_keys": 9
+  },
+  "contracts_reached_a_system_contract": 24,
+  "reached": {
+   "tokens": 18,
+   "scheduled": 10,
+   "hbar": 1,
+   "random numbers": 1,
+   "the exchange rate": 1
+  },
+  "mainnet": 5
+ },
+ "proof_found": {
+  "projects": 358,
+  "read_with_what_each_transaction_was": 358,
+  "with_transactions_in_the_time": 355,
+  "others_took_part": {
+   "share": 0.8873,
+   "range": [
+    0.8535,
+    0.9183
+   ],
+   "count": 315,
+   "of": 355
+  },
+  "tokens_held_by_others": {
+   "share": 0.1183,
+   "range": [
+    0.0845,
+    0.1521
+   ],
+   "count": 42,
+   "of": 355
+  },
+  "active_on_3_days_or_more": {
+   "share": 0.6254,
+   "range": [
+    0.5746,
+    0.6761
+   ],
+   "count": 222,
+   "of": 355
+  },
+  "with_a_failed_transaction": {
+   "share": 0.4169,
+   "range": [
+    0.3662,
+    0.4676
+   ],
+   "count": 148,
+   "of": 355
+  },
+  "with_a_sign_on_paper": {
+   "share": 0.2235,
+   "range": [
+    0.1816,
+    0.2654
+   ],
+   "count": 80,
+   "of": 358
+  },
+  "signs_on_paper": {
+   "topic_with_no_message": 3,
+   "contract_never_called": 27,
+   "token_held_only_by_its_own": 31,
+   "token_held_by_nobody": 1,
+   "accounts_only_moved_hbar": 17,
+   "package_with_no_call": 4,
+   "no_id_of_its_own": 2
+  },
+  "with_a_setup_said": 290,
+  "setup": {
+   "token_with_custom_fees": 21,
+   "token_with_no_key": 10,
+   "topic_with_a_submit_key": 57,
+   "topic_with_a_fee": 1,
+   "account_with_an_ecdsa_key": 236,
+   "account_with_several_keys": 9
+  },
+  "contracts_reached_a_system_contract": 24,
+  "reached": {
+   "tokens": 18,
+   "scheduled": 10,
+   "hbar": 1,
+   "random numbers": 1,
+   "the exchange rate": 1
+  },
+  "mainnet": 5
+ },
+ "per_project": [
+  {
+   "project": 1,
+   "proof": "proof_found",
+   "transactions": 255,
+   "others": 17,
+   "held_by_others": null,
+   "days": 4,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 2,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 3,
+   "proof": "proof_found",
+   "transactions": 167,
+   "others": 8,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 4,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 5,
+   "proof": "proof_found",
+   "transactions": 484,
+   "others": 2,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 6,
+   "proof": "proof_found",
+   "transactions": 183,
+   "others": 12,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 7,
+   "proof": "proof_found",
+   "transactions": 265,
+   "others": 52,
+   "held_by_others": 49,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 8,
+   "proof": "proof_found",
+   "transactions": 37,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 9,
+   "proof": "proof_found",
+   "transactions": 24,
+   "others": 3,
+   "held_by_others": 2,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 10,
+   "proof": "proof_found",
+   "transactions": 77,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 11,
+   "proof": "proof_found",
+   "transactions": 24,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 12,
+   "proof": "proof_found",
+   "transactions": 442,
+   "others": 7,
+   "held_by_others": null,
+   "days": 8,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 13,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 14,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 15,
+   "proof": "proof_found",
+   "transactions": 104,
+   "others": 1,
+   "held_by_others": 8,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 16,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 17,
+   "proof": "proof_found",
+   "transactions": 516,
+   "others": 28,
+   "held_by_others": 3,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 18,
+   "proof": "proof_found",
+   "transactions": 8,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 2,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 19,
+   "proof": "proof_found",
+   "transactions": 2942,
+   "others": 5,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 20,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 21,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 22,
+   "proof": "proof_found",
+   "transactions": 148,
+   "others": 2,
+   "held_by_others": null,
+   "days": 11,
+   "signs": []
+  },
+  {
+   "project": 23,
+   "proof": "proof_found",
+   "transactions": 592,
+   "others": 2,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 24,
+   "proof": "proof_found",
+   "transactions": 119,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 25,
+   "proof": "proof_found",
+   "transactions": 53,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 26,
+   "proof": "proof_found",
+   "transactions": 451,
+   "others": 36,
+   "held_by_others": 1,
+   "days": 4,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 27,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 29,
+   "proof": "proof_found",
+   "transactions": 89,
+   "others": 4,
+   "held_by_others": 2,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 30,
+   "proof": "proof_found",
+   "transactions": 84,
+   "others": 4,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 31,
+   "proof": "proof_found",
+   "transactions": 145,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 33,
+   "proof": "proof_found",
+   "transactions": 7,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 34,
+   "proof": "proof_found",
+   "transactions": 53,
+   "others": 14,
+   "held_by_others": null,
+   "days": 4,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 36,
+   "proof": "proof_found",
+   "transactions": 583,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 37,
+   "proof": "proof_found",
+   "transactions": 188,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 2,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 38,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 39,
+   "proof": "proof_found",
+   "transactions": 467,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 2,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 40,
+   "proof": "proof_found",
+   "transactions": 2487,
+   "others": 2,
+   "held_by_others": 1,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 41,
+   "proof": "proof_found",
+   "transactions": 82,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 42,
+   "proof": "proof_found",
+   "transactions": 139,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 45,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": 1,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 46,
+   "proof": "proof_found",
+   "transactions": 124,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 48,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 49,
+   "proof": "proof_found",
+   "transactions": 36,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 50,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 52,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 53,
+   "proof": "proof_found",
+   "transactions": 21,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 54,
+   "proof": "proof_found",
+   "transactions": 498,
+   "others": 10,
+   "held_by_others": null,
+   "days": 14,
+   "signs": []
+  },
+  {
+   "project": 55,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 58,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 0,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 69,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 70,
+   "proof": "proof_found",
+   "transactions": 6,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 72,
+   "proof": "proof_found",
+   "transactions": 177,
+   "others": 36,
+   "held_by_others": 4,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 79,
+   "proof": "proof_found",
+   "transactions": 7,
+   "others": 3,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 80,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 82,
+   "proof": "proof_found",
+   "transactions": 248,
+   "others": 41,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 84,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 85,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 86,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 89,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 94,
+   "proof": "proof_found",
+   "transactions": 23,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 95,
+   "proof": "proof_found",
+   "transactions": 403,
+   "others": 12,
+   "held_by_others": 0,
+   "days": 2,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 96,
+   "proof": "proof_found",
+   "transactions": 501,
+   "others": 8,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 97,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 98,
+   "proof": "proof_found",
+   "transactions": 2052,
+   "others": 1,
+   "held_by_others": null,
+   "days": 8,
+   "signs": []
+  },
+  {
+   "project": 99,
+   "proof": "proof_found",
+   "transactions": 131,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 100,
+   "proof": "proof_found",
+   "transactions": 314,
+   "others": 79,
+   "held_by_others": 1,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 102,
+   "proof": "proof_found",
+   "transactions": 8,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 103,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 104,
+   "proof": "proof_found",
+   "transactions": 162,
+   "others": 9,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 105,
+   "proof": "proof_found",
+   "transactions": 66,
+   "others": 7,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 106,
+   "proof": "proof_found",
+   "transactions": 44,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 107,
+   "proof": "proof_found",
+   "transactions": 249,
+   "others": 1,
+   "held_by_others": 0,
+   "days": 5,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 108,
+   "proof": "proof_found",
+   "transactions": 60,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 111,
+   "proof": "proof_found",
+   "transactions": 18,
+   "others": 2,
+   "held_by_others": 3,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 112,
+   "proof": "dates_do_not_fit",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "no_id_of_its_own"
+   ]
+  },
+  {
+   "project": 113,
+   "proof": "proof_found",
+   "transactions": 118,
+   "others": 9,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 114,
+   "proof": "proof_found",
+   "transactions": 146,
+   "others": 3,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 115,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 116,
+   "proof": "proof_found",
+   "transactions": 86,
+   "others": 1,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 117,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 119,
+   "proof": "proof_found",
+   "transactions": 545,
+   "others": 2,
+   "held_by_others": null,
+   "days": 35,
+   "signs": []
+  },
+  {
+   "project": 120,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 121,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 122,
+   "proof": "proof_found",
+   "transactions": 13,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 123,
+   "proof": "proof_found",
+   "transactions": 335,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 124,
+   "proof": "proof_found",
+   "transactions": 361,
+   "others": 5,
+   "held_by_others": null,
+   "days": 8,
+   "signs": []
+  },
+  {
+   "project": 125,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 126,
+   "proof": "proof_found",
+   "transactions": 5,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 128,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 129,
+   "proof": "proof_found",
+   "transactions": 84,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 130,
+   "proof": "proof_found",
+   "transactions": 447,
+   "others": 15,
+   "held_by_others": 9,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 131,
+   "proof": "proof_found",
+   "transactions": 3,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 132,
+   "proof": "proof_found",
+   "transactions": 133,
+   "others": 3,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 133,
+   "proof": "proof_found",
+   "transactions": 63,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 134,
+   "proof": "proof_found",
+   "transactions": 1104,
+   "others": 19,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 135,
+   "proof": "proof_found",
+   "transactions": 5,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 136,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 137,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 139,
+   "proof": "proof_found",
+   "transactions": 39,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 140,
+   "proof": "proof_found",
+   "transactions": 372,
+   "others": 34,
+   "held_by_others": 7,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 141,
+   "proof": "proof_found",
+   "transactions": 7,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 142,
+   "proof": "proof_found",
+   "transactions": 3,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 143,
+   "proof": "proof_found",
+   "transactions": 141,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 144,
+   "proof": "proof_found",
+   "transactions": 29,
+   "others": 2,
+   "held_by_others": 0,
+   "days": 1,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 145,
+   "proof": "proof_found",
+   "transactions": 149,
+   "others": 3,
+   "held_by_others": 0,
+   "days": 7,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 146,
+   "proof": "proof_found",
+   "transactions": 39,
+   "others": 5,
+   "held_by_others": 496,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 147,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 148,
+   "proof": "proof_found",
+   "transactions": 52,
+   "others": 7,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 149,
+   "proof": "dates_do_not_fit",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": 500,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 150,
+   "proof": "proof_found",
+   "transactions": 128,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 151,
+   "proof": "proof_found",
+   "transactions": 38,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 152,
+   "proof": "proof_found",
+   "transactions": 655,
+   "others": 21,
+   "held_by_others": 20,
+   "days": 8,
+   "signs": []
+  },
+  {
+   "project": 154,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 155,
+   "proof": "proof_found",
+   "transactions": 18,
+   "others": 5,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 156,
+   "proof": "proof_found",
+   "transactions": 417,
+   "others": 3,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 157,
+   "proof": "proof_found",
+   "transactions": 83,
+   "others": 4,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 158,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 159,
+   "proof": "proof_found",
+   "transactions": 132,
+   "others": 18,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 160,
+   "proof": "proof_found",
+   "transactions": 127,
+   "others": 1,
+   "held_by_others": null,
+   "days": 7,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 161,
+   "proof": "proof_found",
+   "transactions": 33,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 162,
+   "proof": "proof_found",
+   "transactions": 178,
+   "others": 4,
+   "held_by_others": 1,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 163,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 164,
+   "proof": "proof_found",
+   "transactions": 236,
+   "others": 18,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 165,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 166,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 167,
+   "proof": "proof_found",
+   "transactions": 9,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 169,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 171,
+   "proof": "proof_found",
+   "transactions": 48,
+   "others": 14,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 172,
+   "proof": "proof_found",
+   "transactions": 189,
+   "others": 1,
+   "held_by_others": null,
+   "days": 11,
+   "signs": []
+  },
+  {
+   "project": 173,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 174,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 175,
+   "proof": "proof_found",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "no_id_of_its_own"
+   ]
+  },
+  {
+   "project": 176,
+   "proof": "proof_found",
+   "transactions": 220,
+   "others": 6,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "contract_never_called",
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 177,
+   "proof": "proof_found",
+   "transactions": 1084,
+   "others": 77,
+   "held_by_others": null,
+   "days": 13,
+   "signs": []
+  },
+  {
+   "project": 180,
+   "proof": "proof_found",
+   "transactions": 1623,
+   "others": 15,
+   "held_by_others": null,
+   "days": 11,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 181,
+   "proof": "proof_found",
+   "transactions": 19,
+   "others": 1,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 182,
+   "proof": "proof_found",
+   "transactions": 361,
+   "others": 42,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 184,
+   "proof": "proof_found",
+   "transactions": 79,
+   "others": 10,
+   "held_by_others": 1,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 185,
+   "proof": "proof_found",
+   "transactions": 137,
+   "others": 3,
+   "held_by_others": null,
+   "days": 4,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 186,
+   "proof": "proof_found",
+   "transactions": 104,
+   "others": 7,
+   "held_by_others": null,
+   "days": 10,
+   "signs": []
+  },
+  {
+   "project": 187,
+   "proof": "proof_found",
+   "transactions": 519,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 7,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 188,
+   "proof": "proof_found",
+   "transactions": 118,
+   "others": 5,
+   "held_by_others": null,
+   "days": 6,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 189,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 190,
+   "proof": "proof_found",
+   "transactions": 9,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 191,
+   "proof": "proof_found",
+   "transactions": 22,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 192,
+   "proof": "proof_found",
+   "transactions": 55,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 193,
+   "proof": "proof_found",
+   "transactions": 138,
+   "others": 3,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 194,
+   "proof": "proof_found",
+   "transactions": 257,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 8,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 195,
+   "proof": "proof_found",
+   "transactions": 19,
+   "others": 0,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 196,
+   "proof": "proof_found",
+   "transactions": 97,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": [
+    "topic_with_no_message"
+   ]
+  },
+  {
+   "project": 197,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 198,
+   "proof": "proof_found",
+   "transactions": 17,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 200,
+   "proof": "proof_found",
+   "transactions": 14,
+   "others": 0,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 202,
+   "proof": "proof_found",
+   "transactions": 345,
+   "others": 6,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 203,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 204,
+   "proof": "proof_found",
+   "transactions": 137,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 205,
+   "proof": "proof_found",
+   "transactions": 100,
+   "others": 5,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 206,
+   "proof": "proof_found",
+   "transactions": 15,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 207,
+   "proof": "proof_found",
+   "transactions": 39,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 209,
+   "proof": "proof_found",
+   "transactions": 36,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 210,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 211,
+   "proof": "proof_found",
+   "transactions": 439,
+   "others": 19,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 212,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 214,
+   "proof": "proof_found",
+   "transactions": 1313,
+   "others": 1,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 215,
+   "proof": "proof_found",
+   "transactions": 36,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 216,
+   "proof": "proof_found",
+   "transactions": 8,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 217,
+   "proof": "proof_found",
+   "transactions": 20,
+   "others": 0,
+   "held_by_others": null,
+   "days": 3,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 218,
+   "proof": "proof_found",
+   "transactions": 268,
+   "others": 5,
+   "held_by_others": 2,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 219,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 220,
+   "proof": "proof_found",
+   "transactions": 169,
+   "others": 21,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 221,
+   "proof": "proof_found",
+   "transactions": 223,
+   "others": 9,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 222,
+   "proof": "proof_found",
+   "transactions": 99,
+   "others": 11,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 223,
+   "proof": "proof_found",
+   "transactions": 579,
+   "others": 4,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 224,
+   "proof": "proof_found",
+   "transactions": 122,
+   "others": 5,
+   "held_by_others": 5,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 225,
+   "proof": "proof_found",
+   "transactions": 16,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 226,
+   "proof": "proof_found",
+   "transactions": 159,
+   "others": 13,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 228,
+   "proof": "proof_found",
+   "transactions": 32,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 229,
+   "proof": "proof_found",
+   "transactions": 1101,
+   "others": 31,
+   "held_by_others": 13,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 230,
+   "proof": "proof_found",
+   "transactions": 337,
+   "others": 10,
+   "held_by_others": null,
+   "days": 12,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 231,
+   "proof": "proof_found",
+   "transactions": 141,
+   "others": 5,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 232,
+   "proof": "proof_found",
+   "transactions": 624,
+   "others": 12,
+   "held_by_others": null,
+   "days": 7,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 233,
+   "proof": "proof_found",
+   "transactions": 427,
+   "others": 7,
+   "held_by_others": null,
+   "days": 28,
+   "signs": []
+  },
+  {
+   "project": 234,
+   "proof": "proof_found",
+   "transactions": 142,
+   "others": 8,
+   "held_by_others": 3,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 235,
+   "proof": "proof_found",
+   "transactions": 236,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 236,
+   "proof": "proof_found",
+   "transactions": 92,
+   "others": 14,
+   "held_by_others": null,
+   "days": 10,
+   "signs": []
+  },
+  {
+   "project": 237,
+   "proof": "proof_found",
+   "transactions": 98,
+   "others": 4,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 238,
+   "proof": "proof_found",
+   "transactions": 91,
+   "others": 14,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 239,
+   "proof": "proof_found",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "no_id_of_its_own"
+   ]
+  },
+  {
+   "project": 240,
+   "proof": "proof_found",
+   "transactions": 118,
+   "others": 4,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 241,
+   "proof": "proof_found",
+   "transactions": 18,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 242,
+   "proof": "proof_found",
+   "transactions": 96,
+   "others": 0,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 243,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 245,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 246,
+   "proof": "proof_found",
+   "transactions": 7,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 247,
+   "proof": "proof_found",
+   "transactions": 15,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 248,
+   "proof": "proof_found",
+   "transactions": 19,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 249,
+   "proof": "proof_found",
+   "transactions": 45,
+   "others": 0,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 250,
+   "proof": "proof_found",
+   "transactions": 82,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 252,
+   "proof": "proof_found",
+   "transactions": 225,
+   "others": 4,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 253,
+   "proof": "proof_found",
+   "transactions": 17,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 254,
+   "proof": "proof_found",
+   "transactions": 5,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 257,
+   "proof": "proof_found",
+   "transactions": 199,
+   "others": 3,
+   "held_by_others": null,
+   "days": 13,
+   "signs": []
+  },
+  {
+   "project": 258,
+   "proof": "proof_found",
+   "transactions": 18,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 259,
+   "proof": "proof_found",
+   "transactions": 140,
+   "others": 4,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 261,
+   "proof": "proof_found",
+   "transactions": 69,
+   "others": 4,
+   "held_by_others": 6,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 262,
+   "proof": "proof_found",
+   "transactions": 174,
+   "others": 10,
+   "held_by_others": null,
+   "days": 13,
+   "signs": []
+  },
+  {
+   "project": 263,
+   "proof": "proof_found",
+   "transactions": 108,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 264,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 265,
+   "proof": "proof_found",
+   "transactions": 243,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 5,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 266,
+   "proof": "proof_found",
+   "transactions": 2087,
+   "others": 6,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 268,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 270,
+   "proof": "proof_found",
+   "transactions": 135,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 271,
+   "proof": "proof_found",
+   "transactions": 31,
+   "others": 3,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 272,
+   "proof": "proof_found",
+   "transactions": 260,
+   "others": 1,
+   "held_by_others": null,
+   "days": 8,
+   "signs": []
+  },
+  {
+   "project": 273,
+   "proof": "proof_found",
+   "transactions": 20,
+   "others": 1,
+   "held_by_others": null,
+   "days": 5,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 274,
+   "proof": "proof_found",
+   "transactions": 687,
+   "others": 16,
+   "held_by_others": null,
+   "days": 14,
+   "signs": []
+  },
+  {
+   "project": 275,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 3,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 276,
+   "proof": "proof_found",
+   "transactions": 184,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 277,
+   "proof": "proof_found",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 278,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 279,
+   "proof": "proof_found",
+   "transactions": 12,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 280,
+   "proof": "proof_found",
+   "transactions": 62,
+   "others": 3,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 281,
+   "proof": "proof_found",
+   "transactions": 312,
+   "others": 4,
+   "held_by_others": null,
+   "days": 8,
+   "signs": []
+  },
+  {
+   "project": 284,
+   "proof": "proof_found",
+   "transactions": 38,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 285,
+   "proof": "proof_found",
+   "transactions": 153,
+   "others": 5,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 286,
+   "proof": "proof_found",
+   "transactions": 5547,
+   "others": 8,
+   "held_by_others": 1,
+   "days": 37,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 287,
+   "proof": "proof_found",
+   "transactions": 145,
+   "others": 9,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 288,
+   "proof": "proof_found",
+   "transactions": 93,
+   "others": 5,
+   "held_by_others": 0,
+   "days": 6,
+   "signs": [
+    "topic_with_no_message",
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 289,
+   "proof": "proof_found",
+   "transactions": 2924,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 290,
+   "proof": "proof_found",
+   "transactions": 589,
+   "others": 1,
+   "held_by_others": null,
+   "days": 8,
+   "signs": []
+  },
+  {
+   "project": 291,
+   "proof": "proof_found",
+   "transactions": 24,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 292,
+   "proof": "proof_found",
+   "transactions": 136,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 294,
+   "proof": "proof_found",
+   "transactions": 9,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "accounts_only_moved_hbar",
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 295,
+   "proof": "proof_found",
+   "transactions": 650,
+   "others": 13,
+   "held_by_others": null,
+   "days": 15,
+   "signs": []
+  },
+  {
+   "project": 297,
+   "proof": "proof_found",
+   "transactions": 51,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 298,
+   "proof": "proof_found",
+   "transactions": 78,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 299,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 300,
+   "proof": "proof_found",
+   "transactions": 55,
+   "others": 1,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 301,
+   "proof": "proof_found",
+   "transactions": 302,
+   "others": 3,
+   "held_by_others": null,
+   "days": 6,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 302,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 303,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 304,
+   "proof": "proof_found",
+   "transactions": 2575,
+   "others": 237,
+   "held_by_others": 304,
+   "days": 4,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 305,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 3,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 306,
+   "proof": "proof_found",
+   "transactions": 25,
+   "others": 1,
+   "held_by_others": 0,
+   "days": 5,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 307,
+   "proof": "proof_found",
+   "transactions": 32,
+   "others": 1,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 308,
+   "proof": "proof_found",
+   "transactions": 2768,
+   "others": 6,
+   "held_by_others": null,
+   "days": 13,
+   "signs": []
+  },
+  {
+   "project": 309,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 311,
+   "proof": "proof_found",
+   "transactions": 1258,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 312,
+   "proof": "proof_found",
+   "transactions": 74,
+   "others": 4,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 313,
+   "proof": "proof_found",
+   "transactions": 12,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 314,
+   "proof": "proof_found",
+   "transactions": 114,
+   "others": 11,
+   "held_by_others": 5,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 316,
+   "proof": "proof_found",
+   "transactions": 58,
+   "others": 3,
+   "held_by_others": 1,
+   "days": 17,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 317,
+   "proof": "proof_found",
+   "transactions": 171,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 318,
+   "proof": "proof_found",
+   "transactions": 48,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 319,
+   "proof": "proof_found",
+   "transactions": 10,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 320,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 3,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 321,
+   "proof": "proof_found",
+   "transactions": 143,
+   "others": 2,
+   "held_by_others": null,
+   "days": 20,
+   "signs": []
+  },
+  {
+   "project": 322,
+   "proof": "proof_found",
+   "transactions": 264,
+   "others": 6,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 323,
+   "proof": "proof_found",
+   "transactions": 37,
+   "others": 5,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 325,
+   "proof": "proof_found",
+   "transactions": 56,
+   "others": 6,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 326,
+   "proof": "proof_found",
+   "transactions": 2085,
+   "others": 10,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 327,
+   "proof": "proof_found",
+   "transactions": 5205,
+   "others": 9,
+   "held_by_others": null,
+   "days": 10,
+   "signs": []
+  },
+  {
+   "project": 328,
+   "proof": "proof_found",
+   "transactions": 123,
+   "others": 12,
+   "held_by_others": null,
+   "days": 10,
+   "signs": []
+  },
+  {
+   "project": 329,
+   "proof": "proof_found",
+   "transactions": 1530,
+   "others": 61,
+   "held_by_others": 11,
+   "days": 16,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 330,
+   "proof": "proof_found",
+   "transactions": 7,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 332,
+   "proof": "proof_found",
+   "transactions": 396,
+   "others": 17,
+   "held_by_others": null,
+   "days": 14,
+   "signs": []
+  },
+  {
+   "project": 333,
+   "proof": "proof_found",
+   "transactions": 27,
+   "others": 5,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 334,
+   "proof": "proof_found",
+   "transactions": 6,
+   "others": 4,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 335,
+   "proof": "proof_found",
+   "transactions": 269,
+   "others": 4,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 336,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 338,
+   "proof": "proof_found",
+   "transactions": 23,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 339,
+   "proof": "proof_found",
+   "transactions": 6,
+   "others": 3,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 341,
+   "proof": "proof_found",
+   "transactions": 28,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 342,
+   "proof": "proof_found",
+   "transactions": 269,
+   "others": 18,
+   "held_by_others": null,
+   "days": 10,
+   "signs": []
+  },
+  {
+   "project": 343,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 345,
+   "proof": "proof_found",
+   "transactions": 77,
+   "others": 3,
+   "held_by_others": null,
+   "days": 6,
+   "signs": [
+    "topic_with_no_message"
+   ]
+  },
+  {
+   "project": 346,
+   "proof": "proof_found",
+   "transactions": 475,
+   "others": 5,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 347,
+   "proof": "proof_found",
+   "transactions": 21,
+   "others": 3,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 349,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 350,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 351,
+   "proof": "proof_found",
+   "transactions": 48,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 352,
+   "proof": "proof_found",
+   "transactions": 41,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 354,
+   "proof": "proof_found",
+   "transactions": 5,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 355,
+   "proof": "proof_found",
+   "transactions": 1138,
+   "others": 3,
+   "held_by_others": 2,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 356,
+   "proof": "proof_found",
+   "transactions": 553,
+   "others": 1,
+   "held_by_others": 2,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 357,
+   "proof": "proof_found",
+   "transactions": 268,
+   "others": 3,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 358,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 359,
+   "proof": "proof_found",
+   "transactions": 340,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 2,
+   "signs": [
+    "token_held_only_by_its_own",
+    "token_held_by_nobody"
+   ]
+  },
+  {
+   "project": 360,
+   "proof": "proof_found",
+   "transactions": 34,
+   "others": 2,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 361,
+   "proof": "proof_found",
+   "transactions": 129,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 362,
+   "proof": "proof_found",
+   "transactions": 58,
+   "others": 12,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 364,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 365,
+   "proof": "proof_found",
+   "transactions": 608,
+   "others": 9,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 366,
+   "proof": "proof_found",
+   "transactions": 9,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 367,
+   "proof": "proof_found",
+   "transactions": 181,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 368,
+   "proof": "proof_found",
+   "transactions": 211,
+   "others": 10,
+   "held_by_others": 3,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 369,
+   "proof": "proof_found",
+   "transactions": 236,
+   "others": 10,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 370,
+   "proof": "proof_found",
+   "transactions": 932,
+   "others": 3,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 371,
+   "proof": "proof_found",
+   "transactions": 306,
+   "others": 1,
+   "held_by_others": 0,
+   "days": 2,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 372,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 373,
+   "proof": "proof_found",
+   "transactions": 318,
+   "others": 4,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 374,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 375,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 376,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 377,
+   "proof": "proof_found",
+   "transactions": 58,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 378,
+   "proof": "proof_found",
+   "transactions": 39,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 379,
+   "proof": "proof_found",
+   "transactions": 51,
+   "others": 2,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 381,
+   "proof": "proof_found",
+   "transactions": 35,
+   "others": 4,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 382,
+   "proof": "proof_found",
+   "transactions": 34,
+   "others": 1,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 383,
+   "proof": "proof_found",
+   "transactions": 243,
+   "others": 20,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 384,
+   "proof": "proof_found",
+   "transactions": 35,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 385,
+   "proof": "proof_found",
+   "transactions": 7,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 386,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 387,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 388,
+   "proof": "proof_found",
+   "transactions": 346,
+   "others": 1,
+   "held_by_others": null,
+   "days": 10,
+   "signs": []
+  },
+  {
+   "project": 393,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 394,
+   "proof": "proof_found",
+   "transactions": 33,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 395,
+   "proof": "proof_found",
+   "transactions": 14,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 396,
+   "proof": "proof_found",
+   "transactions": 113,
+   "others": 0,
+   "held_by_others": 0,
+   "days": 4,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 397,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 398,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 399,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 400,
+   "proof": "proof_found",
+   "transactions": 2000,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 401,
+   "proof": "proof_found",
+   "transactions": 362,
+   "others": 3,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 402,
+   "proof": "proof_found",
+   "transactions": 46,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 404,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 405,
+   "proof": "proof_found",
+   "transactions": 181,
+   "others": 21,
+   "held_by_others": 3,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 406,
+   "proof": "proof_found",
+   "transactions": 22,
+   "others": 1,
+   "held_by_others": 4,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 407,
+   "proof": "proof_found",
+   "transactions": 89,
+   "others": 3,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 408,
+   "proof": "proof_found",
+   "transactions": 41,
+   "others": 3,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 409,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 410,
+   "proof": "proof_found",
+   "transactions": 90,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 411,
+   "proof": "proof_found",
+   "transactions": 3352,
+   "others": 59,
+   "held_by_others": null,
+   "days": 10,
+   "signs": []
+  },
+  {
+   "project": 412,
+   "proof": "proof_found",
+   "transactions": 231,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 416,
+   "proof": "proof_found",
+   "transactions": 68,
+   "others": 4,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 417,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 418,
+   "proof": "proof_found",
+   "transactions": 9,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 419,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 420,
+   "proof": "proof_found",
+   "transactions": 55,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 421,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": 1,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 422,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 423,
+   "proof": "proof_found",
+   "transactions": 161,
+   "others": 8,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 424,
+   "proof": "dates_do_not_fit",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "no_id_of_its_own"
+   ]
+  },
+  {
+   "project": 425,
+   "proof": "proof_found",
+   "transactions": 69,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 426,
+   "proof": "proof_found",
+   "transactions": 14,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 428,
+   "proof": "proof_found",
+   "transactions": 25,
+   "others": 3,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 429,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 430,
+   "proof": "proof_found",
+   "transactions": 27,
+   "others": 3,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 432,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 436,
+   "proof": "proof_found",
+   "transactions": 32,
+   "others": 0,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 437,
+   "proof": "proof_found",
+   "transactions": 102,
+   "others": 8,
+   "held_by_others": 7,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 438,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 439,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 440,
+   "proof": "proof_found",
+   "transactions": 10,
+   "others": 1,
+   "held_by_others": 1,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 441,
+   "proof": "proof_found",
+   "transactions": 39,
+   "others": 5,
+   "held_by_others": 4,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 442,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 443,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 447,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 448,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 449,
+   "proof": "proof_found",
+   "transactions": 181,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 450,
+   "proof": "proof_found",
+   "transactions": 23,
+   "others": 1,
+   "held_by_others": null,
+   "days": 8,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 452,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 453,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 455,
+   "proof": "proof_found",
+   "transactions": 24,
+   "others": 3,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 456,
+   "proof": "dates_do_not_fit",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 458,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 464,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 465,
+   "proof": "proof_found",
+   "transactions": 1069,
+   "others": 0,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 467,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 468,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 470,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 471,
+   "proof": "proof_found",
+   "transactions": 4,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 472,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 473,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 477,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 479,
+   "proof": "proof_found",
+   "transactions": 76,
+   "others": 6,
+   "held_by_others": null,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 480,
+   "proof": "proof_found",
+   "transactions": 55,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 482,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 483,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 484,
+   "proof": "proof_found",
+   "transactions": 28,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 486,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 488,
+   "proof": "dates_do_not_fit",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 491,
+   "proof": "proof_found",
+   "transactions": 662,
+   "others": 4,
+   "held_by_others": null,
+   "days": 13,
+   "signs": []
+  },
+  {
+   "project": 493,
+   "proof": "proof_found",
+   "transactions": 3,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "accounts_only_moved_hbar",
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 494,
+   "proof": "proof_found",
+   "transactions": 168,
+   "others": 7,
+   "held_by_others": 2,
+   "days": 5,
+   "signs": []
+  },
+  {
+   "project": 498,
+   "proof": "proof_found",
+   "transactions": 14,
+   "others": 1,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 499,
+   "proof": "proof_found",
+   "transactions": 42,
+   "others": 2,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 502,
+   "proof": "proof_found",
+   "transactions": 51,
+   "others": 5,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 503,
+   "proof": "proof_found",
+   "transactions": 30,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 504,
+   "proof": "proof_found",
+   "transactions": 15,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 505,
+   "proof": "proof_found",
+   "transactions": 46,
+   "others": 5,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 508,
+   "proof": "proof_found",
+   "transactions": 181,
+   "others": 0,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 509,
+   "proof": "proof_found",
+   "transactions": 27,
+   "others": 5,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 510,
+   "proof": "proof_found",
+   "transactions": 54,
+   "others": 1,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 513,
+   "proof": "proof_found",
+   "transactions": 11,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 514,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 516,
+   "proof": "proof_found",
+   "transactions": 12,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 518,
+   "proof": "proof_found",
+   "transactions": 35,
+   "others": 2,
+   "held_by_others": null,
+   "days": 4,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 519,
+   "proof": "proof_found",
+   "transactions": 42,
+   "others": 3,
+   "held_by_others": 1,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 520,
+   "proof": "proof_found",
+   "transactions": 230,
+   "others": 61,
+   "held_by_others": 18,
+   "days": 24,
+   "signs": []
+  },
+  {
+   "project": 521,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 525,
+   "proof": "proof_found",
+   "transactions": 1444,
+   "others": 294,
+   "held_by_others": 0,
+   "days": 21,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 526,
+   "proof": "proof_found",
+   "transactions": 9,
+   "others": 1,
+   "held_by_others": 0,
+   "days": 3,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 530,
+   "proof": "proof_found",
+   "transactions": 88,
+   "others": 0,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 536,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 537,
+   "proof": "proof_found",
+   "transactions": 64,
+   "others": 2,
+   "held_by_others": 1,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 542,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 543,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 0,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 544,
+   "proof": "dates_do_not_fit",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 545,
+   "proof": "proof_found",
+   "transactions": 65,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 547,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 549,
+   "proof": "proof_found",
+   "transactions": 1811,
+   "others": 18,
+   "held_by_others": null,
+   "days": 8,
+   "signs": []
+  },
+  {
+   "project": 552,
+   "proof": "proof_found",
+   "transactions": 38,
+   "others": 3,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 555,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 556,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 558,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 559,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 562,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 563,
+   "proof": "proof_found",
+   "transactions": 9,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 564,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 565,
+   "proof": "proof_found",
+   "transactions": 5,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 566,
+   "proof": "proof_found",
+   "transactions": 46,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 567,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 569,
+   "proof": "proof_found",
+   "transactions": 83,
+   "others": 1,
+   "held_by_others": 1,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 573,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 574,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 575,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 577,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 578,
+   "proof": "proof_found",
+   "transactions": 25,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 582,
+   "proof": "proof_found",
+   "transactions": 104,
+   "others": 3,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 583,
+   "proof": "proof_found",
+   "transactions": 23,
+   "others": 2,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 587,
+   "proof": "proof_found",
+   "transactions": 58,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 590,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 591,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 593,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 594,
+   "proof": "proof_found",
+   "transactions": 3,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 596,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 597,
+   "proof": "proof_found",
+   "transactions": 3,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 600,
+   "proof": "proof_found",
+   "transactions": 41,
+   "others": 4,
+   "held_by_others": 0,
+   "days": 2,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 604,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 607,
+   "proof": "proof_found",
+   "transactions": 25,
+   "others": 1,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 614,
+   "proof": "proof_found",
+   "transactions": 33,
+   "others": 5,
+   "held_by_others": null,
+   "days": 3,
+   "signs": [
+    "accounts_only_moved_hbar"
+   ]
+  },
+  {
+   "project": 626,
+   "proof": "proof_found",
+   "transactions": 22,
+   "others": 1,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 630,
+   "proof": "proof_found",
+   "transactions": 109,
+   "others": 0,
+   "held_by_others": null,
+   "days": 4,
+   "signs": []
+  },
+  {
+   "project": 631,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": []
+  },
+  {
+   "project": 636,
+   "proof": "proof_found",
+   "transactions": 41,
+   "others": 3,
+   "held_by_others": null,
+   "days": 3,
+   "signs": []
+  },
+  {
+   "project": 638,
+   "proof": "proof_found",
+   "transactions": 20,
+   "others": 3,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 640,
+   "proof": "proof_found",
+   "transactions": 13,
+   "others": 2,
+   "held_by_others": 0,
+   "days": 1,
+   "signs": [
+    "token_held_only_by_its_own"
+   ]
+  },
+  {
+   "project": 642,
+   "proof": "proof_found",
+   "transactions": 249,
+   "others": 3,
+   "held_by_others": null,
+   "days": 7,
+   "signs": []
+  },
+  {
+   "project": 643,
+   "proof": "proof_found",
+   "transactions": 26,
+   "others": 2,
+   "held_by_others": null,
+   "days": 6,
+   "signs": []
+  },
+  {
+   "project": 644,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": [
+    "contract_never_called"
+   ]
+  },
+  {
+   "project": 648,
+   "proof": "no_id_given",
+   "transactions": 0,
+   "others": null,
+   "held_by_others": null,
+   "days": 0,
+   "signs": [
+    "package_with_no_call"
+   ]
+  },
+  {
+   "project": 649,
+   "proof": "proof_found",
+   "transactions": 94,
+   "others": 0,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 650,
+   "proof": "proof_found",
+   "transactions": 2,
+   "others": 2,
+   "held_by_others": null,
+   "days": 2,
+   "signs": []
+  },
+  {
+   "project": 651,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": 1,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 656,
+   "proof": "proof_found",
+   "transactions": 7,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  },
+  {
+   "project": 657,
+   "proof": "proof_found",
+   "transactions": 1,
+   "others": 1,
+   "held_by_others": null,
+   "days": 1,
+   "signs": []
+  }
+ ],
+ "second_counting": {
+  "drawn": 20,
+  "of": 340,
+  "seed": 20261025,
+  "both_agree": {
+   "share": 1.0,
+   "range": [
+    1.0,
+    1.0
+   ],
+   "count": 20,
+   "of": 20
+  },
+  "rows": [
+   {
+    "project": 339,
+    "tool_transactions": 6,
+    "plain_transactions": 6,
+    "tool_others": 3,
+    "plain_others": 3
+   },
+   {
+    "project": 308,
+    "tool_transactions": 2768,
+    "plain_transactions": 2768,
+    "tool_others": 6,
+    "plain_others": 6
+   },
+   {
+    "project": 198,
+    "tool_transactions": 17,
+    "plain_transactions": 17,
+    "tool_others": 1,
+    "plain_others": 1
+   },
+   {
+    "project": 180,
+    "tool_transactions": 1623,
+    "plain_transactions": 1623,
+    "tool_others": 15,
+    "plain_others": 15
+   },
+   {
+    "project": 498,
+    "tool_transactions": 14,
+    "plain_transactions": 14,
+    "tool_others": 1,
+    "plain_others": 1
+   },
+   {
+    "project": 355,
+    "tool_transactions": 1138,
+    "plain_transactions": 1138,
+    "tool_others": 3,
+    "plain_others": 3
+   },
+   {
+    "project": 58,
+    "tool_transactions": 1,
+    "plain_transactions": 1,
+    "tool_others": 0,
+    "plain_others": 0
+   },
+   {
+    "project": 329,
+    "tool_transactions": 1530,
+    "plain_transactions": 1530,
+    "tool_others": 61,
+    "plain_others": 61
+   },
+   {
+    "project": 297,
+    "tool_transactions": 51,
+    "plain_transactions": 51,
+    "tool_others": 1,
+    "plain_others": 1
+   },
+   {
+    "project": 140,
+    "tool_transactions": 372,
+    "plain_transactions": 372,
+    "tool_others": 34,
+    "plain_others": 34
+   },
+   {
+    "project": 133,
+    "tool_transactions": 63,
+    "plain_transactions": 63,
+    "tool_others": 2,
+    "plain_others": 2
+   },
+   {
+    "project": 39,
+    "tool_transactions": 467,
+    "plain_transactions": 467,
+    "tool_others": 0,
+    "plain_others": 0
+   },
+   {
+    "project": 278,
+    "tool_transactions": 1,
+    "plain_transactions": 1,
+    "tool_others": 2,
+    "plain_others": 2
+   },
+   {
+    "project": 352,
+    "tool_transactions": 41,
+    "plain_transactions": 41,
+    "tool_others": 1,
+    "plain_others": 1
+   },
+   {
+    "project": 316,
+    "tool_transactions": 58,
+    "plain_transactions": 58,
+    "tool_others": 3,
+    "plain_others": 3
+   },
+   {
+    "project": 583,
+    "tool_transactions": 23,
+    "plain_transactions": 23,
+    "tool_others": 2,
+    "plain_others": 2
+   },
+   {
+    "project": 70,
+    "tool_transactions": 6,
+    "plain_transactions": 6,
+    "tool_others": 1,
+    "plain_others": 1
+   },
+   {
+    "project": 292,
+    "tool_transactions": 136,
+    "plain_transactions": 136,
+    "tool_others": 2,
+    "plain_others": 2
+   },
+   {
+    "project": 508,
+    "tool_transactions": 181,
+    "plain_transactions": 181,
+    "tool_others": 0,
+    "plain_others": 0
+   },
+   {
+    "project": 578,
+    "tool_transactions": 25,
+    "plain_transactions": 25,
+    "tool_others": 0,
+    "plain_others": 0
+   }
+  ]
+ }
+}
