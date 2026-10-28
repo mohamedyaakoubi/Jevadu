@@ -15,7 +15,7 @@ class Card:
 
 def depth(did: int, others: int | None, days: int, *signs: str) -> Depth:
     return Depth((("messages to a topic", did),) if did else (), 0, 0, others, None, days, days,
-                 0, 0, tuple(signs), (), True, None, total=did)  # fmt: skip
+                 0, 0, tuple(signs), True, None, total=did)  # fmt: skip
 
 
 def test_the_counts_follow_the_depth_of_each_card() -> None:

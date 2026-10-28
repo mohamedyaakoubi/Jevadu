@@ -11,8 +11,7 @@ depth of use says what that use was, as facts that the ledger gives and that a p
 * the signs that stay on paper: a topic with no message, a token held only by accounts that the
   project names, a contract never called after its deployment, own accounts that only moved
   HBAR, a Hedera package in the code with no call to a Hedera service, and IDs that other
-  projects name too;
-* the page's own words about Hedera: its sentences that name Hedera or a service, word for word.
+  projects name too.
 
 It also gives the strip of days that the card draws (Strip). No score, no rank and no word such
 as "meaningful": the code counts, and a person reads (design 3.3). The time is the time of the
@@ -21,22 +20,17 @@ ledger story's table (check/story.py).
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 
 from hackathon_memory.check.history import HBAR, NETWORK_ACCOUNTS, SERVICES, Act
-from hackathon_memory.check.story import OwnId, places_in, time_of
+from hackathon_memory.check.story import OwnId, time_of
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
 
 MOST_KINDS = 6  # the kinds of transaction named; the others are counted together
-MOST_SAID = 3  # the sentences of the page about Hedera that are shown
-LONGEST_SAID = 300  # the characters of one of them
 MESSAGE, DEPLOYED, CALLED = "CONSENSUSSUBMITMESSAGE", "CONTRACTCREATEINSTANCE", "CONTRACTCALL"
-_SENTENCES = re.compile(r"(?<=[.!?])\s+|\n+")
-_HEDERA = re.compile(r"\b(?:hedera|hashgraph|hbar)\b", re.IGNORECASE)
 
 # The kinds of transaction in plain words, one and many (design 7.5). A kind that the list does
 # not hold is one of the "other transactions".
@@ -98,10 +92,7 @@ class Strip:
     event_first: date
     event_last: date
     rows: tuple[tuple[str, tuple[Day, ...]], ...]  # each service with a transaction, its days
-    before: int  # the transactions of the project's own things before that time
-    after: int  # and after it; an account's are not counted (check/story.py)
     most: int  # the most transactions of one service on one day
-    outside_counted: bool = True  # False when its own IDs are accounts only
 
     @property
     def days(self) -> int:
@@ -122,7 +113,6 @@ class Depth:
     days_before: int
     days_after: int
     on_paper: tuple[str, ...]  # the signs that stay on paper, each a sentence of facts
-    said: tuple[str, ...]  # the page's own sentences that name Hedera or a service
     read: bool  # every own ID was read with what its transactions were
     strip: Strip | None  # None when the days of the event are not known
     total: int = 0  # the transactions in the time of the table, each moment once
@@ -138,20 +128,6 @@ def merged(done: Sequence[Done]) -> list[Done]:
         if kept is None or (kept.kind == ACCOUNT and one.kind != ACCOUNT):
             by_stamp[one.stamp] = one
     return sorted(by_stamp.values(), key=lambda one: one.at)
-
-
-def page_said(words: str) -> tuple[str, ...]:
-    """The first sentences of a text that name Hedera or one of its services, word for word."""
-    found: list[str] = []
-    for part in _SENTENCES.split(words):
-        sentence = " ".join(part.split())
-        if sentence and (_HEDERA.search(sentence) or places_in(sentence)):
-            shown = sentence if len(sentence) <= LONGEST_SAID else sentence[:LONGEST_SAID] + "…"
-            if shown not in found:
-                found.append(shown)
-        if len(found) == MOST_SAID:
-            break
-    return tuple(found)
 
 
 def kinds_in_words(inside: Sequence[Done]) -> tuple[tuple[tuple[str, int], ...], int, int]:
@@ -236,14 +212,7 @@ def strip_of(
                          for day, items in sorted(by_day.items()))  # fmt: skip
             most = max(most, *(one.count for one in days))
             rows.append((service, days))
-    things = (
-        [one for one in moments if one.kind != ACCOUNT]
-        if any(one.kind != ACCOUNT for one in own)
-        else []
-    )
-    return Strip(span[0].date(), span[1].date(), starts_at.date(), ends_on, tuple(rows),
-                 sum(one.at < span[0] for one in things), sum(one.at > span[1] for one in things),
-                 most, any(one.kind != ACCOUNT for one in own))  # fmt: skip
+    return Strip(span[0].date(), span[1].date(), starts_at.date(), ends_on, tuple(rows), most)
 
 
 def depth_of(
@@ -254,7 +223,6 @@ def depth_of(
     *,
     starts_at: datetime | None,
     ends_on: date | None,
-    words: str,
     in_code: frozenset[str] | None,
     set_up: frozenset[str] = frozenset(),
     has_package: bool = False,
@@ -263,9 +231,9 @@ def depth_of(
 ) -> Depth:
     """The depth of use of one project. `own` are its own IDs on their network (the story's),
     `done` the transactions of those that were read, with what each was, `holders` the accounts
-    that hold each own token now, `named` every ID that the project names, `words` the page's own
-    words, `in_code` and `set_up` what its code calls and sets up for (check/story.py), and
-    `read` whether every own ID was read with what its transactions were."""
+    that hold each own token now, `named` every ID that the project names, `in_code` and
+    `set_up` what its code calls and sets up for (check/story.py), and `read` whether every own
+    ID was read with what its transactions were."""
     span = time_of(starts_at, ends_on)
     moments = merged(done)
     inside = [one for one in moments if span is None or span[0] <= one.at <= span[1]]
@@ -288,7 +256,6 @@ def depth_of(
         sum(ends_on is not None and day > ends_on for day in days),
         on_paper(own, moments, inside, holders, named, in_code=in_code, set_up=set_up,
                  has_package=has_package, shared_only=shared_only),
-        page_said(words),
         read,
         strip_of(moments, own, span, starts_at, ends_on)
         if span is not None and starts_at is not None and ends_on is not None else None,

@@ -230,7 +230,6 @@ def depth_of_project(
     project_id: int,
     story: Story | None,
     *,
-    words: str,
     in_code: frozenset[str] | None,
     set_up: frozenset[str] = frozenset(),
     has_package: bool = False,
@@ -281,5 +280,5 @@ def depth_of_project(
                 done.append(Done(stamp, at, service, entity, kind, network, act))
     all_read = len(read) == len(own_ids) and all(depths.get(key, 0) >= DEPTH for key in kinds)
     return depth_of(own_ids, done, holders, named, starts_at=starts_at, ends_on=ends_on,
-                    words=words, in_code=in_code, set_up=set_up, has_package=has_package,
+                    in_code=in_code, set_up=set_up, has_package=has_package,
                     shared_only=shared_only, read=all_read)  # fmt: skip

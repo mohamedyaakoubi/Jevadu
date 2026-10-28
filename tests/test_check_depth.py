@@ -6,11 +6,9 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 
 from hackathon_memory.check.depth import (
-    LONGEST_SAID,
     Done,
     depth_of,
     kinds_in_words,
-    page_said,
 )
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, HBAR, TOKENS, Act
 from hackathon_memory.check.story import OwnId
@@ -41,7 +39,7 @@ def message(at: datetime, payer: str = TEAM, n: int = 0) -> Done:
 def depth(ids: tuple[OwnId, ...], items: list[Done], **options: object):  # noqa: ANN201
     holders = options.pop("holders", {})
     return depth_of(ids, items, holders, NAMED, starts_at=STARTS, ends_on=ENDS,
-                    words=options.pop("words", ""), in_code=options.pop("in_code", None),
+                    in_code=options.pop("in_code", None),
                     **options)  # fmt: skip
 
 
@@ -91,7 +89,9 @@ def test_the_days_are_counted_during_before_and_after_the_event() -> None:
              message(datetime(2026, 9, 1, tzinfo=UTC), n=5)]  # fmt: skip
     result = depth(own((TOPIC_ID, TOPIC)), items)
     assert (result.days, result.days_during, result.days_before, result.days_after) == (4, 2, 1, 1)
-    assert result.strip is not None and (result.strip.before, result.strip.after) == (0, 1)
+    assert result.strip is not None  # it draws the days of the time of the table only
+    drawn = {one.day for _, days in result.strip.rows for one in days}
+    assert date(2026, 4, 20) in drawn and date(2026, 9, 1) not in drawn
 
 
 def test_the_signs_that_stay_on_paper_are_facts() -> None:
@@ -121,15 +121,6 @@ def test_an_evm_project_set_up_for_hedera_is_not_said_to_call_nothing() -> None:
     assert result.on_paper == ()
 
 
-def test_the_page_own_words_about_hedera_are_quoted_as_written() -> None:
-    words = ("A booking app. We log each booking on the Hedera Consensus Service.\n"
-             "Payments use HTS tokens! Nothing else here. " + "Hedera " + "x" * 400)  # fmt: skip
-    said = page_said(words)
-    assert said[:2] == ("We log each booking on the Hedera Consensus Service.",
-                        "Payments use HTS tokens!")  # fmt: skip
-    assert len(said) == 3 and said[2].endswith("…") and len(said[2]) == LONGEST_SAID + 1
-
-
 def test_the_strip_draws_each_service_on_its_row_with_its_shade() -> None:
     items = [message(STARTS, n=n) for n in range(9)]
     items.append(message(STARTS + timedelta(days=1), n=20))
@@ -143,5 +134,5 @@ def test_the_strip_draws_each_service_on_its_row_with_its_shade() -> None:
     assert view.rows[1].squares[0].note == "3 April 2026: 1 Token Service transaction"
     assert [mark.text for mark in view.marks] == ["4 March 2026", "the event", "5 May 2026"]
     assert [row.name for row in view.rows] == ["Consensus", "Tokens"]
-    assert len(view.table) == 3 and view.outside == "Before that time: none. After it: none."
+    assert len(view.table) == 3
     assert strip_view(None) is None

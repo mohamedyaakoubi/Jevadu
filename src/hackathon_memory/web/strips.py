@@ -82,7 +82,6 @@ class StripView:
     marks: tuple[Mark, ...]
     summary: str
     hint: str
-    outside: str  # the transactions before and after the time, in words
     table: tuple[TableRow, ...]
 
 
@@ -100,12 +99,6 @@ def ink(count: int, most: int) -> float:
     if most <= 1:
         return 1.0
     return round(LIGHTEST + (1 - LIGHTEST) * math.log1p(count - 1) / math.log1p(most - 1), 3)
-
-
-def outside(count: int, counted: bool) -> str:
-    if not counted:
-        return "not counted, since its IDs are accounts only"
-    return "none" if count == 0 else f"{count:,} transaction{'s' if count != 1 else ''}"
 
 
 def strip_view(strip: Strip | None) -> StripView | None:
@@ -142,13 +135,8 @@ def strip_view(strip: Strip | None) -> StripView | None:
     table = tuple(sorted((TableRow(one.day, service, one.count)
                           for service, days in strip.rows for one in days),
                          key=lambda row: (row.day, row.service)))  # fmt: skip
-    if strip.outside_counted:
-        around = (f"Before that time: {outside(strip.before, True)}. "
-                  f"After it: {outside(strip.after, True)}.")  # fmt: skip
-    else:
-        around = "Before and after that time: not counted, since its IDs are accounts only."
     return StripView(WIDTH, int(bottom + FOOT), LEFT, WIDTH, tuple(rows), bottom,
-                     round(event_x, 2), round(event_width, 2), marks, summary, HINT, around,
+                     round(event_x, 2), round(event_width, 2), marks, summary, HINT,
                      table)  # fmt: skip
 
 

@@ -476,7 +476,6 @@ def depth_of_check(check: SubmissionCheck, read: Read) -> Depth | None:
     return depth_of(read.own, read.done, read.holders, {one.found.entity_id for one in check.ids},
                     starts_at=event.starts_at if event is not None else None,
                     ends_on=event.ends_on if event is not None else None,
-                    words=readme_prose(check.readme_text),
                     in_code=services_in_code(found) if found is not None else None,
                     set_up=set_up_in_code(found or []), has_package=has_package,
                     shared_only=shared_only,

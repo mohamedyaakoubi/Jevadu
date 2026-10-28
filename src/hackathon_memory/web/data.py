@@ -308,7 +308,7 @@ def project_card(
         words = "\n".join([short_line, *(one.body for one in sections)])
         story = story_of_project(conn, project_id, words=words, in_code=services_of(code_reading),
                                  set_up=set_up_of(code_reading))  # fmt: skip
-        depth = depth_of_project(conn, project_id, story, words=words,
+        depth = depth_of_project(conn, project_id, story,
                                  in_code=services_of(code_reading),
                                  set_up=set_up_of(code_reading),
                                  has_package=has_a_package(code_reading))  # fmt: skip
