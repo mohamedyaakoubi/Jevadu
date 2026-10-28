@@ -16,7 +16,7 @@ from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.parse.ethglobal_page import read_project_page
-from hackathon_memory.parse.hedera_code import CodeScan, Seen
+from hackathon_memory.parse.hedera_code import RELAY, CodeScan, Seen
 from hackathon_memory.settings import Settings
 
 PEBBLE = "https://github.com/sample-org/pebble-pay"
@@ -52,17 +52,28 @@ def test_the_counts_hold_numbers_and_no_name(
                     mentions=Seen(3, ["a.ts"]))  # fmt: skip
     store.save_code(PEBBLE, CodeRead("read", used, DAY))
     store.save_code(CEDAR, CodeRead("read", CodeScan(files=4, mentions=Seen(1, ["b.ts"])), DAY))
+    set_up = CodeScan(
+        files=5,
+        commit=ARCHIVE_COMMIT,
+        packages={"@hashgraph/sdk": ["package.json"]},
+        signs={RELAY: Seen(1, ["hardhat.config.ts"])},
+    )  # an EVM setup, no call
+    store.save_code(FERN, CodeRead("read", set_up, DAY))
     with psycopg.connect(empty_database) as conn:  # as the check on the ledger leaves them
         conn.execute("UPDATE projects SET proof_status = 'no_id_given'")
         conn.execute("UPDATE projects SET proof_status = 'proof_found' WHERE name = 'Cedar Lens'")
     found = code_findings.counts(empty_database)
-    assert found["projects"]["all"] == {"use": 1, "mention_only": 1, "not_read": 1,
+    assert found["projects"]["all"] == {"use": 2, "mention_only": 1,
                                         "no_repository_on_github": 1}  # fmt: skip
     assert found["projects"]["no_prize"] == found["projects"]["all"]
-    assert found["projects_with_no_hedera_id"]["all"] == {"use": 1, "not_read": 1,
+    assert found["projects_with_no_hedera_id"]["all"] == {"use": 2,
                                                           "no_repository_on_github": 1}  # fmt: skip
-    assert found["repositories_per_name"] == {"feature": {"Token Service": 1}}
-    assert found["repositories_read"] == {"read": 2}
+    assert found["repositories_per_name"] == {"feature": {"Token Service": 1},
+                                              "package": {"@hashgraph/sdk": 1},
+                                              "sign": {RELAY: 1}}  # fmt: skip
+    assert found["repositories_read"] == {"read": 3}
+    assert found["the_code_column"] == {"a_hedera_package_and_no_call": 1,
+                                        "smart_contracts_by_an_evm_setup_only": 1}  # fmt: skip
 
     settings = Settings(_env_file=None, database_url=empty_database)
     monkeypatch.setattr(code_findings, "RESULTS", tmp_path)

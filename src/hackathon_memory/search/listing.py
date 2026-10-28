@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import psycopg
 
@@ -52,6 +52,9 @@ class LedgerLine:
     asked_at: datetime | None
     action: str | None = None  # for a transaction: its kind, such as CRYPTOTRANSFER
     outcome: str | None = None  # for a transaction: SUCCESS, or why it failed
+    found_at: str | None = None  # an ID of the code: the file where it stands
+    said_kind: str | None = None  # what the page or the README calls it
+    named_network: str | None = None  # the network that the page or the README names with it
 
 
 @dataclass(frozen=True)
@@ -70,32 +73,48 @@ class ResultCard:
     last_push_at: datetime | None = None
     life: Life | None = None
     entry_kind: str = FULL_CARD
+    event_starts_at: datetime | None = None
+    event_ends_on: date | None = None
+    last_own_activity_at: datetime | None = None  # the last activity of its own IDs (design 7.4)
+    code_read_at: datetime | None = None  # when GitHub last answered about its repository
+    ledger_read_at: datetime | None = None  # the oldest answer of the mirror node about its IDs
+
+    @property
+    def proven_by_code_only(self) -> bool:
+        """True when only IDs of the code prove the project's use of Hedera (design 7.3)."""
+        proofs = [line for line in self.ledger if line.status == "proof_found"]
+        return bool(proofs) and all(line.found_in == "code" for line in proofs)
 
 
 # The signs of life of each project (design 7.4): the end of its event, the facts of its code,
 # and the last activity of its own ids. An id counts on a network where the proof rule found
 # it, and only when no project with other code names it too: a shared service is not a sign.
+# Each sign comes with the moment it was read: GitHub's facts, and the oldest answer of the mirror
+# node about those ids (design 7.4, 25 October 2026).
 _SIGNS = """
-SELECT p.id, e.ends_on, r.code_status, r.made_at, r.last_push_at,
-       (SELECT max(f.last_activity_at)
-        FROM hedera_ids h
-        JOIN id_checks c ON c.hedera_id = h.id AND c.status IN (
-            'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
-        JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network
-        WHERE h.project_id = p.id
-          AND NOT EXISTS (
-              SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
-              WHERE o.entity_id = h.entity_id
-                AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id)))
+SELECT p.id, e.ends_on, r.code_status, r.made_at, r.last_push_at, own.last_activity,
+       r.code_fetched_at, own.read_at
 FROM projects p JOIN events e ON e.id = p.event_id
 LEFT JOIN repositories r ON r.id = p.repository_id
+LEFT JOIN LATERAL (
+    SELECT max(f.last_activity_at) AS last_activity, min(f.asked_at) AS read_at
+    FROM hedera_ids h
+    JOIN id_checks c ON c.hedera_id = h.id AND c.status IN (
+        'proof_found', 'window_not_known', 'dates_do_not_fit', 'found_but_empty')
+    JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network
+    WHERE h.project_id = p.id
+      AND NOT EXISTS (
+          SELECT 1 FROM hedera_ids o JOIN projects op ON op.id = o.project_id
+          WHERE o.entity_id = h.entity_id
+            AND coalesce(op.repository_id, -op.id) <> coalesce(p.repository_id, -p.id))
+) own ON true
 WHERE p.id = ANY(%s)
 """
 
 
 def signs_of_life(conn: psycopg.Connection, ids: Sequence[int]) -> dict[int, tuple]:
-    """For each project: the end of its event, the status, start and last push of its code, and
-    the last activity of its own ids (design 7.4)."""
+    """For each project: the end of its event, the status, start and last push of its code, the
+    last activity of its own ids (design 7.4), and when GitHub and the mirror node were read."""
     return {row[0]: row[1:] for row in conn.execute(_SIGNS, (list(ids),)).fetchall()}
 
 
@@ -108,7 +127,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
             row[0]: row[1:]
             for row in conn.execute(
                 "SELECT p.id, p.name, e.name, p.prize_state, p.proof_status, p.page_url, r.url, "
-                "p.entry_kind "
+                "p.entry_kind, e.starts_at "
                 "FROM projects p JOIN events e ON e.id = p.event_id "
                 "LEFT JOIN repositories r ON r.id = p.repository_id WHERE p.id = ANY(%s)",
                 (ids,),
@@ -118,7 +137,7 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
         for row in conn.execute(
             "SELECT h.project_id, h.entity_id, h.found_in, c.network, c.status, f.kind, "
             "f.created_at, f.last_activity_at, f.asked_at, f.details ->> 'name', "
-            "f.details ->> 'result' "
+            "f.details ->> 'result', h.found_at, h.said_kind, h.network "
             "FROM hedera_ids h LEFT JOIN id_checks c ON c.hedera_id = h.id "
             "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = c.network "
             "WHERE h.project_id = ANY(%s) ORDER BY h.project_id, h.id, c.network",
@@ -130,8 +149,10 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
     for rank, hit in enumerate(hits, start=1):
         if hit.project_id not in projects:
             continue
-        end, code_status, made_at, last_push, last_activity = signs[hit.project_id]
-        *facts, entry_kind = projects[hit.project_id]
+        end, code_status, made_at, last_push, last_activity, code_read, ledger_read = signs[
+            hit.project_id
+        ]
+        *facts, entry_kind, starts_at = projects[hit.project_id]
         life = life_of(
             event_end=end, last_push=last_push, last_ledger_activity=last_activity, now=now
         )
@@ -146,6 +167,11 @@ def cards(conninfo: str, hits: Sequence[Hit], *, now: datetime | None = None) ->
                 last_push_at=last_push,
                 life=life,
                 entry_kind=entry_kind,
+                event_starts_at=starts_at,
+                event_ends_on=end,
+                last_own_activity_at=last_activity,
+                code_read_at=code_read,
+                ledger_read_at=ledger_read,
             )
         )
     return found

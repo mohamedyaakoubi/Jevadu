@@ -175,7 +175,8 @@
         data: {
           labels: numbers.labels,
           datasets: series.map(function (one) {
-            return { label: one.label, data: one.data, backgroundColor: colours[one.color] || all, borderRadius: 3, barPercentage: 0.9 };
+            // a chart of few rows is 140 pixels high (_parts.html): its bars stay bars
+            return { label: one.label, data: one.data, backgroundColor: colours[one.color] || all, borderRadius: 3, barPercentage: 0.9, maxBarThickness: 20 };
           })
         },
         options: {
@@ -254,9 +255,13 @@
     var width = tip.offsetWidth, height = tip.offsetHeight;
     var left = Math.min(Math.max(8, rect.left + rect.width / 2 - width / 2), window.innerWidth - width - 8);
     var below = rect.bottom + 8, above = rect.top - height - 8;
-    var top = below + height < window.innerHeight - 8 || above < 8 ? below : above;
+    // Below when it fits, else above when it fits. A text taller than both stands whole on the
+    // screen, over its (i) if need be, and scrolls inside itself: it is never taller than the
+    // screen (style.css). Before, it ran off the bottom (24 October 2026).
+    var top = below + height <= window.innerHeight - 8 ? below : above >= 8 ? above :
+      Math.max(8, window.innerHeight - height - 8);
     tip.style.left = Math.round(left) + "px";
-    tip.style.top = Math.round(Math.max(8, top)) + "px";
+    tip.style.top = Math.round(top) + "px";
   }
   function showTip(button) {
     var tip = $(button.getAttribute("data-tip"));
@@ -307,6 +312,506 @@
   });
   window.addEventListener("resize", hideTip);
 
+  // ---------------------------------------------------------------- where the page says a word
+  // A word of the page in the ledger story is a button (design 7.5): it marks each place where the
+  // page's texts on the card say it, and brings the next one into view at each press, as a search
+  // of the page would.
+  // ------------------------------------------------------------- the days of the ledger
+  // A square of the strip of days (design 7.5) names its day and its number in the line under
+  // the strip, when the pointer rests on it or when it has the focus of the keyboard.
+  function stripNote(event) {
+    var square = event.target.closest && event.target.closest("[data-strip] a[data-note]");
+    if (!square) return;
+    var note = square.closest("[data-strip]").querySelector(".hm-strip-note");
+    if (note) note.textContent = square.getAttribute("data-note");
+  }
+  document.addEventListener("mouseover", stripNote);
+  document.addEventListener("focusin", stripNote);
+
+  // The days widen (design 12.1, S2, 28 October 2026): Ctrl and the mouse wheel over the strip
+  // (a pinch of a touchpad comes as the same) widen or narrow them around the pointer, and the
+  // buttons + and - around the middle of what is in view. Only the places and the widths of the
+  // shapes stretch, with the width of the drawing, so its words keep their size; the days scroll
+  // sideways. Wide enough, a short date stands under every few days.
+  var TICK_ROOM = 56; // pixels between two dates under the days
+  var TICK_HALF = 22; // pixels from the middle of a date to its end
+  var TICK_STEPS = [1, 2, 7, 14, 28]; // every day, every second day, every week...
+
+  // The dates under the days, for what is in view: none at the first width, else every few days,
+  // whole, and clear of "the event".
+  function stripTicks(scroller) {
+    var svg = scroller.querySelector(".hm-strip-svg");
+    var group = svg && svg.querySelector(".hm-strip-ticks");
+    if (!group) return;
+    var zoom = Number(svg.getAttribute("data-zoom") || 1);
+    var width = Number(svg.getAttribute("data-width"));
+    var unit = scroller.clientWidth / width; // pixels of one unit of the drawing
+    var day = width / Number(svg.getAttribute("data-days")) * zoom * unit; // pixels of one day
+    var every = TICK_STEPS[TICK_STEPS.length - 1];
+    for (var n = 0; n < TICK_STEPS.length; n++) {
+      if (TICK_STEPS[n] * day >= TICK_ROOM) { every = TICK_STEPS[n]; break; }
+    }
+    var wide = zoom > 1;
+    group.setAttribute("display", wide ? "inline" : "none");
+    svg.querySelectorAll(".hm-strip-end").forEach(function (end) {
+      end.setAttribute("display", wide ? "none" : "inline");
+    });
+    if (!wide) return;
+    var label = svg.querySelector(".hm-strip-event-mark");
+    var box = label ? label.getBBox() : null;
+    var half = TICK_HALF / unit; // drawing units
+    var from = scroller.scrollLeft / unit + half;
+    var to = (scroller.scrollLeft + scroller.clientWidth) / unit - half;
+    group.querySelectorAll("text").forEach(function (tick, number) {
+      var x = Number(tick.getAttribute("data-x")) * zoom;
+      var clear = !box || Math.abs(x - (box.x + box.width / 2)) > box.width / 2 + 2 * half;
+      var whole = x >= from && x <= to;
+      tick.setAttribute("display", number % every === 0 && clear && whole ? "inline" : "none");
+    });
+  }
+
+  var ticking = null;
+  document.addEventListener("scroll", function (event) { // scroll does not bubble: caught early
+    var scroller = event.target;
+    if (!scroller.classList || !scroller.classList.contains("hm-strip-scroll") || ticking) return;
+    ticking = window.requestAnimationFrame(function () { ticking = null; stripTicks(scroller); });
+  }, true);
+
+  function widenStrip(figure, factor, at) {
+    var scroller = figure && figure.querySelector(".hm-strip-scroll");
+    var svg = scroller && scroller.querySelector(".hm-strip-svg");
+    if (!svg) return false;
+    var before = Number(svg.getAttribute("data-zoom") || 1);
+    var most = Number(svg.getAttribute("data-most")) || 1;
+    var zoom = Math.min(most, Math.max(1, before * factor));
+    if (Math.abs(zoom - before) < 0.001) return false;
+    if (at === undefined) at = scroller.clientWidth / 2;
+    var share = (scroller.scrollLeft + at) / scroller.scrollWidth; // the place under `at` stays
+    var width = Number(svg.getAttribute("data-width"));
+    svg.setAttribute("data-zoom", String(zoom));
+    svg.setAttribute("viewBox", "0 0 " + width * zoom + " " + svg.getAttribute("data-height"));
+    svg.style.width = zoom * 100 + "%";
+    svg.querySelectorAll("[data-x]").forEach(function (shape) {
+      shape.setAttribute("x", Number(shape.getAttribute("data-x")) * zoom);
+      var wide = shape.getAttribute("data-w");
+      if (wide === null) return;
+      var day = shape.classList.contains("hm-strip-day"); // a day keeps its gap of one unit
+      shape.setAttribute("width", day ? Math.max((Number(wide) + 1) * zoom - 1, 1.5)
+        : Number(wide) * zoom);
+    });
+    svg.querySelectorAll(".hm-strip-base").forEach(function (line) {
+      line.setAttribute("x2", width * zoom);
+    });
+    scroller.scrollLeft = share * scroller.scrollWidth - at;
+    stripTicks(scroller);
+    figure.querySelector('[data-zoom="out"]').disabled = zoom <= 1;
+    figure.querySelector('[data-zoom="in"]').disabled = zoom >= most;
+    return true;
+  }
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest && event.target.closest("[data-strip] .hm-strip-zoom");
+    if (button) widenStrip(button.closest("[data-strip]"),
+                           button.getAttribute("data-zoom") === "in" ? 2 : 0.5);
+  });
+  document.addEventListener("wheel", function (event) {
+    if (!event.ctrlKey) return;
+    var frame = event.target.closest && event.target.closest("[data-strip] .hm-strip-frame");
+    if (!frame) return;
+    event.preventDefault(); // over the strip, the wheel with Ctrl widens its days, not the page
+    var scroller = frame.querySelector(".hm-strip-scroll");
+    var lines = event.deltaMode === 1 ? 33 : (event.deltaMode === 2 ? 400 : 1);
+    var box = scroller.getBoundingClientRect();
+    var at = Math.min(Math.max(event.clientX - box.left, 0), scroller.clientWidth);
+    widenStrip(frame.closest("[data-strip]"), Math.exp(-event.deltaY * lines / 300), at);
+  }, { passive: false });
+
+  var LESS_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-said-word]");
+    var shown = button ? null : event.target.closest("mark.hm-said.is-shown");
+    if (shown) { // a marked place in the text: the word that marked it goes on to the next place
+      var home = shown.closest(".project");
+      button = home ? home.querySelector("[data-said-word][data-at]") : null;
+    }
+    var card = button ? button.closest(".project") : null;
+    if (!card) return;
+    var word = button.getAttribute("data-said-word");
+    var marks = Array.prototype.filter.call(card.querySelectorAll("mark.hm-said"), function (mark) {
+      return mark.getAttribute("data-word") === word;
+    });
+    card.querySelectorAll("mark.hm-said.is-shown").forEach(function (mark) {
+      mark.classList.remove("is-shown", "is-current");
+      mark.removeAttribute("title");
+    });
+    card.querySelectorAll("[data-said-word][data-at]").forEach(function (other) {
+      if (other !== button) other.removeAttribute("data-at");
+    });
+    if (!marks.length) return;
+    var at = button.getAttribute("data-at");
+    var next = at === null ? 0 : (Number(at) + 1) % marks.length;
+    button.setAttribute("data-at", String(next));
+    marks.forEach(function (mark) {
+      mark.classList.add("is-shown");
+      if (marks.length > 1) mark.title = "Next place";
+    });
+    marks[next].classList.add("is-current");
+    var box = marks[next].closest("details"); // the lines of a README, shown when asked for
+    if (box) box.open = true;
+    marks[next].scrollIntoView({ block: "center", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
+    var status = card.querySelector(".hm-said-status");
+    var story = button.closest("[data-said-in]");
+    var where = story ? story.getAttribute("data-said-in") : "on the page";
+    if (status) {
+      status.textContent = "“" + marks[next].textContent + "” " + where + ": place " +
+        (next + 1) + " of " + marks.length + "." +
+        (marks.length > 1 ? " Press the word again, or a marked place, for the next one." : "");
+    }
+  });
+
+  // ---------------------------------------------------------------- the graph of a list
+  // A dot of the graph (design 8.6, S7) shows its project while the pointer rests on it, with the
+  // line to its closest project, and opens its card on a click, through the link of the same
+  // project in the lists under the graph. The click keeps the line and both dots lit after the card
+  // is closed, until a click on an empty place. The name of a group opens the card of the project
+  // it is named after. The words of a project are put in as text only.
+  function graphDot(node) { return node && node.closest ? node.closest(".hm-dot") : null; }
+  function graphName(node) { return node && node.closest ? node.closest("[data-graph-centre]") : null; }
+  function graphOf(node) { return node.closest("[data-graph]"); }
+  function dotOf(graph, id) { return graph.querySelector('.hm-dot[data-graph-id="' + id + '"]'); }
+  function listLink(id) { return document.querySelector('[data-graph-link="' + id + '"]'); }
+  function darkGraph(graph) { // what the pointer showed goes; the kept dot stays (keepDot)
+    graph.querySelectorAll(".is-lit").forEach(function (one) { one.classList.remove("is-lit"); });
+    var hover = graph.querySelector(".hm-graph-hover");
+    if (hover) hover.setAttribute("visibility", "hidden");
+    var tip = graph.querySelector(".hm-graph-tip");
+    if (tip) tip.hidden = true;
+  }
+  function strongLines(graph, dot) {
+    return graph.querySelectorAll('.hm-graph-lines line[data-ends~="' + dot.getAttribute("data-graph-id") + '"]');
+  }
+  // `line` joins the dot to its closest project; returns that project's dot, or null.
+  function joinNearest(graph, dot, line) {
+    var near = dot.getAttribute("data-near"), other = near ? dotOf(graph, near) : null;
+    if (!other || !line) return null;
+    var from = dot.querySelector(".hm-mark"), to = other.querySelector(".hm-mark");
+    line.setAttribute("x1", from.getAttribute("cx"));
+    line.setAttribute("y1", from.getAttribute("cy"));
+    line.setAttribute("x2", to.getAttribute("cx"));
+    line.setAttribute("y2", to.getAttribute("cy"));
+    line.setAttribute("visibility", "visible");
+    return other;
+  }
+  function lightGraph(graph, dot) {
+    dot.classList.add("is-lit");
+    strongLines(graph, dot).forEach(function (line) { line.classList.add("is-lit"); });
+    var other = joinNearest(graph, dot, graph.querySelector(".hm-graph-hover"));
+    if (other) other.classList.add("is-lit");
+  }
+  // The dot that a click kept has a line of its own: it stays lit, with its closest project,
+  // while the pointer shows other dots, until a click on an empty place (24 October 2026: the
+  // pointer took it away, and the dot had to be found again).
+  function keepDot(graph, dot) {
+    graph.querySelectorAll(".is-kept, .is-kept-near").forEach(function (one) {
+      one.classList.remove("is-kept", "is-kept-near");
+    });
+    var kept = graph.querySelector(".hm-graph-kept");
+    if (kept) kept.setAttribute("visibility", "hidden");
+    if (!dot) { graph.removeAttribute("data-kept"); return; }
+    graph.setAttribute("data-kept", dot.getAttribute("data-graph-id"));
+    dot.classList.add("is-kept");
+    strongLines(graph, dot).forEach(function (line) { line.classList.add("is-kept"); });
+    var other = joinNearest(graph, dot, kept);
+    if (other) other.classList.add("is-kept-near");
+  }
+  function showGraphTip(graph, dot) {
+    var tip = graph.querySelector(".hm-graph-tip");
+    if (!tip) return;
+    tip.textContent = "";
+    function line(text, kind, label) { // a label stands out from its value
+      if (!text) return;
+      var one = document.createElement("p");
+      if (kind) one.className = kind;
+      if (label) {
+        var title = document.createElement("span");
+        title.className = "hm-tip-label";
+        title.textContent = label + " ";
+        one.appendChild(title);
+      }
+      one.appendChild(document.createTextNode(text));
+      tip.appendChild(one);
+    }
+    var rank = dot.getAttribute("data-rank"), near = dot.getAttribute("data-near");
+    var other = near ? dotOf(graph, near) : null;
+    line(dot.getAttribute("data-name"), "hm-tip-name");
+    line((rank ? "Number " + rank + " in the list · " : "") + dot.getAttribute("data-event"), "hm-tip-small");
+    line(dot.getAttribute("data-line"));
+    line(dot.getAttribute("data-proof"), "hm-tip-small", "Proof:");
+    line(dot.getAttribute("data-prize"), "hm-tip-small", "Won:");
+    line(dot.getAttribute("data-group"), "hm-tip-small", "Group:");
+    if (other) { // a project at the edge of its group can be closest to one of another group
+      var apart = other.getAttribute("data-group") !== dot.getAttribute("data-group");
+      line(other.getAttribute("data-name") + (apart ? ", in the group " + other.getAttribute("data-group") : ""),
+        "hm-tip-small", "Closest in meaning:");
+    }
+    tip.hidden = false;
+    var box = graph.getBoundingClientRect(), mark = dot.querySelector(".hm-mark").getBoundingClientRect();
+    var x = mark.left + mark.width / 2 - box.left, y = mark.top + mark.height / 2 - box.top;
+    var width = tip.offsetWidth, height = tip.offsetHeight;
+    var left = x + width + 16 < box.width ? x + 14 : x - width - 14;
+    var top = y + height + 16 < box.height ? y + 14 : y - height - 14;
+    tip.style.left = Math.round(Math.max(4, left)) + "px";
+    tip.style.top = Math.round(Math.max(4, top)) + "px";
+  }
+  document.addEventListener("pointerover", function (event) {
+    if (dragging && dragging.moved) return;
+    var dot = graphDot(event.target);
+    var link = dot ? null : event.target.closest && event.target.closest("[data-graph-link]");
+    if (link) dot = document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
+    if (!dot) return;
+    var graph = graphOf(dot);
+    darkGraph(graph);
+    lightGraph(graph, dot);
+    if (!link && HOVER.matches) showGraphTip(graph, dot);
+  });
+  document.addEventListener("pointerout", function (event) {
+    var from = graphDot(event.target) || (event.target.closest && event.target.closest("[data-graph-link]"));
+    if (!from || (event.relatedTarget && from.contains(event.relatedTarget))) return;
+    document.querySelectorAll("[data-graph]").forEach(darkGraph);
+  });
+  document.addEventListener("focusin", function (event) { // a project of the lists, by keyboard
+    var link = event.target.closest && event.target.closest("[data-graph-link]");
+    var dot = link && document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
+    if (!dot) return;
+    darkGraph(graphOf(dot));
+    lightGraph(graphOf(dot), dot);
+  });
+  document.addEventListener("focusout", function (event) {
+    if (event.target.closest && event.target.closest("[data-graph-link]")) {
+      document.querySelectorAll("[data-graph]").forEach(darkGraph);
+    }
+  });
+  document.addEventListener("click", function (event) {
+    var dot = graphDot(event.target), name = dot ? null : graphName(event.target);
+    var id = dot ? dot.getAttribute("data-graph-id") : name ? name.getAttribute("data-graph-centre") : null;
+    if (!id || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    var link = listLink(id);
+    if (!link || !window.htmx) return; // the address of the dot then loads the whole page
+    event.preventDefault();
+    var graph = graphOf(dot || name);
+    keepDot(graph, dot || dotOf(graph, id));
+    // The picture is hidden from screen readers: the focus does not stay in it, so the window of
+    // the card gives it back to the page, not to the dot.
+    if (document.activeElement && graph.contains(document.activeElement)) document.activeElement.blur();
+    window.htmx.trigger(link, "click");
+  });
+  document.addEventListener("click", function (event) { // a project of the lists keeps its dot too
+    var link = event.target.closest && event.target.closest("[data-graph-link]");
+    var dot = link && document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
+    if (dot && event.isTrusted) keepDot(graphOf(dot), dot);
+  });
+  document.addEventListener("click", function (event) { // an empty place lets go of the kept dot
+    var svg = event.target.closest && event.target.closest(".hm-graph-svg");
+    if (!svg) return;
+    if (svg.hmDragged) { svg.hmDragged = false; return; } // the click that ends a drag
+    if (!graphDot(event.target) && !graphName(event.target)) keepDot(graphOf(svg), null);
+  });
+
+  // Ctrl and the wheel, or the pinch of a touchpad, which the browser sends the same way, zoom the
+  // graph around the pointer, up to 8 times; a drag, or two fingers on a touchpad, move the zoomed
+  // graph, and three buttons zoom in, out and back. The dots, the lines and the names keep their
+  // size on the screen (style.css divides them by --hm-zoom), so dots that touch come apart
+  // (design 8.6).
+  var ZOOM_MOST = 8, dragging = null;
+  function zoomOf(svg) {
+    if (!svg.hmZoom) {
+      var box = svg.getAttribute("viewBox").split(/[\s,]+/).map(Number);
+      svg.hmZoom = { base: box, x: box[0], y: box[1], k: 1 };
+    }
+    return svg.hmZoom;
+  }
+  function drawZoom(svg) {
+    var zoom = zoomOf(svg), base = zoom.base;
+    var width = base[2] / zoom.k, height = base[3] / zoom.k;
+    zoom.x = Math.min(Math.max(zoom.x, base[0]), base[0] + base[2] - width);
+    zoom.y = Math.min(Math.max(zoom.y, base[1]), base[1] + base[3] - height);
+    svg.setAttribute("viewBox", [zoom.x, zoom.y, width, height].join(" "));
+    svg.style.setProperty("--hm-zoom", String(zoom.k));
+    svg.classList.toggle("is-zoomed", zoom.k > 1);
+    svg.querySelectorAll("circle[data-r]").forEach(function (circle) {
+      circle.setAttribute("r", String(Number(circle.getAttribute("data-r")) / zoom.k));
+    });
+    var graph = graphOf(svg), tip = graph.querySelector(".hm-graph-tip");
+    if (tip) tip.hidden = true;
+    graph.querySelectorAll("[data-zoom]").forEach(function (button) {
+      var way = button.getAttribute("data-zoom");
+      button.disabled = way === "in" ? zoom.k >= ZOOM_MOST : zoom.k <= 1;
+    });
+  }
+  function zoomAt(svg, clientX, clientY, factor) {
+    var zoom = zoomOf(svg), base = zoom.base;
+    var k = Math.min(ZOOM_MOST, Math.max(1, zoom.k * factor));
+    var matrix = svg.getScreenCTM();
+    if (k === zoom.k || !matrix) return;
+    // The point under the pointer stays under it.
+    var point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    var fx = (point.x - zoom.x) / (base[2] / zoom.k), fy = (point.y - zoom.y) / (base[3] / zoom.k);
+    zoom.k = k;
+    zoom.x = point.x - fx * base[2] / k;
+    zoom.y = point.y - fy * base[3] / k;
+    drawZoom(svg);
+  }
+  document.addEventListener("wheel", function (event) {
+    var svg = event.target.closest && event.target.closest(".hm-graph-svg");
+    if (!svg) return;
+    var unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault(); // the graph zooms, not the page
+      zoomAt(svg, event.clientX, event.clientY, Math.exp(-event.deltaY * unit * 0.0025));
+      return;
+    }
+    // Two fingers on a touchpad send the wheel: they move a zoomed graph (24 October 2026: they
+    // scrolled the page). At the edge of the graph nothing moves, and the page scrolls again.
+    var zoom = zoomOf(svg), matrix = svg.getScreenCTM();
+    if (zoom.k <= 1 || !matrix) return;
+    var before = [zoom.x, zoom.y];
+    zoom.x += event.deltaX * unit / matrix.a;
+    zoom.y += event.deltaY * unit / matrix.d;
+    drawZoom(svg); // keeps the view inside the graph
+    if (zoom.x !== before[0] || zoom.y !== before[1]) event.preventDefault();
+  }, { passive: false });
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest && event.target.closest("[data-zoom]");
+    var graph = button && graphOf(button), svg = graph && graph.querySelector(".hm-graph-svg");
+    if (!svg) return;
+    var way = button.getAttribute("data-zoom");
+    if (way === "reset") { zoomOf(svg).k = 1; drawZoom(svg); return; }
+    var rect = svg.getBoundingClientRect();
+    zoomAt(svg, rect.left + rect.width / 2, rect.top + rect.height / 2, way === "in" ? 1.6 : 1 / 1.6);
+  });
+  document.addEventListener("pointerdown", function (event) {
+    var svg = event.target.closest && event.target.closest(".hm-graph-svg");
+    if (!svg || event.button !== 0 || graphDot(event.target) || graphName(event.target)) return;
+    var zoom = zoomOf(svg);
+    dragging = { svg: svg, id: event.pointerId, x: event.clientX, y: event.clientY,
+      from: [zoom.x, zoom.y], moved: false };
+  });
+  document.addEventListener("pointermove", function (event) {
+    if (!dragging || event.pointerId !== dragging.id) return;
+    var svg = dragging.svg, zoom = zoomOf(svg), matrix = svg.getScreenCTM();
+    var dx = event.clientX - dragging.x, dy = event.clientY - dragging.y;
+    if (zoom.k <= 1 || !matrix || (!dragging.moved && Math.abs(dx) + Math.abs(dy) < 4)) return;
+    if (!dragging.moved) {
+      dragging.moved = true;
+      svg.setPointerCapture(event.pointerId);
+      svg.classList.add("is-dragged");
+      darkGraph(graphOf(svg));
+    }
+    zoom.x = dragging.from[0] - dx / matrix.a; // from the pixels of the screen to the graph's units
+    zoom.y = dragging.from[1] - dy / matrix.d;
+    drawZoom(svg);
+  });
+  function endDrag(event) {
+    if (!dragging || event.pointerId !== dragging.id) return;
+    var ended = dragging;
+    dragging = null;
+    ended.svg.classList.remove("is-dragged");
+    if (ended.moved) ended.svg.hmDragged = true;
+  }
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+  function setUpGraphs(root) { // the buttons need this script, so they are hidden without it
+    (root || document).querySelectorAll(".hm-graph-tools[hidden]").forEach(function (tools) {
+      tools.hidden = false;
+    });
+  }
+
+  // ---------------------------------------------------------------- long lists
+  // A long list shows its first 10 lines, with "Show 10 more" and "Show all" under it, and "Show
+  // fewer" once it is whole (design 12.1, S5 and S7). Without this file every line shows.
+  var STEP = 10;
+  function setUpMore(root) {
+    (root || document).querySelectorAll("[data-more-for]").forEach(function (place) {
+      var list = $(place.getAttribute("data-more-for"));
+      if (place.dataset.ready || !list || list.children.length <= STEP) return;
+      place.dataset.ready = "1";
+      var lines = Array.prototype.slice.call(list.children);
+      var said = document.createElement("span");
+      said.className = "visually-hidden";
+      said.setAttribute("aria-live", "polite");
+      function button(then) {
+        var one = document.createElement("button");
+        one.type = "button";
+        one.className = "btn btn-sm";
+        one.addEventListener("click", then);
+        place.appendChild(one);
+        return one;
+      }
+      var shown = STEP;
+      var more = button(function () { show(shown + STEP, true); });
+      var all = button(function () { show(lines.length, true); });
+      var fewer = button(function () {
+        show(STEP, true);
+        list.scrollIntoView({ block: "nearest" });
+        more.focus({ preventScroll: true });
+      });
+      place.appendChild(said);
+      function show(count, announce) {
+        var first = shown;
+        shown = Math.min(count, lines.length);
+        lines.forEach(function (line, at) { line.hidden = at >= shown; });
+        var left = lines.length - shown;
+        more.hidden = left <= 0;
+        all.hidden = left <= STEP;
+        fewer.hidden = left > 0;
+        more.textContent = left > STEP ? "Show " + STEP + " more" : "Show the last " + left;
+        all.textContent = "Show all " + lines.length;
+        fewer.textContent = "Show fewer";
+        if (announce) said.textContent = shown + " of " + lines.length + " shown.";
+        if (announce && left <= 0 && shown > first) fewer.focus({ preventScroll: true });
+      }
+      show(STEP, false);
+      place.hidden = false;
+    });
+  }
+
+  // ---------------------------------------------------------------- how a mark was judged
+  // A mark of the proof or the activity leads to how it was judged (design 12.1, S1 to S3): inside
+  // a card or a check it brings that part into view; on a card of the list it opens the project's
+  // card first, and brings the part into view once the card is there. The window moves as little
+  // as it can: a part that fits is shown whole, a taller one from its top (24 October 2026: it
+  // went to the top every time, far down the check).
+  var pointedAt = null; // the part to bring into view when the window of a project opens
+  function bringIntoView(id) {
+    var part = $(id);
+    if (!part) return false;
+    part.scrollIntoView({ block: "nearest", behavior: LESS_MOTION.matches ? "auto" : "smooth" });
+    if (part.hasAttribute("tabindex")) part.focus({ preventScroll: true });
+    part.classList.remove("is-pointed");
+    void part.offsetWidth; // start the moment of light again
+    part.classList.add("is-pointed");
+    window.setTimeout(function () { part.classList.remove("is-pointed"); }, 2000); // style.css
+    return true;
+  }
+  document.addEventListener("click", function (event) {
+    var link = event.target.closest && event.target.closest("a[data-scroll-to]");
+    if (!link || link.hasAttribute("hx-get")) return; // a card of the list opens first, below
+    if (bringIntoView(link.getAttribute("data-scroll-to"))) event.preventDefault();
+  });
+  document.addEventListener("htmx:beforeRequest", function (event) {
+    var target = event.detail.target;
+    if (!target || target.id !== "viewer-body") return;
+    var link = event.detail.elt && event.detail.elt.closest && event.detail.elt.closest("[data-scroll-to]");
+    pointedAt = link ? link.getAttribute("data-scroll-to") : null;
+  });
+  document.addEventListener("htmx:afterSettle", function (event) {
+    var target = event.detail.target;
+    if (!target || target.id !== "viewer-body" || !pointedAt) return;
+    var id = pointedAt;
+    pointedAt = null;
+    bringIntoView(id);
+  });
+
   // ---------------------------------------------------------------- the window of a project
   var viewer = function () { return $("viewer"); };
   var pushed = false; // the window added an entry to the history, so "back" closes it
@@ -321,15 +826,11 @@
       '<span class="bone title"></span><span class="bone"></span><span class="bone"></span>' +
       '<span class="bone short"></span></div>';
   }
-  // While a submission is checked: what the programs do, in order (design 12.1, S3).
+  // While a submission is checked: the moment before the server shows its steps (design 12.1,
+  // S3, and the steps in _check_steps.html).
   function checking() {
     return '<div class="project check-progress" role="status"><h2 class="project-title">Checking the submission</h2>' +
-      '<ol><li>GitHub: the dates of the code and its README.</li>' +
-      '<li>The code: read for Hedera, unless it was read before.</li>' +
-      '<li>The Hedera ledger: each ID that the README names.</li>' +
-      '<li>The collection: the same code or IDs, and the closest past projects.</li></ol>' +
-      '<p class="hm-small">This takes up to about a minute when the code was never read before. ' +
-      'No model writes anything.</p></div>';
+      '<p class="hm-small">Starting the check.</p></div>';
   }
   function showViewer() {
     var dialog = viewer();
@@ -547,6 +1048,7 @@
       });
       return;
     }
+    if (target && target.id === "check-steps") target = $("viewer-body"); // a check that runs
     if (!target || !document.body.contains(target)) return;
     if (target.id === "viewer-body" || target.id === "sheet-body") {
       var name = target.id === "viewer-body" ? "viewer-title" : "sheet-title";
@@ -597,6 +1099,8 @@
     var target = event.detail.target;
     if (!target) return;
     setUpTabs(document);
+    setUpGraphs(document);
+    setUpMore(document);
     drawCharts(document); // an outerHTML swap leaves the old element in the event
     if (target.id !== "workspace" && target.id !== "main") return;
     showCount();
@@ -608,6 +1112,8 @@
   });
   document.addEventListener("htmx:historyRestore", function () {
     setUpTabs(document);
+    setUpGraphs(document);
+    setUpMore(document);
     drawCharts(document);
     showCount();
   });
@@ -625,6 +1131,8 @@
     if (themes) themes.hidden = false; // it needs this script, so it is hidden without it
     showCount();
     setUpTabs(document);
+    setUpGraphs(document);
+    setUpMore(document);
     drawCharts(document);
     remember(window.location.href);
     var dialog = viewer();

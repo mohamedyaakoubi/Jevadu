@@ -46,6 +46,8 @@ class FakeGoogle:
         self.vector_for: Callable[[str], list[float]] | None = None
         # Optional: answer every request with an error, as (status, message).
         self.fail_with: tuple[int, str] | None = None
+        # Optional: the same, for the calls of a model that writes only; the embeddings answer.
+        self.fail_writing: tuple[int, str] | None = None
         # Optional: HTTP statuses to answer with, one for each request, before the real answer.
         self.fail_first: list[int] = []
         self.failed_requests = 0
@@ -66,8 +68,9 @@ class FakeGoogle:
             return httpx.Response(
                 status, json={"error": {"code": status, "message": "Internal error encountered."}}
             )
-        if self.fail_with:
-            status, message = self.fail_with
+        failing = self.fail_writing if "generateContent" in request.url.path else None
+        if self.fail_with or failing:
+            status, message = self.fail_with or failing
             return httpx.Response(status, json={"error": {"code": status, "message": message}})
         if request.url.path.endswith(":predict"):
             instances = body["instances"]

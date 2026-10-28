@@ -1,0 +1,18 @@
+{# The block of the readings beside the head of a card (design 7.3, S2, 28 October 2026): the
+   newest reading of the project, whoever made it, and what it found; the days its sources were
+   read; the button that reads them again. `card` is a ProjectCard, `again_query` the address
+   that the card comes back to. #}
+{% import "_parts.html" as parts %}
+{% set facts = card.facts %}
+{% set pid = facts.hit.project_id %}
+<aside class="hm-readings" id="read-{{ pid }}" aria-labelledby="read-{{ pid }}-title">
+  <p class="hm-readings-title" id="read-{{ pid }}-title">Last updated{{ parts.info("fresh", "reading again") }}</p>
+  {% if card.reading %}
+  <p>{{ card.reading.read_at | moment }}, {{ READING_BY[card.reading.source] }}{% if card.reading.changes %}:{% else %}. Nothing changed.{% endif %}</p>
+  {% if card.reading.changes %}<ul class="hm-readings-changes">{% for one in card.reading.changes %}<li>{{ one }}</li>{% endfor %}</ul>{% endif %}
+  {% endif %}
+  {% if facts.code_read_at and facts.ledger_read_at %}<p class="text-secondary">GitHub read on {{ facts.code_read_at | day }}, the mirror node on {{ facts.ledger_read_at | day }}.</p>
+  {% elif facts.code_read_at %}<p class="text-secondary">GitHub read on {{ facts.code_read_at | day }}.</p>
+  {% elif facts.ledger_read_at %}<p class="text-secondary">The mirror node read on {{ facts.ledger_read_at | day }}.</p>{% endif %}
+  <button type="button" class="btn btn-sm btn-outline-primary" hx-post="/project/{{ pid }}/read-again{% if again_query %}?{{ again_query }}{% endif %}" hx-target="#read-{{ pid }}" hx-swap="outerHTML">Read again now</button>
+</aside>

@@ -51,6 +51,15 @@ def test_a_run_that_fails_is_closed_as_failed_and_the_error_goes_on(database: st
     assert failed["problems"] == [{"what": "the step itself", "rule": "RuntimeError"}]
 
 
+def test_a_run_never_ends_before_it_started_when_the_clock_steps_back(database: str) -> None:
+    with recorded_run(database, "check") as run, psycopg.connect(database) as conn:
+        # as if the clock of the database stepped back while the run went on
+        conn.execute("UPDATE runs SET started_at = now() + interval '1 second' WHERE id = %s",
+                     (run.id,))  # fmt: skip
+    (row,) = last_runs(database)
+    assert row["ok"] and row["finished_at"] == row["started_at"]
+
+
 def test_a_run_that_was_cut_off_leaves_a_row_with_no_end(database: str) -> None:
     cut_off = recorded_run(database, "embed")
     cut_off.__enter__()  # the process dies here: the block never ends

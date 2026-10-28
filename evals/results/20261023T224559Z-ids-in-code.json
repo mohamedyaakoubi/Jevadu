@@ -1,0 +1,23 @@
+{
+ "test": "ids-in-code",
+ "made_on": "2026-10-23",
+ "made_at": "2026-10-23T22:45:59Z",
+ "seed": 20261023,
+ "repositories_drawn": 40,
+ "files_read": 5519,
+ "ids_in_code": 161,
+ "new_ids_in_code": 136,
+ "new_ids_named_elsewhere_in_the_collection": 13,
+ "new_ids_on_the_ledger": 128,
+ "repositories_read": 40,
+ "repositories_with_a_new_id_in_code": 20,
+ "repositories_with_a_new_id_on_the_ledger": 19,
+ "repositories_with_a_new_own_id_on_the_ledger": 18,
+ "repositories_with_an_id_in_code": 24,
+ "new_ids_by_kind_of_file": {
+  "example_settings": 3,
+  "settings": 70,
+  "source": 44,
+  "test": 29
+ }
+}

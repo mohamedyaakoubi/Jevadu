@@ -143,13 +143,21 @@ def by_meaning(
 ) -> list[int]:
     """The projects closest in meaning to the idea, closest first, from `only` when it is given.
     The idea is embedded once a day at most."""
+    values = idea_embedding(store, client, idea, model=model, now=now)
+    return [project for project, _ in store.nearest(values, model, limit=limit, only=only)]
+
+
+def idea_embedding(
+    store: EmbeddingStore, client: Any, idea: str, *, model: str, now: datetime | None = None
+) -> list[float]:
+    """The embedding of the idea: the one made less than a day ago, or a new one, kept a day."""
     store.forget_old_ideas(now)
     fingerprint = idea_fingerprint(idea)
     values = store.idea(fingerprint, model, now)
     if values is None:
         values = embed_query(client, idea, model=model).values
         store.save_idea(fingerprint, model, values, now)
-    return [project for project, _ in store.nearest(values, model, limit=limit, only=only)]
+    return values
 
 
 def search(

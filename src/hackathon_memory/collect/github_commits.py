@@ -20,9 +20,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from hackathon_memory.collect.answers import AgainRun, Answers, ask_again
 from hackathon_memory.collect.github import SITE, api_message
 from hackathon_memory.collect.github_once import AnswersRun, fetch_once
 from hackathon_memory.collect.polite import FetchResult, PoliteClient
@@ -114,3 +116,21 @@ def fetch_versions(
         collector=collector,
         limit=limit,
     )
+
+
+def versions_again(
+    client: PoliteClient,
+    answers: Answers,
+    repositories: list[str],
+    *,
+    collector: str,
+    older_than: timedelta,
+    now: Callable[[], datetime],
+    limit: int | None = None,
+) -> AgainRun:
+    """Ask again for the newest commit of every repository whose newest answer is older than
+    `older_than`, with its ETag (collect/answers.py)."""
+    return ask_again(client, answers, repositories, address_of=commits_address, keep=kept_of,
+                     status_of=lambda saved: read_version(saved).status, statuses=STATUSES,
+                     suffix=SUFFIX, collector=collector, older_than=older_than, now=now,
+                     limit=limit)  # fmt: skip

@@ -23,6 +23,7 @@ from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, KeptOrder
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.llm.client import again_if_dropped
+from hackathon_memory.llm.open_models import OpenModelError, OpenModels
 from hackathon_memory.search import engine
 
 MAX_OUTPUT_TOKENS = 2048
@@ -31,9 +32,19 @@ TEXT_LETTERS = 300  # of the short line and of the first text, in each line the 
 # Part of the key of a kept order: it changes when the instructions or the lines change.
 INSTRUCTIONS_VERSION = "rerank-1"
 # The model's answer is not used when it fails, is not valid, is late, or the budget is spent.
-NOT_ORDERED = (google_errors.APIError, httpx.TransportError, ValidationError, BudgetExceeded)
-# Where an order came from: kept from the last day, asked now, or not given (the order of meaning).
-KEPT, ASKED, LATE = "kept", "asked", "late"
+NOT_ORDERED = (google_errors.APIError, httpx.HTTPError, ValidationError, BudgetExceeded,
+               OpenModelError)  # fmt: skip
+# The level of an open model (llm/open_models.py) is DeepSeek's word for how hard it thinks, or
+# "off". Its thinking counts in its tokens and takes time: evals/search_fallback.py measures both.
+OPEN_EFFORT, OPEN_OFF = "high", "off"
+OPEN_MAX_TOKENS = 16384
+OPEN_SECONDS = 60.0  # when the caller gives no limit
+JSON_ANSWER = '\n\nAnswer with JSON only: {"closest": [the numbers, the closest first]}.'
+# Where an order came from: kept from the last day, or asked now; or why there is none, so that
+# the order of meaning stays: the model was late, it failed, or the budget is spent. The page says
+# which: on 24 October 2026 it said "late" for errors that came back in 5 seconds.
+KEPT, ASKED, LATE, FAILED, SPENT = "kept", "asked", "late", "failed", "spent"
+ORDERED = (KEPT, ASKED)
 INSTRUCTIONS = """\
 You help a builder find past hackathon projects that are close to their idea.
 
@@ -81,25 +92,35 @@ def ask_closest(
     timeout_seconds: float | None = None,
 ) -> list[int]:
     """The numbers the model gives, in its order, kept only when they are in the list. With
-    `timeout_seconds`, the call is made once and given up after that time."""
-    config = types.GenerateContentConfig(
-        system_instruction=INSTRUCTIONS,
-        response_mime_type="application/json",
-        response_schema=Closest,
-        thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel[level]),
-        max_output_tokens=MAX_OUTPUT_TOKENS,
-        http_options=None
-        if timeout_seconds is None
-        else types.HttpOptions(
-            timeout=int(timeout_seconds * 1000),
-            retry_options=types.HttpRetryOptions(attempts=1),
-        ),
-    )
+    `timeout_seconds`, the call is made once and given up after that time. An open model
+    (llm/open_models.py) is asked for the JSON in words, and `level` is how hard it thinks, or
+    OPEN_OFF for no thinking."""
     contents = f"Idea: {idea}\n\nProjects:\n" + "\n".join(lines)
-    response = again_if_dropped(
-        lambda: client.models.generate_content(model=model, contents=contents, config=config)
-    )
-    numbers = Closest.model_validate_json(response.text or "").closest
+    if isinstance(client, OpenModels):
+        thinking = level.lower() != OPEN_OFF
+        text = client.chat(model, INSTRUCTIONS + JSON_ANSWER, contents, thinking=thinking,
+                           max_tokens=OPEN_MAX_TOKENS, effort=level.lower() if thinking else None,
+                           as_json=True,
+                           timeout_seconds=timeout_seconds or OPEN_SECONDS).text  # fmt: skip
+    else:
+        config = types.GenerateContentConfig(
+            system_instruction=INSTRUCTIONS,
+            response_mime_type="application/json",
+            response_schema=Closest,
+            thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel[level]),
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+            http_options=None
+            if timeout_seconds is None
+            else types.HttpOptions(
+                timeout=int(timeout_seconds * 1000),
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
+        )
+        response = again_if_dropped(
+            lambda: client.models.generate_content(model=model, contents=contents, config=config)
+        )
+        text = response.text or ""
+    numbers = Closest.model_validate_json(text).closest
     allowed = range(1, len(lines) + 1)
     return list(dict.fromkeys(n for n in numbers if n in allowed))
 
@@ -127,11 +148,12 @@ def order_pool(
     """The closest projects by meaning, put in order by the search model: its answer of the last
     day for the same idea, filters (`scope`), model and pool when there is one, otherwise asked
     now and kept for a day (db/idea_answers.py). Returns the whole pool, the model's order first,
-    and where the order came from: KEPT, ASKED, or LATE when the model failed or was late; then
-    the order is the order of meaning, and nothing is kept."""
+    and where the order came from: KEPT or ASKED; or LATE, FAILED or SPENT when the model was
+    late, failed, or the budget refused the call; then the order is the order of meaning, and
+    nothing is kept."""
     pool = list(pool)
     if not pool:
-        return [], LATE
+        return [], FAILED
     store = AnswerStore(conninfo)
     store.forget_old(now)
     fingerprint = idea_fingerprint(idea)
@@ -143,8 +165,12 @@ def order_pool(
             ordered = by_ai(llm, model, level, idea, pool, texts_of(conninfo, pool),
                             letters=TEXT_LETTERS, with_text=True,
                             timeout_seconds=timeout_seconds)  # fmt: skip
-        except NOT_ORDERED:
+        except httpx.TimeoutException:
             return pool, LATE
+        except BudgetExceeded:
+            return pool, SPENT
+        except NOT_ORDERED:
+            return pool, FAILED
         store.save_order(fingerprint, scope, model, level, INSTRUCTIONS_VERSION,
                          KeptOrder(pool, ordered), now)  # fmt: skip
         how = ASKED
@@ -179,4 +205,4 @@ def closest_by_ai(
     scope = "only=" + ",".join(map(str, sorted(only))) if only is not None else ""
     ordered, how = order_pool(conninfo, llm, idea, pool, model=model, level=level, scope=scope,
                               timeout_seconds=timeout_seconds)  # fmt: skip
-    return engine.merge(ordered[:limit], []), how != LATE
+    return engine.merge(ordered[:limit], []), how in ORDERED

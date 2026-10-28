@@ -59,6 +59,9 @@ def test_the_example_settings_file_holds_no_value() -> None:
             "GEMINI_SEARCH_MODEL": "gemini-3.8-flash",
             "GEMINI_SEARCH_THINKING_LEVEL": "LOW",
             "GEMINI_EMBEDDING_MODEL": "gemini-embedding-2",
+            # how old an answer is before it is asked again, and the background switch (design 7.3)
+            "REFRESH_AFTER_HOURS": "24",
+            "REFRESH_IN_BACKGROUND": "off",
         }
         assert value == allowed.get(name, ""), f"{name} has a value in .env.example"
 

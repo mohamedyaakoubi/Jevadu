@@ -301,6 +301,70 @@ class MirrorNode:
             path = following.removeprefix("/api/v1")
         return []
 
+    # ----------------------------------------------------------------- a whole history
+
+    def _all(self, path: str, key: str, max_rows: int) -> tuple[list[dict], bool]:
+        """Every row of a list that comes in pages, oldest first, at most `max_rows`. Returns the
+        rows, and True when the list was cut: by `max_rows`, or by more than MAX_LINKS empty
+        pages in a row (an account is searched 60 days at a time, see account_transactions)."""
+        rows: list[dict] = []
+        empty_in_a_row = 0
+        while True:
+            body = self._get(path) or {}
+            found = body.get(key) or []
+            rows += found
+            if len(rows) >= max_rows:
+                return rows[:max_rows], True
+            empty_in_a_row = 0 if found else empty_in_a_row + 1
+            following = (body.get("links") or {}).get("next")
+            if not following:
+                return rows, False
+            if empty_in_a_row > MAX_LINKS:
+                return rows, True
+            path = following.removeprefix("/api/v1")
+
+    def account_history(
+        self, account_id: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        """Every transaction of an account, oldest first (see _all). Give `since`, the moment the
+        account was made: with no start, the node searches 60 days at a time from the start of
+        its network (2019 on the main network), and the empty pages before the account reach the
+        limit of _all first (measured on 23 October 2026)."""
+        path = (
+            f"/transactions?account.id={self._entity(account_id)}&limit=100&order=asc"
+            + self._range(since, None)
+        )
+        return self._all(path, "transactions", max_rows)
+
+    def topic_history(
+        self, topic_id: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        """Every message of a topic, oldest first, from `since` on when it is given (see _all)."""
+        path = f"/topics/{self._entity(topic_id)}/messages?limit=100&order=asc"
+        return self._all(path + self._range(since, None), "messages", max_rows)
+
+    def contract_history(
+        self, contract: str, *, max_rows: int, since: datetime | None = None
+    ) -> tuple[list[dict], bool]:
+        """Every call of a contract, oldest first, from `since` on when it is given (see _all).
+        Read on 25 October 2026: the first result of a contract is its creation, whose
+        "created_contract_ids" names the contract itself."""
+        path = f"/contracts/{self._entity_or_address(contract)}/results?limit=100&order=asc"
+        return self._all(path + self._range(since, None), "results", max_rows)
+
+    def token_holders(self, token_id: str, *, max_rows: int) -> tuple[list[str], bool]:
+        """The accounts that hold a token now, with a balance above zero, at most `max_rows`,
+        and True when there are more. Read on 25 October 2026: /tokens/{id}/balances takes the
+        filter account.balance=gt:0, and each row names its "account"."""
+        path = f"/tokens/{self._entity(token_id)}/balances?account.balance=gt:0&limit=100"
+        rows, cut = self._all(path, "balances", max_rows)
+        return [str(row["account"]) for row in rows if row.get("account")], cut
+
+    def nft_history(self, token_id: str, *, max_rows: int) -> tuple[list[dict], bool]:
+        """Every NFT of a token, the first minted first (see _all). A fungible token has none."""
+        return self._all(f"/tokens/{self._entity(token_id)}/nfts?limit=100&order=asc",
+                         "nfts", max_rows)  # fmt: skip
+
     # ----------------------------------------------------------------- waiting
 
     def _wait(self, find: Callable[[], dict | None], timeout: float, interval: float) -> dict:

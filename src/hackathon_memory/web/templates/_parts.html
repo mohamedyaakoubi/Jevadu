@@ -34,7 +34,11 @@
       {% if snippet %}<p class="hm-matched"><span class="visually-hidden">Matching text: </span>&hellip;{{ snippet }}&hellip;</p>{% endif %}
       {{ marks.tags(card) }}
     </div>
-    <div class="card-footer hm-card-foot">{{ marks.proof(card.proof_status) }}{{ marks.life(card.life) }}</div>
+    <div class="card-footer hm-card-foot">
+      {%- for part, mark in (("proof", marks.proof(card.proof_status, card.proven_by_code_only)), ("life", marks.life(card.life) if card.life else "")) if mark %}
+      <a class="hm-mark-link" href="{{ link }}" data-open-viewer="{{ pid }}" data-scroll-to="{{ 'ledger' if part == 'proof' else 'life' }}-{{ pid }}" hx-get="/project/{{ pid }}/panel{% if query %}?{{ query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ mark }}<span class="visually-hidden">: how it was judged</span></a>
+      {%- endfor %}
+    </div>
     {% if compared %}
     <div class="hm-compare compare waiting" id="compare-{{ pid }}" aria-busy="true">
       <span class="visually-hidden">Gemini is comparing this project with your idea.</span>
@@ -83,6 +87,172 @@
 </div>
 {%- endmacro %}
 
+{# A number of transactions of one service, in words: "1 Token Service transaction". #}
+{% macro transactions(service, count) -%}
+{{ "{:,}".format(count) }} {{ SERVICE_TRANSACTIONS[service] if count != 1 else SERVICE_TRANSACTIONS[service][:-1] }}
+{%- endmacro %}
+
+{# The transactions of a project's own things before or after the time of the ledger story:
+   `part` is an Outside of check/story.py, or none when they are not counted. #}
+{% macro outside(part, which) -%}
+{% if part is none %}not counted: its IDs are accounts only
+{%- elif not part.count %}none
+{%- elif part.by_service | length == 1 %}{{ transactions(part.by_service[0][0], part.count) }}, the {{ which }} on {{ part.day | day }}
+{%- else %}{{ "{:,}".format(part.count) }} transactions, the {{ which }} on {{ part.day | day }}: {% for service, count in part.by_service %}{{ transactions(service, count) }}{{ ", " if not loop.last }}{% endfor %}
+{%- endif %}
+{%- endmacro %}
+
+{# The words of the page that name one service, each a button that marks the places where the
+   page says it and brings the next one into view (design 7.5). `line` is a ServiceLine; in a
+   table cell (`listed`) the words stand one under the other, in a sentence they follow the text. #}
+{% macro said_words(line, listed=false, source="page", before="", after="") -%}
+{% if listed %}<span class="hm-said-list">{% endif %}{% for word in line.words %}{% if loop.first or loop.last %}<span class="hm-keep">{% endif %}{% if loop.first %}{{ before }}{% endif %}<button type="button" class="hm-said-word" data-said-word="{{ word | casefold }}">&ldquo;{{ word }}&rdquo;<span class="visually-hidden">: show where the {{ source }} says it, {{ line.places[loop.index0] }} place{{ 's' if line.places[loop.index0] != 1 }}</span></button>{% if loop.last %}{{ after }}{% endif %}{% if loop.first or loop.last %}</span>{% endif %}{{ ", " if not loop.last and not listed }}{% endfor %}{% if listed %}</span>{% endif %}
+{%- endmacro %}
+
+{# The ledger story of a project with its depth of use (design 7.5), in one card: for each Hedera
+   service, the words of its page, its code and the transactions of its own IDs side by side, and
+   what stands out; then the days of those transactions, the time before and after, what the IDs
+   did, who took part, and the signs that stay on paper. `story` is a Story of check/story.py, or
+   none when the project has no own ID that fits; `depth` a Depth of check/depth.py and `view` the
+   strip of its days; `source` names the text whose words it compares (the page, or the README of a
+   check); `lines` are the lines of a text that the card does not
+   show, such as a README, that name a service. #}
+{% macro ledger_story(story, pid, source="page", source_title="Page", no_days="The days of the event are not known.", tip="story", lines=none, depth=none, view=none) -%}
+<section class="card project-section story-section" aria-labelledby="story-{{ pid }}-title" data-said-in="{{ "in the " if source == "README" else "on the " }}{{ source }}">
+  <div class="card-body">
+    <h3 id="story-{{ pid }}-title">Hedera services: {{ source }}, code and ledger{{ info(tip, "Hedera services: " ~ source ~ ", code and ledger") }}</h3>
+    {% if story and not story.read %}
+    <p class="text-secondary">The history of its own Hedera IDs has not been read yet.</p>
+    {% elif story %}
+    {% set within = " in that time" if story.starts_on else "" %}
+    {% if story.lines %}
+    <table class="table table-sm hm-story">
+      <caption>{% if story.starts_on %}Ledger: the transactions of its own IDs from {{ story.starts_on | day }} to {{ story.ends_on | day }}, the event and 30 days on each side.{% else %}Ledger: every transaction of its own IDs. {{ no_days }}{% endif %}</caption>
+      <thead><tr><th scope="col">Service</th><th scope="col">{{ source_title }}</th>{% if story.code_read %}<th scope="col">Code</th>{% endif %}<th scope="col" class="text-end">Ledger</th></tr></thead>
+      <tbody>
+      {% for line in story.lines %}
+        <tr>
+          <th scope="row">{{ SERVICE_NAMES[line.service] }}</th>
+          <td>{% if not line.compared %}<span class="text-secondary">not compared</span>{% elif line.words %}{{ said_words(line, listed=true, source=source) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
+          {% if story.code_read %}<td>{% if line.in_code %}yes{% elif line.set_up %}EVM setup{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
+          <td class="text-end">{{ "{:,}".format(line.count) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if not story.code_read %}<p class="hm-small">Its code was not read, so the table leaves it out.</p>{% endif %}
+    {% else %}
+    <p class="text-secondary">Its IDs show no transaction{{ within }}, and the {{ source }} names none of the services that are looked for.</p>
+    {% endif %}
+    {% if story.named_not_seen or story.seen_not_named or story.all_named_seen %}
+    <ul class="hm-story-facts">
+      {% for service in story.named_not_seen %}<li>The {{ source }} names {{ SERVICE_SUBJECTS[service] }} {{ said_words(story.lines | selectattr("service", "equalto", service) | first, source=source, before="(", after=")") }}, and its IDs show no {{ SERVICE_TRANSACTIONS[service] }}{{ within }}.</li>{% endfor %}
+      {% for service, count in story.seen_not_named %}<li>Its IDs show {{ transactions(service, count) }}{{ within }}, and the {{ source }} does not name {{ SERVICE_SUBJECTS[service] }}.</li>{% endfor %}
+      {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{{ within }}.</li>{% endif %}
+    </ul>
+    {% if story.named_not_seen %}<p class="hm-small">A team can also use a service through an ID that the {{ source }} does not give.</p>{% endif %}
+    {% endif %}
+    {% if lines %}
+    <details class="hm-said-lines">
+      <summary>Where the {{ source }} names them ({{ lines | length }} line{{ "s" if lines | length != 1 }})</summary>
+      <ul class="hm-said-text">{% for line in lines %}<li>{{ line | said }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+    <p class="hm-small hm-said-status" aria-live="polite"></p>
+    {% if not (depth and view) %}{{ story_time(story) }}{% endif %}
+    {% endif %}
+    {% if depth %}{{ depth_block(depth, view, pid, source, story) }}{% endif %}
+    {% if story and story.read %}
+    {% set first, last = story.read_on %}
+    <p class="hm-small">Read from the mirror node {% if first == last %}on {{ first | day }}{% else %}from {{ first | day }} to {{ last | day }}{% endif %}: {{ story.read | length }} of its own IDs.{% if story.cut %} {{ story.cut }} of them {{ "was" if story.cut == 1 else "were" }} cut by the limit of the reading, {{ "{:,}".format(MAX_EVENTS) }} transactions, so later transactions may be missing.{% endif %}{% if story.not_read %} {{ story.not_read }} more {{ "is" if story.not_read == 1 else "are" }} not read yet.{% endif %}</p>
+    {% endif %}
+  </div>
+</section>
+{%- endmacro %}
+
+{# The transactions of its own things before and after the time of the ledger story, when the
+   days of the event are known. #}
+{% macro story_time(story) -%}
+{% if story and story.starts_on and story.before is none and story.after is none %}
+<p class="hm-story-time-none">Before {{ story.starts_on | day }} and after {{ story.ends_on | day }}: not counted, since its own IDs are accounts only.</p>
+{% elif story and story.starts_on %}
+<dl class="hm-story-time">
+  <dt>Before {{ story.starts_on | day }}</dt><dd>{{ outside(story.before, "first") }}</dd>
+  <dt>After {{ story.ends_on | day }}</dt><dd>{{ outside(story.after, "last") }}</dd>
+</dl>
+{% endif %}
+{%- endmacro %}
+
+{# The days of the time of the ledger story (design 7.5): one row for each service, one square
+   for each day with a transaction, darker for more; the days of the event marked. A square links
+   to the first transaction of its day on HashScan and names its day and its number; the same
+   numbers stand in a table. The names stay and the days widen (S2, 28 October 2026): the page's
+   script stretches what carries data-x, and shows a tick of every few days. `view` is a
+   StripView of web/strips.py. #}
+{% macro strip(view, pid) -%}
+<figure class="hm-strip" data-strip>
+  <div class="hm-strip-tools" role="group" aria-label="The width of the days">
+    <button type="button" class="hm-strip-zoom" data-zoom="out" aria-label="Narrow the days" title="Narrow the days" disabled>&minus;</button>
+    <button type="button" class="hm-strip-zoom" data-zoom="in" aria-label="Widen the days" title="Widen the days (or Ctrl and the mouse wheel)">+</button>
+  </div>
+  <div class="hm-strip-frame">
+    <svg class="hm-strip-names" viewBox="0 0 {{ view.left }} {{ view.height }}" style="width: {{ view.names_share }}%" aria-hidden="true" focusable="false">
+      {% for row in view.rows %}<text class="hm-strip-name" x="0" y="{{ row.y + 12 }}">{{ row.name }}</text>{% endfor %}
+    </svg>
+    <div class="hm-strip-scroll">
+    <svg class="hm-strip-svg" viewBox="0 0 {{ view.days_width }} {{ view.height }}" role="group" aria-labelledby="strip-{{ pid }}-title" preserveAspectRatio="xMinYMin meet" data-width="{{ view.days_width }}" data-height="{{ view.height }}" data-days="{{ view.days }}" data-most="{{ view.most_zoom }}">
+      <title id="strip-{{ pid }}-title">{{ view.summary }}</title>
+      <rect class="hm-strip-event" x="{{ view.event_x }}" y="0" width="{{ view.event_width }}" height="{{ view.rows_bottom }}" data-x="{{ view.event_x }}" data-w="{{ view.event_width }}"></rect>
+      {% for row in view.rows %}
+      <line class="hm-strip-base" x1="0" x2="{{ view.days_width }}" y1="{{ row.y + 15.5 }}" y2="{{ row.y + 15.5 }}"></line>
+      {% for square in row.squares %}
+      <a href="{{ hashscan_moment(square.network, square.first) }}" target="_blank" rel="noopener" data-note="{{ square.note }}" aria-label="{{ square.note }}, the first on HashScan (opens in a new tab)"><rect class="hm-strip-day" x="{{ square.x }}" y="{{ row.y + 2 }}" width="{{ square.width }}" height="13" fill-opacity="{{ square.ink }}" data-x="{{ square.x }}" data-w="{{ square.width }}"><title>{{ square.note }}</title></rect></a>
+      {% endfor %}
+      {% endfor %}
+      {% for mark in view.marks %}<text class="hm-strip-mark{{ ' hm-strip-end' if mark.anchor != 'middle' else ' hm-strip-event-mark' }}" x="{{ mark.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="{{ mark.anchor }}" data-x="{{ mark.x }}">{{ mark.text }}</text>{% endfor %}
+      <g class="hm-strip-ticks" display="none" aria-hidden="true">{% for tick in view.ticks %}<text class="hm-strip-mark" x="{{ tick.x }}" y="{{ view.rows_bottom + 14 }}" text-anchor="middle" data-x="{{ tick.x }}">{{ tick.text }}</text>{% endfor %}</g>
+    </svg>
+    </div>
+  </div>
+  <figcaption class="hm-small">
+    <span class="hm-strip-note" aria-live="polite">{{ view.hint }}</span>
+  </figcaption>
+  <details class="hm-strip-table">
+    <summary>The days as a table</summary>
+    <table class="table table-sm">
+      <thead><tr><th scope="col">Day</th><th scope="col">Service</th><th scope="col" class="text-end">Transactions</th></tr></thead>
+      <tbody>{% for row in view.table %}<tr><td>{{ row.day | day }}</td><td>{{ SERVICE_NAMES[row.service] }}</td><td class="text-end">{{ "{:,}".format(row.count) }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </details>
+</figure>
+{%- endmacro %}
+
+{# The depth of use of a project's own IDs (design 7.5), inside the card of its Hedera services:
+   the days of their transactions and the time before and after, then what they did, who took
+   part, on how many days, and the signs that stay on paper. `depth` is a Depth of check/depth.py;
+   `view` the strip of its days; `story` gives the time before and after. #}
+{% macro depth_block(depth, view, pid, source="page", story=none) -%}
+<div class="hm-depth-block" id="depth-{{ pid }}">
+  {% if not depth.read %}<p class="text-secondary">Some of its IDs were read before the tool kept what each transaction was. They are read again with the next reading.</p>{% endif %}
+  {% if view %}{{ strip(view, pid) }}{{ story_time(story) }}{% endif %}
+  {% if depth.did or depth.others is not none or depth.days %}
+  {% set within = " in that time" if view else "" %}
+  <dl class="hm-depth">
+    <dt>What its IDs did{{ within }}</dt>
+    <dd>{% if depth.did %}{% for words, count in depth.did %}{{ "{:,}".format(count) }} {{ words }}{{ ", " if not loop.last }}{% endfor %}{% if depth.more_kinds %}, and {{ "{:,}".format(depth.more_count) }} more of {{ "another kind" if depth.more_kinds == 1 else depth.more_kinds ~ " other kinds" }}{% endif %}{% else %}no transaction{% endif %}{% if depth.failed %}. Failed: {{ "{:,}".format(depth.failed) }}{% endif %}.</dd>
+    <dt>Who took part</dt>
+    <dd>{% if depth.others is none %}not known{% elif depth.others == 0 %}only accounts that the {{ source }} names{% else %}{{ "{:,}".format(depth.others) }} account{{ "s" if depth.others != 1 }} that the {{ source }} does not name{% endif %}{% if depth.held_by_others == 0 %}. No account that it does not name holds its tokens now{% elif depth.held_by_others is not none %}. Its tokens are held now by {{ "{:,}".format(depth.held_by_others) }} account{{ "s" if depth.held_by_others != 1 }} that it does not name{% endif %}.</dd>
+    <dt>On how many days</dt>
+    <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
+  </dl>
+  {% endif %}
+  {% if depth.on_paper %}
+  <p class="hm-depth-title">Signs that stay on paper</p>
+  <ul class="hm-depth-list">{% for one in depth.on_paper %}<li>{{ one }}</li>{% endfor %}</ul>
+  {% endif %}
+</div>
+{%- endmacro %}
+
 {# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
 {% macro link_reason(by) -%}
 {% if by == "repository" %}Same repository.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}
@@ -105,6 +275,13 @@
 {% endif %}
 {%- endmacro %}
 
+{# Where an ID of the code stands (design 7.3): the file, linked at the commit that was read,
+   and why it counts. #}
+{% macro in_code(repository, commit, path) -%}
+{% set at = file_link(repository, commit, path) if repository else none %}
+in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ path }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ path }}{% endif %}: no page or README names it, and it was made during the event
+{%- endmacro %}
+
 {% macro filter_select(name, label, all_words, options, current, tip=none) -%}
 <div class="hm-filter{% if current %} chosen{% endif %}">
   <span class="hm-filter-head"><label for="filter-{{ name }}">{{ label }}</label>{% if tip %}{{ info(tip, label) }}{% endif %}</span>
@@ -116,10 +293,10 @@
 </div>
 {%- endmacro %}
 
-{# The shape of the cards, drawn while Gemini works. #}
+{# The shape of the cards, drawn while the search model works: Gemini, or its stand-in. #}
 {% macro skeleton_cards(count=8) -%}
 <div class="hm-skeletons" aria-hidden="true">
-  <p class="hm-asking">Gemini is reading the 30 closest projects. This takes a few seconds.</p>
+  <p class="hm-asking">{{ ordering_model() }} is reading the 30 closest projects. This takes a few seconds.</p>
   <ol class="hm-grid">
   {% for _ in range(count) %}<li><div class="card hm-card placeholder-glow"><div class="card-body"><span class="placeholder col-4"></span><span class="placeholder placeholder-lg col-8"></span><span class="placeholder col-12"></span><span class="placeholder col-10"></span><span class="placeholder col-6"></span></div></div></li>{% endfor %}
   </ol>
@@ -134,7 +311,7 @@
     <h3 class="hm-chart-title" id="chart-{{ one.key }}">{{ one.title }}{% if one.tip %}{{ info(one.tip, one.title | lower) }}{% endif %}</h3>
     <p class="hm-chart-note">{{ one.note }}</p>
     {% if one.bars %}
-    <div class="hm-chart-canvas" style="height: {{ 44 + 30 * (one.bars | length) }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
+    <div class="hm-chart-canvas" style="height: {{ [140, 44 + 30 * (one.bars | length)] | max }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
     <ul class="visually-hidden">{% for bar in one.bars %}<li>{{ bar.words }}: {{ bar.count }}{% if bar.winners %}, {{ bar.winners }} with a Hedera prize{% endif %}</li>{% endfor %}</ul>
     {% else %}
     <p class="text-secondary">Nothing to count in this list.</p>
@@ -151,7 +328,7 @@
     <h3 class="hm-chart-title" id="chart-{{ one.key }}">{{ one.title }}{% if one.tip %}{{ info(one.tip, one.title | lower) }}{% endif %}</h3>
     <p class="hm-chart-note">{{ one.note }}</p>
     {% if one.pairs %}
-    <div class="hm-chart-canvas" style="height: {{ 44 + 34 * (one.pairs | length) }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
+    <div class="hm-chart-canvas" style="height: {{ [140, 44 + 34 * (one.pairs | length)] | max }}px"><canvas data-chart='{{ one.data() }}' role="img" aria-label="{{ one.title }}: {{ one.summary() }}"></canvas></div>
     <ul class="visually-hidden">{% for pair in one.pairs %}<li>{{ pair.words }}: {{ pair.won }} of {{ pair.won_of }} with a Hedera prize ({{ pair.won_share }}%), {{ pair.other }} of {{ pair.other_of }} without ({{ pair.other_share }}%)</li>{% endfor %}</ul>
     {% endif %}
   </div>

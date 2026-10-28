@@ -138,6 +138,7 @@ class RepositoryStore:
             if row is None:
                 return  # no project links this repository
             conn.execute("DELETE FROM hedera_in_code WHERE repository_id = %s", row)
+            conn.execute("DELETE FROM ids_in_code WHERE repository_id = %s", row)
             with conn.cursor() as cursor:
                 cursor.executemany(
                     "INSERT INTO hedera_in_code (repository_id, kind, name, files, examples) "
@@ -145,6 +146,16 @@ class RepositoryStore:
                     [
                         (row[0], one.kind, one.name, one.files, list(one.examples))
                         for one in (scan.found() if scan else [])
+                    ],
+                )
+                # The IDs that the code names (since the reader of format 3): candidates, which
+                # the check weighs (pipeline/code_ids.py).
+                cursor.executemany(
+                    "INSERT INTO ids_in_code (repository_id, entity_id, network, files, examples) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    [
+                        (row[0], one.entity_id, one.network, one.seen.files, one.seen.examples)
+                        for one in (scan.ids.values() if scan else [])
                     ],
                 )
 

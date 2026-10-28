@@ -6,16 +6,31 @@ repository, ID and date is invented."""
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import psycopg
 import pytest
 
-from checkfakes import COMMIT, DOWNLOAD, NOW, README, REPO, TOPIC, found_code, github, nodes
-from fakes import Reply, StandInMirror, project_page
+from checkfakes import (
+    CODE_FILES,
+    COMMIT,
+    DOWNLOAD,
+    NOW,
+    README,
+    REPO,
+    TOPIC,
+    commits_answer,
+    facts_answer,
+    found_code,
+    github,
+    nodes,
+    readme_answer,
+)
+from fakes import ARCHIVE_COMMIT, Reply, StandInMirror, archive, project_page
 from hackathon_memory.check import submission
 from hackathon_memory.check.submission import EventDays
+from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.github import archive_address, readme_address
 from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
@@ -160,6 +175,38 @@ def test_the_check_asks_github_once_and_judges_the_ids_of_the_readme(
     assert len(site.seen) == 5 and again.proof == "proof_found"
     assert again.hedera_code == code  # the saved reading
     assert len(mirrors["testnet"].asked) == asked_before  # the ledger's answer is in the table
+
+
+def test_a_check_asks_github_again_after_an_hour_and_finds_a_repository_made_public(
+    database: str, tmp_path: Path
+) -> None:
+    """With the answers asked again (design 7.3, 25 October 2026): an answer younger than an hour
+    is used, an older one is asked again. Before, a "not found" saved while a repository was
+    private stayed for good."""
+    pages = {
+        facts_address(REPO): [Reply(404, b'{"message": "Not Found"}'), Reply(200, facts_answer())],
+        readme_address(REPO): Reply(200, readme_answer()),
+        commits_address(REPO): Reply(200, commits_answer(ARCHIVE_COMMIT)),
+        archive_address(REPO): Reply(302, b"", {"Location": DOWNLOAD}),
+        DOWNLOAD: Reply(200, archive(CODE_FILES)),
+    }
+    client, site = github(tmp_path, pages)
+    answers = Answers(tmp_path / "raw")
+
+    def check(minutes: int) -> submission.SubmissionCheck:
+        at = NOW + timedelta(minutes=minutes)
+        client.now = lambda: at
+        return submission.check_submission(database, REPO, EVENT, client=client, store=answers,
+                                           collector=COLLECTOR, mirrors=nodes(),
+                                           now=lambda: at)  # fmt: skip
+
+    private = check(0)
+    assert private.code.status == "gone" and len(site.seen) == 1
+    soon = check(30)
+    assert soon.code.status == "gone" and len(site.seen) == 1  # younger than an hour
+    public = check(120)
+    assert public.code.status == "found" and public.hedera_code is not None
+    assert public.version.sha == ARCHIVE_COMMIT and public.readme_text
 
 
 @pytest.mark.integration

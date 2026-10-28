@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import secrets
 from pathlib import Path
+from types import SimpleNamespace
 
 import psycopg
 import pytest
@@ -137,11 +139,24 @@ def test_a_wrong_file_is_refused_and_the_line_is_named_without_its_words(
 
 
 def test_the_path_passes_and_finds_the_known_projects(
-    tmp_path: Path, empty_database: str, results_dir: Path, server_conninfo: str
+    tmp_path: Path,
+    empty_database: str,
+    results_dir: Path,
+    server_conninfo: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = Settings(_env_file=None, database_url=empty_database, data_dir=str(data(tmp_path)))
     client, _, _ = google()
-    before = gate_databases(server_conninfo)
+    # The name of this run's new database, known to the test: another test may run the proof on
+    # the same server at the same time, with a database of its own.
+    made = secrets.token_hex(4)
+    asked: list[int] = []
+
+    def token_hex(size: int) -> str:
+        asked.append(size)
+        return made
+
+    monkeypatch.setattr(gate_b, "secrets", SimpleNamespace(token_hex=token_hex))
     code = gate_b.run(settings, mirrors=stand_ins(), google=client, minimum_projects=3)
     saved = the_result(results_dir)
     assert code == 0, failed(saved)
@@ -152,9 +167,8 @@ def test_the_path_passes_and_finds_the_known_projects(
     text = json.dumps(saved)
     for words in ("vendor", "parcel", "ballot", "ethglobal.com", "Pebble"):
         assert words not in text  # no idea, no name, no address
-    # The new database of this run was deleted. Another run of the proof, on the same server
-    # at the same time, may have one of its own: only the ones that this run made count.
-    assert gate_databases(server_conninfo) <= before
+    # The new database of this run was made with that name, and deleted at its end.
+    assert asked == [4] and f"gate_b_{made}" not in gate_databases(server_conninfo)
 
 
 def test_every_call_of_the_proof_is_counted_in_the_main_database(

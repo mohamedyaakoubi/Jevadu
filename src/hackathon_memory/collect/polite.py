@@ -5,7 +5,8 @@
 | Only named pages                                    | `allow`, checked before every request   |
 |                                                     | and on every redirect                   |
 | A fixed limit of requests for each site             | `max_requests` for one run, and         |
-|                                                     | `RequestCount` over all runs            |
+|                                                     | `RequestCount` over all runs, and for   |
+|                                                     | each day where answers are asked again  |
 | One request at a time, a pause of two seconds       | `_lock`, `_wait_turn`                   |
 | The tool's name and a contact address in each one   | `CollectorIdentity`, `_headers`         |
 | A stop switch for each site, for a stop order of    | `is_enabled`, read before every request |
@@ -141,6 +142,7 @@ class FetchResult:
     body: bytes
     content_type: str
     fetched_at: str  # UTC, ISO form
+    etag: str = ""  # the ETag header of the answer, for a conditional request later
 
 
 class RequestCount:
@@ -166,17 +168,33 @@ class RequestCount:
         site: str,
         limit: int = MAX_REQUESTS,
         now: Callable[[], datetime] | None = None,
+        *,
+        daily_limit: int | None = None,
     ) -> None:
         self.path = path
         self.site = site
         self.limit = limit
+        # A limit for each day (UTC), for a site whose answers are asked again as they change
+        # (design 7.3, 25 October 2026); None for a site whose pages are read once.
+        self.daily_limit = daily_limit
         self.now = now or (lambda: datetime.now(UTC))
 
     def sent(self) -> int:
         return self._read()["sent"]
 
+    def sent_today(self) -> int:
+        return int(self._read()["by_day"].get(self.now().strftime("%Y-%m-%d"), 0))
+
     def left(self) -> int:
-        return max(0, self.limit - self.sent())
+        left = max(0, self.limit - self.sent())
+        if self.daily_limit is not None:
+            left = min(left, max(0, self.daily_limit - self.sent_today()))
+        return left
+
+    def day_is_full(self) -> bool:
+        """True when the limit of the day, and not the one over all runs, stops the requests."""
+        return (self.daily_limit is not None and self.sent_today() >= self.daily_limit
+                and self.sent() < self.limit)  # fmt: skip
 
     def add_one(self) -> None:
         record = self._read()
@@ -417,12 +435,15 @@ class PoliteClient:
         """A site asked for a longer pause (robots.txt Crawl-delay). Never shorten the pause."""
         self.pause_seconds = max(self.pause_seconds, seconds)
 
-    def get(self, url: str) -> FetchResult:
+    def get(self, url: str, *, etag: str | None = None) -> FetchResult:
+        """The answer for `url`. With `etag`, the ETag of the last answer, the request is
+        conditional (If-None-Match): a site answers 304 and no body when nothing changed."""
+        extra = {"If-None-Match": etag} if etag else None
         with self._lock:
             current = url
             for _ in range(MAX_REDIRECTS + 1):
                 self._check_allowed(current)
-                raw = self._request_once(current)
+                raw = self._request_once(current, extra)
                 if raw.status in _REDIRECT_STATUSES:
                     location = raw.headers.get("Location")
                     if not location:
@@ -436,6 +457,7 @@ class PoliteClient:
                     body=raw.body,
                     content_type=raw.headers.get("Content-Type", ""),
                     fetched_at=self.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    etag=str(raw.headers.get("ETag", ""))[:200],
                 )
             raise StopCollecting(f"{self.site} sent too many redirects in a row.")
 
@@ -473,6 +495,11 @@ class PoliteClient:
         if self.requests_made >= self.max_requests:
             raise StopCollecting(f"The limit of {self.max_requests} requests is reached.")
         if self.count is not None and self.count.left() <= 0:
+            if self.count.day_is_full():
+                raise StopCollecting(
+                    f"The limit of {self.count.daily_limit} requests to {self.site} for one day "
+                    "is reached. Nothing more is requested today (UTC)."
+                )
             raise StopCollecting(
                 f"The limit of {self.count.limit} requests to {self.site} over all runs is "
                 "reached. Nothing more is requested."
@@ -525,7 +552,7 @@ class PoliteClient:
             chunks.append(chunk)
         return b"".join(chunks)
 
-    def _request_once(self, url: str) -> RawAnswer:
+    def _request_once(self, url: str, extra: dict[str, str] | None = None) -> RawAnswer:
         self._wait_turn()
         self.requests_made += 1
         if self.count is not None:
@@ -533,7 +560,7 @@ class PoliteClient:
         try:
             response = self.session.get(
                 url,
-                headers=self._headers(),
+                headers={**self._headers(), **(extra or {})},
                 timeout=self.timeout,
                 allow_redirects=False,
                 stream=True,

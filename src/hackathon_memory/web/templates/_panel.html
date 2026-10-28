@@ -6,7 +6,11 @@
 {% set facts = card.facts %}
 {% set pid = facts.hit.project_id %}
 <article class="project" data-project="{{ pid }}">
-  <header class="project-head">
+  {# A card with no repository and no Hedera ID, as every entry of a winners' list, has nothing to
+     read again: no block of the readings (28 October 2026). #}
+  {% set readable = facts.repository or facts.ledger %}
+  <header class="project-head{% if readable %} has-readings{% endif %}">
+    <div class="project-head-main">
     <p class="project-meta">{% if card.event_link %}<a href="{{ card.event_link }}" target="_blank" rel="noopener">{{ facts.event }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ facts.event }}{% endif %}</p>
     {% set level = "h1" if as_page else "h2" %}
     <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ facts.name }}</{{ level }}>
@@ -17,8 +21,8 @@
     <p class="project-lede">{{ card.short_line }} <span class="hm-tiny">The team's tagline</span></p>
     {% endif %}
     <div class="project-marks">
-      {{ marks.proof(facts.proof_status) }}{{ parts.info("proof", "Hedera proof") }}
-      {% if facts.life %}{{ marks.life(facts.life) }}{{ parts.info("life", "life") }}{% endif %}
+      <a class="hm-mark-link" href="#ledger-{{ pid }}" data-scroll-to="ledger-{{ pid }}">{{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("proof", "Hedera proof") }}
+      {% if facts.life %}<a class="hm-mark-link" href="#life-{{ pid }}" data-scroll-to="life-{{ pid }}">{{ marks.life(facts.life) }}<span class="visually-hidden">: how it was judged</span></a>{{ parts.info("life", "life") }}{% endif %}
       {{ marks.tags(facts) }}{% if facts.prize_state in ("hedera_prize", "other_prize") or facts.entry_kind == WINNER_ENTRY %}{{ parts.info("event", "the prize and the winners' list") }}{% endif %}
     </div>
     <p class="project-links">
@@ -28,12 +32,18 @@
       {% if demos %}<a class="btn btn-sm" href="{{ demos[0].url }}" rel="noopener" target="_blank">Live demo<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
       {% if not as_page %}<a class="btn btn-sm btn-ghost-secondary" href="/project/{{ pid }}">Open as a page</a>{% endif %}
     </p>
+    </div>
+    {% if readable %}
+    {% set again_query = "page=1" if as_page else (back_query ~ ("&idea=" ~ (idea | urlencode) if idea else "")) %}
+    {% include "_readings.html" %}
+    {% endif %}
   </header>
   {# On a page of its own the title is a level 1 heading, so the sections need a level 2 above them. #}
   {% if as_page %}<h2 class="visually-hidden">The details of the project</h2>{% endif %}
 
   <div class="project-cols">
     <div class="project-col project-facts">
+      {% set how = judged_of(facts) %}
       {% if linked %}
       <section class="card project-section linked-section" aria-labelledby="linked-{{ pid }}-title">
         <div class="card-body">
@@ -44,15 +54,19 @@
               <span class="hm-small d-block">{{ parts.link_reason(by) }}</span></li>
           {% endfor %}
           </ul>
-          <p class="hm-small">A link is only a fact: a team may have built on earlier work, or reused an account. People judge.</p>
+          <p class="hm-small">A link can mean earlier work of the same team, or a reused account.</p>
         </div>
       </section>
       {% endif %}
-      <section class="card project-section ledger-section" aria-labelledby="ledger-{{ pid }}-title">
+      {% if card.story or card.depth %}{{ parts.ledger_story(card.story, pid, depth=card.depth, view=strip_view(card.depth.strip) if card.depth else none) }}{% endif %}
+      {# The proof mark leads here (design 12.1, S2): the window of the event, then each ID with
+         why it counts or not, in sentences made by code. #}
+      <section class="card project-section ledger-section" id="ledger-{{ pid }}" tabindex="-1" data-pointable aria-labelledby="ledger-{{ pid }}-title">
         <div class="card-body">
           <h3 id="ledger-{{ pid }}-title">On the ledger{{ parts.info("ledger", "the facts of the ledger") }}</h3>
-          {% set checked = facts.ledger | selectattr("network") | list %}
+          {% set checked = lines_to_show(facts.ledger) %}
           {% if checked %}
+          <p class="hm-small hm-ledger-lead">{% if how.window %}The window of {{ facts.event }}: {{ how.window.start | day }} to {{ how.window.end | day }}, from 30 days before its start to 14 days after its end.{% else %}The end of {{ facts.event }} is not known yet, so no date can be judged.{% endif %} The best result among its IDs is the project's: {{ marks.proof(facts.proof_status, facts.proven_by_code_only) }}</p>
           <ul class="id-list">
           {% for line in checked %}
             {% set link = hashscan(line.network, line.kind, line.entity_id) %}
@@ -60,12 +74,13 @@
               <p class="id-name">{% if link %}<a class="id" href="{{ link }}" rel="noopener" target="_blank">{{ line.entity_id }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>{% else %}<span class="id">{{ line.entity_id }}</span>{% endif %} <span class="badge bg-secondary-lt">{{ line.network }}</span></p>
               {% if line.kind == "transaction" %}<p>Transaction: {{ ACTION_WORDS.get(line.action, (line.action or "an action") | lower) }}{% if line.created_at %}, {{ line.created_at | day }}{% endif %}{% if line.outcome and line.outcome != "SUCCESS" %}; failed ({{ line.outcome }}){% endif %}.</p>
               {% else %}<p>{{ KIND_WORDS.get(line.kind, line.kind or "nothing") | capitalize }}{% if line.created_at %}, created {{ line.created_at | day }}{% endif %}{% if line.last_activity_at %}, last activity {{ line.last_activity_at | day }}{% endif %}.</p>{% endif %}
-              <p class="hm-small">{{ STATUS_WORDS.get(line.status, line.status) | capitalize }} &middot; {{ "in the README" if line.found_in == "readme" else "on the page" }} &middot; checked {{ line.asked_at | day if line.asked_at else "not yet" }}</p>
+              {% set why = (STATUS_WORDS.get(line.status, line.status) | capitalize) ~ ": " ~ reason_of(line, how.window) %}
+              <p class="hm-small">{% if line.status == facts.proof_status %}<b>{{ why }}</b>{% else %}{{ why }}{% endif %} &middot; {% if line.found_in == "code" %}{{ parts.in_code(facts.repository, card.code_reading.commit if card.code_reading else none, line.found_at) }}{% elif line.found_in == "readme" %}in the README{% else %}on the page{% endif %} &middot; checked {{ line.asked_at | day if line.asked_at else "not yet" }}</p>
             </li>
           {% endfor %}
           </ul>
           {% else %}
-          <p class="text-secondary">No Hedera ID on the page or in the README. That is common, and says nothing bad about the project.</p>
+          <p class="text-secondary">Neither the page nor the README names a Hedera ID, and the code names none of the team's own made during the event. That is common. <a href="#code-{{ pid }}-title" data-scroll-to="code-{{ pid }}-title">What its code shows</a> is below.</p>
           {% endif %}
         </div>
       </section>
@@ -80,7 +95,8 @@
           {% else %}
           <p class="text-secondary">The page links no repository.</p>
           {% endif %}
-          {% if facts.life %}<p class="hm-small">Activity: {{ facts.life.status }}, {{ facts.life.why }}{% if facts.life.last_sign %}; last sign {{ facts.life.last_sign | day }}{% endif %}.</p>{% endif %}
+          {# The activity mark leads here: the dates behind it, and the rule. #}
+          {% if facts.life %}<p class="hm-small hm-life-line" id="life-{{ pid }}" tabindex="-1" data-pointable>{{ marks.life(facts.life) }} {% if how.life_after %}{{ facts.event }} ended on {{ facts.event_ends_on | day }}, so a sign of life is a push of its code, or an activity of its own IDs on the ledger, after {{ how.life_after | day }}.{% else %}The end of {{ facts.event }} is not known, so no date is a sign of life yet.{% endif %} Last push: {{ facts.last_push_at | day if facts.last_push_at else "not known" }}{% if facts.last_push_at and facts.code_read_at %}, read from GitHub on {{ facts.code_read_at | day }}{% endif %}. Last activity of its own IDs: {{ facts.last_own_activity_at | day if facts.last_own_activity_at else "none" }}{% if facts.ledger_read_at %}, read from the mirror node on {{ facts.ledger_read_at | day }}{% endif %}. So: {{ facts.life.why }}.</p>{% endif %}
           {% if facts.repository and facts.code_status == "found" %}{{ parts.hedera_code(card.code_reading) }}{% endif %}
         </div>
       </section>
@@ -107,12 +123,12 @@
       <section class="card project-section page-section" aria-labelledby="page-{{ pid }}-title">
         <div class="card-body">
           <h3 id="page-{{ pid }}-title">From the project page{{ parts.info("page", "the texts of the page") }}</h3>
-          <p class="hm-small">Copied verbatim from <a href="{{ facts.page_url }}" rel="noopener" target="_blank">the project page<span class="visually-hidden"> (opens in a new tab)</span></a>{% if card.collected_at %} as of {{ card.collected_at | day }}{% endif %}. Not edited by AI.</p>
-          {% if card.short_line %}<h4>Tagline</h4><p>{{ card.short_line }}</p>{% endif %}
+          <p class="hm-small">Copied verbatim from <a href="{{ facts.page_url }}" rel="noopener" target="_blank">the project page<span class="visually-hidden"> (opens in a new tab)</span></a>{% if card.collected_at %} as of {{ card.collected_at | day }}{% endif %}.</p>
+          {% if card.short_line %}<h4>Tagline</h4><p>{{ card.short_line | said if card.story else card.short_line }}</p>{% endif %}
           {% for prize in card.prizes %}<p class="hm-small">Prize: {{ prize.sponsor }}{% if prize.track %}, {{ prize.track }}{% endif %}{% if prize.award %}, {{ prize.award }}{% endif %}</p>{% endfor %}
           {% for section in card.sections %}
           <h4>{{ section.title or "Text" }}</h4>
-          <div class="hm-text">{{ section.body }}</div>
+          <div class="hm-text">{{ section.body | said if card.story else section.body }}</div>
           {% else %}
           <p class="text-secondary">The page has no description.</p>
           {% endfor %}

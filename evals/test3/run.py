@@ -66,8 +66,11 @@ def tool_ids(conninfo: str, project_id: int) -> dict[tuple[str, str], str]:
     """(where, ID) -> the status that the tool gives it."""
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
+            # Test 3 measures the reader of the page and of the README; the IDs that the check
+            # takes from the code (pipeline/code_ids.py) have a measure of their own.
             "SELECT h.found_in, h.entity_id, c.status FROM hedera_ids h "
-            "LEFT JOIN id_checks c ON c.hedera_id = h.id WHERE h.project_id = %s", (project_id,)
+            "LEFT JOIN id_checks c ON c.hedera_id = h.id "
+            "WHERE h.project_id = %s AND h.found_in <> 'code'", (project_id,)
         ).fetchall()  # fmt: skip
     statuses: dict[tuple[str, str], list[str | None]] = {}
     for where, entity, status in rows:

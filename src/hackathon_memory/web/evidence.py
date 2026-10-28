@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 RESULTS = Path(__file__).resolve().parents[3] / "evals" / "results"
@@ -123,3 +124,28 @@ def compare_numbers(level: str = "LOW", folder: Path | None = None) -> Comparing
     if not one.get("calls"):
         return None
     return Comparing(level, float(one["seconds_middle"]), float(one["cost_usd"]) / one["calls"])
+
+
+def _day(made_on: str) -> str:
+    """A day of a result file (2026-10-21), as the pages write it: 21 October 2026."""
+    found = date.fromisoformat(made_on)
+    return f"{found.day} {found:%B %Y}"
+
+
+def check_notes(folder: Path | None = None) -> dict[str, str]:
+    """What the slow steps of a check usually take, in words, from their dated measures
+    (evals/code_times.py, evals/history_times.py). A step with no measure has no line."""
+    notes = {}
+    code = newest("code-times", folder)
+    if code and code.get("seconds"):
+        seconds = code["seconds"]
+        notes["code"] = (f"Code that the tool never read takes about {seconds['median']:.1f} "
+                         f"seconds, and under {seconds['p95']:.1f} seconds for 95 of 100 "
+                         f"repositories (measured on {_day(code['made_on'])}).")  # fmt: skip
+    history = newest("history-times", folder)
+    if history and history.get("seconds_per_project"):
+        seconds, day = history["seconds_per_project"], _day(history["made_on"])
+        notes["history"] = (f"For the IDs of one project this takes about "
+                            f"{seconds['median']:.1f} seconds, and under {seconds['p90']:.1f} "
+                            f"seconds for 9 of 10 (measured on {day}).")  # fmt: skip
+    return notes

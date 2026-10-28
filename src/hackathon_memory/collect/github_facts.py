@@ -18,9 +18,11 @@ of a fork also holds the repository it comes from, with its owner: it is dropped
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from hackathon_memory.collect.answers import AgainRun, Answers, ask_again
 from hackathon_memory.collect.github import SITE, api_message
 from hackathon_memory.collect.github_once import AnswersRun, fetch_once
 from hackathon_memory.collect.polite import FetchResult, PoliteClient
@@ -97,6 +99,11 @@ class RepositoryFacts:
     fetched_at: str
     default_branch: str | None = None  # the branch that GitHub opens first, such as main
 
+    @property
+    def read_at(self) -> datetime:
+        """When GitHub gave this answer."""
+        return datetime.fromisoformat(self.fetched_at.replace("Z", "+00:00"))
+
 
 def _moment(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:
@@ -164,3 +171,21 @@ def fetch_facts(
         collector=collector,
         limit=limit,
     )
+
+
+def facts_again(
+    client: PoliteClient,
+    answers: Answers,
+    repositories: list[str],
+    *,
+    collector: str,
+    older_than: timedelta,
+    now: Callable[[], datetime],
+    limit: int | None = None,
+) -> AgainRun:
+    """Ask again for the facts of every repository whose newest answer is older than
+    `older_than`, with its ETag (collect/answers.py)."""
+    return ask_again(client, answers, repositories, address_of=facts_address, keep=kept_of,
+                     status_of=lambda saved: read_facts(saved).status, statuses=STATUSES,
+                     suffix=SUFFIX, collector=collector, older_than=older_than, now=now,
+                     limit=limit)  # fmt: skip

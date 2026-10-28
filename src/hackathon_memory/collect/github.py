@@ -5,10 +5,11 @@ a time. The token in .env reads public repositories only.
 
 The rules of design 5.7 hold here too, through the polite client: the name of the tool and the
 contact address in every request, one request at a time with a pause, a stop switch in .env
-(COLLECT_GITHUB), and a limit of requests counted on disk. Every answer is saved, so a
-repository is asked again only when a team registers it (design 9.2): GitHub's limits are far
-above what the tool sends, and the rule of a page asked once holds for the sites that it was
-promised to.
+(COLLECT_GITHUB), and a limit of requests counted on disk. Every answer is saved. Since 25
+October 2026 an answer is asked again once it is a day old, because a repository changes after
+its event (collect/answers.py, design 7.3): with the ETag of the last answer, so that GitHub
+answers 304 when nothing changed, which does not count against its hourly limit. The rule of a
+page asked once holds for the sites that it was promised to, not for GitHub's API.
 
 GitHub's own rules, read on docs.github.com on 11 October 2026:
 
@@ -74,9 +75,13 @@ API_VERSION = "2026-03-10"
 # Design rule 10: at least one second between two requests. That is 60 points a minute, a
 # fifteenth of what GitHub allows.
 PAUSE_SECONDS = 1.0
-# Over all runs. The README of each repository (about 650), then the facts of the code (about
-# eight requests for each repository) need about 6,000. The rest is room for redirects.
-REQUEST_LIMIT = 8000
+# Over all runs, a stop for a fault that no day ends: about 50 rounds of asking again. Until 25
+# October 2026 it was 8,000, for answers that were asked once (3,956 were used).
+REQUEST_LIMIT = 100_000
+# For each day (UTC). One round of asking again sends about 1,950: three for each of the 651
+# repositories, and two more for each one whose commit changed (design 7.3). GitHub allows 5,000
+# in an hour.
+DAILY_LIMIT = 4000
 # When fewer requests than this are left in GitHub's hour, the run stops before it is told to.
 HOURLY_RESERVE = 100
 CODE_HOST = "github.com"
@@ -308,9 +313,8 @@ def _hour_end(reset: int | None) -> str:
 
 
 def request_count(settings: Settings) -> RequestCount:
-    return RequestCount(
-        Path(settings.data_dir) / "requests" / f"{SITE}.json", SITE, limit=REQUEST_LIMIT
-    )
+    return RequestCount(Path(settings.data_dir) / "requests" / f"{SITE}.json", SITE,
+                        limit=REQUEST_LIMIT, daily_limit=DAILY_LIMIT)  # fmt: skip
 
 
 def raw_dir(settings: Settings) -> Path:

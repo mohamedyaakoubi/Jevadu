@@ -1,0 +1,1353 @@
+{
+ "came_back": {
+  "groups": 2,
+  "projects": 5
+ },
+ "cards": {
+  "cards": 658,
+  "fields_dropped": 4,
+  "quotes_found": 8909,
+  "quotes_given": 8931
+ },
+ "events": [
+  {
+   "life": {
+    "all": {
+     "active": 4,
+     "quiet": 2,
+     "stopped": 30,
+     "unknown": 4
+    },
+    "hedera_prize": {
+     "active": 3,
+     "quiet": 2,
+     "stopped": 3,
+     "unknown": 1
+    }
+   },
+   "prize": {
+    "hedera_prize": 9,
+    "no_prize": 27,
+    "other_prize": 4
+   },
+   "projects": 40,
+   "proof": {
+    "all": {
+     "dates_do_not_fit": 1,
+     "no_id_given": 26,
+     "proof_found": 13
+    },
+    "hedera_prize": {
+     "no_id_given": 5,
+     "proof_found": 4
+    }
+   },
+   "services": {
+    "all": {
+     "account": 7,
+     "contract": 3,
+     "token": 6,
+     "topic": 8
+    },
+    "hedera_prize": {
+     "account": 3,
+     "token": 2,
+     "topic": 2
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "cannes2026",
+   "themes": {
+    "all": {
+     "AI agents and automation": 9,
+     "Data and devices": 1,
+     "Developer tools": 2,
+     "Gaming and entertainment": 5,
+     "Identity and credentials": 1,
+     "Lending, saving and investing": 1,
+     "Other": 2,
+     "Public services": 2,
+     "Real-world assets and tokens": 3,
+     "Supply chain and provenance": 1,
+     "Sustainability, energy and climate": 1,
+     "Tools for AI agents": 12
+    },
+    "hedera_prize": {
+     "AI agents and automation": 3,
+     "Developer tools": 1,
+     "Lending, saving and investing": 1,
+     "Real-world assets and tokens": 2,
+     "Supply chain and provenance": 1,
+     "Tools for AI agents": 1
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 40,
+   "year": 2026
+  },
+  {
+   "life": {
+    "all": {
+     "active": 6,
+     "too early to tell": 243,
+     "unknown": 22
+    },
+    "hedera_prize": {
+     "too early to tell": 10
+    }
+   },
+   "prize": {
+    "hedera_prize": 10,
+    "no_prize": 250,
+    "other_prize": 11
+   },
+   "projects": 271,
+   "proof": {
+    "all": {
+     "another_kind": 2,
+     "dates_do_not_fit": 4,
+     "no_id_given": 103,
+     "proof_found": 162
+    },
+    "hedera_prize": {
+     "no_id_given": 2,
+     "proof_found": 8
+    }
+   },
+   "services": {
+    "all": {
+     "account": 123,
+     "contract": 65,
+     "schedule": 19,
+     "token": 49,
+     "topic": 93
+    },
+    "hedera_prize": {
+     "account": 5,
+     "contract": 3,
+     "schedule": 2,
+     "token": 1,
+     "topic": 4
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "ethonline2026",
+   "themes": {
+    "all": {
+     "AI agents and automation": 16,
+     "Agriculture": 1,
+     "Data and devices": 2,
+     "Developer tools": 15,
+     "Gaming and entertainment": 3,
+     "Health": 1,
+     "Identity and credentials": 1,
+     "Lending, saving and investing": 22,
+     "Other": 1,
+     "Payments and remittance": 8,
+     "Real-world assets and tokens": 30,
+     "Social and community": 2,
+     "Supply chain and provenance": 5,
+     "Sustainability, energy and climate": 2,
+     "Tools for AI agents": 162
+    },
+    "hedera_prize": {
+     "AI agents and automation": 3,
+     "Developer tools": 2,
+     "Lending, saving and investing": 2,
+     "Real-world assets and tokens": 1,
+     "Tools for AI agents": 2
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 271,
+   "year": 2026
+  },
+  {
+   "life": {
+    "all": {
+     "active": 8,
+     "too early to tell": 37,
+     "unknown": 1
+    },
+    "hedera_prize": {
+     "active": 2,
+     "too early to tell": 8
+    }
+   },
+   "prize": {
+    "hedera_prize": 10,
+    "no_prize": 28,
+    "other_prize": 8
+   },
+   "projects": 46,
+   "proof": {
+    "all": {
+     "no_id_given": 20,
+     "proof_found": 26
+    },
+    "hedera_prize": {
+     "no_id_given": 5,
+     "proof_found": 5
+    }
+   },
+   "services": {
+    "all": {
+     "account": 18,
+     "contract": 4,
+     "schedule": 3,
+     "token": 8,
+     "topic": 20
+    },
+    "hedera_prize": {
+     "account": 2,
+     "schedule": 1,
+     "token": 3,
+     "topic": 3
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "lisbon2026",
+   "themes": {
+    "all": {
+     "AI agents and automation": 11,
+     "Data and devices": 3,
+     "Gaming and entertainment": 1,
+     "Identity and credentials": 1,
+     "Lending, saving and investing": 2,
+     "Other": 1,
+     "Payments and remittance": 2,
+     "Real-world assets and tokens": 3,
+     "Social and community": 2,
+     "Supply chain and provenance": 1,
+     "Tools for AI agents": 19
+    },
+    "hedera_prize": {
+     "AI agents and automation": 2,
+     "Data and devices": 1,
+     "Lending, saving and investing": 1,
+     "Payments and remittance": 1,
+     "Real-world assets and tokens": 1,
+     "Tools for AI agents": 4
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 46,
+   "year": 2026
+  },
+  {
+   "life": {
+    "all": {
+     "active": 5,
+     "quiet": 1,
+     "stopped": 24,
+     "unknown": 3
+    },
+    "hedera_prize": {
+     "active": 3,
+     "quiet": 1,
+     "stopped": 6,
+     "unknown": 1
+    }
+   },
+   "prize": {
+    "hedera_prize": 11,
+    "no_prize": 16,
+    "other_prize": 6
+   },
+   "projects": 33,
+   "proof": {
+    "all": {
+     "no_id_given": 20,
+     "proof_found": 13
+    },
+    "hedera_prize": {
+     "no_id_given": 6,
+     "proof_found": 5
+    }
+   },
+   "services": {
+    "all": {
+     "account": 6,
+     "contract": 2,
+     "schedule": 1,
+     "token": 5,
+     "topic": 9
+    },
+    "hedera_prize": {
+     "account": 5,
+     "contract": 1,
+     "schedule": 1,
+     "token": 3,
+     "topic": 2
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "newyork2026",
+   "themes": {
+    "all": {
+     "AI agents and automation": 6,
+     "Data and devices": 2,
+     "Developer tools": 2,
+     "Gaming and entertainment": 1,
+     "Health": 2,
+     "Identity and credentials": 2,
+     "Lending, saving and investing": 3,
+     "Payments and remittance": 2,
+     "Public services": 1,
+     "Real-world assets and tokens": 1,
+     "Supply chain and provenance": 1,
+     "Tools for AI agents": 10
+    },
+    "hedera_prize": {
+     "AI agents and automation": 3,
+     "Data and devices": 1,
+     "Lending, saving and investing": 2,
+     "Payments and remittance": 1,
+     "Real-world assets and tokens": 1,
+     "Supply chain and provenance": 1,
+     "Tools for AI agents": 2
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 33,
+   "year": 2026
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 15
+    },
+    "hedera_prize": {
+     "unknown": 15
+    }
+   },
+   "prize": {
+    "hedera_prize": 15
+   },
+   "projects": 15,
+   "proof": {
+    "all": {
+     "no_id_given": 15
+    },
+    "hedera_prize": {
+     "no_id_given": 15
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hello-future-apex",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 15,
+   "with_theme": 0,
+   "year": 2026
+  },
+  {
+   "life": {
+    "all": {
+     "active": 1,
+     "quiet": 1,
+     "stopped": 11,
+     "unknown": 2
+    },
+    "hedera_prize": {
+     "active": 1,
+     "stopped": 4
+    }
+   },
+   "prize": {
+    "hedera_prize": 5,
+    "no_prize": 5,
+    "other_prize": 5
+   },
+   "projects": 15,
+   "proof": {
+    "all": {
+     "no_id_given": 14,
+     "proof_found": 1
+    },
+    "hedera_prize": {
+     "no_id_given": 5
+    }
+   },
+   "services": {
+    "all": {
+     "account": 1
+    },
+    "hedera_prize": {}
+   },
+   "site": "ethglobal.com",
+   "slug": "buenosaires",
+   "themes": {
+    "all": {
+     "AI agents and automation": 3,
+     "Lending, saving and investing": 1,
+     "Other": 1,
+     "Payments and remittance": 4,
+     "Social and community": 2,
+     "Tools for AI agents": 4
+    },
+    "hedera_prize": {
+     "AI agents and automation": 1,
+     "Other": 1,
+     "Payments and remittance": 1,
+     "Tools for AI agents": 2
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 15,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "quiet": 4,
+     "stopped": 7,
+     "unknown": 1
+    },
+    "hedera_prize": {
+     "quiet": 3,
+     "stopped": 2
+    }
+   },
+   "prize": {
+    "hedera_prize": 5,
+    "no_prize": 6,
+    "other_prize": 1
+   },
+   "projects": 12,
+   "proof": {
+    "all": {
+     "no_id_given": 11,
+     "proof_found": 1
+    },
+    "hedera_prize": {
+     "no_id_given": 5
+    }
+   },
+   "services": {
+    "all": {
+     "contract": 1
+    },
+    "hedera_prize": {}
+   },
+   "site": "ethglobal.com",
+   "slug": "cannes",
+   "themes": {
+    "all": {
+     "AI agents and automation": 1,
+     "Data and devices": 1,
+     "Developer tools": 2,
+     "Health": 1,
+     "Lending, saving and investing": 4,
+     "Payments and remittance": 1,
+     "Tools for AI agents": 2
+    },
+    "hedera_prize": {
+     "Data and devices": 1,
+     "Developer tools": 1,
+     "Health": 1,
+     "Lending, saving and investing": 2
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 12,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "active": 3,
+     "quiet": 8,
+     "stopped": 56,
+     "unknown": 12
+    },
+    "hedera_prize": {
+     "stopped": 4,
+     "unknown": 1
+    }
+   },
+   "prize": {
+    "hedera_prize": 5,
+    "no_prize": 73,
+    "other_prize": 1
+   },
+   "projects": 79,
+   "proof": {
+    "all": {
+     "dates_do_not_fit": 2,
+     "no_id_given": 62,
+     "proof_found": 15
+    },
+    "hedera_prize": {
+     "no_id_given": 4,
+     "proof_found": 1
+    }
+   },
+   "services": {
+    "all": {
+     "account": 4,
+     "contract": 12,
+     "topic": 3
+    },
+    "hedera_prize": {
+     "contract": 1
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "ethonline2025",
+   "themes": {
+    "all": {
+     "AI agents and automation": 21,
+     "Data and devices": 1,
+     "Developer tools": 8,
+     "Education": 1,
+     "Gaming and entertainment": 10,
+     "Health": 2,
+     "Identity and credentials": 3,
+     "Lending, saving and investing": 6,
+     "Other": 3,
+     "Payments and remittance": 9,
+     "Real-world assets and tokens": 2,
+     "Social and community": 5,
+     "Sustainability, energy and climate": 2,
+     "Tools for AI agents": 6
+    },
+    "hedera_prize": {
+     "AI agents and automation": 1,
+     "Lending, saving and investing": 2,
+     "Sustainability, energy and climate": 1,
+     "Tools for AI agents": 1
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 79,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "active": 1,
+     "quiet": 9,
+     "stopped": 44,
+     "unknown": 6
+    },
+    "hedera_prize": {
+     "quiet": 1,
+     "stopped": 4
+    }
+   },
+   "prize": {
+    "hedera_prize": 5,
+    "no_prize": 49,
+    "other_prize": 6
+   },
+   "projects": 60,
+   "proof": {
+    "all": {
+     "no_id_given": 49,
+     "proof_found": 11
+    },
+    "hedera_prize": {
+     "no_id_given": 1,
+     "proof_found": 4
+    }
+   },
+   "services": {
+    "all": {
+     "account": 3,
+     "contract": 10,
+     "topic": 2
+    },
+    "hedera_prize": {
+     "contract": 4
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "newdelhi",
+   "themes": {
+    "all": {
+     "AI agents and automation": 12,
+     "Data and devices": 1,
+     "Developer tools": 8,
+     "Education": 1,
+     "Gaming and entertainment": 4,
+     "Health": 3,
+     "Identity and credentials": 4,
+     "Lending, saving and investing": 3,
+     "Other": 2,
+     "Payments and remittance": 6,
+     "Public services": 1,
+     "Real-world assets and tokens": 3,
+     "Social and community": 4,
+     "Supply chain and provenance": 1,
+     "Sustainability, energy and climate": 1,
+     "Tools for AI agents": 6
+    },
+    "hedera_prize": {
+     "AI agents and automation": 1,
+     "Payments and remittance": 2,
+     "Real-world assets and tokens": 1,
+     "Tools for AI agents": 1
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 60,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "quiet": 1,
+     "stopped": 5,
+     "unknown": 5
+    },
+    "hedera_prize": {
+     "stopped": 2,
+     "unknown": 2
+    }
+   },
+   "prize": {
+    "hedera_prize": 4,
+    "no_prize": 3,
+    "other_prize": 4
+   },
+   "projects": 11,
+   "proof": {
+    "all": {
+     "no_id_given": 10,
+     "proof_found": 1
+    },
+    "hedera_prize": {
+     "no_id_given": 4
+    }
+   },
+   "services": {
+    "all": {
+     "contract": 1
+    },
+    "hedera_prize": {}
+   },
+   "site": "ethglobal.com",
+   "slug": "newyork2025",
+   "themes": {
+    "all": {
+     "AI agents and automation": 1,
+     "Data and devices": 2,
+     "Gaming and entertainment": 1,
+     "Health": 1,
+     "Lending, saving and investing": 3,
+     "Public services": 1,
+     "Real-world assets and tokens": 1,
+     "Tools for AI agents": 1
+    },
+    "hedera_prize": {
+     "Data and devices": 1,
+     "Health": 1,
+     "Lending, saving and investing": 1,
+     "Public services": 1
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 11,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "quiet": 1,
+     "stopped": 15,
+     "unknown": 1
+    },
+    "hedera_prize": {
+     "stopped": 5
+    }
+   },
+   "prize": {
+    "hedera_prize": 5,
+    "no_prize": 6,
+    "other_prize": 6
+   },
+   "projects": 17,
+   "proof": {
+    "all": {
+     "no_id_given": 15,
+     "proof_found": 2
+    },
+    "hedera_prize": {
+     "no_id_given": 3,
+     "proof_found": 2
+    }
+   },
+   "services": {
+    "all": {
+     "account": 1,
+     "contract": 2
+    },
+    "hedera_prize": {
+     "account": 1,
+     "contract": 2
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "prague",
+   "themes": {
+    "all": {
+     "AI agents and automation": 8,
+     "Data and devices": 1,
+     "Developer tools": 1,
+     "Gaming and entertainment": 1,
+     "Health": 1,
+     "Identity and credentials": 1,
+     "Lending, saving and investing": 1,
+     "Real-world assets and tokens": 2,
+     "Social and community": 1
+    },
+    "hedera_prize": {
+     "AI agents and automation": 3,
+     "Developer tools": 1,
+     "Social and community": 1
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 17,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 19
+    },
+    "hedera_prize": {
+     "unknown": 19
+    }
+   },
+   "prize": {
+    "hedera_prize": 19
+   },
+   "projects": 19,
+   "proof": {
+    "all": {
+     "no_id_given": 19
+    },
+    "hedera_prize": {
+     "no_id_given": 19
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera-hackathon.hashgraph.swiss",
+   "slug": "hedera-africa-hackathon-2025",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 19,
+   "with_theme": 0,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 15
+    },
+    "hedera_prize": {
+     "unknown": 15
+    }
+   },
+   "prize": {
+    "hedera_prize": 15
+   },
+   "projects": 15,
+   "proof": {
+    "all": {
+     "no_id_given": 15
+    },
+    "hedera_prize": {
+     "no_id_given": 15
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hello-future-ascension",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 15,
+   "with_theme": 0,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 12
+    },
+    "hedera_prize": {
+     "unknown": 12
+    }
+   },
+   "prize": {
+    "hedera_prize": 12
+   },
+   "projects": 12,
+   "proof": {
+    "all": {
+     "no_id_given": 12
+    },
+    "hedera_prize": {
+     "no_id_given": 12
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hello-future-origins",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 12,
+   "with_theme": 0,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 6
+    },
+    "hedera_prize": {
+     "unknown": 6
+    }
+   },
+   "prize": {
+    "hedera_prize": 6
+   },
+   "projects": 6,
+   "proof": {
+    "all": {
+     "no_id_given": 6
+    },
+    "hedera_prize": {
+     "no_id_given": 6
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hol.org",
+   "slug": "hedera-x-ai-hackathon-2025",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 6,
+   "with_theme": 0,
+   "year": 2025
+  },
+  {
+   "life": {
+    "all": {
+     "quiet": 3,
+     "stopped": 12,
+     "unknown": 2
+    },
+    "hedera_prize": {
+     "quiet": 1,
+     "stopped": 2
+    }
+   },
+   "prize": {
+    "hedera_prize": 3,
+    "no_prize": 3,
+    "other_prize": 11
+   },
+   "projects": 17,
+   "proof": {
+    "all": {
+     "no_id_given": 15,
+     "proof_found": 2
+    },
+    "hedera_prize": {
+     "no_id_given": 1,
+     "proof_found": 2
+    }
+   },
+   "services": {
+    "all": {
+     "contract": 2,
+     "token": 1,
+     "topic": 1
+    },
+    "hedera_prize": {
+     "contract": 2,
+     "token": 1,
+     "topic": 1
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "bangkok",
+   "themes": {
+    "all": {
+     "AI agents and automation": 3,
+     "Developer tools": 2,
+     "Gaming and entertainment": 1,
+     "Lending, saving and investing": 2,
+     "Other": 2,
+     "Payments and remittance": 2,
+     "Social and community": 4,
+     "Tools for AI agents": 1
+    },
+    "hedera_prize": {
+     "AI agents and automation": 1,
+     "Lending, saving and investing": 1,
+     "Social and community": 1
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 17,
+   "year": 2024
+  },
+  {
+   "life": {
+    "all": {
+     "quiet": 4,
+     "stopped": 22,
+     "unknown": 5
+    },
+    "hedera_prize": {
+     "quiet": 1,
+     "stopped": 6,
+     "unknown": 3
+    }
+   },
+   "prize": {
+    "hedera_prize": 10,
+    "no_prize": 10,
+    "other_prize": 11
+   },
+   "projects": 31,
+   "proof": {
+    "all": {
+     "no_id_given": 23,
+     "proof_found": 8
+    },
+    "hedera_prize": {
+     "no_id_given": 9,
+     "proof_found": 1
+    }
+   },
+   "services": {
+    "all": {
+     "account": 1,
+     "contract": 7,
+     "token": 1
+    },
+    "hedera_prize": {
+     "contract": 1
+    }
+   },
+   "site": "ethglobal.com",
+   "slug": "ethonline2024",
+   "themes": {
+    "all": {
+     "AI agents and automation": 3,
+     "Developer tools": 3,
+     "Education": 1,
+     "Gaming and entertainment": 3,
+     "Identity and credentials": 3,
+     "Lending, saving and investing": 2,
+     "Other": 4,
+     "Payments and remittance": 7,
+     "Real-world assets and tokens": 3,
+     "Social and community": 1,
+     "Sustainability, energy and climate": 1
+    },
+    "hedera_prize": {
+     "AI agents and automation": 2,
+     "Developer tools": 1,
+     "Education": 1,
+     "Identity and credentials": 2,
+     "Lending, saving and investing": 1,
+     "Other": 1,
+     "Payments and remittance": 2
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 31,
+   "year": 2024
+  },
+  {
+   "life": {
+    "all": {
+     "stopped": 4,
+     "unknown": 2
+    },
+    "hedera_prize": {
+     "stopped": 3,
+     "unknown": 2
+    }
+   },
+   "prize": {
+    "hedera_prize": 5,
+    "other_prize": 1
+   },
+   "projects": 6,
+   "proof": {
+    "all": {
+     "no_id_given": 6
+    },
+    "hedera_prize": {
+     "no_id_given": 5
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "ethglobal.com",
+   "slug": "sanfrancisco2024",
+   "themes": {
+    "all": {
+     "AI agents and automation": 1,
+     "Developer tools": 1,
+     "Lending, saving and investing": 1,
+     "Payments and remittance": 1,
+     "Social and community": 1,
+     "Tools for AI agents": 1
+    },
+    "hedera_prize": {
+     "AI agents and automation": 1,
+     "Developer tools": 1,
+     "Lending, saving and investing": 1,
+     "Payments and remittance": 1,
+     "Social and community": 1
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 6,
+   "year": 2024
+  },
+  {
+   "life": {
+    "all": {
+     "quiet": 2,
+     "stopped": 16,
+     "unknown": 2
+    },
+    "hedera_prize": {
+     "stopped": 5
+    }
+   },
+   "prize": {
+    "hedera_prize": 5,
+    "no_prize": 9,
+    "other_prize": 6
+   },
+   "projects": 20,
+   "proof": {
+    "all": {
+     "no_id_given": 18,
+     "proof_found": 2
+    },
+    "hedera_prize": {
+     "no_id_given": 5
+    }
+   },
+   "services": {
+    "all": {
+     "contract": 2
+    },
+    "hedera_prize": {}
+   },
+   "site": "ethglobal.com",
+   "slug": "singapore2024",
+   "themes": {
+    "all": {
+     "Agriculture": 1,
+     "Data and devices": 2,
+     "Developer tools": 1,
+     "Gaming and entertainment": 1,
+     "Identity and credentials": 3,
+     "Lending, saving and investing": 4,
+     "Other": 1,
+     "Payments and remittance": 2,
+     "Public services": 1,
+     "Social and community": 2,
+     "Sustainability, energy and climate": 2
+    },
+    "hedera_prize": {
+     "Identity and credentials": 1,
+     "Lending, saving and investing": 2,
+     "Social and community": 2
+    }
+   },
+   "winner_entries": 0,
+   "with_theme": 20,
+   "year": 2024
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 18
+    },
+    "hedera_prize": {
+     "unknown": 18
+    }
+   },
+   "prize": {
+    "hedera_prize": 18
+   },
+   "projects": 18,
+   "proof": {
+    "all": {
+     "no_id_given": 18
+    },
+    "hedera_prize": {
+     "no_id_given": 18
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hello-future-2-0",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 18,
+   "with_theme": 0,
+   "year": 2024
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 26
+    },
+    "hedera_prize": {
+     "unknown": 26
+    }
+   },
+   "prize": {
+    "hedera_prize": 26
+   },
+   "projects": 26,
+   "proof": {
+    "all": {
+     "no_id_given": 26
+    },
+    "hedera_prize": {
+     "no_id_given": 26
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hello-future-2024",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 26,
+   "with_theme": 0,
+   "year": 2024
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 7
+    },
+    "hedera_prize": {
+     "unknown": 7
+    }
+   },
+   "prize": {
+    "hedera_prize": 7
+   },
+   "projects": 7,
+   "proof": {
+    "all": {
+     "no_id_given": 7
+    },
+    "hedera_prize": {
+     "no_id_given": 7
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "beyond-blockchain-2023",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 7,
+   "with_theme": 0,
+   "year": 2023
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 19
+    },
+    "hedera_prize": {
+     "unknown": 19
+    }
+   },
+   "prize": {
+    "hedera_prize": 19
+   },
+   "projects": 19,
+   "proof": {
+    "all": {
+     "no_id_given": 19
+    },
+    "hedera_prize": {
+     "no_id_given": 19
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hedera22",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 19,
+   "with_theme": 0,
+   "year": 2022
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 13
+    },
+    "hedera_prize": {
+     "unknown": 13
+    }
+   },
+   "prize": {
+    "hedera_prize": 13
+   },
+   "projects": 13,
+   "proof": {
+    "all": {
+     "no_id_given": 13
+    },
+    "hedera_prize": {
+     "no_id_given": 13
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hedera21",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 13,
+   "with_theme": 0,
+   "year": 2021
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 10
+    },
+    "hedera_prize": {
+     "unknown": 10
+    }
+   },
+   "prize": {
+    "hedera_prize": 10
+   },
+   "projects": 10,
+   "proof": {
+    "all": {
+     "no_id_given": 10
+    },
+    "hedera_prize": {
+     "no_id_given": 10
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "hedera.com",
+   "slug": "hedera20",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 10,
+   "with_theme": 0,
+   "year": 2020
+  },
+  {
+   "life": {
+    "all": {
+     "unknown": 8
+    },
+    "hedera_prize": {
+     "unknown": 8
+    }
+   },
+   "prize": {
+    "hedera_prize": 8
+   },
+   "projects": 8,
+   "proof": {
+    "all": {
+     "no_id_given": 8
+    },
+    "hedera_prize": {
+     "no_id_given": 8
+    }
+   },
+   "services": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "site": "web.archive.org",
+   "slug": "hedera18-hackathon",
+   "themes": {
+    "all": {},
+    "hedera_prize": {}
+   },
+   "winner_entries": 8,
+   "with_theme": 0,
+   "year": 2018
+  }
+ ],
+ "made_at": "2026-10-24T01:43:07Z",
+ "made_on": "2026-10-24",
+ "projects": 826,
+ "share_needs": 20,
+ "test": "overview"
+}

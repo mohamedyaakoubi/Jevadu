@@ -20,6 +20,6 @@
 </div>
 {% endfor %}
 {% if check_place %}
-<div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">{% if not failed %}<p class="hm-small">Compared by Gemini with this README. Not a judgment of the projects.</p>{% endif %}</div>
+<div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">{% if not failed %}<p class="hm-small">Compared by {{ compared_by or "Gemini" }} with this README. Not a judgment of the projects.</p>{% endif %}</div>
 {% endif %}
 {% endif %}

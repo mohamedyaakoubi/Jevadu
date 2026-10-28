@@ -1,0 +1,2089 @@
+{
+ "test": "search-fallback",
+ "made_on": "2026-10-24",
+ "made_at": "2026-10-24T05:16:25Z",
+ "cases_of": "test2, the counted cases",
+ "pool_ordered": 30,
+ "cases_at_once": 6,
+ "seconds_limit": {
+  "gemini-3.8-flash LOW": 120.0,
+  "deepseek-v4.1-flash-maas off": 120.0,
+  "deepseek-v4.1-flash-maas high": 420.0
+ },
+ "models": {
+  "meaning, no model": {
+   "share": 0.6316,
+   "range": [
+    0.4833,
+    0.7719
+   ],
+   "found": 36,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 0,
+   "seconds_middle": 0.0,
+   "seconds_95_of_100": 0.0,
+   "cost_usd_per_search": 0.0
+  },
+  "gemini-3.8-flash LOW": {
+   "share": 0.7368,
+   "range": [
+    0.6102,
+    0.8571
+   ],
+   "found": 42,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 20,
+   "seconds_middle": 28.66,
+   "seconds_95_of_100": 120.16,
+   "cost_usd_per_search": 0.001401
+  },
+  "deepseek-v4.1-flash-maas off": {
+   "share": 0.7018,
+   "range": [
+    0.5763,
+    0.8214
+   ],
+   "found": 40,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 1,
+   "seconds_middle": 1.58,
+   "seconds_95_of_100": 36.94,
+   "cost_usd_per_search": 0.000787
+  },
+  "deepseek-v4.1-flash-maas high": {
+   "share": 0.6667,
+   "range": [
+    0.5439,
+    0.7857
+   ],
+   "found": 38,
+   "known": 57,
+   "searches": 56,
+   "failed_ai_calls": 3,
+   "seconds_middle": 123.14,
+   "seconds_95_of_100": 414.39,
+   "cost_usd_per_search": 0.006955
+  }
+ },
+ "rows": [
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.6,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.93,
+   "failed": false
+  },
+  {
+   "case": 1,
+   "group": "pair 1",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 229.85,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 14.96,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.75,
+   "failed": false
+  },
+  {
+   "case": 2,
+   "group": "pair 1",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 100.87,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.64,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.27,
+   "failed": false
+  },
+  {
+   "case": 3,
+   "group": "pair 2",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 200.58,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 117.49,
+   "failed": true
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.85,
+   "failed": false
+  },
+  {
+   "case": 4,
+   "group": "pair 2",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 180.74,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 14.76,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.62,
+   "failed": false
+  },
+  {
+   "case": 5,
+   "group": "pair 3",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 27.54,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 16.18,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.12,
+   "failed": false
+  },
+  {
+   "case": 6,
+   "group": "pair 3",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 53.88,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 116.98,
+   "failed": true
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.22,
+   "failed": false
+  },
+  {
+   "case": 7,
+   "group": "pair 4",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 57.32,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 116.98,
+   "failed": true
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.45,
+   "failed": false
+  },
+  {
+   "case": 8,
+   "group": "pair 4",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 190.2,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 116.83,
+   "failed": true
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.82,
+   "failed": false
+  },
+  {
+   "case": 9,
+   "group": "pair 5",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 414.39,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 116.86,
+   "failed": true
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.71,
+   "failed": false
+  },
+  {
+   "case": 10,
+   "group": "pair 5",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 420.07,
+   "failed": true
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 3.11,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.1,
+   "failed": false
+  },
+  {
+   "case": 11,
+   "group": "pair 6",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 167.16,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 117.18,
+   "failed": true
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 2.39,
+   "failed": false
+  },
+  {
+   "case": 12,
+   "group": "pair 6",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 94.42,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.04,
+   "failed": true
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.46,
+   "failed": false
+  },
+  {
+   "case": 13,
+   "group": "pair 7",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 61.18,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 8.13,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 6.99,
+   "failed": false
+  },
+  {
+   "case": 14,
+   "group": "pair 7",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 125.27,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.09,
+   "failed": true
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 47.09,
+   "failed": false
+  },
+  {
+   "case": 15,
+   "group": "pair 8",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 23.18,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 10.96,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.74,
+   "failed": false
+  },
+  {
+   "case": 16,
+   "group": "pair 8",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 110.04,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 93.99,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.23,
+   "failed": false
+  },
+  {
+   "case": 17,
+   "group": "pair 9",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 98.74,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 19.63,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.23,
+   "failed": false
+  },
+  {
+   "case": 18,
+   "group": "pair 9",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 112.4,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 26.34,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.36,
+   "failed": false
+  },
+  {
+   "case": 19,
+   "group": "pair 10",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 242.61,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.05,
+   "failed": true
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.0,
+   "failed": false
+  },
+  {
+   "case": 20,
+   "group": "pair 10",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 181.62,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 11.76,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.27,
+   "failed": false
+  },
+  {
+   "case": 21,
+   "group": "pair 11",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 96.15,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.36,
+   "failed": true
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.72,
+   "failed": false
+  },
+  {
+   "case": 22,
+   "group": "pair 11",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 63.09,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 9.13,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 2.69,
+   "failed": false
+  },
+  {
+   "case": 23,
+   "group": "pair 12",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 176.62,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 101.01,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.05,
+   "failed": false
+  },
+  {
+   "case": 24,
+   "group": "pair 12",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 75.22,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.05,
+   "failed": true
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.46,
+   "failed": false
+  },
+  {
+   "case": 25,
+   "group": "pair 13",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 27.27,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 4.34,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.87,
+   "failed": false
+  },
+  {
+   "case": 26,
+   "group": "pair 13",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 130.74,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 110.71,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.21,
+   "failed": false
+  },
+  {
+   "case": 27,
+   "group": "pair 14",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.56,
+   "failed": true
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.04,
+   "failed": true
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.11,
+   "failed": false
+  },
+  {
+   "case": 28,
+   "group": "pair 14",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 60.15,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.64,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.97,
+   "failed": false
+  },
+  {
+   "case": 29,
+   "group": "pair 15",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 47.45,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.05,
+   "failed": true
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.38,
+   "failed": false
+  },
+  {
+   "case": 30,
+   "group": "pair 15",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 193.12,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 120.16,
+   "failed": true
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.36,
+   "failed": true
+  },
+  {
+   "case": 31,
+   "group": "pair 16",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 420.12,
+   "failed": true
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 14.05,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.84,
+   "failed": false
+  },
+  {
+   "case": 32,
+   "group": "pair 16",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 189.15,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 120.07,
+   "failed": true
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.72,
+   "failed": false
+  },
+  {
+   "case": 33,
+   "group": "pair 17",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 187.23,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 9.09,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.21,
+   "failed": false
+  },
+  {
+   "case": 34,
+   "group": "pair 17",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 27.5,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 120.19,
+   "failed": true
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 3.03,
+   "failed": false
+  },
+  {
+   "case": 35,
+   "group": "pair 18",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 118.89,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.05,
+   "failed": true
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.18,
+   "failed": false
+  },
+  {
+   "case": 36,
+   "group": "pair 18",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 205.11,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 7.28,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.57,
+   "failed": false
+  },
+  {
+   "case": 37,
+   "group": "pair 19",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 86.48,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 120.14,
+   "failed": true
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.72,
+   "failed": false
+  },
+  {
+   "case": 38,
+   "group": "pair 19",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 108.49,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.74,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 33.25,
+   "failed": false
+  },
+  {
+   "case": 39,
+   "group": "pair 20",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 256.23,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 17.16,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.22,
+   "failed": false
+  },
+  {
+   "case": 40,
+   "group": "pair 20",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 330.78,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 17.7,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.6,
+   "failed": false
+  },
+  {
+   "case": 41,
+   "group": "pair 21",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 110.87,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 15.33,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 35.22,
+   "failed": false
+  },
+  {
+   "case": 42,
+   "group": "pair 21",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 287.19,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 100.25,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.22,
+   "failed": false
+  },
+  {
+   "case": 43,
+   "group": "pair 22",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 259.69,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 8.42,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.06,
+   "failed": false
+  },
+  {
+   "case": 44,
+   "group": "pair 22",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 162.01,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 13.6,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.09,
+   "failed": false
+  },
+  {
+   "case": 45,
+   "group": "pair 23",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 129.9,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 120.06,
+   "failed": true
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 35.92,
+   "failed": false
+  },
+  {
+   "case": 46,
+   "group": "pair 23",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 105.38,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 19.04,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.8,
+   "failed": false
+  },
+  {
+   "case": 47,
+   "group": "pair 24",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 121.01,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 91.17,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.97,
+   "failed": false
+  },
+  {
+   "case": 48,
+   "group": "pair 24",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 144.97,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 21.75,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 36.94,
+   "failed": false
+  },
+  {
+   "case": 49,
+   "group": "idea 3",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 331.43,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 120.04,
+   "failed": true
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.97,
+   "failed": false
+  },
+  {
+   "case": 50,
+   "group": "idea 9",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 110.28,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "meaning, no model",
+   "found": 0,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 0,
+   "known": 1,
+   "seconds": 114.11,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 0,
+   "known": 1,
+   "seconds": 1.9,
+   "failed": false
+  },
+  {
+   "case": 51,
+   "group": "idea 17",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 0,
+   "known": 1,
+   "seconds": 131.17,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 2,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 2,
+   "known": 2,
+   "seconds": 17.41,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 2,
+   "seconds": 1.98,
+   "failed": false
+  },
+  {
+   "case": 52,
+   "group": "idea 18",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 2,
+   "known": 2,
+   "seconds": 71.52,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 102.66,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.95,
+   "failed": false
+  },
+  {
+   "case": 53,
+   "group": "idea 23",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 334.2,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 30.99,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 1.45,
+   "failed": false
+  },
+  {
+   "case": 54,
+   "group": "idea 24",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 306.14,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 11.94,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 29.57,
+   "failed": false
+  },
+  {
+   "case": 55,
+   "group": "idea 25",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 51.04,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "meaning, no model",
+   "found": 1,
+   "known": 1,
+   "seconds": 0.0,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "gemini-3.8-flash LOW",
+   "found": 1,
+   "known": 1,
+   "seconds": 8.85,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "deepseek-v4.1-flash-maas off",
+   "found": 1,
+   "known": 1,
+   "seconds": 37.03,
+   "failed": false
+  },
+  {
+   "case": 56,
+   "group": "idea 29",
+   "mode": "deepseek-v4.1-flash-maas high",
+   "found": 1,
+   "known": 1,
+   "seconds": 73.89,
+   "failed": false
+  }
+ ]
+}

@@ -3,5 +3,5 @@
 <div class="hm-compare-text">
   <p><span class="hm-compare-key">Same</span> {{ one.same }}</p>
   <p><span class="hm-compare-key">Different</span> {{ one.differs }}</p>
-  <p class="hm-tiny">By Gemini, from {% for name in one.fields_used %}{{ TEXT_WORDS.get(name, name) | lower }}{% if not loop.last %}, {% endif %}{% else %}the texts of the project{% endfor %}. Not a judgment of the project.</p>
+  <p class="hm-tiny">By {{ compared_by or "Gemini" }}, from {% for name in one.fields_used %}{{ TEXT_WORDS.get(name, name) | lower }}{% if not loop.last %}, {% endif %}{% else %}the texts of the project{% endfor %}.</p>
 </div>

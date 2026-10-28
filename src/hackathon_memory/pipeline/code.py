@@ -33,10 +33,14 @@ def read_code(
     run: Run,
     *,
     fetch: Callable[[list[str]], AnswersRun] | None = None,
+    only: set[str] | None = None,
 ) -> None:
     """Ask for the missing facts when `fetch` is given, and write the facts of every repository
-    whose answer is saved. Counts what was done in `run`."""
+    whose answer is saved; with `only`, of these repositories only. Counts what was done in
+    `run`."""
     wanted = sorted(set(link_repositories(repositories, run).values()))
+    if only is not None:
+        wanted = [one for one in wanted if one in only]
     if fetch is not None:
         count_the_fetch(fetch(wanted), run, "facts")
     for repository in wanted:

@@ -143,6 +143,19 @@ def judge(
     return DATES_DO_NOT_FIT
 
 
+def counts_from_the_code(facts: LedgerFacts, window: Window | None) -> bool:
+    """The rule for an ID that only the code names (design 7.3, 24 October 2026): what the rule
+    finds for an ID of a page whose kind nobody gave, and made on the ledger inside the window.
+    Code names many things that are not the team's own, such as a public token; a thing made
+    during the event most likely is. That the ID is the project's own (no other project names
+    it) the caller checks."""
+    return (
+        window is not None
+        and judge(facts, None, window) == PROOF_FOUND
+        and window.holds(facts.created_at)
+    )
+
+
 def best(statuses: list[str]) -> str:
     """The best of several statuses. A project with no id has NO_ID_GIVEN."""
     return min(statuses, key=ORDER.index) if statuses else NO_ID_GIVEN

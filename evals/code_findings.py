@@ -12,7 +12,8 @@ another sponsor only, no prize):
   them the code is the only thing that the tool can read about Hedera;
 
 and, for the repositories that were read, how many name each Hedera package, call each Hedera
-service and carry each sign.
+service and carry each sign; and what the code column of the ledger story says of them (design
+7.5): smart contracts by a call, or by an EVM setup only, and a Hedera package with no call.
 
 It writes evals/results/<UTC time>-code-findings.json, in numbers only: no name of a project or
 of a repository.
@@ -29,7 +30,9 @@ from pathlib import Path
 
 import psycopg
 
+from hackathon_memory.check.history import CONTRACTS
 from hackathon_memory.check.proof import NO_ID_GIVEN
+from hackathon_memory.check.story import services_in_code, set_up_in_code
 from hackathon_memory.parse.hedera_code import FEATURE, IMPORT, MENTION, PACKAGE, SIGN
 from hackathon_memory.settings import Settings
 
@@ -50,6 +53,11 @@ SELECT h.kind, h.name, count(DISTINCT h.repository_id)
 FROM hedera_in_code h JOIN repositories r ON r.id = h.repository_id
 WHERE r.archive_status IN ('read', 'partial') AND h.kind IN ('package', 'feature', 'sign')
 GROUP BY 1, 2
+"""
+_FOUND = """
+SELECT h.repository_id, h.kind, h.name
+FROM hedera_in_code h JOIN repositories r ON r.id = h.repository_id
+WHERE r.archive_status IN ('read', 'partial')
 """
 
 
@@ -80,14 +88,27 @@ def counts(conninfo: str) -> dict:
         names: dict[str, dict[str, int]] = defaultdict(dict)
         for kind, name, repositories in conn.execute(_NAMES):
             names[kind][name] = repositories
+        found_in: dict[int, list[tuple[str, str]]] = defaultdict(list)
+        for repository, kind, name in conn.execute(_FOUND):
+            found_in[repository].append((kind, name))
         read = dict(
             conn.execute(
                 "SELECT archive_status, count(*) FROM repositories "
                 "WHERE archive_status IS NOT NULL GROUP BY 1"
             ).fetchall()
         )
+    code_column: Counter[str] = Counter()
+    for found in found_in.values():
+        calls = services_in_code(found)
+        if CONTRACTS in calls:
+            code_column["smart_contracts_by_a_call"] += 1
+        elif set_up_in_code(found):
+            code_column["smart_contracts_by_an_evm_setup_only"] += 1
+        if not calls and any(kind == PACKAGE for kind, _ in found):
+            code_column["a_hedera_package_and_no_call"] += 1
     return {
         "repositories_read": read,
+        "the_code_column": dict(sorted(code_column.items())),
         "projects": {group: dict(found) for group, found in sorted(by_prize.items())},
         "projects_with_no_hedera_id": {
             group: dict(found) for group, found in sorted(no_id.items())

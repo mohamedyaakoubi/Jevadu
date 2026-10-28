@@ -150,11 +150,12 @@ def measure(settings: Settings, cases: Sequence[Case], projects: dict, page_of: 
     return rows
 
 
-def summary(rows: Sequence[dict], costs: dict[str, list[float]]) -> dict:
-    """The numbers of each mode: the share found with its range by group of cases, the time of a
-    search, and its cost."""
+def summary(rows: Sequence[dict], costs: dict[str, list[float]],
+            modes: Sequence[str] = MODES) -> dict:  # fmt: skip
+    """The numbers of each mode of `modes`: the share found with its range by group of cases, the
+    time of a search, and its cost."""
     numbers = {}
-    for mode in MODES:
+    for mode in modes:
         mine = [row for row in rows if row["mode"] == mode]
         if not mine:
             continue

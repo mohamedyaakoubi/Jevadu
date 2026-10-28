@@ -45,10 +45,13 @@ def read_hedera_code(
     run: Run,
     *,
     fetch: Callable[[list[str]], AnswersRun] | None = None,
+    only: set[str] | None = None,
 ) -> None:
     """Read the missing archives when `fetch` is given, and write what every saved reading
-    found. Counts what was done in `run`."""
+    found; with `only`, of these repositories only. Counts what was done in `run`."""
     wanted = sorted(set(link_repositories(repositories, run).values()))
+    if only is not None:
+        wanted = [one for one in wanted if one in only]
     if fetch is not None:
         gone = {one for one in wanted if _gone(raw, one)}
         if gone:

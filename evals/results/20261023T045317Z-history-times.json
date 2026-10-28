@@ -1,0 +1,24 @@
+{
+ "test": "history-times",
+ "made_on": "2026-10-23",
+ "made_at": "2026-10-23T04:53:17Z",
+ "seed": 20261023,
+ "projects": 25,
+ "ids": 134,
+ "cut": 1,
+ "failed": 0,
+ "seconds_per_id": {
+  "median": 0.28,
+  "p90": 0.58,
+  "p95": 2.08,
+  "largest": 5.7,
+  "all": 66.2
+ },
+ "seconds_per_project": {
+  "median": 1.39,
+  "p90": 6.98,
+  "p95": 7.45,
+  "largest": 7.86,
+  "all": 66.2
+ }
+}

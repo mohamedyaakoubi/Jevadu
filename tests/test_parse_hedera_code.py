@@ -222,3 +222,30 @@ def test_an_unreadable_package_file_is_named_and_the_rest_goes_on() -> None:
                     "go.mod": go_mod})  # fmt: skip
     assert sorted(scan.unreadable) == ["package.json", "pyproject.toml"]
     assert scan.packages == {"github.com/hashgraph/hedera-sdk-go/v2": ["go.mod"]}
+
+
+# --------------------------------------------------------------------------- the IDs
+
+
+def test_the_ids_of_the_code_are_kept_with_their_files_and_never_their_words() -> None:
+    scan = scanned({
+        ".env.example": b"OPERATOR_ID=0.0.4870201\nOPERATOR_KEY=invented-placeholder\n",
+        "src/topic.ts": b'const topic = "0.0.4870201";\n',
+        "src/links.ts": b"// https://hashscan.io/testnet/topic/0.0.4870202\n",
+        "package.json": b'{"name": "x", "version": "0.0.3"}',  # a version, never an ID
+        "node_modules/x/index.js": b'const token = "0.0.5551000";',  # other people's code
+        ".env": b"OPERATOR_ID=0.0.4870209\n",  # never opened
+    })  # fmt: skip
+    assert {key: one.seen.files for key, one in scan.ids.items()} == {
+        ("0.0.4870201", None): 2, ("0.0.4870202", "testnet"): 1}  # fmt: skip
+    assert scan.ids[("0.0.4870201", None)].seen.examples == [".env.example", "src/topic.ts"]
+    record = scan.to_json().decode()
+    assert "placeholder" not in record and "OPERATOR" not in record  # no words around an ID
+    assert CodeScan.from_json(scan.to_json()) == scan and not scan.ids_cut
+
+
+def test_a_repository_that_names_too_many_ids_keeps_the_first_ones(monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setattr(hc, "MOST_IDS", 2)
+    scan = scanned({"tokens.json": b'["0.0.4870301", "0.0.4870302", "0.0.4870303"]'})
+    assert [key[0] for key in scan.ids] == ["0.0.4870301", "0.0.4870302"] and scan.ids_cut
+    assert CodeScan.from_json(scan.to_json()).ids_cut

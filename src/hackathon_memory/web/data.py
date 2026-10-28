@@ -5,8 +5,9 @@ A card has three sources, and the page keeps them apart:
 * the page, copied word for word by the parser: the name, the short line, the texts, the links,
   the event and the prize;
 * the code host and the ledger, read by code: the repository, its dates, what its code says
-  about Hedera, each Hedera ID and what the mirror node said about it, the proof status and the
-  life status;
+  about Hedera, each Hedera ID and what the mirror node said about it, the proof status, the
+  life status, and the ledger story, which sets the services of the page, the code and the
+  ledger side by side;
 * the model: the fields of the card of the instructions in use, each with its label and the
   quotes that the program found in the page.
 """
@@ -16,17 +17,35 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 
 import psycopg
 from markupsafe import Markup, escape
 
+from hackathon_memory.check.depth import Depth
+from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
+from hackathon_memory.check.life import AFTER_THE_EVENT
+from hackathon_memory.check.proof import (
+    ANOTHER_KIND,
+    CANNOT_BE_CHECKED,
+    DATES_DO_NOT_FIT,
+    FOUND_BUT_EMPTY,
+    NOT_FOUND,
+    PROOF_FOUND,
+    WINDOW_NOT_KNOWN,
+    Window,
+    window_of,
+)
+from hackathon_memory.check.story import Story, places_in, services_in_code, set_up_in_code
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.history import depth_of_project, story_of_project
+from hackathon_memory.db.readings import Reading, latest_reading
+from hackathon_memory.parse.hedera_code import PACKAGE
 from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
 from hackathon_memory.search.engine import LANGUAGE, Hit
-from hackathon_memory.search.listing import ResultCard
+from hackathon_memory.search.listing import STATUS_WORDS, LedgerLine, ResultCard
 from hackathon_memory.web.code_reading import CodeView, view_of_repository
 
 FIELD_TITLES = {
@@ -43,6 +62,8 @@ _SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\n+")
 HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transaction", "schedule"})
 # A kind of ID in the words of a person, where they differ from the name of the kind.
 KIND_WORDS = {"schedule": "scheduled transaction"}
+NETWORK_WORDS = {"testnet": "test network", "mainnet": "main network",
+                 "previewnet": "preview network"}  # fmt: skip
 # The kinds of action of a transaction that the mirror node names, in plain words. Another kind is
 # shown as the node writes it.
 ACTION_WORDS = {
@@ -60,6 +81,98 @@ ACTION_WORDS = {
     "ATOMICBATCH": "atomic batch of transactions",  # 3 of the 223 transactions, 18 October 2026
 }
 NETWORKS = frozenset({"mainnet", "testnet", "previewnet"})
+# The Hedera services of the ledger story (design 7.5), in the words of the card: the name of a
+# row, as "Hedera in the code" names the service; the service in a sentence; its transactions.
+SERVICE_NAMES = {
+    CONSENSUS: "Consensus Service (topics)",
+    TOKENS: "Token Service",
+    CONTRACTS: "Smart contracts",
+    SCHEDULED: "Scheduled transactions",
+    FILES: "File Service",
+    HBAR: "Accounts and HBAR transfers",
+}
+SERVICE_SUBJECTS = {
+    CONSENSUS: "the Consensus Service",
+    TOKENS: "the Token Service",
+    CONTRACTS: "smart contracts",
+    SCHEDULED: "scheduled transactions",
+    FILES: "the File Service",
+}
+SERVICE_TRANSACTIONS = {  # plural; the singular drops the last letter
+    CONSENSUS: "Consensus Service transactions",
+    TOKENS: "Token Service transactions",
+    CONTRACTS: "smart contract transactions",
+    SCHEDULED: "scheduled transactions",
+    FILES: "File Service transactions",
+    HBAR: "HBAR and account transactions",
+}
+
+
+@dataclass(frozen=True)
+class Judged:
+    """What a card says about how its marks were judged (design 12.1, S2): the window of the
+    event, in "On the ledger", and the day after which a sign counts as a sign of life, in the
+    activity line of the code."""
+
+    window: Window | None
+    life_after: datetime | None
+
+
+def a_or_an(word: str) -> str:
+    """The word with its article: "an account", "a topic"."""
+    return f"{'an' if word[:1].lower() in 'aeiou' else 'a'} {word}"
+
+
+# The results of an ID that the ledger knows on the network that was asked.
+KNOWN_THERE = frozenset({PROOF_FOUND, DATES_DO_NOT_FIT, ANOTHER_KIND, FOUND_BUT_EMPTY,
+                         WINDOW_NOT_KNOWN})  # fmt: skip
+
+
+def lines_to_show(ledger: Sequence[LedgerLine]) -> list[LedgerLine]:
+    """The lines of "On the ledger" (design 12.1, S2): each network that was asked about an ID,
+    but not the "not found" of an ID that its page or README names with no network, when the
+    other network knows it. Both networks were asked only because the network was not said."""
+    known = {line.entity_id for line in ledger if line.status in KNOWN_THERE}
+
+    def left_out(line: LedgerLine) -> bool:
+        return line.status == NOT_FOUND and line.named_network is None and line.entity_id in known
+
+    return [line for line in ledger if line.network and not left_out(line)]
+
+
+def reason_of(line: LedgerLine, window: Window | None) -> str:
+    """Why the result of one ID is what it is, from its facts, in plain words."""
+    where = "README" if line.found_in == "readme" else "page"
+    if line.status == PROOF_FOUND:
+        return ("made inside the window" if window is not None and window.holds(line.created_at)
+                else "used inside the window")  # fmt: skip
+    if line.status == DATES_DO_NOT_FIT:
+        return "made and used outside the window"
+    if line.status == ANOTHER_KIND:
+        known = KIND_WORDS.get(line.kind, line.kind or "")
+        return (f"the {where} calls it {a_or_an(line.said_kind or '')}, but the ledger knows it "
+                f"as {a_or_an(known)}")  # fmt: skip
+    if line.status == FOUND_BUT_EMPTY:
+        return ("nothing in it: a topic with no message, a token with no unit, a deleted contract "
+                "or a failed transaction")  # fmt: skip
+    if line.status == NOT_FOUND:
+        return f"the {NETWORK_WORDS.get(line.network, line.network)} does not know it"
+    if line.status == CANNOT_BE_CHECKED:
+        return "the test network was emptied on 1 February 2024, after this event"
+    if line.status == WINDOW_NOT_KNOWN:
+        return "found; its dates wait for the end of the event"
+    return STATUS_WORDS.get(line.status, line.status or "not checked yet")
+
+
+def life_line(ended: date | None) -> datetime | None:
+    """The moment after which a sign counts as a sign of life (design 7.4), or None."""
+    return datetime.combine(ended, time.max, tzinfo=UTC) + AFTER_THE_EVENT if ended else None
+
+
+def judged_of(facts: ResultCard) -> Judged:
+    """The facts behind the proof and the activity of a project, for its card."""
+    return Judged(window_of(facts.event_starts_at, facts.event_ends_on),
+                  life_line(facts.event_ends_on))  # fmt: skip
 
 
 def hashscan(network: str | None, kind: str | None, entity_id: str) -> str | None:
@@ -129,6 +242,9 @@ class ProjectCard:
     card: ModelCard | None
     event_link: str | None = None  # the page of the event (event_page)
     code_reading: CodeView | None = None  # what the code says about Hedera (design 7.3)
+    story: Story | None = None  # the ledger story (design 7.5), or None when it has none
+    depth: Depth | None = None  # the depth of use of its own IDs (design 7.5), or None
+    reading: Reading | None = None  # its newest reading, whoever made it (design 7.3)
 
 
 def first_sentence(text: str) -> str:
@@ -208,6 +324,14 @@ def project_card(
         ).fetchone()
         repository = found[0].repository
         code_reading = view_of_repository(conn, repository) if repository else None
+        words = "\n".join([short_line, *(one.body for one in sections)])
+        story = story_of_project(conn, project_id, words=words, in_code=services_of(code_reading),
+                                 set_up=set_up_of(code_reading))  # fmt: skip
+        depth = depth_of_project(conn, project_id, story,
+                                 in_code=services_of(code_reading),
+                                 set_up=set_up_of(code_reading),
+                                 has_package=has_a_package(code_reading))  # fmt: skip
+        reading = latest_reading(conn, project_id)
     card = None
     if row is not None:
         fields, made_at = row
@@ -218,7 +342,51 @@ def project_card(
         ))  # fmt: skip
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
                        collected_at(raw_dir, found[0].page_url), language, card,
-                       event_page(site, slug, found[0].page_url), code_reading)  # fmt: skip
+                       event_page(site, slug, found[0].page_url), code_reading, story,
+                       depth, reading)  # fmt: skip
+
+
+def said(text: str) -> Markup:
+    """A text of the page with each place that names a Hedera service marked (design 7.5). The
+    buttons of the ledger story show the marks of one word; until then they look like text."""
+    parts: list[Markup] = []
+    at = 0
+    for start, end, service in places_in(text):
+        word = text[start:end]
+        parts.append(escape(text[at:start]))
+        parts.append(Markup('<mark class="hm-said" data-said="{}" data-word="{}">{}</mark>')
+                     .format(service, word.casefold(), word))  # fmt: skip
+        at = end
+    parts.append(escape(text[at:]))
+    return Markup("").join(parts)
+
+
+def said_lines(text: str) -> list[str]:
+    """The lines of a text that the page does not show, such as a README, that name a Hedera
+    service, in their order (design 7.5): every place of the ledger story's words is in them."""
+    return [line.strip() for line in text.splitlines() if places_in(line)]
+
+
+def services_of(view: CodeView | None) -> frozenset[str] | None:
+    """The Hedera services that a reading of the code calls (design 7.5); None when the code was
+    not read, or could not be read."""
+    if view is None or view.status in ("gone", "blocked"):
+        return None
+    return services_in_code((one.kind, one.name) for one in view.found)
+
+
+def has_a_package(view: CodeView | None) -> bool:
+    """Whether a reading of the code found a Hedera package in a package file (design 7.3)."""
+    if view is None or view.status in ("gone", "blocked"):
+        return False
+    return any(one.kind == PACKAGE for one in view.found)
+
+
+def set_up_of(view: CodeView | None) -> frozenset[str]:
+    """The services that a reading of the code only sets up for: an EVM project (design 7.5)."""
+    if view is None or view.status in ("gone", "blocked"):
+        return frozenset()
+    return set_up_in_code((one.kind, one.name) for one in view.found)
 
 
 def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:

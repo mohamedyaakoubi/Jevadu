@@ -26,6 +26,7 @@ from pydantic import BaseModel, ValidationError
 from hackathon_memory.db.embeddings import idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, KeptComparison
 from hackathon_memory.llm.client import again_if_dropped
+from hackathon_memory.llm.open_models import OpenModels
 from hackathon_memory.read.quotes import KEPT
 
 INSTRUCTIONS_VERSION = "compare-2"
@@ -50,6 +51,13 @@ sentence.
 - Give one answer for each project, with the number it has in the list.
 """
 CARD_TEXTS = ("what_it_does", "how_it_works", "for_whom", "problem", "solution")
+# An open model (llm/open_models.py) is asked for the same answer in words: it has no schema.
+JSON_ANSWER = (
+    '\n\nAnswer with JSON only: {"projects": [{"number": 1, "same": "...", "differs": "...", '
+    '"fields_used": ["what_it_does"]}]}, one object for each project.'
+)
+OPEN_SECONDS = 60.0  # when the caller gives no limit
+OPEN_OFF = "off"  # the level of an open model that does not think
 
 
 class ProjectComparison(BaseModel):
@@ -136,25 +144,35 @@ def compare(
     """
     if not items:
         return {}
-    config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_INSTRUCTIONS,
-        response_mime_type="application/json",
-        response_schema=Comparison,
-        thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel[thinking_level]),
-        max_output_tokens=MAX_OUTPUT_TOKENS,
-        http_options=None
-        if timeout_seconds is None
-        else types.HttpOptions(
-            timeout=int(timeout_seconds * 1000),
-            retry_options=types.HttpRetryOptions(attempts=1),
-        ),
-    )
     text = prompt(idea, items)
-    response = again_if_dropped(
-        lambda: client.models.generate_content(model=model, contents=text, config=config)
-    )
+    if isinstance(client, OpenModels):  # the stand-in of the search model (search/stand_in.py)
+        thinking = thinking_level.lower() != OPEN_OFF
+        written = client.chat(model, SYSTEM_INSTRUCTIONS + JSON_ANSWER, text, thinking=thinking,
+                              max_tokens=MAX_OUTPUT_TOKENS, as_json=True,
+                              effort=thinking_level.lower() if thinking else None,
+                              timeout_seconds=timeout_seconds or OPEN_SECONDS).text  # fmt: skip
+    else:
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTIONS,
+            response_mime_type="application/json",
+            response_schema=Comparison,
+            thinking_config=types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel[thinking_level]
+            ),
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+            http_options=None
+            if timeout_seconds is None
+            else types.HttpOptions(
+                timeout=int(timeout_seconds * 1000),
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
+        )
+        response = again_if_dropped(
+            lambda: client.models.generate_content(model=model, contents=text, config=config)
+        )
+        written = response.text or ""
     try:
-        answer = Comparison.model_validate_json(response.text or "")
+        answer = Comparison.model_validate_json(written)
     except ValidationError as error:
         raise CompareError("the model gave no valid comparison") from error
     by_number = {item.number: item for item in items}

@@ -153,17 +153,20 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-check-days { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .hm-check-days[hidden] { display: none; }
 
-/* the filters, in one row under the search */
+/* the six filters in one row under the search, in columns of the same width: a long value shows
+   its start, and its list opens it whole (24 October 2026: the sixth, the prize, had wrapped to a
+   second row) */
 .hm-filters {
-  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem 0.75rem; margin-bottom: 1rem;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)) auto; align-items: end;
+  gap: 0.5rem 0.75rem; margin-bottom: 1rem;
   padding: 0.75rem 1rem; background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color);
   border-radius: var(--tblr-border-radius);
 }
 .hm-filter { display: grid; gap: 0.125rem; min-width: 0; }
 .hm-filter-head { display: inline-flex; align-items: center; min-height: 24px; font-size: 0.75rem; font-weight: 600; color: var(--tblr-secondary); }
-.hm-filter select { max-width: 16rem; }
+.hm-filter select { width: 100%; text-overflow: ellipsis; }
 .hm-filter.chosen select { border-color: var(--tblr-primary); box-shadow: 0 0 0 1px var(--tblr-primary); }
-.hm-filters-note { flex-basis: 100%; margin: 0; font-size: 0.75rem; color: var(--tblr-secondary); }
+.hm-filters-note { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: var(--tblr-secondary); }
 .hm-clear-filters { align-self: flex-end; }
 .hm-notices { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
 .hm-notices .alert { margin: 0; }
@@ -249,6 +252,124 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-linked { padding-left: 1.1rem; margin: 0; display: grid; gap: 0.5rem; }
 .hm-linked a { font-weight: 600; }
 
+/* ------------------------------------------------------------------ the graph of a list */
+
+/* The colours of the groups (design 8.6, S7): blue, yellow, pink and green of the reference
+   palette of the dataviz method, the only four of its eight that stay apart for every reader
+   when any two meet, in both themes (its validator with all pairs, on 23 October 2026). Yellow
+   and pink are under 3:1 on white, so every group is also named on the graph and in the lists. */
+:root {
+  --hm-group-1: #2a78d6;
+  --hm-group-2: #eda100;
+  --hm-group-3: #e87ba4;
+  --hm-group-4: #008300;
+}
+[data-bs-theme="dark"] {
+  --hm-group-1: #3987e5;
+  --hm-group-2: #c98500;
+  --hm-group-3: #d55181;
+  --hm-group-4: #008300;
+}
+.hm-g1 { --hm-group: var(--hm-group-1); }
+.hm-g2 { --hm-group: var(--hm-group-2); }
+.hm-g3 { --hm-group: var(--hm-group-3); }
+.hm-g4 { --hm-group: var(--hm-group-4); }
+.hm-workspace.asking-ai .hm-results :is(.hm-graph-note, .hm-graph-card, .hm-graph-lists) { display: none; }
+.hm-graph-note { color: var(--tblr-secondary); font-size: 0.875rem; margin: 0 0 1rem; }
+.hm-graph { position: relative; }
+/* While the graph is zoomed (site.js), --hm-zoom divides every size of its marks and words, so
+   they keep their size on the screen while the distances grow. */
+.hm-graph-svg { display: block; width: 100%; max-height: 80vh; margin: 0 auto; overflow: visible; }
+.hm-graph-svg.is-zoomed { overflow: hidden; cursor: grab; }
+.hm-graph-svg.is-dragged { cursor: grabbing; }
+.hm-graph-svg text { font-family: var(--tblr-font-sans-serif); }
+.hm-graph-small { fill: var(--tblr-secondary); font-size: calc(12px / var(--hm-zoom, 1)); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: calc(4px / var(--hm-zoom, 1)); stroke-linejoin: round; }
+.hm-graph-tools { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 4; display: flex; gap: 0.25rem; }
+.hm-graph-tools .btn { min-width: 2rem; }
+/* a strong line: the same code or Hedera ID; the dashed line of a pointed dot: its closest project */
+.hm-graph-lines line { stroke: var(--tblr-body-color); stroke-width: calc(2.5px / var(--hm-zoom, 1)); stroke-opacity: 0.8; }
+.hm-graph-lines line.is-lit { stroke-opacity: 1; }
+.hm-graph-lines :is(.hm-graph-hover, .hm-graph-kept) { stroke-width: calc(1.5px / var(--hm-zoom, 1)); stroke-dasharray: calc(5px / var(--hm-zoom, 1)) calc(3px / var(--hm-zoom, 1)); stroke-opacity: 1; }
+.hm-graph-idea circle { fill: var(--tblr-body-color); }
+.hm-dot { cursor: pointer; }
+.hm-dot .hm-hit { fill: transparent; }
+.hm-dot .hm-mark { fill: var(--hm-group); stroke: var(--tblr-bg-surface); stroke-width: calc(1.5px / var(--hm-zoom, 1)); }
+/* the first 10 of a search: a ring in the colour of the group, the place in the list inside */
+.hm-dot.is-first .hm-mark { fill: var(--tblr-bg-surface); stroke: var(--hm-group); stroke-width: calc(3px / var(--hm-zoom, 1)); }
+.hm-dot text { fill: var(--tblr-body-color); font-size: calc(10px / var(--hm-zoom, 1)); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.hm-dot:hover .hm-mark, .hm-dot.is-lit .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(2.5px / var(--hm-zoom, 1)); }
+/* the dot that a click kept, and its closest project, with their line, until a click on an
+   empty place */
+.hm-dot:is(.is-kept, .is-kept-near) .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
+.hm-graph-lines line.is-kept { stroke-opacity: 1; }
+.hm-graph-names text { fill: var(--tblr-body-color); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: calc(5px / var(--hm-zoom, 1)); stroke-linejoin: round; }
+.hm-graph-name { cursor: pointer; }
+/* The theme underlines a link on hover, and under the outline of a word of the picture the line
+   broke into dots (24 October 2026); a name shows that it is a link by its colour. */
+.hm-graph-svg a, .hm-graph-svg a:hover { text-decoration: none; }
+.hm-graph-name:hover .hm-graph-title { fill: var(--tblr-link-color); }
+.hm-graph-title { font-size: calc(13px / var(--hm-zoom, 1)); font-weight: 600; }
+.hm-graph-sub { fill: var(--tblr-secondary); font-size: calc(12px / var(--hm-zoom, 1)); }
+.hm-graph-tip {
+  position: absolute; z-index: 5; max-width: min(320px, 90%); padding: 0.5rem 0.625rem;
+  background: var(--tblr-bg-surface); color: var(--tblr-body-color); border: 1px solid var(--tblr-border-color);
+  border-radius: 6px; box-shadow: var(--tblr-shadow-dropdown); font-size: 0.8125rem; line-height: 1.45; pointer-events: none;
+}
+.hm-graph-tip p { margin: 0; }
+.hm-graph-tip p + p { margin-top: 0.25rem; }
+.hm-graph-tip .hm-tip-name { font-weight: 700; }
+.hm-graph-tip .hm-tip-small { color: var(--tblr-secondary); }
+.hm-graph-tip .hm-tip-label { color: var(--tblr-body-color); font-weight: 600; }
+.hm-graph-key { display: flex; flex-wrap: wrap; gap: 0.375rem 1.25rem; margin: 0.75rem 0 0; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--tblr-secondary); }
+.hm-graph-key li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.hm-graph-swatch { display: inline-block; flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--hm-group); vertical-align: -0.05em; }
+.hm-graph-stroke { display: inline-block; width: 1.5rem; height: 0; border-top: 3px solid var(--tblr-body-color); }
+.hm-graph-lists { margin: 1.25rem 0 0; }
+.hm-graph-lists-title { display: flex; align-items: center; font-size: 1rem; font-weight: 700; margin: 0 0 0.5rem; }
+.hm-graph-group { border-top: 1px solid var(--tblr-border-color); padding: 0.5rem 0; }
+.hm-graph-group summary { cursor: pointer; }
+.hm-graph-group summary .hm-graph-swatch { margin-right: 0.4rem; }
+.hm-graph-members { margin: 0.5rem 0 0.25rem; padding-left: 1.6rem; display: grid; gap: 0.25rem; }
+.hm-graph-members a { font-weight: 600; }
+/* a dot or a name is reached with the mouse; the lists under the graph are the keyboard's way */
+.hm-dot:focus, .hm-graph-name:focus { outline: none; }
+.hm-graph-tally { display: block; padding-left: 1.6rem; font-size: 0.8125rem; color: var(--tblr-secondary); }
+/* the buttons under a long list (site.js) */
+.hm-more { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 0.25rem; }
+.hm-graph-group .hm-more { padding-left: 1.6rem; }
+
+/* ------------------------------------------------------------------ how a mark was judged */
+
+/* A mark of the proof or the activity is a link to how it was judged (design 12.1, S1 to S3). */
+.hm-mark-link { color: inherit; text-decoration: none; border-radius: 4px; }
+.hm-mark-link:hover .hm-status, .hm-mark-link:focus-visible .hm-status { text-decoration: underline; text-underline-offset: 2px; }
+/* The part that a mark leads to comes into view a little under the top of the window, and takes
+   the focus for a screen reader with no frame: it shows where it is by a moment of light. */
+[data-pointable] { scroll-margin: 1rem 0; }
+[data-pointable]:focus { outline: none; }
+.hm-ledger-lead { margin: 0 0 0.75rem; }
+.ledger-section .text-secondary a { text-decoration: underline; text-underline-offset: 2px; }
+.hm-life-line .hm-status { margin-right: 0.25rem; }
+/* The part that a mark led to shows where it is for 2 seconds (site.js): a tint and a ring that
+   hold, then fade; still, when the computer asks for less motion. A ring, not an outline: the
+   rule above takes the outline away, and with less motion nothing was lit (24 October 2026). */
+[data-pointable].is-pointed { animation: hm-pointed 2s ease-out; border-radius: 6px; }
+@keyframes hm-pointed {
+  0%, 40% { background-color: color-mix(in oklab, var(--tblr-primary) 16%, var(--tblr-bg-surface)); box-shadow: 0 0 0 2px var(--tblr-primary); }
+  100% { box-shadow: 0 0 0 2px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-pointable].is-pointed {
+    animation: none; box-shadow: 0 0 0 2px var(--tblr-primary);
+    background-image: linear-gradient(color-mix(in oklab, var(--tblr-primary) 14%, transparent), color-mix(in oklab, var(--tblr-primary) 14%, transparent));
+  }
+}
+/* On a phone the graph is a small picture: its words would be too small to read, so the key and
+   the lists under it name the groups. */
+@media (max-width: 640px) {
+  .hm-graph-names, .hm-dot text, .hm-graph-small { display: none; }
+}
+
 /* ------------------------------------------------------------------ the (i) and its text */
 
 .info {
@@ -263,6 +384,7 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .info:hover span, .info[aria-expanded="true"] span { border-color: var(--tblr-primary); color: var(--tblr-primary); }
 .tip {
   position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(380px, calc(100vw - 24px));
+  max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain;
   padding: 0.75rem 1rem; color: var(--tblr-body-color); background: var(--tblr-bg-surface);
   border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius-lg, 8px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16); font-size: 0.875rem; line-height: 1.5; text-align: left;
@@ -309,6 +431,18 @@ dialog.viewer::backdrop, dialog.sheet::backdrop {
 body:has(dialog[open]) { overflow: hidden; }
 
 .project-head { margin-bottom: 1.25rem; }
+/* the card: its head on the left, the block of its readings on the right, as the columns below */
+.project-head.has-readings { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.project-head-main { min-width: 0; }
+.hm-readings { border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius-lg, 0.5rem); padding: 0.75rem 1rem; background: var(--tblr-bg-surface); font-size: 0.875rem; }
+.hm-readings p { margin: 0 0 0.5rem; }
+.hm-readings-title { font-weight: 600; }
+.hm-readings-changes, .hm-readings-steps { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.hm-readings-steps { list-style: none; padding-left: 0; }
+.hm-readings-steps li { padding: 0.125rem 0; color: var(--tblr-secondary); }
+.hm-readings-steps li.is-now { color: var(--tblr-body-color); font-weight: 600; }
+.hm-readings-steps li.is-done { color: var(--tblr-body-color); }
+.hm-step-done { display: inline-block; width: 0.875rem; margin-right: 0.25rem; color: var(--tblr-success); }
 .check-result .project-head { margin-bottom: 0.25rem; } /* the head opens the left column */
 .project-meta { margin: 0; font-size: 0.875rem; color: var(--tblr-secondary); }
 .project-meta a { color: inherit; }
@@ -323,10 +457,12 @@ body:has(dialog[open]) { overflow: hidden; }
 .project-facts { order: 2; }
 .project-reading { order: 1; }
 @media (max-width: 859.98px) {
+  .project-head.has-readings { display: block; }
+  .hm-readings { margin-top: 0.75rem; }
   .project-cols { display: flex; flex-direction: column; }
   .project-col { display: contents; }
-  .compare-section { order: 1; } .ledger-section { order: 2; } .code-section { order: 3; }
-  .page-section { order: 4; } .model-section { order: 5; }
+  .compare-section { order: 1; } .story-section { order: 2; } .ledger-section { order: 3; }
+  .code-section { order: 4; } .page-section { order: 5; } .model-section { order: 6; }
   .check-seen-section { order: 1; } .check-register-section { order: 4; } .check-close-section { order: 5; }
 }
 .project-section { margin: 0; }
@@ -341,6 +477,33 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-code-files summary { cursor: pointer; overflow-wrap: anywhere; padding-block: 0.25rem; } /* 24 px or more to tap (WCAG 2.5.8) */
 .hm-code-files[open] summary { margin-bottom: 0.25rem; }
 .hm-code-files .hm-link-list a { text-decoration: underline; text-underline-offset: 2px; }
+/* the ledger story (design 7.5): a plain table of the services, then sentences and the time */
+.hm-story { margin: 0 0 0.5rem; }
+.hm-story caption { caption-side: top; padding: 0 0 0.375rem; color: var(--tblr-secondary); font-size: 0.8125rem; }
+.hm-story th, .hm-story td { overflow-wrap: anywhere; vertical-align: top; }
+.hm-story tbody th { font-weight: 600; }
+.hm-story .text-end { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-story-facts { padding-left: 1.1rem; margin: 0.5rem 0; }
+.hm-story-facts li { margin-bottom: 0.25rem; }
+.hm-story-time { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 1rem; margin: 0.5rem 0 0.375rem; }
+.hm-story-time dt { font-weight: 600; }
+.hm-story-time dd { margin: 0; }
+.hm-story-time-none { margin: 0.5rem 0 0.375rem; }
+/* a word of the page is a button that looks like a link; its marks in the page's texts show only
+   when it is pressed, and the place in view is outlined */
+.hm-said-word { padding: 0.1875rem 0; border: 0; background: none; font: inherit; text-align: start; color: var(--tblr-link-color); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.hm-said-list { display: flex; flex-direction: column; align-items: flex-start; }
+.hm-keep { white-space: nowrap; } /* a bracket stays with its word */
+.hm-said-word:hover { color: var(--tblr-link-hover-color); }
+mark.hm-said { background: none; padding: 0; color: inherit; }
+mark.hm-said.is-shown { background: color-mix(in oklab, var(--tblr-primary) 24%, transparent); padding: 0 0.1em; cursor: pointer; }
+[data-bs-theme="dark"] mark.hm-said.is-shown { background: color-mix(in oklab, var(--tblr-primary) 36%, transparent); }
+mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset: 1px; }
+.hm-said-status:empty { margin: 0; }
+.hm-said-lines { margin: 0.25rem 0 0.5rem; font-size: 0.875rem; }
+.hm-said-lines summary { cursor: pointer; padding-block: 0.25rem; }
+.hm-said-text { padding-left: 1.1rem; margin: 0.25rem 0 0; overflow-wrap: anywhere; }
+.hm-said-text li + li { margin-top: 0.25rem; }
 .id-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
 .id-row { padding-bottom: 0.75rem; border-bottom: 1px solid var(--tblr-border-color); }
 .id-row:last-child { padding-bottom: 0; border-bottom: 0; }
@@ -360,8 +523,74 @@ body:has(dialog[open]) { overflow: hidden; }
 /* a project named in a line of text is a link that is not told by its colour alone */
 .check-result .hm-link-list a, .linked-section .hm-link-list a, .hm-close-name a { text-decoration: underline; text-underline-offset: 2px; }
 .check-result .project-title { overflow-wrap: anywhere; }
-.check-progress ol { padding-left: 1.2rem; margin: 0.75rem 0; }
-.check-progress li { margin-bottom: 0.375rem; }
+/* the steps of a check while it runs: one bar that moves with the usual time of each step, and
+   a mark for each step that says its state with its words beside it (design 12.1, S3) */
+.hm-check-steps { margin: 1rem 0 0.75rem; max-width: 46rem; }
+.hm-progress { height: 6px; border-radius: 3px; background: var(--tblr-border-color); overflow: hidden; margin: 0 0 1.125rem; }
+.hm-progress-bar { display: block; height: 100%; background: var(--tblr-primary); transition: width 450ms linear; }
+.hm-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
+.hm-step { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto; column-gap: 0.75rem; row-gap: 0.125rem; align-items: start; }
+.hm-step-mark { grid-row: 1; width: 1.125rem; height: 1.125rem; margin-top: 0.125rem; border-radius: 50%; border: 2px solid var(--tblr-border-color); box-sizing: border-box; }
+.hm-step-name { grid-column: 2; }
+.hm-step-state { grid-column: 3; font-size: 0.8125rem; color: var(--tblr-secondary); white-space: nowrap; }
+.hm-step-note { grid-column: 2 / span 2; font-size: 0.8125rem; color: var(--tblr-secondary); }
+.hm-step.is-waiting .hm-step-name { color: var(--tblr-secondary); }
+.hm-step.is-running .hm-step-name { font-weight: 600; }
+.hm-step.is-running .hm-step-mark { border-color: var(--tblr-primary); border-right-color: transparent; animation: hm-turn 0.9s linear infinite; }
+.hm-step.is-done .hm-step-mark, .hm-step.is-saved .hm-step-mark { border-color: var(--tblr-primary); background: var(--tblr-primary); }
+.hm-step.is-done .hm-step-mark::after, .hm-step.is-saved .hm-step-mark::after { content: ""; display: block; width: 0.3125rem; height: 0.5625rem; margin: 0.125rem auto 0; border: solid var(--tblr-bg-surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.hm-step.is-skipped .hm-step-mark { border-style: dashed; }
+@keyframes hm-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .hm-step.is-running .hm-step-mark { animation: none; border-right-color: var(--tblr-primary); }
+  .hm-progress-bar { transition: none; }
+}
+/* The days of a card's ledger story (design 7.5): one colour, darker for more transactions,
+   and a border in the full colour, so that a light square still stands out from the page. */
+.hm-strip { margin: 0 0 0.75rem; }
+/* The names stay and the days widen (S2, 28 October 2026): two drawings side by side, the
+   days in a band that scrolls sideways; the script sets the width of the days. The two small
+   buttons keep a target of 24 pixels (WCAG 2.5.8). */
+.hm-strip-tools { display: flex; justify-content: flex-end; gap: 4px; margin: 0 0 2px; }
+.hm-strip-zoom { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; font-size: 15px; line-height: 1; color: var(--tblr-body-color); background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color); border-radius: 4px; cursor: pointer; }
+.hm-strip-zoom:hover:not(:disabled) { color: var(--tblr-primary); border-color: var(--tblr-primary); }
+.hm-strip-zoom:disabled { opacity: 0.4; cursor: default; }
+.hm-strip-frame { display: flex; align-items: flex-start; }
+.hm-strip-names { display: block; flex: none; min-width: 0; height: auto; overflow: visible; }
+.hm-strip-scroll { flex: 1 1 0; min-width: 0; overflow-x: auto; overflow-y: hidden; }
+.hm-strip-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.hm-strip-event { fill: var(--tblr-primary); fill-opacity: 0.09; }
+.hm-strip-day { fill: var(--tblr-primary); stroke: var(--tblr-primary); stroke-width: 1; }
+.hm-strip a:hover .hm-strip-day, .hm-strip a:focus .hm-strip-day { stroke: var(--tblr-body-color); stroke-width: 2; }
+.hm-strip a:focus { outline: none; }
+/* 13 units of the drawing, about 12 pixels in a card's column: the 11 of 25 October drew about
+   10 (review layer 1, 28 October 2026). */
+.hm-strip-name, .hm-strip-mark { font-size: 13px; fill: var(--tblr-secondary); }
+.hm-strip-base { stroke: var(--tblr-border-color); stroke-width: 1; }
+.hm-strip-note { display: block; }
+.hm-strip-note { min-height: 1.4em; }
+.hm-strip-table { margin-top: 0.25rem; }
+.hm-depth { margin: 0 0 0.5rem; }
+.hm-depth dt { font-weight: 600; }
+.hm-depth dd { margin: 0 0 0.5rem; }
+.hm-depth-title { font-weight: 600; margin: 0.75rem 0 0.25rem; }
+.hm-depth-list { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.hm-depth-block { margin-top: 0.75rem; }
+
+/* Started with --rehearsal (design 9.3): a band at the top of every page, in the colour of a
+   warning, so that a rehearsal is never taken for the register. */
+.hm-rehearsal { margin: 0; padding: 0.5rem 1rem; text-align: center; background: var(--tblr-warning-lt, #fff3cd); color: var(--tblr-body-color); border-bottom: 2px solid var(--tblr-warning); }
+
+/* A card read again (design 7.3, S2): the line under its links, with a small turning ring while
+   the reading runs; a full ring that stands still when the computer asks for less motion. */
+.hm-reading { display: inline-block; width: 0.875rem; height: 0.875rem; margin-right: 0.25rem; vertical-align: -0.125rem; border-radius: 50%; border: 2px solid var(--tblr-primary); border-right-color: transparent; animation: hm-turn 0.9s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hm-reading { animation: none; border-right-color: var(--tblr-primary); }
+}
+@media (max-width: 575.98px) {
+  .hm-step { grid-template-columns: 1.25rem minmax(0, 1fr); }
+  .hm-step-state, .hm-step-note { grid-column: 2; }
+}
 .hm-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
 .hm-section-head h3 { margin: 0; }
 .hm-come-back { margin: 1rem 0 0; color: var(--tblr-secondary); }
@@ -423,7 +652,7 @@ body:has(dialog[open]) { overflow: hidden; }
   .hm-title { font-size: 1.5rem; }
   .hm-actions, .hm-ai-group { width: 100%; }
   .hm-ai-group .btn { flex: 1; }
-  .hm-filters { flex-wrap: nowrap; overflow-x: auto; }
+  .hm-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; }
   .hm-filter { flex: none; }
 }
 

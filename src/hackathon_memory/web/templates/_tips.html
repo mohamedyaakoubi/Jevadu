@@ -28,8 +28,8 @@
 {% call tip("quick", "Search modes") %}
 <p>Both update as you type, and neither uses Gemini.</p>
 <ul>
-  <li><b>Semantic:</b> Google's embedding model{{ parts.ref("embedding") }} compares the meaning of your idea with every project, so it also finds the same idea written in other words.{% if meaning and meaning.known %} In Test 2 it put {{ meaning.found }} of {{ meaning.known }} known similar projects in its top 10.{% endif %}</li>
-  <li><b>Keyword:</b> classic full-text search (BM25{{ parts.ref("bm25") }}), with no AI. Best for a name or an exact term.{% if words and words.known %} In Test 2: {{ words.found }} of {{ words.known }}.{% endif %}</li>
+  <li><b>Keyword:</b> classic full-text search (BM25{{ parts.ref("bm25") }}). Best for a name or an exact term.{% if words and words.known %} In Test 2 it put {{ words.found }} of {{ words.known }} known similar projects in its top 10.{% endif %}</li>
+  <li><b>Semantic:</b> Google's embedding model{{ parts.ref("embedding") }} compares the meaning of your idea with the text of every project page, so it also finds the same idea written in other words.{% if meaning and meaning.known %} In Test 2: {{ meaning.found }} of {{ meaning.known }}.{% endif %}</li>
 </ul>
 {% endcall %}
 
@@ -41,18 +41,33 @@
 
 {% call tip("orders", "The two orders") %}
 <ul>
-  <li><b>Search order:</b> by similarity of meaning, with no generative AI.</li>
+  <li><b>Search order:</b> by similarity of meaning.</li>
   <li><b>Gemini's order:</b> Gemini's 10 most similar of the 30 closest, each with a comparison. The first time takes a few seconds; the answer is then cached for one day, so switching back and forth is instant.</li>
 </ul>
 {% endcall %}
 
-{% call tip("charts", "Insights and charts") %}
-<p>Counts for the projects of the current list: the closest to your idea, or the whole collection with your filters. Computed live from the database, never by AI. A percentage appears only when at least 20 projects stand behind it.</p>
-<p>Four tabs: <b>Overview</b> (proof, activity, linked projects), <b>Hedera services</b> (what the code and the ledger show), <b>Winners</b> (what projects with a Hedera prize use, next to the others) and <b>Events</b>.</p>
+{% call tip("views", "Cards, Graph and Insights") %}
+<p>Three views of the current list: the closest to your idea, or the whole collection with your filters.</p>
+<ul>
+  <li><b>Cards:</b> the projects ten at a time, closest first when you search.</li>
+  <li><b>Graph:</b> the same projects as dots, in groups by meaning, from the embeddings{{ parts.ref("embedding") }} of their pages. With an idea, the closest stand nearest to it. Without a search or a filter, the whole collection.</li>
+  <li><b>Insights:</b> counts computed live from the database, in four tabs: <b>Overview</b> (proof, activity, linked projects), <b>Hedera services</b> (what the code and the ledger show), <b>Winners</b> (what projects with a Hedera prize use, next to the others) and <b>Events</b>. A percentage appears only when at least 20 projects stand behind it.</li>
+</ul>
+{% endcall %}
+
+{% call tip("graph", "The graph") %}
+<ul>
+  <li><b>Groups:</b> Ward's method{{ parts.ref("ward") }} starts with each project alone and joins, step by step, the two groups whose joining spreads their embeddings least, until 1 to 4 groups are left, more for a longer list. No threshold. The groups come from how close the projects are to each other, not to your idea: your idea only chose the projects of the list.</li>
+  <li><b>Names:</b> a group is named after its most central project, the one closest in meaning to all the others of the group ("Like &hellip;"), with its number of projects and the category that most of them share on their cards. When most of its projects are known only from a winners' list, the group says so: those hold a name and a line, no page, so they group together by the shape of their text more than by their idea.</li>
+  <li><b>Places:</b> with an idea, each project stands as far from your idea as it is far in meaning, from the closest of the list to the farthest; the first 10 are numbered as in the list. Without an idea, each group gathers around its most central project.</li>
+  <li><b>Lines:</b> point at a project and a dashed line goes to its closest project in the list: the one whose embedding is the most similar to its own. A click keeps the line, also while you point at other projects, until you click an empty place. The closest project can stand in another group: a group is tight as a whole, so a project at its edge can be closer to one project of another group. A strong line joins projects with the same code or the same Hedera ID, as in Insights.</li>
+  <li><b>Zoom:</b> hold Ctrl and scroll over the graph, or pinch on a touchpad; then drag it, or scroll with two fingers, to move it. The buttons zoom in, out and back. The dots keep their size, so dots that touch come apart.</li>
+  <li><b>Under the graph:</b> each group lists its projects, says how many of them won a Hedera prize and how many have a Hedera proof, and its name opens the card of the project it is named after.</li>
+</ul>
 {% endcall %}
 
 {% call tip("code-services", "Hedera services in the code") %}
-<p>The projects whose code calls each Hedera service, found in the reading of their code by the class names of Hedera's SDKs{{ parts.ref("sdk") }}, such as TopicCreateTransaction for the Consensus Service{{ parts.ref("topic") }}. No AI.</p>
+<p>The projects whose code calls each Hedera service, found in the reading of their code by the class names of Hedera's SDKs{{ parts.ref("sdk") }}, such as TopicCreateTransaction for the Consensus Service{{ parts.ref("topic") }}.</p>
 <p>Only the projects whose code was read are counted: a project with no repository is not a project that uses nothing. A project can count in several rows.</p>
 {% endcall %}
 
@@ -62,11 +77,11 @@
 
 {% call tip("winners-use", "What winners use, next to the others") %}
 <p>For each Hedera service, the share of the projects with a Hedera prize whose code calls it, next to the same share for the projects without one. Both groups count only the projects whose code was read, and each needs at least 20.</p>
-<p>This puts facts side by side. It shows what winners used, not why they won, and it says nothing about a single project.</p>
+<p>It shows what winners used, not why they won.</p>
 {% endcall %}
 
 {% call tip("order", "Order") %}
-<p>The closest to your idea comes first. The order reflects similarity only: never quality, and never a sign of copying.</p>
+<p>The closest to your idea comes first.</p>
 {% endcall %}
 
 {% call tip("event", "Event and prizes") %}
@@ -89,9 +104,23 @@
   <li><b>Wrong kind of ID:</b> the ledger knows the number as another kind of entity.</li>
   <li><b>Empty ID:</b> nothing ever happened with it, or the transaction failed.</li>
   <li><b>ID not found:</b> the ledger does not know it.</li>
-  <li><b>No ID given:</b> neither the page nor the README names one. That is common, and says nothing bad about the project.</li>
+  <li><b>No ID given:</b> neither the page nor the README names one. That is common.</li>
+  <li><b>Found in the code:</b> the code of the project names one of the team's own IDs, which no other team names, made on the ledger during the event, such as the account that runs its program. Code also names IDs that many teams use, such as a public token, so the code only counts in this strict way.</li>
 </ul>
 <p>Every ID links to HashScan{{ parts.ref("explorer") }}, a public explorer of the same records.</p>
+{% endcall %}
+
+{% call tip("winner", "Prize") %}
+<ul>
+  <li><b>Won a Hedera prize:</b> the projects that the organisers gave a Hedera prize: on ETHGlobal, the block "Winner of" on the project's own page; for the other hackathons, the organisers' lists of winners.</li>
+  <li><b>Winners' list only:</b> among them, the projects that are known only from such a list, because their own page is gone or was never public. They have a name and a line, no full card.</li>
+</ul>
+{% endcall %}
+
+
+{% call tip("fresh", "Read again") %}
+<p>A repository and its Hedera IDs change after the event: a team pushes code, rewrites its README, or makes its repository private. So GitHub and the mirror node are asked again once their answers are a day old, while the website runs.</p>
+<p><b>Read again now</b> asks them at once for this project. GitHub answers "not modified" when nothing changed, which costs it nothing. The pages of the hackathon sites are never read again: a submission does not change after its event.</p>
 {% endcall %}
 
 {% call tip("life", "Activity after the event") %}
@@ -100,14 +129,45 @@
   <li><b>Active:</b> activity in the last 90 days.</li>
   <li><b>Quiet:</b> activity, but none in the last 90 days.</li>
   <li><b>Stopped:</b> nothing more than 30 days after the event.</li>
-  <li><b>Too early to tell:</b> the event ended less than 90 days ago.</li>
+  <li><b>Too early to tell:</b> the event is not over, or it ended less than 90 days ago.</li>
   <li><b>Unknown:</b> no commit dates, and no on-chain activity.</li>
 </ul>
 {% endcall %}
 
 {% call tip("ledger", "On the ledger") %}
-<p>What the public Hedera ledger{{ parts.ref("ledger") }} shows for each ID named on the page or in the README, read from a mirror node{{ parts.ref("mirror") }}. No AI.</p>
+<p>What the public Hedera ledger{{ parts.ref("ledger") }} shows for each ID named on the page or in the README, read from a mirror node{{ parts.ref("mirror") }}.</p>
+<p>The window of an event runs from 30 days before its start to 14 days after its end. Each ID says why it counts or not, from when the ledger says it was made and last used, and the best result among the IDs is the project's.</p>
 <p>Testnet{{ parts.ref("testnet") }} and mainnet{{ parts.ref("mainnet") }} are separate networks: the same number is a different entity on each. Every ID links to HashScan{{ parts.ref("explorer") }}.</p>
+{% endcall %}
+
+{% call tip("story", "Hedera services: page, code and ledger") %}
+<p>For each Hedera service, what the project page says, what the code calls, and what its own IDs did on the ledger:</p>
+<ul>
+  <li><b>Page:</b> the words of the project page that name the service, such as &ldquo;HCS&rdquo; or &ldquo;topic ID&rdquo; for the Consensus Service{{ parts.ref("topic") }}, &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}, or &ldquo;smart contract&rdquo; and &ldquo;Solidity&rdquo; for smart contracts{{ parts.ref("contract") }}. Each word is a button that marks where the page says it.</li>
+  <li><b>Code:</b> whether a source file names one of the service's SDK classes, such as TokenCreateTransaction. A package alone does not count. &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
+  <li><b>Ledger:</b> the transactions of its own Hedera IDs, read from a mirror node{{ parts.ref("mirror") }}, from 30 days before the event to 30 days after it.</li>
+</ul>
+<p>Its own IDs are those whose kind fits the page and that no other team names: an ID that several teams name is often a shared service. The entries of one team's code at several hackathons share their IDs. HBAR is not compared, since nearly every project moves HBAR to set itself up. A team can also use a service through an ID that its page does not give.</p>
+<ul>
+  <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or reach it with the keyboard, to see its number; a click opens its first transaction on HashScan{{ parts.ref("explorer") }}. Before and after that time, only its topics, tokens, contracts and schedules count: an account often lives on for years and across projects.</li>
+  <li><b>Who took part:</b> the accounts that the page does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. One of them can be the team's own, such as a test account. The network's own accounts are left out.</li>
+  <li><b>Signs that stay on paper:</b> a topic with no message, a token held only by the project's own accounts, a contract never called, accounts that only moved HBAR, a Hedera package that nothing calls, or IDs that other projects name too.</li>
+</ul>
+{% endcall %}
+
+{% call tip("story-readme", "Hedera services: README, code and ledger") %}
+<p>The same comparison as on the card of a project, for the submission:</p>
+<ul>
+  <li><b>README:</b> the words of its README that name a Hedera service, such as &ldquo;HCS&rdquo; for the Consensus Service{{ parts.ref("topic") }} or &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}. Each word is a button that marks where the README says it, in the lines under the table.</li>
+  <li><b>Code:</b> whether its code calls the service, from the reading of the code below. A package alone does not count, and &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
+  <li><b>Ledger:</b> the transactions of the README's IDs whose kind fits, read from a mirror node{{ parts.ref("mirror") }} during the check and kept for 7 days: in the time of the hackathon and 30 days on each side, or every transaction when no hackathon is chosen.</li>
+</ul>
+<p>A team can also use a service through an ID that its README does not give.</p>
+<ul>
+  <li><b>The days:</b> each square is a day with transactions, darker for more. Point at one, or reach it with the keyboard, to see its number; a click opens its first transaction on HashScan{{ parts.ref("explorer") }}. Before and after that time, only its topics, tokens, contracts and schedules count: an account often lives on for years and across projects.</li>
+  <li><b>Who took part:</b> the accounts that the README does not name, in its transfers, its messages and the calls of its contracts, and the accounts that hold its tokens now. One of them can be the team's own, such as a test account. The network's own accounts are left out.</li>
+  <li><b>Signs that stay on paper:</b> a topic with no message, a token held only by the project's own accounts, a contract never called, accounts that only moved HBAR, a Hedera package that nothing calls, or IDs that other projects name too.</li>
+</ul>
 {% endcall %}
 
 {% call tip("code", "Code") %}
@@ -115,12 +175,12 @@
 {% endcall %}
 
 {% call tip("hedera-code", "Hedera in the code") %}
-<p>We read every file of the project's own code once, from the archive of its default branch on GitHub{{ parts.ref("repository") }}, and keep only what we find, with no AI: the Hedera packages that its package files name, the Hedera services that it calls (by the class names of Hedera's SDKs{{ parts.ref("hedera") }}, such as TopicCreateTransaction), other signs such as Hedera's JSON-RPC relay, a Hedera chain ID, a Hedera network of viem, wagmi or Hardhat, Hedera's system contracts or the mirror node{{ parts.ref("mirror") }}, the files that import a Hedera library, and the files that only name Hedera. Each file opens on GitHub as it was read.</p>
+<p>We read every file of the project's own code once, from the archive of its default branch on GitHub{{ parts.ref("repository") }}, and keep what we find: the Hedera packages that its package files name, the Hedera services that it calls (by the class names of Hedera's SDKs{{ parts.ref("hedera") }}, such as TopicCreateTransaction), other signs such as Hedera's JSON-RPC relay, a Hedera chain ID, a Hedera network of viem, wagmi or Hardhat, Hedera's system contracts or the mirror node{{ parts.ref("mirror") }}, the files that import a Hedera library, and the files that only name Hedera. Each file opens on GitHub as it was read.</p>
 <p>Folders of other people's code, such as node_modules, are skipped, and .env files are never opened. This shows what the code names, not whether it runs, and it cannot see Hedera used from another repository.</p>
 {% endcall %}
 
 {% call tip("page", "From the project page") %}
-<p>The team's own text, copied verbatim from the project page as it was on the day it was saved. Not edited by AI.</p>
+<p>The team's own text, copied verbatim from the project page as it was on the day it was saved.</p>
 {% endcall %}
 
 {% call tip("model", "AI summary") %}
@@ -140,16 +200,16 @@
 {% call tip("check", "Check a submission") %}
 <p>For judges, or for a team before it submits. Enter the GitHub repository, and the hackathon if you want the dates checked.</p>
 <ul>
-  <li>The check asks GitHub's API for the repository, its README, its newest commit and the archive of its code, one request after the other, with the name of this site. What was read before is not asked again.</li>
+  <li>The check asks GitHub's API for the repository, its README, its newest commit and the archive of its code, one request after the other. An answer less than an hour old is used again.</li>
   <li>It finds the Hedera IDs in the README, looks each one up on the public mirror node{{ parts.ref("mirror") }}, and checks the dates against the hackathon.</li>
   <li>It reads the code for Hedera: its packages, its imports and its calls to Hedera services. A repository that was never read takes a few seconds, at most 30.</li>
   <li>It shows whether the same repository or ID appeared at an earlier event, and the most similar past projects.</li>
 </ul>
-<p>Facts only: no AI-generated text. You can then register the submission on Hedera{{ parts.ref("topic") }}.</p>
+<p>You can then register the submission on Hedera{{ parts.ref("topic") }}.</p>
 {% endcall %}
 
 {% call tip("seen", "Linked projects") %}
-<p>Two projects are linked when they share a repository{{ parts.ref("repository") }}, or a Hedera ID on the same network that the ledger confirmed for both. Exact matching, no AI.</p>
+<p>Two projects are linked when they share a repository{{ parts.ref("repository") }}, or a Hedera ID on the same network that the ledger confirmed for both. Exact matching.</p>
 <ul>
   <li>An ID that many teams use is most likely a shared service, such as a common test account or a public payment address: more than three different repositories in all, or two at one hackathon. Such an ID links nothing.</li>
   <li>A shared name links nothing either: two teams can pick the same name.</li>
@@ -157,7 +217,7 @@
 {% endcall %}
 
 {% call tip("closest", "Most similar past projects") %}
-<p>The past projects closest in meaning to the README, found with the same semantic search as an idea (Google's embedding model{{ parts.ref("embedding") }}). Similar does not mean copied: the site shows facts, and people judge.</p>
+<p>The past projects closest in meaning to the README, found with the same semantic search as an idea (Google's embedding model{{ parts.ref("embedding") }}). Similar does not mean copied.</p>
 {% endcall %}
 
 {% call tip("register", "Public register") %}
@@ -172,21 +232,21 @@
 {% call tip("hackathon", "Hackathon (optional)") %}
 <p>This site is a memory of past hackathons, not a live view: it cannot see the other submissions of a hackathon that is running now.</p>
 <ul>
-  <li><b>None:</b> the check shows each fact with its own date, for example "token created 7 March 2026", and you judge.</li>
+  <li><b>None:</b> the check shows each fact with its own date, for example "token created 7 March 2026".</li>
   <li><b>A hackathon, or its dates:</b> the check also says whether each Hedera ID was created or used during the event, and whether the code changed after it.</li>
 </ul>
 <p>The list shows the hackathons running now first, then past ones by the year they ended. Registering on Hedera needs a hackathon from the list.</p>
 {% endcall %}
 
 {% call tip("check-compare", "Compare with Gemini") %}
-<p>Gemini 3.8 Flash{{ parts.ref("gemini") }} reads this README and the summaries of the most similar past projects, and writes what each one shares with it and how it differs. It does not judge any project, and it never calls anything a copy.</p>
+<p>Gemini 3.8 Flash{{ parts.ref("gemini") }} reads this README and the summaries of the most similar past projects, and writes what each one shares with it and how it differs. It does not judge projects.</p>
 <p>It costs less than one cent, and the answer is cached for one day, so the same check does not call Gemini again.</p>
 {% endcall %}
 
 {% call tip("insights", "Insights") %}
-<p>A few facts in sentences, counted live from the same list as the charts. Each one names its numbers, and none of them predicts, scores or ranks a project. A sentence appears only when the list holds enough projects for it.</p>
+<p>A few facts in sentences, counted live from the same list as the charts. A sentence appears only when the list holds enough projects for it.</p>
 <ul>
-  <li><b>Won again:</b> linked projects (the same repository, or the same Hedera ID confirmed by the ledger) that each won a Hedera prize, at more than one event. A link says only that.</li>
+  <li><b>Won again:</b> linked projects (the same repository, or the same Hedera ID confirmed by the ledger) that each won a Hedera prize, at more than one event.</li>
   <li><b>Categories with the most Hedera prizes:</b> the categories are chosen by Gemini 3.1 Pro from each page, so an entry from a winners' list has none.</li>
   <li><b>Still worked on after the event:</b> active or quiet, among the projects whose activity is known 90 days after their event; each group needs at least 20 such projects.</li>
 </ul>

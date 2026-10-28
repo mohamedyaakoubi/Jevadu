@@ -1,6 +1,6 @@
 """The website: the search (S1), the card of a project over it (S2), the check of a submission
-(S3) and its registration on Hedera (S4), the charts of a list (S5) and the method (S6), on one
-page (design 12.1, fourth version, on Tabler).
+(S3) and its registration on Hedera (S4), the charts of a list (S5), the method (S6) and the graph
+of a list (S7), on one page (design 12.1, fourth version, on Tabler).
 
 While an idea is typed, the page shows quick results, by meaning or by words, with no model that
 writes. Only the button "Order and compare with Gemini" calls the search model: it orders the 30
@@ -16,59 +16,80 @@ are searched and the page says so.
 
 from __future__ import annotations
 
+import logging
 import math
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode
 
 import psycopg
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.conninfo import make_conninfo
 from starlette.concurrency import run_in_threadpool
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from hackathon_memory import __version__
 from hackathon_memory.check import submission
+from hackathon_memory.check.history import MAX_EVENTS
+from hackathon_memory.check.life import NOT_OVER
+from hackathon_memory.check.proof import PROOF_FOUND
 from hackathon_memory.collect import github
+from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
+from hackathon_memory.collect.github_facts import GONE as CODE_GONE
 from hackathon_memory.collect.github_facts import saved_facts
 from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
 from hackathon_memory.collect.github_readmes import saved_readme
 from hackathon_memory.collect.polite import CollectorRefused
-from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db import readings
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
+from hackathon_memory.db.runs import recorded_run
 from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.hedera import listed, registry
-from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode, hashscan_topic
+from hackathon_memory.hedera.mirror import (
+    MIRROR_URLS,
+    MirrorError,
+    MirrorNode,
+    hashscan_topic,
+    hashscan_transaction,
+)
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
+from hackathon_memory.pipeline import refresh as refresh_step
 from hackathon_memory.pipeline.embed import FAILED_CALLS
+from hackathon_memory.search import closeness, engine, listing, rerank, seen, stand_in
 from hackathon_memory.search import compare as comparing
 from hackathon_memory.search import counts as counting
-from hackathon_memory.search import engine, listing, rerank, seen
 from hackathon_memory.search import filters as filtering
 from hackathon_memory.settings import Settings, SettingsError
 from hackathon_memory.web import (
     charts,
+    checks,
     code_reading,
     data,
     evidence,
+    graph,
     hackathons,
     insights,
     references,
+    strips,
 )
+from hackathon_memory.web import refresher as refreshing
 
 HERE = Path(__file__).parent
+LOG = logging.getLogger(__name__)
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
 SHOWN = 50  # a search shows its 50 closest projects
 # Without a limit, a connection to a database that does not answer waits 130 seconds (the
@@ -89,14 +110,47 @@ COMPARE_SECONDS = 30
 # The order by the model took 2 s in the middle; the service is sometimes much slower, so the
 # order by meaning is kept after this time, and the page says so.
 RERANK_SECONDS = 8
+# The stand-in of the search model (search/stand_in.py), from its measure of 24 October 2026
+# (evals/results/20261024T051625Z-search-fallback.json): with no thinking it found 40 of 57, and
+# 38 on "high", which took 123 s in the middle; 49 of its 56 orders came within 7 s, the other 7
+# in 29 to 47 s. Its comparisons were not measured, so they wait as long as Gemini's.
+STAND_IN_LEVEL = rerank.OPEN_OFF
+STAND_IN_RERANK_SECONDS = 10
+STAND_IN_COMPARE_SECONDS = COMPARE_SECONDS
 MEANING, WORDS = engine.MEANING, engine.WORDS
 MODES = (MEANING, WORDS)
-FILTERS = ("event", "year", "category", "proof", "life")
+# The page opens on keyword search (design 12.1, S1, 28 October 2026): it needs no call to
+# Google, so it answers when Google does not; semantic search is one click away.
+DEFAULT_MODE = WORDS
+FILTERS = ("event", "year", "category", "proof", "life", "winner")
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 CHARTS = "charts"
+GRAPH = "graph"
+VIEWS = (CHARTS, GRAPH)  # the views beside the cards, each named in the address
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
-                "proof": "the Hedera proof", "life": "the life"}  # fmt: skip
+                "proof": "the Hedera proof", "life": "the life", "winner": "the prize"}  # fmt: skip
 EXAMPLES = EXAMPLE_IDEAS  # what the search learns about them is kept for good
+# The block of the readings of a card (design 7.3, S2): who read, the steps of a reading as
+# pipeline/refresh.py says them, and a failure of the reading by the kind of its error.
+READING_BY = {
+    readings.BUTTON: "read again by a visitor",
+    readings.ROUND: "read again by the website",
+    readings.REFRESH: "read again by the daily reading",
+}
+READING_STEP_WORDS = {
+    refresh_step.GITHUB: "GitHub: the facts, the README, the newest commit",
+    refresh_step.CODE: "The code, when its commit is new",
+    refresh_step.LEDGER: "Its Hedera IDs on the ledger",
+    refresh_step.HISTORIES: "The new transactions of its own IDs",
+}
+READING_PROBLEMS = {
+    "CollectorRefused": "GitHub refused the reading, or its limit for today is reached.",
+    "MirrorError": "The mirror node did not answer.",
+    "OperationalError": "The database did not answer.",
+    "SettingsError": "The website is missing a setting for GitHub or the database.",
+    "ReadTimeout": "GitHub or the mirror node did not answer in time.",
+    "ConnectError": "There was no connection to GitHub or the mirror node.",
+}
 PROOF_SHORT = {
     "proof_found": "found",
     "window_not_known": "event end not known yet",
@@ -108,19 +162,39 @@ PROOF_SHORT = {
     "no_id_given": "no ID given",
     filtering.NOT_CHECKED: "not checked yet",
     submission.NOT_ASKED: "no answer from the ledger",
-    "dates_not_judged": "found, dates not judged",
+    # A check with no hackathon: the ledger knows IDs, and their dates wait for one. "found, dates
+    # not judged", in grey, was not understood (24 October 2026).
+    "dates_not_judged": "IDs found, no hackathon chosen",
 }
 NO_SUCH_PROJECT = "There is no project with this ID. Close this window and search again."
 SERVER_FAILED = (
     "Something went wrong on the server, so this cannot be shown. Please try again in a minute."
 )
 DATABASE_DOWN = (
-    "The database is not running. Start Docker Desktop, run "
-    '"docker compose up -d --wait db" in the project folder, then reload this page.'
+    "The database of this site is not answering, so this cannot be shown. Try again in a minute. "
+    'If you run the site: start Docker Desktop, run "docker compose up -d --wait db" in the '
+    "project folder, then reload this page."
 )
+# What the page says when Gemini gives no order (design 8.2). Before 24 October 2026 it said "did
+# not respond in time" also for errors that came back in 5 seconds.
 AI_LATE = (
-    "Gemini did not respond in time, so the results are in the search order. Try the button "
-    "again in a moment."
+    "Gemini did not answer within {seconds} seconds, so the results are in the search order. Try "
+    "the button again: after {left} more failure{s} in a row, {stand_in} takes its place for "
+    "{minutes} minutes."
+)
+AI_FAILED = (
+    "Gemini failed to give an order just now, so the results are in the search order. Try the "
+    "button again: after {left} more failure{s} in a row, {stand_in} takes its place for "
+    "{minutes} minutes."
+)
+AI_SPENT = "The budget for AI calls is spent, so the results are in the search order."
+STAND_IN_USED = (
+    "Gemini failed {failures} times in a row, so {stand_in} put these results in order. Gemini is "
+    "asked again after {minutes} minutes."
+)
+BOTH_FAILED = (
+    "Neither Gemini nor {stand_in}, which takes its place when it fails, gave an order just now, "
+    "so the results are in the search order. Try again in a few minutes."
 )
 GOOGLE_AWAY = (
     "Semantic search is not available just now (Google's embedding service did not respond), "
@@ -132,9 +206,14 @@ GOOGLE_AWAY_CHECK = (
 )
 NO_PAGE_EMBEDDINGS = "The projects have no embeddings yet, so these are keyword results."
 UNKNOWN_SHEET = "Page not found. Close this window."
+NO_SUCH_PAGE = "This page does not exist. The search is on the start page."
 NOT_A_REPOSITORY = (
     "This is not a GitHub repository link. Paste one such as github.com/owner/project, "
     "then try again."
+)
+CHECK_LOST = (
+    "This check is no longer kept, for example because the server restarted. Check the "
+    "submission again."
 )
 NO_EVENT = "That hackathon is not in the list. Pick one from the list, or none, and try again."
 NO_DAYS = (
@@ -168,6 +247,18 @@ NOT_LISTED = (
 REGISTER_CLOSED = (
     "The public register is not open yet: its topic on Hedera testnet has not been created."
 )
+# What a refusal of the network means for the register, by the name of Hedera's status
+# (hedera/register.py, RegisterError.status); any other says that the network refused it.
+REGISTER_REFUSED = {
+    "INSUFFICIENT_PAYER_BALANCE": "the site's Hedera account has run out of HBAR",
+    "INVALID_SIGNATURE": "the network did not accept the site's key",
+    "INVALID_TOPIC_ID": "the register's topic was not found on the network",
+    "TOPIC_EXPIRED": "the register's topic has expired",
+    "BUSY": "Hedera testnet was busy",
+    "PLATFORM_NOT_ACTIVE": "Hedera testnet was not ready",
+    "PLATFORM_TRANSACTION_NOT_CREATED": "Hedera testnet was not ready",
+}
+REGISTER_FAILED = "Nothing was registered: {why}. Try again in a minute."
 REGISTER_UNREAD = (
     "The register could not be read from the mirror node just now, so nothing can be "
     "written. Try again in a moment."
@@ -180,6 +271,17 @@ NOT_YET_VISIBLE = (
 MIRROR_SECONDS = 10.0
 MIRROR_PAUSES = (2.0,)
 IDEA_CUT = f"Your idea was longer than {LONGEST_IDEA:,} characters, so it was shortened."
+# The groups of a graph are kept this long: the whole collection takes about 4 seconds, and its
+# embeddings change only when the pipeline runs. At most GRAPHS_KEPT lists are kept.
+GRAPH_SECONDS = 600
+GRAPHS_KEPT = 16
+GRAPH_TOO_MANY = (
+    "These filters keep {count:,} projects, and the graph draws at most {most}. Choose an event "
+    "or a category to see fewer."
+)
+GRAPH_TOO_FEW = (
+    "A graph needs at least two projects with an embedding. Remove a filter to see more."
+)
 SHEETS = {"how": ("How it works", "_about_how.html"),
           "questions": ("Common questions", "_about_questions.html"),
           "sources": ("Sources and references", "_about_sources.html")}  # fmt: skip
@@ -246,11 +348,11 @@ def search_query(values: dict[str, str], *, drop: tuple[str, ...] = ()) -> str:
     """The part of an address that repeats a search: the idea, the way, Gemini's order when it was
     asked for, the filters and the view. The defaults need no word in the address."""
     kept = {k: v for k, v in values.items() if k in SEARCH_PARAMS and v and k not in drop}
-    if kept.get("mode") == MEANING:
+    if kept.get("mode") == DEFAULT_MODE:
         del kept["mode"]
     if kept.get("ai") != "1":
         kept.pop("ai", None)
-    if kept.get("view") != CHARTS:
+    if kept.get("view") not in VIEWS:
         kept.pop("view", None)
     return urlencode(kept)
 
@@ -275,21 +377,37 @@ def create_app(
     github_client: Any = None,
     mirrors: Mapping[str, Any] | None = None,
     register_writer: Any = None,
+    stand_in_client: Any = None,
+    refresh_inline: bool = False,
+    rehearsal: bool = False,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
     a submission asks GitHub with `github_client` and the ledger with `mirrors`; by default they
     are made when first needed, with the promises of collect/github.py. `register_writer` writes
-    one record to the register (hedera/registry.py); by default it is made when first needed."""
+    one record to the register (hedera/registry.py); by default it is made when first needed.
+    `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
+    is made, counted by the meter, when it is first needed. `refresh_inline` reads a card again
+    on the thread of its request, for the tests (web/refresher.py). With `rehearsal`, the topic of
+    `settings` is the one for rehearsals, and every page says so (design 9.3)."""
     settings = settings or Settings()
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
+    # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
+    # 6 is zlib's own default: almost as small as 9, and faster.
+    app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
+    jobs = checks.CheckJobs()  # the checks that run while their page waits
+    app.state.check_jobs = jobs
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
                                "github": github_client, "mirrors": mirrors,
-                               "writer": register_writer}  # fmt: skip
+                               "writer": register_writer, "stand_in": stand_in_client}  # fmt: skip
+    breaker = stand_in.Breaker()  # Gemini's failures in a row (design 8.2)
+    answers = Answers(github.raw_dir(settings))  # GitHub's newest answers (design 7.3)
+    app.state.breaker = breaker
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
+    graphs: dict[tuple, tuple[float, Any]] = {}  # the groups of a list, with when they were made
 
     def database() -> str:
         return make_conninfo(settings.database_conninfo(), connect_timeout=CONNECT_SECONDS)
@@ -300,6 +418,21 @@ def create_app(
 
             clients[name] = metered_client(settings, purpose)
         return clients[name]
+
+    def standing_in(purpose: str) -> Any:
+        """The client of the stand-in of the search model, counted under `purpose`."""
+        if clients["stand_in"] is None:
+            from hackathon_memory.llm.open_models import open_models
+
+            clients["stand_in"] = open_models(settings, purpose)
+        return clients["stand_in"].tagged(purpose=purpose)
+
+    def told(words: str) -> str:
+        """A message about Gemini and its stand-in, with the numbers of the switch."""
+        left = breaker.left()
+        return words.format(seconds=RERANK_SECONDS, left=left, s="s" if left != 1 else "",
+                            stand_in=stand_in.NAME, failures=stand_in.FAILURES,
+                            minutes=int(stand_in.SECONDS // 60))  # fmt: skip
 
     def project_facts(conninfo: str) -> list[filtering.Facts]:
         """The facts of every project for the filters, read at most once a minute."""
@@ -321,7 +454,7 @@ def create_app(
         repository = submission.repository_link(repo[:300])
         if repository is None:
             return ""
-        readme = saved_readme(RawStore(github.raw_dir(settings)), repository)
+        readme = saved_readme(answers, repository)
         if readme is None or readme.status != README_FOUND:
             return ""
         return submission.readme_words(readme.text)
@@ -371,6 +504,74 @@ def create_app(
         prize = {row.project_id: row.prize for row in project_facts(conninfo)}
         return built, members, insights.build(found, members, prize)
 
+    def graph_of(
+        conninfo: str, ids: list[int] | None, idea: str = ""
+    ) -> tuple[graph.Graph | None, str | None, dict[int, dict[str, Any]]]:
+        """The graph of the projects of `ids` (design 8.6, S7), closest first when there is an
+        idea, with what each dot shows; or, in place of a graph, why there is none, in plain
+        words. The embedding of the idea is the one that the search keeps for a day; without
+        Google, the places in the list stand in for the distances in meaning."""
+        if ids is None:  # no idea and no filter: the whole collection
+            ids = [row.project_id for row in project_facts(conninfo)]
+        if len(ids) > graph.MOST:
+            return None, GRAPH_TOO_MANY.format(count=len(ids), most=graph.MOST), {}
+        model = settings.gemini_embedding_model
+        kept = closeness.with_embedding(conninfo, ids, model=model)
+        order = [pid for pid in ids if pid in kept]
+        if len(order) < 2:
+            return None, GRAPH_TOO_FEW, {}
+        found, centres, nearest, typical = grouped(conninfo, order, model)
+        rows = {row.project_id: row for row in facts_of(conninfo, order)}
+        (members,) = data.members(conninfo, [order])
+        named = {member.project_id: member for member in members}
+        lines = data.summaries(conninfo, order, model=settings.gemini_rewrite_model,
+                               version=INSTRUCTIONS_VERSION)  # fmt: skip
+        distance = None
+        if idea:
+            store = EmbeddingStore(conninfo)
+            try:
+                values = engine.idea_embedding(store, client("google", "embed_query"), idea,
+                                               model=model)  # fmt: skip
+                distance = dict(store.nearest(values, model, limit=len(order), only=order))
+            except (*FAILED_CALLS, BudgetExceeded):
+                distance = None
+        built = graph.build(
+            order, found, ranked=bool(idea), distance=distance, typical=typical,
+            nearest=nearest, centres=centres,
+            categories={pid: row.category for pid, row in rows.items()},
+            names={pid: member.name for pid, member in named.items()},
+            linked=seen.came_back(conninfo), left_out=len(ids) - len(order),
+            listed={pid for pid, row in rows.items() if row.entry_kind == "winner_entry"},
+            won={pid for pid, row in rows.items() if row.prize == "hedera_prize"},
+            proven={pid for pid, row in rows.items() if row.proof == PROOF_FOUND},
+        )  # fmt: skip
+        about = {pid: {"name": named[pid].name, "event": named[pid].event,
+                       "line": lines[pid].text if pid in lines else "",
+                       "proof": rows[pid].proof if pid in rows else None,
+                       "prize": rows[pid].prize if pid in rows else None}
+                 for pid in order if pid in named}  # fmt: skip
+        return built, None, about
+
+    def grouped(conninfo: str, order: list[int], model: str) -> tuple:
+        """The groups of the projects of `order` (design 8.6), their most central projects, the
+        closest project of each, and how close each is to the most central one of its group.
+        Kept for GRAPH_SECONDS under the list and the model."""
+        key = (model, tuple(order))
+        kept = graphs.get(key)
+        if kept is not None and time.monotonic() - kept[0] < GRAPH_SECONDS:
+            return kept[1]
+        pairs = closeness.similarities(conninfo, order, model=model)
+        found = closeness.groups(order, pairs, graph.group_count(len(order)))
+        centres = [closeness.central(group, pairs) for group in found]
+        typical = {pid: closeness.similarity(pairs, pid, centre)
+                   for group, centre in zip(found, centres, strict=True)
+                   for pid in group if pid != centre}  # fmt: skip
+        made = (found, centres, closeness.nearest(order, pairs), typical)
+        while len(graphs) >= GRAPHS_KEPT:
+            graphs.pop(next(iter(graphs)))  # the oldest first
+        graphs[key] = (time.monotonic(), made)
+        return made
+
     def results_of(conninfo: str, ids: list[int], idea: str, words: bool) -> list[tuple]:
         """The card facts, the sentence, the marked sentence and the words found, of each id."""
         found = listing.cards(conninfo, [engine.Hit(pid, 0.0, None, None) for pid in ids])
@@ -390,9 +591,11 @@ def create_app(
         with_ai: bool,
         chosen: filtering.Filters,
         notes: list[str],
-    ) -> tuple[list[int], str | None]:
-        """The projects closest to the idea, closest first, at most SHOWN, and where Gemini's
-        order came from when it was asked for. When Google cannot be reached, the words.
+    ) -> tuple[list[int], str | None, str | None]:
+        """The projects closest to the idea, closest first, at most SHOWN; where the model's
+        order came from when it was asked for (search/rerank.py); and the name of the model
+        that gave it: Gemini, or after its failures its stand-in (search/stand_in.py). When
+        Google cannot be reached, the words.
 
         A filter keeps the projects of the SHOWN closest that have its values (design 8.2), so
         the number next to a value of a filter is the number of projects it leaves."""
@@ -403,29 +606,49 @@ def create_app(
 
         try:
             if only == []:
-                return [], None
+                return [], None, None
             if mode == WORDS:
-                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
+                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
             if not EmbeddingStore(conninfo).counts(settings.gemini_embedding_model)["embeddings"]:
                 notes.append(NO_PAGE_EMBEDDINGS)
-                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
+                return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
             ranking = narrowed(engine.by_meaning(
                 EmbeddingStore(conninfo), client("google", "embed_query"), idea,
                 model=settings.gemini_embedding_model, limit=SHOWN,
             ))  # fmt: skip
             if not (with_ai and ranking):
-                return ranking, None
+                return ranking, None, None
+            pool, rest = ranking[: rerank.POOL], ranking[rerank.POOL :]
+            scope = scope_of(chosen.chosen(), FILTERS)
+            if not breaker.standing_in():
+                order, how = rerank.order_pool(
+                    conninfo, client("rerank", "rerank"), idea, pool,
+                    model=settings.gemini_search_model,
+                    level=settings.gemini_search_thinking_level, scope=scope,
+                    timeout_seconds=RERANK_SECONDS,
+                )  # fmt: skip
+                if how in rerank.ORDERED:
+                    if how == rerank.ASKED:
+                        breaker.answered()
+                    return order + rest, how, "Gemini"
+                if how == rerank.SPENT:
+                    notes.append(AI_SPENT)
+                    return ranking, how, None
+                if not breaker.failed():
+                    notes.append(told(AI_LATE if how == rerank.LATE else AI_FAILED))
+                    return ranking, how, None
             order, how = rerank.order_pool(
-                conninfo, client("rerank", "rerank"), idea, ranking[: rerank.POOL],
-                model=settings.gemini_search_model, level=settings.gemini_search_thinking_level,
-                scope=scope_of(chosen.chosen(), FILTERS), timeout_seconds=RERANK_SECONDS,
+                conninfo, standing_in("rerank"), idea, pool, model=stand_in.MODEL,
+                level=STAND_IN_LEVEL, scope=scope, timeout_seconds=STAND_IN_RERANK_SECONDS,
             )  # fmt: skip
-            if how == rerank.LATE:
-                notes.append(AI_LATE)
-            return order + ranking[rerank.POOL :], how
+            if how in rerank.ORDERED:
+                notes.append(told(STAND_IN_USED))
+                return order + rest, how, stand_in.NAME
+            notes.append(AI_SPENT if how == rerank.SPENT else told(BOTH_FAILED))
+            return ranking, how, None
         except (*FAILED_CALLS, BudgetExceeded):
             notes.append(GOOGLE_AWAY)
-            return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None
+            return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
 
     def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
                      only: list[int] | None, every: filtering.Choices,
@@ -438,20 +661,21 @@ def create_app(
         if only is None:
             ids = ranking
         else:
-            ids, _ = ranking_of(conninfo, idea, mode, None, False, filtering.Filters(), [])
+            ids, _, _ = ranking_of(conninfo, idea, mode, None, False, filtering.Filters(), [])
         return filtering.keep_chosen(filtering.choices(facts_of(conninfo, ids)), every, chosen)
 
     @app.get("/", response_class=HTMLResponse)
     def search(
         request: Request,
         idea: str = "",
-        mode: str = MEANING,
+        mode: str = "",
         ai: str = "",
         event: str = "",
         year: str = "",
         category: str = "",
         proof: str = "",
         life: str = "",
+        winner: str = "",
         open: str = "",  # noqa: A002  (the name in the address)
         page: str = "1",
         view: str = "",
@@ -461,16 +685,18 @@ def create_app(
         idea = idea[:LONGEST_IDEA]
         if mode == "ai":  # the address of the second version of the page
             mode, ai = MEANING, "1"
-        mode = mode if mode in MODES else MEANING
+        if not mode and ai == "1":  # Gemini orders the semantic results; an address of before
+            mode = MEANING  # 28 October 2026 asked for its order with no mode
+        mode = mode if mode in MODES else DEFAULT_MODE
         with_ai = ai == "1" and mode == MEANING and bool(idea)
-        view = CHARTS if view in (CHARTS, "overview") else ""
+        view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
-        asked = filtering.Filters(event, year, category, proof, life)
+        asked = filtering.Filters(event, year, category, proof, life, winner)
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
                 "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,
-                "panel_card": None, "search_query": ""}  # fmt: skip
+                "panel_card": None, "panel_problem": None, "search_query": ""}  # fmt: skip
         try:
             conninfo = database()
             every = filtering.choices(project_facts(conninfo))
@@ -494,12 +720,15 @@ def create_app(
                  "unfiltered_query": search_query(values, drop=FILTERS),
                  "cards_query": search_query(values, drop=("view",)),
                  "charts_query": search_query({**values, "view": CHARTS}),
+                 "graph_query": search_query({**values, "view": GRAPH}),
                  "check_events": data.dated_events(conninfo), "all_projects": every.projects,
                  "shown_limit": SHOWN,
                  "with_category": every.with_category, "notes": notes}  # fmt: skip
         try:
             panel_card = card_of(conninfo, open_id) if open_id else None
             shown["panel_linked"] = linked_to(conninfo, open_id) if panel_card else []
+            # a link to a project that is not in the collection opens the window with that sentence
+            shown["panel_problem"] = NO_SUCH_PROJECT if open_id and panel_card is None else None
             if not idea:
                 total = len(only) if only is not None else every.projects
                 if view == CHARTS:
@@ -507,6 +736,11 @@ def create_app(
                     return render(request, "search.html", asked=False, results=[], total=total,
                                   charts=built, came_back=groups, insights=said, offer=every,
                                   panel_card=panel_card, **shown)  # fmt: skip
+                if view == GRAPH:
+                    drawn, why, about = graph_of(conninfo, only)
+                    return render(request, "search.html", asked=False, results=[], total=total,
+                                  graph=drawn, graph_problem=why, graph_about=about,
+                                  offer=every, panel_card=panel_card, **shown)  # fmt: skip
                 ids, total = data.browse(conninfo, only, offset=(page_number - 1) * PAGE_SIZE,
                                          limit=PAGE_SIZE)  # fmt: skip
                 results = results_of(conninfo, ids, "", False)
@@ -516,17 +750,26 @@ def create_app(
                               pages=math.ceil(total / PAGE_SIZE), first_shown=first,
                               last_shown=first + len(results) - 1, **shown)  # fmt: skip
             began = time.perf_counter()
-            ranking, how = ranking_of(conninfo, idea, mode, only, with_ai, chosen, notes)
+            ranking, how, sorted_by = ranking_of(conninfo, idea, mode, only, with_ai, chosen,
+                                                 notes)  # fmt: skip
             elapsed = time.perf_counter() - began
             offer = search_offer(conninfo, idea, mode, ranking, only, every, chosen)
             if cut:
                 notes.append(IDEA_CUT)
-            ordered = how in (rerank.KEPT, rerank.ASKED)
+            ordered = how in rerank.ORDERED
+            shown["sorted_by"] = sorted_by
             none_close = bool(only) and not ranking  # the filters match, but none is close
             if view == CHARTS:
                 built, groups, said = charts_of(conninfo, ranking)
                 return render(request, "search.html", asked=True, results=[], total=len(ranking),
                               charts=built, came_back=groups, insights=said, offer=offer,
+                              nothing_matches=only == [], none_close=none_close,
+                              panel_card=panel_card,
+                              **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
+            if view == GRAPH:
+                drawn, why, about = graph_of(conninfo, ranking, idea)
+                return render(request, "search.html", asked=True, results=[], total=len(ranking),
+                              graph=drawn, graph_problem=why, graph_about=about, offer=offer,
                               nothing_matches=only == [], none_close=none_close,
                               panel_card=panel_card,
                               **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
@@ -607,6 +850,29 @@ def create_app(
         view.same_event = next((one for one in view.earlier if one.event == view.event), None)
         return view
 
+    def refresh_work(
+        projects: set[int] | None,
+        older_than: timedelta,
+        limit: int | None,
+        step: Callable[[str], None],
+    ) -> None:
+        """Read again what is older than `older_than`, for `projects` (the button of a card) or for
+        all (a round), and say each step to `step` (design 7.3)."""
+        client, _ = github_or_why()
+        conninfo = database()
+        with recorded_run(conninfo, refresh_step.STEP) as run:
+            refresh_step.refresh(conninfo, answers, client, mirror_nodes(), run,
+                                 collector=f"{settings.collector_name.strip()}/{__version__}",
+                                 older_than=older_than, limit=limit, projects=projects,
+                                 source=readings.BUTTON if projects else readings.ROUND,
+                                 step=step)  # fmt: skip
+
+    age = timedelta(hours=settings.refresh_after_hours)
+    reader = refreshing.Refresher(refresh_work, older_than=age, inline=refresh_inline)
+    app.state.refresher = reader
+    if settings.refresh_in_background:
+        reader.start_rounds()
+
     def writer_or_why() -> tuple[Any, str | None]:
         """What writes to the register, or None with the reason in plain words."""
         if clients["writer"] is None:
@@ -633,33 +899,32 @@ def create_app(
         ids = [pid for pid in ranking if pid not in known][:CLOSEST]
         return results_of(conninfo, ids, "", False), None
 
-    @app.get("/check", response_class=HTMLResponse)
-    def check(
-        request: Request, repo: str = "", event: str = "", starts: str = "", ends: str = ""
-    ) -> HTMLResponse:
-        """S3: the check of one submission (design 12.1), in the window over the page, or as a
-        page of its own without JavaScript. Programs read every fact; no model writes."""
-        name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
-        repository = submission.repository_link(repo[:300])
-        if repository is None:
-            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+    def check_answer(
+        conninfo: str,
+        repository: str,
+        days: submission.EventDays | None,
+        asked: dict[str, str],
+        progress: checks.Progress = lambda step, state: None,
+    ) -> tuple[int, dict[str, Any]]:
+        """What the page of a check shows: its status, and the values of its template.
+        `progress` hears each step start and end (web/checks.py)."""
         try:
-            conninfo = database()
-            days, wrong = event_days(conninfo, event, starts, ends)
-            if wrong:
-                return render(request, name, 400, problem=wrong)
             asker, why = github_or_why()
             result = submission.check_submission(
                 conninfo, repository, days, client=asker,
-                store=RawStore(github.raw_dir(settings)),
+                store=answers,
                 collector=f"{settings.collector_name.strip()}/{__version__}",
-                mirrors=mirror_nodes(), problems=[why] if why else [],
+                mirrors=mirror_nodes(), problems=[why] if why else [], progress=progress,
             )  # fmt: skip
+            if result.code is not None and result.code.status == CODE_GONE and not result.seen:
+                return 404, {"problem": submission.NO_SUCH_CODE}
+            progress(checks.COLLECTION, checks.RUNNING)
             closest, note = closest_to(conninfo, result)
             groups = [[one.project_id] for one in result.seen]
             members = [group[0] for group in data.members(conninfo, groups)]
+            progress(checks.COLLECTION, checks.DONE)
         except (SettingsError, psycopg.OperationalError):
-            return render(request, name, 503, problem=DATABASE_DOWN)
+            return 503, {"problem": DATABASE_DOWN}
         found = result.code is not None and result.code.status == CODE_FOUND
         listed_one = days is not None and not days.typed
         view = register_view(repository, days) if found and listed_one else None
@@ -673,10 +938,70 @@ def create_app(
             offer = (member.event_id, member.event)
             if one.by == "repository" and member.event_id is not None and offer not in offers:
                 offers.append(offer)
-        return render(request, name, result=result, closest=closest, closest_note=note,
-                      seen_before=seen_before, register=view, register_offers=offers,
-                      hedera_code=code_reading.view_of_read(repository, result.hedera_code),
-                      asked={"event": event, "starts": starts, "ends": ends})  # fmt: skip
+        ends_on = days.ends_on if days is not None else None
+        return 200, {
+            "result": result, "closest": closest, "closest_note": note,
+            "life_after": data.life_line(ends_on),
+            "event_over": not (result.life and result.life.why == NOT_OVER),
+            "seen_before": seen_before, "register": view, "register_offers": offers,
+            "hedera_code": code_reading.view_of_read(repository, result.hedera_code),
+            "readme_lines": (data.said_lines(submission.readme_prose(result.readme_text))
+                             if result.story else []),  # fmt: skip
+            "asked": asked,
+        }  # fmt: skip
+
+    @app.get("/check", response_class=HTMLResponse)
+    def check(
+        request: Request,
+        repo: str = "",
+        event: str = "",
+        starts: str = "",
+        ends: str = "",
+        progress: str = "",
+    ) -> HTMLResponse:
+        """S3: the check of one submission (design 12.1), in the window over the page, or as a
+        page of its own without JavaScript. Programs read every fact; no model writes. Asked by
+        the page's script with progress=1, it runs in a thread of its own, and the window shows
+        its steps until the answer is there (/check/progress)."""
+        name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
+        repository = submission.repository_link(repo[:300])
+        if repository is None:
+            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+        try:
+            conninfo = database()
+            days, wrong = event_days(conninfo, event, starts, ends)
+        except (SettingsError, psycopg.OperationalError):
+            return render(request, name, 503, problem=DATABASE_DOWN)
+        if wrong:
+            return render(request, name, 400, problem=wrong)
+        asked = {"event": event, "starts": starts, "ends": ends}
+        if name == "_check.html" and progress == "1":
+            job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report))
+            return render(request, "_check_progress.html", view=jobs.view(job, announce=False),
+                          repository=repository, event_name=days.name if days else None,
+                          step_notes=evidence.check_notes())  # fmt: skip
+        status, shown = check_answer(conninfo, repository, days, asked)
+        return render(request, name, status, **shown)
+
+    @app.get("/check/progress", response_class=HTMLResponse)
+    def check_progress(request: Request, job: str = "") -> HTMLResponse:
+        """The steps of a check that runs, or its answer in their place once it is there."""
+        running = jobs.get(job[:40])
+        if running is None:
+            return in_window(render(request, "_check.html", 404, problem=CHECK_LOST))
+        if running.answer is None:
+            return render(request, "_check_steps.html", view=jobs.view(running),
+                          step_notes=evidence.check_notes())  # fmt: skip
+        jobs.forget(running.id)
+        status, shown = running.answer
+        return in_window(render(request, "_check.html", status, **(shown or
+                                {"problem": SERVER_FAILED})))  # fmt: skip
+
+    def in_window(response: HTMLResponse) -> HTMLResponse:
+        """The answer takes the place of the whole window, not only of the steps."""
+        response.headers["HX-Retarget"] = "#viewer-body"
+        response.headers["HX-Reswap"] = "innerHTML"
+        return response
 
     @app.post("/register", response_class=HTMLResponse)
     async def register_page(request: Request) -> HTMLResponse:
@@ -704,8 +1029,7 @@ def create_app(
             return render(request, name, 400, problem=wrong or EVENT_FOR_REGISTER)
         if days.typed:
             return render(request, name, 400, problem=NOT_LISTED)
-        store = RawStore(github.raw_dir(settings))
-        code = saved_facts(store, repository)
+        code = saved_facts(answers, repository)
         if code is None or code.status != CODE_FOUND:
             return render(request, name, 400, problem=CHECK_FIRST)
         view = register_view(repository, days)
@@ -715,13 +1039,13 @@ def create_app(
         if view.same_event is not None:  # never written twice: the first record stands
             return render(request, name, done=view.same_event, already=True, **values)
         # The README and the version, read again now: the team's line must be in the README, and
-        # the newest version is stamped. Each read goes to a new folder; nothing saved is replaced.
+        # the newest version is stamped. Each read is saved as the newest answer, with no answer
+        # replaced (collect/answers.py).
         asker, why = github_or_why()
         if asker is None:
             return render(request, name, 503, problem=why)
-        when = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
         readme, version, problems = submission.read_again(
-            asker, RawStore(github.raw_dir(settings) / "register" / when), repository,
+            asker, answers, repository,
             collector=f"{settings.collector_name.strip()}/{__version__}",
         )  # fmt: skip
         if problems:
@@ -740,7 +1064,13 @@ def create_app(
             done = registry.register_submission(write, mirror_nodes()[view.network],
                                                 view.topic_id, payload)  # fmt: skip
         except RegisterError as error:
-            return render(request, name, 503, problem=f"Nothing was registered. {error}")
+            why = (
+                REGISTER_REFUSED.get(error.status, "the network refused the message")
+                if error.status
+                else "the site could not write the record"
+            )
+            LOG.warning("the register refused a record: %s", error)
+            return render(request, name, 503, problem=REGISTER_FAILED.format(why=why))
         except MirrorError:
             return render(request, name, 202, problem=NOT_YET_VISIBLE)
         return render(request, name, done=done, already=False, **values)
@@ -778,6 +1108,32 @@ def create_app(
         return render(request, "_panel.html", card=card, back_query=back, idea=idea,
                       kept_comparison=kept, linked=linked)  # fmt: skip
 
+    def read_again_shown(
+        request: Request, project_id: int, state: refreshing.State | None
+    ) -> HTMLResponse:
+        """The line of a card that reads its project again (design 7.3, S2): while it runs, it
+        asks again every 2 seconds; when it is done, the card shows itself again, in its window,
+        or as its page."""
+        query = search_query(dict(request.query_params))
+        if state is not None and state.status == refreshing.DONE:
+            if request.query_params.get("page") == "1":
+                done = HTMLResponse("")
+                done.headers["HX-Refresh"] = "true"
+                return done
+            shown = project_panel(request, project_id, request.query_params.get("idea", ""))
+            return in_window(shown)
+        return render(request, "_read_again.html", project_id=project_id, state=state,
+                      query=query, page=request.query_params.get("page") == "1")  # fmt: skip
+
+    @app.post("/project/{project_id}/read-again", response_class=HTMLResponse)
+    def read_again_now(request: Request, project_id: int) -> HTMLResponse:
+        """S2: read GitHub and the mirror node again for one project, before the next round."""
+        return read_again_shown(request, project_id, reader.ask(project_id))
+
+    @app.get("/project/{project_id}/read-again", response_class=HTMLResponse)
+    def read_again_state(request: Request, project_id: int) -> HTMLResponse:
+        return read_again_shown(request, project_id, reader.state(project_id))
+
     @app.get("/compare", response_class=HTMLResponse)
     def comparison(
         request: Request,
@@ -805,22 +1161,42 @@ def create_app(
             return render(request, "_compare.html", 400, found={}, failed=True, asked_ids=[],
                           **place)  # fmt: skip
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
-                    BudgetExceeded, *FAILED_CALLS)  # fmt: skip
-        try:
-            conninfo = database()
-            items = comparing.items_for(conninfo, project_ids, model=settings.gemini_rewrite_model,
-                                        version=INSTRUCTIONS_VERSION)  # fmt: skip
-            found, _ = comparing.kept_or_compared(
+                    BudgetExceeded, *FAILED_CALLS, *rerank.NOT_ORDERED)  # fmt: skip
+
+        def compared(conninfo: str, items: list, by_stand_in: bool) -> tuple[dict, int]:
+            if by_stand_in:
+                return comparing.kept_or_compared(
+                    conninfo, standing_in("compare"), idea, items, model=stand_in.MODEL,
+                    thinking_level=STAND_IN_LEVEL, timeout_seconds=STAND_IN_COMPARE_SECONDS,
+                )  # fmt: skip
+            return comparing.kept_or_compared(
                 conninfo, client("llm", "compare"), idea, items,
                 model=settings.gemini_search_model,
                 thinking_level=settings.gemini_search_thinking_level,
                 timeout_seconds=COMPARE_SECONDS,
             )  # fmt: skip
+
+        by_stand_in = breaker.standing_in()
+        try:
+            conninfo = database()
+            items = comparing.items_for(conninfo, project_ids, model=settings.gemini_rewrite_model,
+                                        version=INSTRUCTIONS_VERSION)  # fmt: skip
+            try:
+                found, asked = compared(conninfo, items, by_stand_in)
+                if asked and not by_stand_in:
+                    breaker.answered()
+            except (comparing.CompareError, *rerank.NOT_ORDERED) as error:
+                # A failure of Gemini counts toward its stand-in (design 8.2); the one that ends
+                # its turn hands the comparison to the stand-in at once.
+                if by_stand_in or isinstance(error, BudgetExceeded) or not breaker.failed():
+                    raise
+                by_stand_in = True
+                found, _ = compared(conninfo, items, by_stand_in)
         except failures:
             return render(request, "_compare.html", 503, found={}, failed=True,
                           asked_ids=project_ids, **place)  # fmt: skip
         return render(request, "_compare.html", found=found, failed=False, asked_ids=project_ids,
-                      **place)  # fmt: skip
+                      compared_by=stand_in.NAME if by_stand_in else "Gemini", **place)  # fmt: skip
 
     def about(request: Request, name: str) -> HTMLResponse:
         """A window of the bottom of the page: a part of a page for htmx, a whole page without."""
@@ -844,6 +1220,14 @@ def create_app(
         """How the search works, and what the tests measured (design 12.1, S6)."""
         return about(request, "how")
 
+    @app.exception_handler(StarletteHTTPException)
+    def no_such_page(request: Request, error: StarletteHTTPException) -> HTMLResponse:
+        """An address that the website does not have, or a method that it does not take: a page
+        in plain words, not the framework's JSON."""
+        name = "_problem.html" if request.headers.get("HX-Request") == "true" else "problem.html"
+        problem = NO_SUCH_PAGE if error.status_code == 404 else SERVER_FAILED
+        return render(request, name, error.status_code, problem=problem)
+
     @app.exception_handler(Exception)
     def unexpected(request: Request, error: Exception) -> HTMLResponse:
         """An error that no route answers in its own words. The page says so in plain words and
@@ -856,7 +1240,13 @@ def create_app(
     templates.env.filters["day"] = day
     templates.env.filters["moment"] = moment
     templates.env.filters["iso_day"] = iso_day
+    templates.env.filters["said"] = data.said
+    templates.env.filters["casefold"] = str.casefold
     templates.env.globals |= {
+        "READING_BY": READING_BY,
+        "READING_STEPS": list(refresh_step.STEPS),
+        "READING_STEP_WORDS": READING_STEP_WORDS,
+        "READING_PROBLEMS": READING_PROBLEMS,
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,
         "PROOF_SHORT": PROOF_SHORT,
@@ -866,14 +1256,28 @@ def create_app(
         "CONFIRMED": seen.CONFIRMED,
         "MAX_IDS": submission.MAX_IDS,
         "RERANK_SECONDS": RERANK_SECONDS,
+        # the model that orders the closest now: Gemini, or its stand-in (search/stand_in.py)
+        "ordering_model": lambda: stand_in.NAME if breaker.standing_in() else "Gemini",
         "LONGEST_IDEA": LONGEST_IDEA,
         "EXAMPLES": EXAMPLES,
         "REFS": references.BY_KEY,
         "REF_NUMBER": references.NUMBER,
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
+        "file_link": code_reading.file_link,
+        "judged_of": data.judged_of,
+        "strip_view": strips.strip_view,
+        "hashscan_moment": hashscan_transaction,
+        "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
+        "reason_of": data.reason_of,
+        "lines_to_show": data.lines_to_show,
+        "NETWORK_WORDS": data.NETWORK_WORDS,
         "ACTION_WORDS": data.ACTION_WORDS,
         "KIND_WORDS": data.KIND_WORDS,
+        "SERVICE_NAMES": data.SERVICE_NAMES,
+        "SERVICE_SUBJECTS": data.SERVICE_SUBJECTS,
+        "SERVICE_TRANSACTIONS": data.SERVICE_TRANSACTIONS,
+        "MAX_EVENTS": MAX_EVENTS,
         "hashscan_topic": hashscan_topic,
         "hackathon_groups": lambda collected: hackathons.groups(
             collected, listed.LISTED, datetime.now(UTC).date()

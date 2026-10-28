@@ -24,7 +24,7 @@
       <p class="mt-2 mb-1"><b>First, prove that the repository is yours.</b> Add this line to its README on the default branch:</p>
       <p class="mb-1"><code class="hm-readme-line">{{ view.line }}</code></p>
       <p class="hm-small">{% if view.line_found %}The README already contains it.{% else %}Only someone with write access can add it, so it proves that the repository is yours and that you agree to the record.{% endif %} When you click the button, the README is read again from GitHub to find the line.</p>
-      <p class="mt-2 mb-1">The button writes one record to the public register on Hedera testnet{{ parts.ref("topic") }}. It holds:</p>
+      <p class="mt-2 mb-1">{% if rehearsal_topic %}<b>Rehearsal:</b> the button writes one record to the practice topic <span class="id">{{ rehearsal_topic }}</span> on Hedera testnet, not to the register{% else %}The button writes one record to the public register on Hedera testnet{% endif %}{{ parts.ref("topic") }}. It holds:</p>
       <ul class="hm-written">
         <li>the hackathon: <span class="id">{{ view.event }}</span></li>
         <li>a hash of the repository link: <span class="id">{{ view.code[:16] }}&hellip;</span></li>

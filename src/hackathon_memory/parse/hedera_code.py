@@ -17,7 +17,12 @@ limit on how many. What is kept is what the plain text matching found, with no A
   node read by the code;
 * **mentions:** the files that name Hedera, Hashgraph or Hiero at all, in code, settings or
   comments. The weakest sign, kept so that a person sees where to look when nothing else was
-  found.
+  found;
+* **IDs:** the Hedera IDs that the files name, by the rules of the page (parse/hedera_ids.py),
+  each with the files where it stands (24 October 2026). Only the ID, its network when the text
+  names one, and the paths are kept, never the words around it: in a file of example settings
+  the next line can hold a key. Whether an ID proves anything is for the check to say
+  (pipeline/code_ids.py): code also names things that many teams use, such as a public token.
 
 It says what the code names. It does not run the code, and it cannot tell whether a line is ever
 executed. Folders of other people's code (node_modules, vendor) and generated files are left
@@ -38,8 +43,16 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 
-FORMAT = 2  # 2 (21 October 2026): the Hedera networks of EVM tools, and the mentions
+from hackathon_memory.parse.hedera_ids import find_ids
+
+# 2 (21 October 2026): the Hedera networks of EVM tools, and the mentions. 3 (24 October 2026):
+# the Hedera IDs that the code names.
+FORMAT = 3
 EXAMPLES = 10  # the files kept as examples for each thing found; the count is always complete
+# The most IDs kept for one repository. In 40 repositories of the collection the code named 161
+# IDs in all, 23 at most in one (evals/results/20261023T224559Z-ids-in-code.json); more than this
+# is a list of somebody else's things, such as the tokens of an exchange.
+MOST_IDS = 200
 MAX_FILE_BYTES = 1_000_000  # a larger file is a bundle or data, not code that a team wrote
 
 # Folders that hold other people's code, or files made by a tool from the project's code.
@@ -351,6 +364,19 @@ class Found:
 
 
 @dataclass
+class IdInCode:
+    """A Hedera ID that the code names: its network when the text names one, and the files."""
+
+    entity_id: str
+    network: str | None
+    seen: Seen = field(default_factory=Seen)
+
+    def to_record(self) -> dict:
+        return {"id": self.entity_id, "network": self.network, "files": self.seen.files,
+                "examples": self.seen.examples}  # fmt: skip
+
+
+@dataclass
 class CodeScan:
     format: int = FORMAT  # the version of the rules that made this reading
     files: int = 0  # files of the project's own code that were read
@@ -365,6 +391,8 @@ class CodeScan:
     signs: dict[str, Seen] = field(default_factory=dict)
     imports: Seen = field(default_factory=Seen)
     mentions: Seen = field(default_factory=Seen)  # files that name Hedera at all
+    ids: dict[tuple[str, str | None], IdInCode] = field(default_factory=dict)
+    ids_cut: bool = False  # more than MOST_IDS IDs: the first ones are kept
 
     @property
     def uses_hedera(self) -> bool:
@@ -400,6 +428,7 @@ class CodeScan:
             "signs": seen(self.signs),
             "imports": {"files": self.imports.files, "examples": self.imports.examples},
             "mentions": {"files": self.mentions.files, "examples": self.mentions.examples},
+            "ids": [one.to_record() for one in self.ids.values()], "ids_cut": self.ids_cut,
         }  # fmt: skip
         return json.dumps(record, ensure_ascii=False, sort_keys=True).encode("utf-8")
 
@@ -412,6 +441,9 @@ class CodeScan:
 
         imports = record.get("imports") or {}
         mentions = record.get("mentions") or {}
+        ids = {(one["id"], one["network"]): IdInCode(one["id"], one["network"],
+                                                     Seen(one["files"], list(one["examples"])))
+               for one in record.get("ids") or []}  # fmt: skip
         return cls(
             format=record.get("format", 1), files=record["files"], commit=record.get("commit"),
             archive_bytes=record["archive_bytes"],
@@ -421,6 +453,7 @@ class CodeScan:
             signs=seen(record.get("signs") or {}),
             imports=Seen(imports.get("files", 0), list(imports.get("examples", []))),
             mentions=Seen(mentions.get("files", 0), list(mentions.get("examples", []))),
+            ids=ids, ids_cut=record.get("ids_cut", False),
         )  # fmt: skip
 
 
@@ -560,6 +593,14 @@ def read_file(scan: CodeScan, path: str, data: bytes, calls: list[_Calls]) -> No
         scan.signs.setdefault(sign, Seen()).add(path)
     if _MENTION.search(text):
         scan.mentions.add(path)
+    for found in find_ids(text):
+        key = (found.entity_id, found.network)
+        if key not in scan.ids:
+            if len(scan.ids) >= MOST_IDS:
+                scan.ids_cut = True
+                continue
+            scan.ids[key] = IdInCode(found.entity_id, found.network)
+        scan.ids[key].seen.add(path)
 
 
 def finish(scan: CodeScan, calls: list[_Calls]) -> None:
