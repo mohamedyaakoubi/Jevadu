@@ -67,6 +67,7 @@ MAX_LINKS = 24
 
 _ENTITY_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}$")
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_TRANSACTION_HASH = re.compile(r"^0x[0-9a-fA-F]{64}(?:[0-9a-fA-F]{32})?$")
 _TRANSACTION_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}-\d{1,11}-\d{1,9}$")
 _BEFORE = re.compile(r"timestamp=lte?:(\d+\.\d+)")
 _AFTER = re.compile(r"timestamp=gte?:(\d+\.\d+)")
@@ -342,6 +343,15 @@ class MirrorNode:
         """Every message of a topic, oldest first, from `since` on when it is given (see _all)."""
         path = f"/topics/{self._entity(topic_id)}/messages?limit=100&order=asc"
         return self._all(path + self._range(since, None), "messages", max_rows)
+
+    def contract_actions(self, transaction_hash: str) -> list[dict]:
+        """What one call of a contract did inside the EVM, its first 100 actions in order (read on
+        28 October 2026): a call to one of Hedera's system contracts has the call_type SYSTEM and
+        the system contract as its recipient, such as 0.0.359 for the Token Service."""
+        if not _TRANSACTION_HASH.match(transaction_hash):
+            raise MirrorError(f"not the hash of a transaction: {transaction_hash!r}")
+        path = f"/contracts/results/{transaction_hash}/actions?limit=100"
+        return (self._get(path) or {}).get("actions") or []
 
     def contract_history(
         self, contract: str, *, max_rows: int, since: datetime | None = None

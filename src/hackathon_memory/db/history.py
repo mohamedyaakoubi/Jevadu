@@ -14,6 +14,7 @@ history is then read on from its newest event (design 7.3), unless the limit of 
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -24,6 +25,7 @@ from hackathon_memory.check.history import Act, History
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
 from hackathon_memory.check.setup import Setup
 from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of
+from hackathon_memory.check.system_calls import ContractCalls
 from hackathon_memory.parse.hedera_ids import ACCOUNT
 
 KINDS_THAT_FIT = (PROOF_FOUND, DATES_DO_NOT_FIT, FOUND_BUT_EMPTY)
@@ -229,6 +231,24 @@ def story_of_project(
     ).fetchone() or (None, None)
     return story_of(tuple(ids.values()), merged(seen), words, in_code,
                     starts_at=starts_at, ends_on=ends_on, set_up=set_up)  # fmt: skip
+
+
+def calls_of(
+    conn: psycopg.Connection, keys: Sequence[tuple[str, str]], span: tuple[datetime, datetime]
+) -> list[ContractCalls]:
+    """What the calls of these contracts (ID, network) reached among Hedera's system contracts
+    in the time `span` (db/contract_calls.py); only those that were read in that time."""
+    wanted = set(keys)
+    if not wanted:
+        return []
+    rows = conn.execute(
+        "SELECT entity_id, network, starts_at, ends_at, read, cut, reached FROM contract_calls "
+        "WHERE entity_id = ANY(%s) AND starts_at = %s AND ends_at = %s",
+        ([entity for entity, _ in wanted], *span),
+    ).fetchall()
+    return [ContractCalls(entity, network, starts, ends, read, cut, dict(reached or {}))
+            for entity, network, starts, ends, read, cut, reached in rows
+            if (entity, network) in wanted]  # fmt: skip
 
 
 def depth_of_project(
