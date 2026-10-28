@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import math
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -48,6 +48,7 @@ from hackathon_memory.collect.github_facts import saved_facts
 from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
 from hackathon_memory.collect.github_readmes import saved_readme
 from hackathon_memory.collect.polite import CollectorRefused
+from hackathon_memory.db import readings
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
 from hackathon_memory.db.runs import recorded_run
@@ -125,6 +126,27 @@ VIEWS = (CHARTS, GRAPH)  # the views beside the cards, each named in the address
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
                 "proof": "the Hedera proof", "life": "the life", "winner": "the prize"}  # fmt: skip
 EXAMPLES = EXAMPLE_IDEAS  # what the search learns about them is kept for good
+# The block of the readings of a card (design 7.3, S2): who read, the steps of a reading as
+# pipeline/refresh.py says them, and a failure of the reading by the kind of its error.
+READING_BY = {
+    readings.BUTTON: "read again by a visitor",
+    readings.ROUND: "read again by the website",
+    readings.REFRESH: "read again by the daily reading",
+}
+READING_STEP_WORDS = {
+    refresh_step.GITHUB: "GitHub: the facts, the README, the newest commit",
+    refresh_step.CODE: "The code, when its commit is new",
+    refresh_step.LEDGER: "Its Hedera IDs on the ledger",
+    refresh_step.HISTORIES: "The new transactions of its own IDs",
+}
+READING_PROBLEMS = {
+    "CollectorRefused": "GitHub refused the reading, or its limit for today is reached.",
+    "MirrorError": "The mirror node did not answer.",
+    "OperationalError": "The database did not answer.",
+    "SettingsError": "The website is missing a setting for GitHub or the database.",
+    "ReadTimeout": "GitHub or the mirror node did not answer in time.",
+    "ConnectError": "There was no connection to GitHub or the mirror node.",
+}
 PROOF_SHORT = {
     "proof_found": "found",
     "window_not_known": "event end not known yet",
@@ -808,15 +830,22 @@ def create_app(
         view.same_event = next((one for one in view.earlier if one.event == view.event), None)
         return view
 
-    def refresh_work(projects: set[int] | None, older_than: timedelta, limit: int | None) -> None:
-        """Read again what is older than `older_than`, for `projects` or for all (design 7.3)."""
+    def refresh_work(
+        projects: set[int] | None,
+        older_than: timedelta,
+        limit: int | None,
+        step: Callable[[str], None],
+    ) -> None:
+        """Read again what is older than `older_than`, for `projects` (the button of a card) or for
+        all (a round), and say each step to `step` (design 7.3)."""
         client, _ = github_or_why()
         conninfo = database()
         with recorded_run(conninfo, refresh_step.STEP) as run:
             refresh_step.refresh(conninfo, answers, client, mirror_nodes(), run,
                                  collector=f"{settings.collector_name.strip()}/{__version__}",
-                                 older_than=older_than, limit=limit,
-                                 projects=projects)  # fmt: skip
+                                 older_than=older_than, limit=limit, projects=projects,
+                                 source=readings.BUTTON if projects else readings.ROUND,
+                                 step=step)  # fmt: skip
 
     age = timedelta(hours=settings.refresh_after_hours)
     reader = refreshing.Refresher(refresh_work, older_than=age, inline=refresh_inline)
@@ -1178,6 +1207,10 @@ def create_app(
     templates.env.filters["said"] = data.said
     templates.env.filters["casefold"] = str.casefold
     templates.env.globals |= {
+        "READING_BY": READING_BY,
+        "READING_STEPS": list(refresh_step.STEPS),
+        "READING_STEP_WORDS": READING_STEP_WORDS,
+        "READING_PROBLEMS": READING_PROBLEMS,
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,
         "PROOF_SHORT": PROOF_SHORT,

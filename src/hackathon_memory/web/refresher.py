@@ -7,8 +7,8 @@ repositories and the ledger:
 * **rounds:** when REFRESH_IN_BACKGROUND is on, a round every few minutes asks again, at most a
   few requests of each kind, for what is older than its age; the oldest answers come first;
 * **one project, at once:** the button "Read again now" of a card asks again about that project
-  only, with no age, before the next round. The card asks for the state of its reading and shows
-  itself again when it is done.
+  only, with no age, before the next round. The card asks for the state of its reading, shows
+  the step that runs, and shows itself again when it is done, with what changed.
 
 One thread, one task at a time: GitHub is asked one request after the other, with its pause,
 through the one client of the website.
@@ -21,7 +21,7 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 
 LOG = logging.getLogger(__name__)
@@ -29,8 +29,9 @@ WAITING, RUNNING, DONE, FAILED = "waiting", "running", "done", "failed"
 ROUND_EVERY = 300.0  # seconds between two rounds
 ROUND_LIMIT = 30  # requests of each kind in one round: about two minutes of GitHub's pace
 
-# What does the work: the projects (None for all), the age, the most requests of each kind.
-Work = Callable[[set[int] | None, timedelta, int | None], None]
+# What does the work: the projects (None for all), the age, the most requests of each kind, and
+# what hears each step as it starts (pipeline/refresh.py, STEPS).
+Work = Callable[[set[int] | None, timedelta, int | None, Callable[[str], None]], None]
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class State:
     status: str  # WAITING, RUNNING, DONE or FAILED
     since: datetime
     problem: str | None = None
+    step: str | None = None  # the step that runs (pipeline/refresh.py, STEPS)
 
 
 class Refresher:
@@ -112,7 +114,8 @@ class Refresher:
         with self._lock:
             self._states[project_id] = State(RUNNING, self._now())
         try:
-            self._work({project_id}, timedelta(0), None)
+            self._work({project_id}, timedelta(0), None,
+                       lambda step: self._stepped(project_id, step))  # fmt: skip
         except Exception as error:  # the card says so; the log keeps the details
             LOG.exception("reading project %s again failed", project_id)
             with self._lock:
@@ -120,6 +123,12 @@ class Refresher:
             return
         with self._lock:
             self._states[project_id] = State(DONE, self._now())
+
+    def _stepped(self, project_id: int, step: str) -> None:
+        with self._lock:
+            state = self._states.get(project_id)
+            if state is not None and state.status == RUNNING:
+                self._states[project_id] = replace(state, step=step)
 
     def _loop(self) -> None:
         last_round = -self._round_every  # the first round comes at once
@@ -132,7 +141,7 @@ class Refresher:
             if self._rounds and time.monotonic() - last_round >= self._round_every:
                 last_round = time.monotonic()
                 try:
-                    self._work(None, self._older_than, self._limit)
+                    self._work(None, self._older_than, self._limit, lambda _step: None)
                 except Exception:  # the next round tries again; the log keeps the details
                     LOG.exception("a round of reading again failed")
                 self.rounds_done += 1

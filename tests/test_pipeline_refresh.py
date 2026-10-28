@@ -6,7 +6,7 @@ Every page, answer and archive here is invented. No request leaves the test."""
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import psycopg
@@ -118,3 +118,50 @@ def test_one_project_is_read_again_alone(database: str, tmp_path: Path) -> None:
         refresh(database, Answers(tmp_path / "raw"), client, nodes(), run, collector=COLLECTOR,
                 older_than=timedelta(0), projects={pebble}, now=lambda: NOW)  # fmt: skip
     assert str(site.seen[0].url) == facts_address(REPO)
+
+
+def test_each_reading_keeps_what_changed_and_says_its_steps(database: str, tmp_path: Path) -> None:
+    """A reading compares what the tool holds before and after it (design 7.3, 28 October 2026):
+    the step keeps what changed, a reading by the button is kept also when nothing did, and each
+    step is said as it starts."""
+    from hackathon_memory.db.readings import BUTTON, REFRESH, ReadingStore
+    from hackathon_memory.pipeline.refresh import STEPS
+
+    pages = {
+        facts_address(REPO): [Reply(200, facts_answer(), {"ETag": '"facts"'}), Reply(304, b"")],
+        readme_address(REPO): [Reply(200, readme_answer(FIRST), {"ETag": '"one"'}),
+                               Reply(200, readme_answer(SECOND), {"ETag": '"two"'})],
+        commits_address(REPO): Reply(200, commits_answer(ARCHIVE_COMMIT), {"ETag": '"c"'}),
+        archive_address(REPO): Reply(302, b"", {"Location": DOWNLOAD}),
+        DOWNLOAD: Reply(200, archive({"src/a.ts": b"// nothing"})),
+    }  # fmt: skip
+    client, _ = github(tmp_path, pages)
+    answers = Answers(tmp_path / "raw")
+    store = ReadingStore(database)
+    with psycopg.connect(database) as conn:
+        (pebble,) = conn.execute("SELECT id FROM projects").fetchone()
+
+    def read(when: datetime, **options: object) -> None:
+        client.now = lambda: when
+        with recorded_run(database, STEP) as run:
+            refresh(database, answers, client, nodes(), run, collector=COLLECTOR, older_than=DAY,
+                    now=lambda: when, **options)  # fmt: skip
+
+    steps: list[str] = []
+    read(NOW, step=steps.append)
+    assert steps == list(STEPS)  # GitHub, the code, the ledger, the new transactions
+    first = store.latest(pebble)
+    assert first is not None and first.source == REFRESH and first.read_at == NOW
+    assert "A README was found." in first.changes and "New Hedera ID: 0.0.3456781." in first.changes
+    read(LATER)
+    second = store.latest(pebble)
+    assert second is not None and second.read_at == LATER
+    assert "The README changed." in second.changes
+    assert "New Hedera ID: 0.0.4870201." in second.changes
+    read(
+        LATER + timedelta(minutes=1)
+    )  # nothing is old enough to ask: nothing changed, nothing kept
+    assert store.latest(pebble) == second
+    read(LATER + timedelta(minutes=2), projects={pebble}, source=BUTTON)
+    pressed = store.latest(pebble)
+    assert pressed is not None and pressed.source == BUTTON and pressed.changes == ()

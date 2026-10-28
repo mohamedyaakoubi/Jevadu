@@ -431,6 +431,18 @@ dialog.viewer::backdrop, dialog.sheet::backdrop {
 body:has(dialog[open]) { overflow: hidden; }
 
 .project-head { margin-bottom: 1.25rem; }
+/* the card: its head on the left, the block of its readings on the right, as the columns below */
+.project-head.has-readings { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.project-head-main { min-width: 0; }
+.hm-readings { border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius-lg, 0.5rem); padding: 0.75rem 1rem; background: var(--tblr-bg-surface); font-size: 0.875rem; }
+.hm-readings p { margin: 0 0 0.5rem; }
+.hm-readings-title { font-weight: 600; }
+.hm-readings-changes, .hm-readings-steps { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.hm-readings-steps { list-style: none; padding-left: 0; }
+.hm-readings-steps li { padding: 0.125rem 0; color: var(--tblr-secondary); }
+.hm-readings-steps li.is-now { color: var(--tblr-body-color); font-weight: 600; }
+.hm-readings-steps li.is-done { color: var(--tblr-body-color); }
+.hm-step-done { display: inline-block; width: 0.875rem; margin-right: 0.25rem; color: var(--tblr-success); }
 .check-result .project-head { margin-bottom: 0.25rem; } /* the head opens the left column */
 .project-meta { margin: 0; font-size: 0.875rem; color: var(--tblr-secondary); }
 .project-meta a { color: inherit; }
@@ -445,6 +457,8 @@ body:has(dialog[open]) { overflow: hidden; }
 .project-facts { order: 2; }
 .project-reading { order: 1; }
 @media (max-width: 859.98px) {
+  .project-head.has-readings { display: block; }
+  .hm-readings { margin-top: 0.75rem; }
   .project-cols { display: flex; flex-direction: column; }
   .project-col { display: contents; }
   .compare-section { order: 1; } .story-section { order: 2; } .ledger-section { order: 3; }
@@ -558,8 +572,6 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 
 /* A card read again (design 7.3, S2): the line under its links, with a small turning ring while
    the reading runs; a full ring that stands still when the computer asks for less motion. */
-.hm-read-line { margin: 0.5rem 0 0; color: var(--tblr-secondary); }
-.hm-read-line .btn { margin-left: 0.25rem; }
 .hm-reading { display: inline-block; width: 0.875rem; height: 0.875rem; margin-right: 0.25rem; vertical-align: -0.125rem; border-radius: 50%; border: 2px solid var(--tblr-primary); border-right-color: transparent; animation: hm-turn 0.9s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
   .hm-reading { animation: none; border-right-color: var(--tblr-primary); }

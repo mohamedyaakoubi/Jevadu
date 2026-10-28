@@ -939,17 +939,42 @@ def test_a_card_is_read_again_at_the_press_of_its_button(site) -> None:  # noqa:
     checkable(database)  # Pebble Pay keeps the code of REPO
     own_id(database, pebble, "0.0.4870201", "topic")
     panel = client.get(f"/project/{pebble}/panel").text
-    line = panel[panel.index(f'id="read-{pebble}"') :].split("</p>")[0]
-    assert "Read from the mirror node on 22 October 2026." in line
-    assert f'hx-post="/project/{pebble}/read-again' in line and "Read again now" in line
+    block = panel[panel.index(f'id="read-{pebble}"') :].split("</aside>")[0]
+    assert "The mirror node read on 22 October 2026." in block and "read again by" not in block
+    assert f'hx-post="/project/{pebble}/read-again' in block and "Read again now" in block
     before = len(client.github_site.seen)
     answer = client.post(f"/project/{pebble}/read-again", headers=HX)
     assert answer.status_code == 200 and answer.headers["HX-Retarget"] == "#viewer-body"
     assert len(client.github_site.seen) > before  # GitHub was asked about its repository
-    assert "Read from GitHub on 11 October 2026" in answer.text  # the card, read again
+    shown = answer.text[answer.text.index(f'id="read-{pebble}"') :].split("</aside>")[0]
+    assert "GitHub read on 11 October 2026" in shown  # the card, read again
+    # what the reading found stays in the block, for every visitor (28 October 2026)
+    assert "read again by a visitor:" in shown and "<li>A README was found.</li>" in shown
+    later = client.get(f"/project/{pebble}/panel").text
+    assert "read again by a visitor:" in later and "<li>A README was found.</li>" in later
     assert client.get(f"/project/{pebble}/read-again", headers=HX).headers["HX-Retarget"]
     as_page = client.post(f"/project/{pebble}/read-again?page=1", headers=HX)
     assert as_page.headers["HX-Refresh"] == "true"  # the card's own page loads again
+
+
+def test_the_block_of_the_readings_shows_its_steps_and_a_failure_in_words(site) -> None:  # noqa: ANN001
+    """While a project is read again, its block shows the steps, those done marked and the one
+    that runs turning; a failure says what went wrong and offers to try again (design 7.3, S2)."""
+    from hackathon_memory.web.refresher import FAILED, RUNNING, State
+
+    client, _, ids, _ = site
+    pebble = ids["Pebble Pay"]
+    reader = client.app.state.refresher
+    moment = datetime(2026, 10, 28, 7, tzinfo=UTC)
+    reader.state = lambda _pid: State(RUNNING, moment, None, "ledger")
+    running = client.get(f"/project/{pebble}/read-again", headers=HX).text
+    assert 'hx-trigger="every 1s"' in running and ">Reading again</p>" in running
+    assert running.count('class="is-done"') == 2 and running.count('class="is-now"') == 1
+    assert 'Its Hedera IDs on the ledger<span class="visually-hidden">: running</span>' in running
+    reader.state = lambda _pid: State(FAILED, moment, "MirrorError")
+    failed = client.get(f"/project/{pebble}/read-again", headers=HX).text
+    assert "The mirror node did not answer. The card keeps what it read before." in failed
+    assert "every 1s" not in failed and "Try again" in failed
 
 
 def test_the_activity_of_a_check_names_its_hackathon_and_one_not_over(site) -> None:  # noqa: ANN001

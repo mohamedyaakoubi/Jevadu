@@ -40,6 +40,7 @@ from hackathon_memory.check.proof import (
 from hackathon_memory.check.story import Story, places_in, services_in_code, set_up_in_code
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.history import depth_of_project, story_of_project
+from hackathon_memory.db.readings import Reading, latest_reading
 from hackathon_memory.parse.hedera_code import PACKAGE
 from hackathon_memory.read.quotes import FIELDS, KEPT
 from hackathon_memory.search import listing
@@ -226,6 +227,7 @@ class ProjectCard:
     code_reading: CodeView | None = None  # what the code says about Hedera (design 7.3)
     story: Story | None = None  # the ledger story (design 7.5), or None when it has none
     depth: Depth | None = None  # the depth of use of its own IDs (design 7.5), or None
+    reading: Reading | None = None  # its newest reading, whoever made it (design 7.3)
 
 
 def first_sentence(text: str) -> str:
@@ -312,6 +314,7 @@ def project_card(
                                  in_code=services_of(code_reading),
                                  set_up=set_up_of(code_reading),
                                  has_package=has_a_package(code_reading))  # fmt: skip
+        reading = latest_reading(conn, project_id)
     card = None
     if row is not None:
         fields, made_at = row
@@ -323,7 +326,7 @@ def project_card(
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
                        collected_at(raw_dir, found[0].page_url), language, card,
                        event_page(site, slug, found[0].page_url), code_reading, story,
-                       depth)  # fmt: skip
+                       depth, reading)  # fmt: skip
 
 
 def said(text: str) -> Markup:

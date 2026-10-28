@@ -1,8 +1,21 @@
-{# The line of a card while its project is read again (design 7.3, S2). It asks for the state
-   every 2 seconds; the server shows the card again when the reading is done. #}
+{# The block of the readings while its project is read again (design 7.3, S2): the steps of the
+   reading, those done marked, the one that runs turning; it asks for the state every second, and
+   the server shows the card again when the reading is done, with what changed. #}
 {% import "_parts.html" as parts %}
 {% set failed = state is not none and state.status == "failed" %}
-<p class="hm-small hm-read-line" id="read-{{ project_id }}" role="status"{% if not failed %} hx-get="/project/{{ project_id }}/read-again{% if query or page %}?{{ "page=1" if page else query }}{% endif %}" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
-{%- if failed %}Reading again failed ({{ state.problem }}). The card keeps what it read before. <button type="button" class="btn btn-sm btn-ghost-primary" hx-post="/project/{{ project_id }}/read-again{% if query or page %}?{{ "page=1" if page else query }}{% endif %}" hx-target="#read-{{ project_id }}" hx-swap="outerHTML">Try again</button>
-{%- else %}<span class="hm-reading" aria-hidden="true"></span> Reading GitHub and the mirror node again for this project. The card shows itself again when it is done.
-{%- endif %}</p>
+{% set again = "/project/" ~ project_id ~ "/read-again" ~ ("?" ~ ("page=1" if page else query) if query or page else "") %}
+{% set current = READING_STEPS.index(state.step) if state is not none and state.step in READING_STEPS else -1 %}
+<aside class="hm-readings" id="read-{{ project_id }}" role="status" aria-labelledby="read-{{ project_id }}-title"{% if not failed %} hx-get="{{ again }}" hx-trigger="every 1s" hx-swap="outerHTML"{% endif %}>
+  <p class="hm-readings-title" id="read-{{ project_id }}-title">{% if failed %}Reading again failed{% elif current < 0 %}Waiting to read again{% else %}Reading again{% endif %}</p>
+  <ol class="hm-readings-steps">
+    {% for key in READING_STEPS %}
+    {% set done = loop.index0 < current %}
+    {% set now = loop.index0 == current and not failed %}
+    <li class="{{ 'is-done' if done else ('is-now' if now else '') }}">{% if now %}<span class="hm-reading" aria-hidden="true"></span>{% elif done %}<span class="hm-step-done" aria-hidden="true">&#10003;</span>{% endif %}{{ READING_STEP_WORDS[key] }}{% if done %}<span class="visually-hidden">: done</span>{% elif now %}<span class="visually-hidden">: running</span>{% endif %}</li>
+    {% endfor %}
+  </ol>
+  {% if failed %}
+  <p>{{ READING_PROBLEMS.get(state.problem, "Something went wrong while reading.") }} The card keeps what it read before.</p>
+  <button type="button" class="btn btn-sm btn-outline-primary" hx-post="{{ again }}" hx-target="#read-{{ project_id }}" hx-swap="outerHTML">Try again</button>
+  {% endif %}
+</aside>

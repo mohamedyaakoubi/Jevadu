@@ -17,6 +17,8 @@ A repository lives on after its event, and so do the Hedera IDs of a project. In
    the age, else from the mirror node; the proof rule judges them again.
 5. The histories of the own IDs: those never read or read before the depth of use (design 7.5),
    whole, and the new transactions of the others, from their newest event on.
+6. What changed for each project, compared with what the tool held before the reading, is kept
+   (db/readings.py): always for a reading by the button of a card, else only when something did.
 
 GitHub is asked only when the switch COLLECT_GITHUB is on; without it, steps 3 to 5 run on what
 is saved. The pages of the sites that were asked for permission are never read again (design
@@ -30,6 +32,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 
+from hackathon_memory.check.readings import changes_of
 from hackathon_memory.collect.answers import AgainRun, Answers
 from hackathon_memory.collect.github import GitHubClient
 from hackathon_memory.collect.github_code import fetch_code, read_new_commits
@@ -41,6 +44,7 @@ from hackathon_memory.db.code_ids import CodeIdStore
 from hackathon_memory.db.history import HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.projects import ProjectStore
+from hackathon_memory.db.readings import BUTTON, REFRESH, ReadingStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.db.runs import Run
 from hackathon_memory.hedera.mirror import MirrorNode
@@ -49,10 +53,18 @@ from hackathon_memory.pipeline import check_ids, code, code_ids, hedera_code, hi
 STEP = "refresh"
 AGE = timedelta(hours=24)  # REFRESH_AFTER_HOURS in .env (design 7.3)
 KINDS = ("facts", "readmes", "versions", "archives")
+# The steps of a reading, said as each starts (web/refresher.py shows them on the card).
+GITHUB, CODE, LEDGER, HISTORIES = "github", "code", "ledger", "histories"
+STEPS = (GITHUB, CODE, LEDGER, HISTORIES)
+Step = Callable[[str], None]
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def _quiet(_step: str) -> None:
+    """A reading that says nothing of its steps: the step `refresh` and the rounds."""
 
 
 def _count_first(run: Run, kind: str, done: AnswersRun) -> None:
@@ -88,6 +100,7 @@ def ask_github(
     older_than: timedelta,
     now: Callable[[], datetime],
     limit: int | None,
+    step: Step = _quiet,
 ) -> set[str]:
     """Steps 1 and 2: ask for what is missing and for what is old. Returns the repositories that
     GitHub answered about, whose answers the steps of step 3 write again."""
@@ -105,6 +118,7 @@ def ask_github(
                       now=now, limit=limit)  # fmt: skip
         _count(run, kind, later)
         answered.update(later.answered)
+    step(CODE)
     new_code = read_new_commits(client, answers, wanted, collector=collector, limit=limit)
     _count(run, "archives", new_code)
     answered.update(new_code.changed)
@@ -127,30 +141,47 @@ def refresh(
     limit: int | None = None,
     projects: set[int] | None = None,
     now: Callable[[], datetime] = _now,
+    source: str = REFRESH,
+    step: Step = _quiet,
 ) -> None:
     """Read again what is older than `older_than`, for the whole collection or for `projects`
-    only, and count what was done in `run`. With no client, GitHub is not asked."""
+    only, and count what was done in `run`. With no client, GitHub is not asked. `source` names
+    who reads (db/readings.py), and `step` hears each step as it starts."""
+    readings = ReadingStore(conninfo)
+    before = readings.states(projects)
+    step(GITHUB)
     repositories = RepositoryStore(conninfo)
     of_project = readmes.link_repositories(repositories, run)
     wanted = sorted({one for pid, one in of_project.items() if projects is None or pid in projects})
     answered: set[str] = set()
     if client is not None:
         answered = ask_github(client, answers, wanted, run, collector=collector,
-                              older_than=older_than, now=now, limit=limit)  # fmt: skip
+                              older_than=older_than, now=now, limit=limit, step=step)  # fmt: skip
     if answered:
         readmes.read_readmes(repositories, ProjectStore(conninfo), answers, run, only=answered)
         code.read_code(repositories, answers, run, only=answered)
         hedera_code.read_hedera_code(repositories, answers, run, only=answered)
+    step(LEDGER)
     ledger = LedgerStore(conninfo)
     code_ids.give_code_ids(CodeIdStore(conninfo), ledger, mirrors, run, max_age=older_than,
                            now=now, projects=projects)  # fmt: skip
     check_ids.check_ids(ledger, mirrors, run, max_age=older_than, now=now, projects=projects)
+    step(HISTORIES)
     histories = HistoryStore(conninfo)
     history.read_histories(histories, mirrors, run, now=now, again=True, limit=limit,
                            projects=projects)  # fmt: skip
     history.read_histories_on(histories, mirrors, run, older_than=older_than, limit=limit,
                               now=now, projects=projects)  # fmt: skip
     run.counts["repositories_answered"] = len(answered)
+    after = readings.states(projects)
+    moment = now()
+    kept = []
+    for project_id, state in after.items():
+        changes = changes_of(before.get(project_id, state), state)
+        if changes or source == BUTTON:
+            kept.append((project_id, moment, source, changes))
+    readings.save(kept)
+    run.counts["projects_changed"] = sum(bool(changes) for *_, changes in kept)
 
 
 def refresh_lines(run: Run) -> list[str]:
