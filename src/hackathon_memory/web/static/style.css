@@ -538,7 +538,9 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 .hm-strip-day { fill: var(--tblr-primary); stroke: var(--tblr-primary); stroke-width: 1; }
 .hm-strip a:hover .hm-strip-day, .hm-strip a:focus .hm-strip-day { stroke: var(--tblr-body-color); stroke-width: 2; }
 .hm-strip a:focus { outline: none; }
-.hm-strip-name, .hm-strip-mark { font-size: 11px; fill: var(--tblr-secondary); }
+/* 13 units of the drawing, about 12 pixels in a card's column: the 11 of 25 October drew about
+   10 (review layer 1, 28 October 2026). */
+.hm-strip-name, .hm-strip-mark { font-size: 13px; fill: var(--tblr-secondary); }
 .hm-strip-base { stroke: var(--tblr-border-color); stroke-width: 1; }
 .hm-strip-note, .hm-strip-ends { display: block; }
 .hm-strip-note { min-height: 1.4em; }
