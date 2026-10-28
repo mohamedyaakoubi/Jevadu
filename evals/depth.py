@@ -59,6 +59,15 @@ SIGNS = {
     "package_with_no_call": "names a Hedera package, and calls no Hedera service",
     "no_id_of_its_own": "has no ID of its own",
 }
+# What "How they are set up" says, by the words of its sentences (check/setup.py, 28 October 2026).
+SETUP = {
+    "token_with_custom_fees": ("royalty of", "a fee of", "fixed fee"),
+    "token_with_no_key": ("no key, so nobody can change it",),
+    "topic_with_a_submit_key": ("submit key",),
+    "topic_with_a_fee": ("a fee for each message", "each message pays a fee"),
+    "account_with_an_ecdsa_key": ("ECDSA key",),
+    "account_with_several_keys": ("several keys",),
+}
 
 
 def cards(conninfo: str, model: str) -> list[tuple[int, str, object]]:
@@ -88,6 +97,19 @@ def measure(found: Sequence[tuple[int, str, object]]) -> dict:
         for depth in depths:
             for key, words in SIGNS.items():
                 signs[key] += any(words in sentence for sentence in depth.on_paper)
+        setup = Counter()
+        for depth in depths:
+            for key, all_words in SETUP.items():
+                setup[key] += any(words in sentence for sentence in depth.setup
+                                  for words in all_words)  # fmt: skip
+        stories = [getattr(card, "story", None) for _, _, card in chosen]
+        reached = Counter()
+        for story in stories:
+            lines = [line for line in story.lines if line.from_contracts] if story else []
+            for line in lines:
+                reached[line.service] += 1
+            for words in story.contract_others if story else ():
+                reached[words.split(" in ")[0]] += 1
         result[name] = {
             "projects": len(depths),
             "read_with_what_each_transaction_was": sum(depth.read for depth in depths),
@@ -98,7 +120,16 @@ def measure(found: Sequence[tuple[int, str, object]]) -> dict:
             "with_a_failed_transaction": one_share([bool(depth.failed) for depth in active]),
             "with_a_sign_on_paper": one_share([bool(depth.on_paper) for depth in depths]),
             "signs_on_paper": dict(signs),
-        }
+            # the three reads of 28 October 2026 (design 7.5)
+            "with_a_setup_said": sum(bool(depth.setup) for depth in depths),
+            "setup": dict(setup),
+            "contracts_reached_a_system_contract": sum(
+                bool(story and (any(line.from_contracts for line in story.lines)
+                                or story.contract_others)) for story in stories),
+            "reached": dict(reached),
+            "mainnet": sum(bool(getattr(getattr(card, "facts", None), "mainnet", False))
+                           for _, _, card in chosen),
+        }  # fmt: skip
     result["per_project"] = [
         {"project": pid, "proof": proof, "transactions": card.depth.total,
          "others": card.depth.others,

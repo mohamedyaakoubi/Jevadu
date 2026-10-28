@@ -37,9 +37,10 @@ class Card:
     depth: Depth
 
 
-def depth(did: int, others: int | None, days: int, *signs: str) -> Depth:
+def depth(did: int, others: int | None, days: int, *signs: str,
+          setup: tuple[str, ...] = ()) -> Depth:  # fmt: skip
     return Depth((("messages to a topic", did),) if did else (), 0, 0, others, None, days, days,
-                 0, 0, tuple(signs), True, None, total=did)  # fmt: skip
+                 0, 0, tuple(signs), True, None, total=did, setup=setup)  # fmt: skip
 
 
 def test_the_counts_follow_the_depth_of_each_card() -> None:
@@ -106,3 +107,24 @@ def test_the_second_counting_takes_the_accounts_of_a_single_transaction(
     session = Answers({"transactions": [TRANSFER]})
     took_part = {"0.0.7001", "0.0.7002", "0.0.7003"}  # not the node, not the account of fees
     assert recount(session, card, {}) == (1, took_part)  # type: ignore[arg-type]
+
+
+def test_the_three_reads_of_the_cards_are_counted() -> None:
+    """The setup, the calls of the contracts and the main network (28 October 2026)."""
+    from hackathon_memory.check.history import TOKENS
+    from hackathon_memory.check.story import ServiceLine
+
+    said = ("Its token 0.0.7001: an NFT collection with no supply limit; a royalty of 10% on each "
+            "sale; keys for admin and supply.", "Its account 0.0.7201: an ECDSA key, the kind that "
+            "EVM wallets use.")  # fmt: skip
+    story = SimpleNamespace(lines=(ServiceLine(TOKENS, (), False, 0, from_contracts=34),),
+                            contract_others=("random numbers in 2 calls",))  # fmt: skip
+    first = SimpleNamespace(depth=depth(4, 2, 3, setup=said), story=story,
+                            facts=SimpleNamespace(mainnet=True))  # fmt: skip
+    second = SimpleNamespace(depth=depth(1, 0, 1), story=None, facts=SimpleNamespace(mainnet=False))
+    every = measure([(1, "proof_found", first), (2, "proof_found", second)])["all"]
+    assert (every["with_a_setup_said"], every["mainnet"]) == (1, 1)
+    assert every["setup"]["token_with_custom_fees"] == 1 and every["setup"]["topic_with_a_fee"] == 0
+    assert every["setup"]["account_with_an_ecdsa_key"] == 1
+    assert every["contracts_reached_a_system_contract"] == 1
+    assert every["reached"] == {TOKENS: 1, "random numbers": 1}
