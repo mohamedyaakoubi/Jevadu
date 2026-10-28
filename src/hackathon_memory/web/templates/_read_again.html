@@ -1,0 +1,8 @@
+{# The line of a card while its project is read again (design 7.3, S2). It asks for the state
+   every 2 seconds; the server shows the card again when the reading is done. #}
+{% import "_parts.html" as parts %}
+{% set failed = state is not none and state.status == "failed" %}
+<p class="hm-small hm-read-line" id="read-{{ project_id }}" role="status"{% if not failed %} hx-get="/project/{{ project_id }}/read-again{% if query or page %}?{{ "page=1" if page else query }}{% endif %}" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+{%- if failed %}Reading again failed ({{ state.problem }}). The card keeps what it read before. <button type="button" class="btn btn-sm btn-ghost-primary" hx-post="/project/{{ project_id }}/read-again{% if query or page %}?{{ "page=1" if page else query }}{% endif %}" hx-target="#read-{{ project_id }}" hx-swap="outerHTML">Try again</button>
+{%- else %}<span class="hm-reading" aria-hidden="true"></span> Reading GitHub and the mirror node again for this project. The card shows itself again when it is done.
+{%- endif %}</p>

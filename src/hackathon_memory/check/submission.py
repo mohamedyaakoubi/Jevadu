@@ -7,7 +7,9 @@ Programs read everything here, and no model writes anything:
 * GitHub's API gives the dates of the code and the README, through the polite client of the
   pipeline (collect/github.py): the tool's name and contact address in every request, the pause,
   the limit counted on disk and the switch COLLECT_GITHUB. An answer that was saved before, also
-  for a project of the collection, is read again and never asked twice.
+  for a project of the collection, is used while it is younger than CHECK_AGE; an older one is
+  asked again with its ETag, so that GitHub answers 304 when nothing changed (collect/answers.py,
+  25 October 2026: a repository made public after a first check stayed "not found").
 * The Hedera IDs of the README are found by the parser's rules (parse/hedera_ids.py). The mirror
   node is asked about each one, on the network that the README names or on both, as the step of
   the pipeline asks (check/asking.py), and the proof rule judges it against the window of the
@@ -34,6 +36,7 @@ from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
+from typing import Any
 
 from hackathon_memory.check import asking
 from hackathon_memory.check.history import read_history
@@ -59,14 +62,30 @@ from hackathon_memory.check.story import (
     set_up_in_code,
     story_of,
 )
+from hackathon_memory.collect.answers import AgainRun, Answers
 from hackathon_memory.collect.github import GitHubClient, repository_of
 from hackathon_memory.collect.github_code import CodeRead, read_code_now, saved_code
-from hackathon_memory.collect.github_commits import Version, fetch_versions, saved_version
+from hackathon_memory.collect.github_commits import (
+    Version,
+    fetch_versions,
+    saved_version,
+    versions_again,
+)
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
-from hackathon_memory.collect.github_facts import RepositoryFacts, fetch_facts, saved_facts
+from hackathon_memory.collect.github_facts import (
+    RepositoryFacts,
+    facts_again,
+    fetch_facts,
+    saved_facts,
+)
 from hackathon_memory.collect.github_once import AnswersRun
 from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
-from hackathon_memory.collect.github_readmes import Readme, fetch_readmes, saved_readme
+from hackathon_memory.collect.github_readmes import (
+    Readme,
+    fetch_readmes,
+    readmes_again,
+    saved_readme,
+)
 from hackathon_memory.collect.polite import PoliteClient
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.code_ids import CodeIdStore
@@ -84,6 +103,7 @@ MAX_IDS = 5
 MAX_CODE_IDS = 10
 NETWORKS_WHEN_OPEN = ("testnet", "mainnet")  # as the step of the pipeline asks
 MAX_AGE = timedelta(days=7)  # an answer of the node younger than this is taken from the table
+CHECK_AGE = timedelta(hours=1)  # an answer of GitHub older than this is asked again (design 7.3)
 NOT_ASKED = "not_asked"  # no network could be asked about the ID just now
 # The steps of a check, as it reports them while it runs (web/checks.py), and their states:
 # SAVED is done at once from what the tool kept, SKIPPED is a step with nothing to read.
@@ -208,39 +228,81 @@ def read_code(
     repository: str,
     *,
     collector: str,
+    older_than: timedelta | None = None,
+    now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> tuple[RepositoryFacts | None, Readme | None, Version | None, list[str]]:
     """The facts, the README and the version of a repository: the saved answers, or asked for
-    once now. With no client, only what was saved. Returns them with what went wrong, in plain
-    words."""
+    now. An answer is asked for when none was saved, and again when it is older than
+    `older_than` and `store` keeps the answers asked again. With no client, only what was saved.
+    Returns them with what went wrong, in plain words."""
     problems: list[str] = []
-    facts, readme = saved_facts(store, repository), saved_readme(store, repository)
-    version = saved_version(store, repository)
-    if client is not None and facts is None:
-        _note(fetch_facts(client, store, [repository], collector=collector), problems)
-        facts = saved_facts(store, repository)
-    code_is_there = facts is not None and facts.status == CODE_FOUND
-    if client is not None and readme is None and code_is_there:
-        _note(fetch_readmes(client, store, [repository], collector=collector), problems)
-        readme = saved_readme(store, repository)
-    if client is not None and version is None and code_is_there:
-        _note(fetch_versions(client, store, [repository], collector=collector), problems)
-        version = saved_version(store, repository)
+    again = older_than is not None and isinstance(store, Answers) and client is not None
+    facts = _now_or_saved(client, store, repository, problems, fetch_facts, facts_again,
+                          saved_facts, collector=collector, older_than=older_than if again
+                          else None, now=now)  # fmt: skip
+    if facts is None or facts.status != CODE_FOUND:
+        return facts, saved_readme(store, repository), saved_version(store, repository), problems
+    options = {"collector": collector, "older_than": older_than if again else None, "now": now}
+    readme = _now_or_saved(client, store, repository, problems, fetch_readmes, readmes_again,
+                           saved_readme, **options)  # fmt: skip
+    version = _now_or_saved(client, store, repository, problems, fetch_versions, versions_again,
+                            saved_version, **options)  # fmt: skip
     return facts, readme, version, problems
 
 
+def _now_or_saved(
+    client: PoliteClient | None,
+    store: RawStore,
+    repository: str,
+    problems: list[str],
+    first: Callable[..., AnswersRun],
+    again: Callable[..., AgainRun],
+    saved: Callable[[RawStore, str], Any],
+    *,
+    collector: str,
+    older_than: timedelta | None,
+    now: Callable[[], datetime],
+) -> Any:
+    """One answer of GitHub about a repository: the saved one, asked for when there is none,
+    and asked again when it is older than `older_than` (None: never again)."""
+    known = saved(store, repository)
+    if client is None:
+        return known
+    if known is None:
+        _note(first(client, store, [repository], collector=collector), problems)
+    elif older_than is not None and isinstance(store, Answers):
+        _note(again(client, store, [repository], collector=collector, older_than=older_than,
+                    now=now), problems)  # fmt: skip
+    return saved(store, repository)
+
+
 def read_again(
-    client: PoliteClient, store: RawStore, repository: str, *, collector: str
+    client: PoliteClient,
+    store: RawStore,
+    repository: str,
+    *,
+    collector: str,
+    now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> tuple[Readme | None, Version | None, list[str]]:
     """The README and the version of a repository, asked for now, for a registration: it needs
-    the team's line in the README, and stamps the newest version (design 9.2). `store` is a new
-    one, since a saved answer is never replaced."""
+    the team's line in the README, and stamps the newest version (design 9.2). With the answers
+    asked again as `store` (collect/answers.py), each is asked again at once, with the ETag of the
+    newest answer: a 304 says that it did not change since. Any other store is a new one, since a
+    saved answer is never replaced."""
     problems: list[str] = []
+    if isinstance(store, Answers):
+        options = {"collector": collector, "older_than": timedelta(0), "now": now}
+        readme = _now_or_saved(client, store, repository, problems, fetch_readmes,
+                               readmes_again, saved_readme, **options)  # fmt: skip
+        version = _now_or_saved(client, store, repository, problems, fetch_versions,
+                                versions_again, saved_version, **options)  # fmt: skip
+        return readme, version, problems
     _note(fetch_readmes(client, store, [repository], collector=collector), problems)
     _note(fetch_versions(client, store, [repository], collector=collector), problems)
     return saved_readme(store, repository), saved_version(store, repository), problems
 
 
-def _note(done: AnswersRun, problems: list[str]) -> None:
+def _note(done: AnswersRun | AgainRun, problems: list[str]) -> None:
     if done.stopped:
         problems.append(f"GitHub was not asked: {done.stopped}")
     elif done.failed and GITHUB_AWAY not in problems:
@@ -435,11 +497,11 @@ def check_submission(
     end, with its state."""
     check = SubmissionCheck(repository, event, problems=list(problems or []))
     progress(GITHUB, RUNNING)
-    kept = [saved_facts(store, repository), saved_readme(store, repository),
-            saved_version(store, repository)]  # fmt: skip
-    check.code, check.readme, check.version, asked = read_code(client, store, repository,
-                                                               collector=collector)  # fmt: skip
-    progress(GITHUB, SAVED if all(one is not None for one in kept) else DONE)
+    sent = client.requests_made if client is not None else 0
+    check.code, check.readme, check.version, asked = read_code(
+        client, store, repository, collector=collector, older_than=CHECK_AGE, now=now
+    )
+    progress(GITHUB, DONE if client is not None and client.requests_made > sent else SAVED)
     check.problems.extend(asked)
     if check.code is not None and check.code.status != CODE_FOUND:
         check.problems.append(NO_SUCH_CODE if check.code.status != "blocked" else BLOCKED_CODE)
@@ -447,7 +509,9 @@ def check_submission(
     elif check.code is not None:
         progress(CODE, RUNNING)
         read_before = saved_code(store, repository) is not None
-        check.hedera_code, trouble = read_code_now(client, store, repository, collector=collector)
+        newest = check.version.sha if check.version is not None else None
+        check.hedera_code, trouble = read_code_now(client, store, repository, collector=collector,
+                                                   commit=newest)  # fmt: skip
         check.problems.extend([trouble] if trouble else [])
         progress(CODE, SAVED if read_before else DONE)
     else:

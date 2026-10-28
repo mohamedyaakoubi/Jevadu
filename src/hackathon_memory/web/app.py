@@ -20,7 +20,7 @@ import math
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode
@@ -40,6 +40,7 @@ from hackathon_memory.check.history import MAX_EVENTS
 from hackathon_memory.check.life import NOT_OVER
 from hackathon_memory.check.proof import PROOF_FOUND
 from hackathon_memory.collect import github
+from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.github_commits import FOUND as VERSION_FOUND
 from hackathon_memory.collect.github_facts import FOUND as CODE_FOUND
@@ -47,15 +48,16 @@ from hackathon_memory.collect.github_facts import saved_facts
 from hackathon_memory.collect.github_readmes import FOUND as README_FOUND
 from hackathon_memory.collect.github_readmes import saved_readme
 from hackathon_memory.collect.polite import CollectorRefused
-from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
+from hackathon_memory.db.runs import recorded_run
 from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.finops.budget import BudgetExceeded
 from hackathon_memory.hedera import listed, registry
 from hackathon_memory.hedera.mirror import MIRROR_URLS, MirrorError, MirrorNode, hashscan_topic
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
+from hackathon_memory.pipeline import refresh as refresh_step
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import closeness, engine, listing, rerank, seen, stand_in
 from hackathon_memory.search import compare as comparing
@@ -73,6 +75,7 @@ from hackathon_memory.web import (
     insights,
     references,
 )
+from hackathon_memory.web import refresher as refreshing
 
 HERE = Path(__file__).parent
 PAGE_SIZE = 10  # projects on one page, of the list and of the results
@@ -325,6 +328,7 @@ def create_app(
     mirrors: Mapping[str, Any] | None = None,
     register_writer: Any = None,
     stand_in_client: Any = None,
+    refresh_inline: bool = False,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
@@ -332,7 +336,8 @@ def create_app(
     are made when first needed, with the promises of collect/github.py. `register_writer` writes
     one record to the register (hedera/registry.py); by default it is made when first needed.
     `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
-    is made, counted by the meter, when it is first needed."""
+    is made, counted by the meter, when it is first needed. `refresh_inline` reads a card again
+    on the thread of its request, for the tests (web/refresher.py)."""
     settings = settings or Settings()
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
@@ -347,6 +352,7 @@ def create_app(
                                "github": github_client, "mirrors": mirrors,
                                "writer": register_writer, "stand_in": stand_in_client}  # fmt: skip
     breaker = stand_in.Breaker()  # Gemini's failures in a row (design 8.2)
+    answers = Answers(github.raw_dir(settings))  # GitHub's newest answers (design 7.3)
     app.state.breaker = breaker
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
     graphs: dict[tuple, tuple[float, Any]] = {}  # the groups of a list, with when they were made
@@ -396,7 +402,7 @@ def create_app(
         repository = submission.repository_link(repo[:300])
         if repository is None:
             return ""
-        readme = saved_readme(RawStore(github.raw_dir(settings)), repository)
+        readme = saved_readme(answers, repository)
         if readme is None or readme.status != README_FOUND:
             return ""
         return submission.readme_words(readme.text)
@@ -788,6 +794,22 @@ def create_app(
         view.same_event = next((one for one in view.earlier if one.event == view.event), None)
         return view
 
+    def refresh_work(projects: set[int] | None, older_than: timedelta, limit: int | None) -> None:
+        """Read again what is older than `older_than`, for `projects` or for all (design 7.3)."""
+        client, _ = github_or_why()
+        conninfo = database()
+        with recorded_run(conninfo, refresh_step.STEP) as run:
+            refresh_step.refresh(conninfo, answers, client, mirror_nodes(), run,
+                                 collector=f"{settings.collector_name.strip()}/{__version__}",
+                                 older_than=older_than, limit=limit,
+                                 projects=projects)  # fmt: skip
+
+    age = timedelta(hours=settings.refresh_after_hours)
+    reader = refreshing.Refresher(refresh_work, older_than=age, inline=refresh_inline)
+    app.state.refresher = reader
+    if settings.refresh_in_background:
+        reader.start_rounds()
+
     def writer_or_why() -> tuple[Any, str | None]:
         """What writes to the register, or None with the reason in plain words."""
         if clients["writer"] is None:
@@ -827,7 +849,7 @@ def create_app(
             asker, why = github_or_why()
             result = submission.check_submission(
                 conninfo, repository, days, client=asker,
-                store=RawStore(github.raw_dir(settings)),
+                store=answers,
                 collector=f"{settings.collector_name.strip()}/{__version__}",
                 mirrors=mirror_nodes(), problems=[why] if why else [], progress=progress,
             )  # fmt: skip
@@ -942,8 +964,7 @@ def create_app(
             return render(request, name, 400, problem=wrong or EVENT_FOR_REGISTER)
         if days.typed:
             return render(request, name, 400, problem=NOT_LISTED)
-        store = RawStore(github.raw_dir(settings))
-        code = saved_facts(store, repository)
+        code = saved_facts(answers, repository)
         if code is None or code.status != CODE_FOUND:
             return render(request, name, 400, problem=CHECK_FIRST)
         view = register_view(repository, days)
@@ -953,13 +974,13 @@ def create_app(
         if view.same_event is not None:  # never written twice: the first record stands
             return render(request, name, done=view.same_event, already=True, **values)
         # The README and the version, read again now: the team's line must be in the README, and
-        # the newest version is stamped. Each read goes to a new folder; nothing saved is replaced.
+        # the newest version is stamped. Each read is saved as the newest answer, with no answer
+        # replaced (collect/answers.py).
         asker, why = github_or_why()
         if asker is None:
             return render(request, name, 503, problem=why)
-        when = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
         readme, version, problems = submission.read_again(
-            asker, RawStore(github.raw_dir(settings) / "register" / when), repository,
+            asker, answers, repository,
             collector=f"{settings.collector_name.strip()}/{__version__}",
         )  # fmt: skip
         if problems:
@@ -1015,6 +1036,32 @@ def create_app(
             return render(request, "_problem.html", 404, problem=NO_SUCH_PROJECT)
         return render(request, "_panel.html", card=card, back_query=back, idea=idea,
                       kept_comparison=kept, linked=linked)  # fmt: skip
+
+    def read_again_shown(
+        request: Request, project_id: int, state: refreshing.State | None
+    ) -> HTMLResponse:
+        """The line of a card that reads its project again (design 7.3, S2): while it runs, it
+        asks again every 2 seconds; when it is done, the card shows itself again, in its window,
+        or as its page."""
+        query = search_query(dict(request.query_params))
+        if state is not None and state.status == refreshing.DONE:
+            if request.query_params.get("page") == "1":
+                done = HTMLResponse("")
+                done.headers["HX-Refresh"] = "true"
+                return done
+            shown = project_panel(request, project_id, request.query_params.get("idea", ""))
+            return in_window(shown)
+        return render(request, "_read_again.html", project_id=project_id, state=state,
+                      query=query, page=request.query_params.get("page") == "1")  # fmt: skip
+
+    @app.post("/project/{project_id}/read-again", response_class=HTMLResponse)
+    def read_again_now(request: Request, project_id: int) -> HTMLResponse:
+        """S2: read GitHub and the mirror node again for one project, before the next round."""
+        return read_again_shown(request, project_id, reader.ask(project_id))
+
+    @app.get("/project/{project_id}/read-again", response_class=HTMLResponse)
+    def read_again_state(request: Request, project_id: int) -> HTMLResponse:
+        return read_again_shown(request, project_id, reader.state(project_id))
 
     @app.get("/compare", response_class=HTMLResponse)
     def comparison(

@@ -90,7 +90,8 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
         changed = settings.model_copy(update=changes)
         return TestClient(
             create_app(changed, google=client, llm=client, github_client=asker, mirrors=mirrors,
-                       register_writer=writes, stand_in_client=open_client(stand_in))
+                       register_writer=writes, stand_in_client=open_client(stand_in),
+                       refresh_inline=True)
         )  # fmt: skip
 
     served = make()
@@ -826,9 +827,33 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
                      r"\(README\.md\) and the latest commit\.", part.text)  # fmt: skip
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
-    assert len(client.github_site.seen) == 5  # GitHub was not asked again
+    # The stand-in's answers are dated 11 October 2026, more than an hour old, so this check
+    # asks GitHub again (design 7.3): the facts, the README and the commit, and the archive,
+    # which the stand-in made from another commit than its newest one.
+    assert len(client.github_site.seen) == 10
     hidden = '<h2 class="visually-hidden">What the check found</h2>'
     assert hidden in page.text and hidden not in part.text
+
+
+def test_a_card_is_read_again_at_the_press_of_its_button(site) -> None:  # noqa: ANN001
+    """ "Read again now" asks GitHub and the mirror node again about one project, and the card
+    shows itself again, in its window or as its page (design 7.3, S2, 25 October 2026)."""
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    checkable(database)  # Pebble Pay keeps the code of REPO
+    own_id(database, pebble, "0.0.4870201", "topic")
+    panel = client.get(f"/project/{pebble}/panel").text
+    line = panel[panel.index(f'id="read-{pebble}"') :].split("</p>")[0]
+    assert "Read from the mirror node on 22 October 2026." in line
+    assert f'hx-post="/project/{pebble}/read-again' in line and "Read again now" in line
+    before = len(client.github_site.seen)
+    answer = client.post(f"/project/{pebble}/read-again", headers=HX)
+    assert answer.status_code == 200 and answer.headers["HX-Retarget"] == "#viewer-body"
+    assert len(client.github_site.seen) > before  # GitHub was asked about its repository
+    assert "Read from GitHub on 11 October 2026" in answer.text  # the card, read again
+    assert client.get(f"/project/{pebble}/read-again", headers=HX).headers["HX-Retarget"]
+    as_page = client.post(f"/project/{pebble}/read-again?page=1", headers=HX)
+    assert as_page.headers["HX-Refresh"] == "true"  # the card's own page loads again
 
 
 def test_the_activity_of_a_check_names_its_hackathon_and_one_not_over(site) -> None:  # noqa: ANN001

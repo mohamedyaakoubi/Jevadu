@@ -28,6 +28,10 @@
       {% if demos %}<a class="btn btn-sm" href="{{ demos[0].url }}" rel="noopener" target="_blank">Live demo<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
       {% if not as_page %}<a class="btn btn-sm btn-ghost-secondary" href="/project/{{ pid }}">Open as a page</a>{% endif %}
     </p>
+    {% if facts.code_read_at or facts.ledger_read_at %}
+    {% set again_query = "page=1" if as_page else (back_query ~ ("&idea=" ~ (idea | urlencode) if idea else "")) %}
+    <p class="hm-small hm-read-line" id="read-{{ pid }}">Read from {% if facts.code_read_at %}GitHub on {{ facts.code_read_at | day }}{% endif %}{% if facts.code_read_at and facts.ledger_read_at %} and {% endif %}{% if facts.ledger_read_at %}the mirror node on {{ facts.ledger_read_at | day }}{% endif %}.{{ parts.info("fresh", "reading again") }} <button type="button" class="btn btn-sm btn-ghost-primary" hx-post="/project/{{ pid }}/read-again{% if again_query %}?{{ again_query }}{% endif %}" hx-target="#read-{{ pid }}" hx-swap="outerHTML">Read again now</button></p>
+    {% endif %}
   </header>
   {# On a page of its own the title is a level 1 heading, so the sections need a level 2 above them. #}
   {% if as_page %}<h2 class="visually-hidden">The details of the project</h2>{% endif %}

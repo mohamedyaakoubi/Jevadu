@@ -530,6 +530,14 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
   .hm-step.is-running .hm-step-mark { animation: none; border-right-color: var(--tblr-primary); }
   .hm-progress-bar { transition: none; }
 }
+/* A card read again (design 7.3, S2): the line under its links, with a small turning ring while
+   the reading runs; a full ring that stands still when the computer asks for less motion. */
+.hm-read-line { margin: 0.5rem 0 0; color: var(--tblr-secondary); }
+.hm-read-line .btn { margin-left: 0.25rem; }
+.hm-reading { display: inline-block; width: 0.875rem; height: 0.875rem; margin-right: 0.25rem; vertical-align: -0.125rem; border-radius: 50%; border: 2px solid var(--tblr-primary); border-right-color: transparent; animation: hm-turn 0.9s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hm-reading { animation: none; border-right-color: var(--tblr-primary); }
+}
 @media (max-width: 575.98px) {
   .hm-step { grid-template-columns: 1.25rem minmax(0, 1fr); }
   .hm-step-state, .hm-step-note { grid-column: 2; }

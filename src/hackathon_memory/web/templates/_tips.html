@@ -119,13 +119,18 @@
 <p>A prize is the organisers' decision, not a judgement of this tool.</p>
 {% endcall %}
 
+{% call tip("fresh", "Read again") %}
+<p>A repository and its Hedera IDs change after the event: a team pushes code, rewrites its README, or makes its repository private. So GitHub and the mirror node are asked again once their answers are a day old, while the website runs.</p>
+<p><b>Read again now</b> asks them at once for this project. GitHub answers "not modified" when nothing changed, which costs it nothing. The pages of the hackathon sites are never read again: a submission does not change after its event.</p>
+{% endcall %}
+
 {% call tip("life", "Activity after the event") %}
 <p>Was the project still worked on after the event? Activity means a commit, or on-chain activity of the project's own IDs, more than 30 days after the event.</p>
 <ul>
   <li><b>Active:</b> activity in the last 90 days.</li>
   <li><b>Quiet:</b> activity, but none in the last 90 days.</li>
   <li><b>Stopped:</b> nothing more than 30 days after the event.</li>
-  <li><b>Too early to tell:</b> the event ended less than 90 days ago.</li>
+  <li><b>Too early to tell:</b> the event is not over, or it ended less than 90 days ago.</li>
   <li><b>Unknown:</b> no commit dates, and no on-chain activity.</li>
 </ul>
 {% endcall %}
