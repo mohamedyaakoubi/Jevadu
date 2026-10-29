@@ -31,9 +31,10 @@ from urllib.parse import parse_qs, urlencode
 import psycopg
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import escape
 from psycopg.conninfo import make_conninfo
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -88,6 +89,7 @@ from hackathon_memory.web import (
     references,
     strips,
 )
+from hackathon_memory.web import public as public_copy
 from hackathon_memory.web import refresher as refreshing
 
 HERE = Path(__file__).parent
@@ -267,6 +269,19 @@ NO_README_TO_SEARCH = (
 NOT_AN_ACCOUNT = "A Hedera account ID looks like 0.0.12345. Leave it empty to register without one."
 # The signature of a team's own wallet (design 9.6, 29 October 2026).
 NOT_SIGNED_RIGHT = "The signature came back incomplete from the wallet. Sign again."
+# The public copy (web/public.py, design 12.5, 30 October 2026).
+PUBLIC_AI_OFF = (
+    "On this public copy of Jevadu, the AI is turned off, so these are keyword results. The search "
+    "by meaning and the AI's order work on the full version, shown in the video."
+)
+PUBLIC_REGISTER_OFF = (
+    "On this public copy of Jevadu, registering on Hedera is paused for now. Everything else of "
+    "the check works."
+)
+PUBLIC_LIMIT = (
+    "This public copy of Jevadu allows {count} {what} a day for each visitor, and that is reached. "
+    "Try again tomorrow."
+)
 SIGNED_OLD_COMMIT = (
     "A new commit reached the repository after you signed: the record must name the latest one. "
     "Sign again, then register."
@@ -424,6 +439,7 @@ def create_app(
     stand_in_client: Any = None,
     refresh_inline: bool = False,
     rehearsal: bool = False,
+    public: bool = False,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
@@ -433,13 +449,48 @@ def create_app(
     `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
     is made, counted by the meter, when it is first needed. `refresh_inline` reads a card again
     on the thread of its request, for the tests (web/refresher.py). With `rehearsal`, the topic of
-    `settings` is the one for rehearsals, and every page says so (design 9.3)."""
+    `settings` is the one for rehearsals, and every page says so (design 9.3). With `public`, it is
+    the public copy, with the switches and the counts of web/public.py (design 12.5)."""
     settings = settings or Settings()
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
     # 6 is zlib's own default: almost as small as 9, and faster.
     app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
     app.mount("/static", Revalidated(directory=HERE / "static"), name="static")
+    limits = public_copy.Limits(lambda: database()) if public else None
+    salt = settings.public_salt.get_secret_value()
+
+    @app.middleware("http")
+    async def unlisted(request: Request, call_next: Callable) -> Any:
+        """No page is indexed (design 12.5); on the public copy, each request knows its visitor."""
+        token = None
+        if limits is not None:
+            peer = request.client.host if request.client else None
+            token = public_copy.visitor.set(public_copy.visitor_of(request.headers, peer, salt))
+        try:
+            response = await call_next(request)
+        finally:
+            if token is not None:
+                public_copy.visitor.reset(token)
+        extra = public_copy.PUBLIC_HEADERS if limits is not None else {}
+        for name, value in {**public_copy.HEADERS, **extra}.items():
+            response.headers[name] = value
+        return response
+
+    @app.get("/robots.txt", response_class=PlainTextResponse)
+    def robots() -> str:
+        return public_copy.ROBOTS
+
+    def allowed(kind: str) -> bool:
+        """On the public copy, whether the visitor of this request may do `kind` once more today;
+        always on the laptop's own site."""
+        return limits is None or limits.take(kind, public_copy.visitor.get())
+
+    def ai_closed() -> bool:
+        """On the public copy, a call to a model is refused while the AI is off, or past the
+        visitor's count of the day; every caller then falls back as for a spent budget."""
+        return limits is not None and not (limits.on(public_copy.AI) and allowed(public_copy.AI))
+
     templates = Jinja2Templates(directory=HERE / "templates")
     jobs = checks.CheckJobs()  # the checks that run while their page waits
     app.state.check_jobs = jobs
@@ -457,6 +508,8 @@ def create_app(
         return make_conninfo(settings.database_conninfo(), connect_timeout=CONNECT_SECONDS)
 
     def client(name: str, purpose: str) -> Any:
+        if ai_closed():
+            raise BudgetExceeded("The AI is turned off on this public copy.")
         if clients[name] is None:
             from hackathon_memory.finops.meter import metered_client
 
@@ -465,6 +518,8 @@ def create_app(
 
     def standing_in(purpose: str) -> Any:
         """The client of the stand-in of the search model, counted under `purpose`."""
+        if ai_closed():
+            raise BudgetExceeded("The AI is turned off on this public copy.")
         if clients["stand_in"] is None:
             from hackathon_memory.llm.open_models import open_models
 
@@ -736,6 +791,11 @@ def create_app(
             mode = MEANING  # 28 October 2026 asked for its order with no mode
         mode = mode if mode in MODES else DEFAULT_MODE
         with_ai = ai == "1" and mode == MEANING and bool(idea)
+        # The public copy with its AI off searches by keyword, and says so (design 12.5).
+        ai_off = (limits is not None and bool(idea) and mode == MEANING
+                  and not limits.on(public_copy.AI))  # fmt: skip
+        if ai_off:
+            mode, with_ai = WORDS, False
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
@@ -751,7 +811,7 @@ def create_app(
             if not idea:  # the start page needs no database; the list waits for it
                 return render(request, "search.html", asked=False, **down)
             return render(request, "search.html", 503, asked=True, **down)
-        notes = []
+        notes = [PUBLIC_AI_OFF] if ai_off else []
         unknown = [name for name, value in asked.chosen().items() if not every.knows(name, value)]
         if unknown:
             notes.append("No project has the value given for "
@@ -1021,6 +1081,9 @@ def create_app(
             return render(request, name, 503, problem=DATABASE_DOWN)
         if wrong:
             return render(request, name, 400, problem=wrong)
+        if not allowed(public_copy.CHECK):
+            return render(request, name, 429, problem=PUBLIC_LIMIT.format(
+                count=public_copy.PER_DAY[public_copy.CHECK], what="checks"))  # fmt: skip
         asked = {"event": event, "starts": starts, "ends": ends}
         if name == "_check.html" and progress == "1":
             job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report))
@@ -1060,6 +1123,11 @@ def create_app(
 
     def registered(request: Request, form: dict[str, str]) -> HTMLResponse:
         name = "_register.html" if request.headers.get("HX-Request") == "true" else "register.html"
+        if limits is not None and not limits.on(public_copy.REGISTER):
+            return render(request, name, 503, problem=PUBLIC_REGISTER_OFF)
+        if not allowed(public_copy.REGISTER):
+            return render(request, name, 429, problem=PUBLIC_LIMIT.format(
+                count=public_copy.PER_DAY[public_copy.REGISTER], what="registrations"))  # fmt: skip
         repository = submission.repository_link(form.get("repo", "")[:300])
         if repository is None:
             return render(request, name, 400, problem=NOT_A_REPOSITORY)
@@ -1211,6 +1279,10 @@ def create_app(
     @app.post("/project/{project_id}/read-again", response_class=HTMLResponse)
     def read_again_now(request: Request, project_id: int) -> HTMLResponse:
         """S2: read GitHub and the mirror node again for one project, before the next round."""
+        if not allowed(public_copy.REFRESH):
+            words = PUBLIC_LIMIT.format(count=public_copy.PER_DAY[public_copy.REFRESH],
+                                        what="readings again")  # fmt: skip
+            return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 429)
         return read_again_shown(request, project_id, reader.ask(project_id))
 
     @app.get("/project/{project_id}/read-again", response_class=HTMLResponse)
@@ -1354,6 +1426,7 @@ def create_app(
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
         "WALLETCONNECT_PROJECT_ID": settings.walletconnect_project_id.strip(),
         "REFRESH_IN_BACKGROUND": settings.refresh_in_background,
+        "PUBLIC_COPY": public,
         "reason_of": data.reason_of,
         "static_url": static_url,
         "lines_to_show": data.lines_to_show,

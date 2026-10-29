@@ -58,6 +58,9 @@ class Settings(BaseSettings):
 
     # GitHub (step 2)
     github_token: SecretStr = SecretStr("")
+    # The salt of the hash that counts each visitor of the public copy (web/public.py): any long
+    # random text, kept so that the counts of a day hold across a restart.
+    public_salt: SecretStr = SecretStr("")
 
     # Google Cloud: the Gemini models and the embedding model on Vertex AI (step 3)
     google_cloud_project: SecretStr = SecretStr("")
