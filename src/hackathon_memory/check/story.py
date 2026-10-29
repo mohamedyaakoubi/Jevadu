@@ -21,6 +21,7 @@ from hackathon_memory.check.history import (
     CONTRACTS,
     FILES,
     HBAR,
+    NETWORK_ACCOUNTS,
     SCHEDULED,
     SERVICES,
     TOKENS,
@@ -82,6 +83,7 @@ class Event:
     at: datetime
     service: str
     of_an_account: bool  # seen only through an account, whose old history is not the project's
+    payer: str | None = None  # the account that paid for it, when the mirror node says
 
 
 def named_services(words: str, names: dict[str, re.Pattern] = NAMES) -> set[str]:
@@ -143,14 +145,15 @@ def on_its_network(rows: Sequence[tuple]) -> list[tuple]:
     return [row for row in rows if ORDER.index(row[3]) == best[(row[0], row[1])]]
 
 
-def merged(events: Sequence[tuple[str, datetime, str, bool]]) -> tuple[Event, ...]:
-    """The events of one project, each moment of consensus once. A moment that an account and a
-    topic both show belongs to the topic: it is then an event of the project's own things."""
+def merged(events: Sequence[tuple]) -> tuple[Event, ...]:
+    """The events of one project, each moment of consensus once: (stamp, moment, service, of an
+    account) and, if known, the account that paid. A moment that an account and a topic both show
+    belongs to the topic: it is then an event of the project's own things."""
     by_stamp: dict[str, Event] = {}
-    for stamp, at, service, of_an_account in events:
+    for stamp, at, service, of_an_account, *paid in events:
         kept = by_stamp.get(stamp)
         if kept is None or (kept.of_an_account and not of_an_account):
-            by_stamp[stamp] = Event(at, service, of_an_account)
+            by_stamp[stamp] = Event(at, service, of_an_account, paid[0] if paid else None)
     return tuple(sorted(by_stamp.values(), key=lambda event: event.at))
 
 
@@ -185,11 +188,15 @@ class ServiceLine:
 
 @dataclass(frozen=True)
 class Outside:
-    """The transactions of a project's own things before or after the time of the table."""
+    """The transactions of a project's own things before or after the time of the table, and the
+    accounts that paid for them: anyone can send a transaction to a contract or a topic, so those
+    of accounts that the project does not name may be strangers' (29 October 2026)."""
 
     count: int
     day: date | None  # the first one before that time, or the last one after it
     by_service: tuple[tuple[str, int], ...]
+    paid_by_named: int = 0  # the accounts that paid for some of them, that the project names
+    paid_by_others: int = 0  # and those it does not name; the network's own accounts left out
 
 
 @dataclass(frozen=True)
@@ -237,13 +244,15 @@ def time_of(starts_at: datetime | None, ends_on: date | None) -> tuple[datetime,
     return starts_at - WINDOW_BEFORE, datetime.combine(ends_on, time.max, tzinfo=UTC) + LIFE_LINE
 
 
-def _outside(events: Sequence[Event], *, first: bool) -> Outside:
+def _outside(events: Sequence[Event], *, first: bool, named: frozenset[str]) -> Outside:
     if not events:
         return Outside(0, None, ())
     by_service = Counter(event.service for event in events)
     moments = [event.at for event in events]
     day = (min(moments) if first else max(moments)).date()
-    return Outside(len(events), day, tuple((s, by_service[s]) for s in SERVICES if by_service[s]))
+    payers = {event.payer for event in events if event.payer} - NETWORK_ACCOUNTS
+    return Outside(len(events), day, tuple((s, by_service[s]) for s in SERVICES if by_service[s]),
+                   len(payers & named), len(payers - named))  # fmt: skip
 
 
 def story_of(
@@ -256,13 +265,15 @@ def story_of(
     ends_on: date | None,
     set_up: frozenset[str] = frozenset(),
     calls: Sequence[ContractCalls] = (),
+    named_ids: frozenset[str] = frozenset(),
 ) -> Story:
     """The ledger story of one project. `ids` are its own IDs on their network, `events` the
     transactions of those that were read, each moment once (merged), `words` the page's own
     words, `in_code` the services that its code calls, None when the code was not read,
-    `set_up` the services that it only sets up for (set_up_in_code), and `calls` what the calls
+    `set_up` the services that it only sets up for (set_up_in_code), `calls` what the calls
     of its own contracts in that time reached among Hedera's system contracts: a call that
-    reached the Token Service counts for it beside the transactions.
+    reached the Token Service counts for it beside the transactions, and `named_ids` every ID
+    that the project names, to tell who paid for the transactions before and after.
 
     The table counts the transactions of every ID in the time around the event. Before and after
     that time, only the project's own things count, not its accounts: an account is often kept
@@ -292,8 +303,8 @@ def story_of(
     before = after = None
     if span is not None and any(one.kind != ACCOUNT for one in ids):
         own = [event for event in events if not event.of_an_account]
-        before = _outside([e for e in own if e.at < span[0]], first=True)
-        after = _outside([e for e in own if e.at > span[1]], first=False)
+        before = _outside([e for e in own if e.at < span[0]], first=True, named=named_ids)
+        after = _outside([e for e in own if e.at > span[1]], first=False, named=named_ids)
     return Story(
         tuple(ids),
         span[0].date() if span else None,

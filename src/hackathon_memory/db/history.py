@@ -224,15 +224,18 @@ def story_of_project(
     for _, entity, network, _, kind, asked_at, cut in on_its_network(rows):
         ids.setdefault((entity, network), OwnId(entity, network, kind, asked_at, cut))
     read = [one.entity_id for one in ids.values() if one.asked_at is not None]
-    seen: list[tuple[str, datetime, str, bool]] = []
-    for entity, network, stamp, at, service in conn.execute(
-        "SELECT entity_id, network, stamp, at, service FROM ledger_events "
+    seen: list[tuple[str, datetime, str, bool, str | None]] = []
+    for entity, network, stamp, at, service, payer in conn.execute(
+        "SELECT entity_id, network, stamp, at, service, payer FROM ledger_events "
         "WHERE entity_id = ANY(%s)",
         (read,),
     ):
         one = ids.get((entity, network))
         if one is not None and one.asked_at is not None:
-            seen.append((stamp, at, service, one.kind == ACCOUNT))
+            seen.append((stamp, at, service, one.kind == ACCOUNT, payer))
+    named = frozenset(row[0] for row in conn.execute(
+        "SELECT DISTINCT entity_id FROM hedera_ids WHERE project_id = %s",
+        (project_id,)))  # fmt: skip
     starts_at, ends_on = conn.execute(
         "SELECT e.starts_at, e.ends_on FROM projects p JOIN events e ON e.id = p.event_id "
         "WHERE p.id = %s",
@@ -242,7 +245,8 @@ def story_of_project(
     span = time_of(starts_at, ends_on)
     calls = calls_of(conn, contracts, span) if span is not None else []
     return story_of(tuple(ids.values()), merged(seen), words, in_code,
-                    starts_at=starts_at, ends_on=ends_on, set_up=set_up, calls=calls)  # fmt: skip
+                    starts_at=starts_at, ends_on=ends_on, set_up=set_up, calls=calls,
+                    named_ids=named)  # fmt: skip
 
 
 def calls_of(

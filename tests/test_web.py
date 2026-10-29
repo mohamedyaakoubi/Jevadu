@@ -530,7 +530,7 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
     """The strip draws the messages of its topic a year before the event too, and cuts out the
     time between them, a hatched band with its length (design 7.5, 28 October 2026). Before, it
     stopped 30 days before the event."""
-    from hackathon_memory.check.history import CONSENSUS, History
+    from hackathon_memory.check.history import CONSENSUS, Act, History
     from hackathon_memory.db.history import HistoryStore
 
     client, _, ids, database = site
@@ -538,9 +538,12 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
     own_id(database, pebble, "0.0.4511", "topic")
     with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
         conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
-    messages = {stamp(datetime(2025, 3, 7, 12, tzinfo=UTC), 1): CONSENSUS,
-                stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 2): CONSENSUS}  # fmt: skip
-    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, False, {}),
+    early, during = stamp(datetime(2025, 3, 7, 12, tzinfo=UTC), 1), stamp(
+        datetime(2026, 3, 7, 12, tzinfo=UTC), 2)  # fmt: skip
+    messages = {early: CONSENSUS, during: CONSENSUS}
+    # a stranger paid for the early message: an account that the page does not name
+    acts = {early: Act("CONSENSUSSUBMITMESSAGE", True, "0.0.8001", ("0.0.8001",))}
+    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, False, acts),
                                 datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
     part = client.get(f"/project/{pebble}/panel").text
     block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
@@ -549,6 +552,9 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
     assert ("<title>No transaction for 11 months, from 8 March 2025 to 3 February 2026: left out "
             "of the strip.</title>") in block  # fmt: skip
     assert 'class="hm-strip-mark hm-strip-cut-mark"' in block and ">11 mo</text>" in block
+    # who paid for the transactions before the time of the table (29 October 2026)
+    assert ("1 Consensus Service transaction, the first on 7 March 2025; paid by 1 account that "
+            "the page does not name") in block  # fmt: skip
     assert ("A hatched band is a time of more than 30 days with no transaction, left out of the "
             "strip; its length stands under it.") in block  # fmt: skip
 

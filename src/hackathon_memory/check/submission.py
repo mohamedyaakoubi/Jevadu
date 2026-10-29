@@ -427,7 +427,7 @@ def histories(
     a project with other code names, or a shared service, is not the team's own (design 8.4)."""
     counts = Counter() if counts is None else counts
     own: list[OwnId] = []
-    events: list[tuple[str, datetime, str, bool]] = []
+    events: list[tuple[str, datetime, str, bool, str | None]] = []
     done: list[Done] = []
     holders: dict[tuple[str, str], tuple[str, ...] | None] = {}
     for one in ids:
@@ -456,8 +456,8 @@ def histories(
         own.append(OwnId(entity, network, kind, asked_at, history.cut))
         for stamp, service in history.events.items():
             at = datetime.fromtimestamp(float(stamp), tz=UTC)
-            events.append((stamp, at, service, kind == ACCOUNT))
             act = history.acts.get(stamp) or Act(None, None, None)
+            events.append((stamp, at, service, kind == ACCOUNT, act.payer))
             done.append(Done(stamp, at, service, entity, kind or "", network, act))
         holders[(entity, network)] = history.holders
     return Read(own, events, done, holders)
@@ -513,7 +513,8 @@ def story_of_check(check: SubmissionCheck, own: list[OwnId], events: list[tuple]
                     services_in_code(found) if found is not None else None,
                     starts_at=event.starts_at if event is not None else None,
                     ends_on=event.ends_on if event is not None else None,
-                    set_up=set_up_in_code(found or []))  # fmt: skip
+                    set_up=set_up_in_code(found or []),
+                    named_ids=frozenset(one.found.entity_id for one in check.ids))  # fmt: skip
 
 
 def readme_prose(text: str) -> str:
