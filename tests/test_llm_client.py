@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 from pathlib import Path
 
@@ -23,6 +22,7 @@ from hackathon_memory.llm.client import (
     load_key_file,
     make_client,
     project_of,
+    vercel_token,
 )
 from hackathon_memory.settings import Settings
 
@@ -99,30 +99,30 @@ def test_a_service_account_key_file_is_read(tmp_path: Path) -> None:
     assert loaded.service_account_email == "tool@test-project.iam.gserviceaccount.com"
 
 
-def test_the_one_line_key_signs_in_and_names_its_own_project(tmp_path: Path) -> None:
-    """One line of .env holds the whole Google account (llm/account.py writes it): its project
-    wins over GOOGLE_CLOUD_PROJECT, and it comes before a key file."""
-    line = base64.b64encode(json.dumps(throwaway_key("key-project")).encode()).decode()
-    other = tmp_path / "other.json"
-    other.write_text(json.dumps(throwaway_key("file-project")), encoding="utf-8")
-    file = {"google_cloud_project": "env-project", "google_application_credentials": str(other)}
-    chosen = settings(google_service_account_key=line, google_cloud_location="global", **file)
-    assert project_of(chosen) == "key-project"
-    assert credentials_of(chosen).service_account_email.startswith("tool@key-project.")
-    assert make_client(chosen)._api_client.project == "key-project"
-    plain = settings(**file)  # without the line, as before
-    assert project_of(plain) == "env-project"
-    assert credentials_of(plain).service_account_email.startswith("tool@file-project.")
+def test_the_host_signs_in_with_the_token_of_its_request_and_no_key() -> None:
+    """On Vercel, Google's Security Token Service takes the token that Vercel gives the request
+    and lets it act as the service account that may only call Vertex AI (vercel.com/docs/oidc/gcp,
+    read 29 October 2026)."""
+    from google.auth import identity_pool
+    from google.auth.exceptions import RefreshError
 
-
-NOT_KEYS = ["not base64 at all!", base64.b64encode(b"[1, 2]").decode(),
-            base64.b64encode(b'{"type": "authorized_user"}').decode()]  # fmt: skip
-
-
-@pytest.mark.parametrize("line", NOT_KEYS)
-def test_a_line_that_is_not_a_service_account_key_is_refused_in_plain_words(line: str) -> None:
-    with pytest.raises(GoogleSetupError, match="python -m hackathon_memory.llm.account switch"):
-        project_of(settings(google_service_account_key=line))
+    audience = ("//iam.googleapis.com/projects/123/locations/global/workloadIdentityPools/vercel/"
+                "providers/vercel")  # fmt: skip
+    account = "jevadu-gemini@p-one.iam.gserviceaccount.com"
+    federation = {"google_federation_audience": audience, "google_federation_account": account}
+    host = settings(google_cloud_project="p-one", google_cloud_location="global", **federation)
+    signed = credentials_of(host)
+    assert isinstance(signed, identity_pool.Credentials) and signed.info["audience"] == audience
+    assert signed.service_account_email == account and project_of(host) == "p-one"
+    supplier = signed._subject_token_supplier
+    with pytest.raises(RefreshError, match="No token of Vercel"):
+        supplier.get_subject_token(None, None)
+    token = vercel_token.set("token-of-this-request")
+    try:
+        assert supplier.get_subject_token(None, None) == "token-of-this-request"
+    finally:
+        vercel_token.reset(token)
+    assert credentials_of(settings(google_federation_audience=audience)) is None  # both, or none
 
 
 def test_a_user_login_file_is_read(tmp_path: Path) -> None:

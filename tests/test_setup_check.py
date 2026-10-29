@@ -194,26 +194,6 @@ def sign_in(tmp_path: Path, name: str, content: object | None, **where: Path):
     return google_sign_in_note(settings(tmp_path, google_application_credentials=name), root)
 
 
-def test_the_one_line_key_is_reported_without_showing_it_or_its_project(tmp_path: Path) -> None:
-    import base64
-    import json
-
-    key = {"type": "service_account", "project_id": "key-project-for-the-test"}
-    line = base64.b64encode(json.dumps(key).encode()).decode()
-    lines = by_what(lines_for(tmp_path, google_service_account_key=line))
-    assert lines["GOOGLE_SERVICE_ACCOUNT_KEY"].ok
-    assert "its own project is used" in lines["GOOGLE_SERVICE_ACCOUNT_KEY"].note
-    assert lines["GOOGLE_CLOUD_PROJECT"].ok  # empty, the key's project is used
-    assert "the project of the key below" in lines["GOOGLE_CLOUD_PROJECT"].note
-    assert "not used while GOOGLE_SERVICE_ACCOUNT_KEY is set" in (
-        lines["GOOGLE_APPLICATION_CREDENTIALS"].note)  # fmt: skip
-    assert "key-project-for-the-test" not in repr(lines) and line not in repr(lines)
-    broken = by_what(lines_for(tmp_path, google_service_account_key="not a key"))
-    assert not broken["GOOGLE_SERVICE_ACCOUNT_KEY"].ok
-    unset = by_what(lines_for(tmp_path))["GOOGLE_SERVICE_ACCOUNT_KEY"]
-    assert unset.ok and "empty" in unset.note
-
-
 def test_no_sign_in_file_means_the_gcloud_sign_in_is_used(tmp_path: Path) -> None:
     from hackathon_memory.setup_check import google_sign_in_note
 

@@ -1,53 +1,49 @@
 """The switch of the Google account (llm/account.py), with a stand-in of gcloud. Everything is
-invented; the key is made for the test."""
+invented."""
 
 from __future__ import annotations
 
-import json
 from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
-from test_llm_client import throwaway_key
 
 from hackathon_memory.llm import account
-from hackathon_memory.llm.client import project_of, service_account_key
 from hackathon_memory.settings import Settings
 
 EMAIL = "jevadu-gemini@p-one.iam.gserviceaccount.com"
 
 
 class Gcloud:
-    """What gcloud was asked, and its answers: `exists` says if the service account is there,
-    `refuse_bindings` how many first bindings fail, as for a service account not yet known."""
+    """What gcloud was asked, and its answers. `there` names what already exists: "account",
+    "pool", "provider"; `refuse_bindings` is how many first roles fail, as for a service account
+    that Google does not know everywhere yet."""
 
-    def __init__(self, projects: Sequence[str] = ("p-one",), exists: bool = False,
-                 refuse_bindings: int = 0, older: Sequence[str] = ("old-1", "old-2"),
-                 ) -> None:  # fmt: skip
-        self.projects, self.exists, self.refuse = list(projects), exists, refuse_bindings
-        self.older = list(older)
+    def __init__(self, projects: Sequence[str] = ("p-one",), there: Sequence[str] = (),
+                 refuse_bindings: int = 0) -> None:  # fmt: skip
+        self.projects, self.there, self.refuse = list(projects), set(there), refuse_bindings
         self.asked: list[list[str]] = []
-        self.key = {**throwaway_key("p-one"), "private_key_id": "new-1"}
 
     def __call__(self, args: Sequence[str]) -> str:
         args = list(args)
         self.asked.append(args)
         if args[:2] == ["projects", "list"]:
             return "\n".join(self.projects) + "\n"
-        if args[:3] == ["iam", "service-accounts", "describe"] and not self.exists:
-            raise account.AccountError("NOT_FOUND")
+        if args[:2] == ["projects", "describe"]:
+            return "123456\n"
+        kinds = {"service-accounts": "account", "workload-identity-pools": "pool",
+                 "providers": "provider"}  # fmt: skip
+        if "describe" in args:
+            kind = kinds[args[args.index("describe") - 1]]
+            if kind not in self.there:
+                raise account.AccountError("NOT_FOUND")
         if args[:2] == ["projects", "add-iam-policy-binding"] and self.refuse:
             self.refuse -= 1
             raise account.AccountError("Service account does not exist")
-        if args[:4] == ["iam", "service-accounts", "keys", "create"]:
-            Path(args[4]).write_text(json.dumps(self.key), encoding="utf-8")
-        if args[:4] == ["iam", "service-accounts", "keys", "list"]:
-            keys = [*self.older, "new-1"]
-            return "\n".join(f"projects/p-one/serviceAccounts/{EMAIL}/keys/{k}" for k in keys)
         return ""
 
     def commands(self) -> list[str]:
-        return [" ".join(args[:4]) for args in self.asked]
+        return [" ".join(args[:5]) for args in self.asked]
 
 
 def test_the_project_is_the_only_one_the_account_sees_or_the_one_named() -> None:
@@ -59,41 +55,63 @@ def test_the_project_is_the_only_one_the_account_sees_or_the_one_named() -> None
         account.choose_project(Gcloud(["p-one"]), "p-three")
 
 
-def test_the_key_may_only_call_vertex_ai_and_its_older_keys_are_deleted() -> None:
+def test_the_service_account_may_only_call_vertex_ai_and_is_made_once() -> None:
     gcloud = Gcloud(refuse_bindings=2)
     waits: list[float] = []
-    key = account.make_key(gcloud, "p-one", sleep=waits.append)
-    assert key["private_key_id"] == "new-1"
-    assert gcloud.commands()[:4] == ["config set project p-one",
-                                     "services enable iam.googleapis.com aiplatform.googleapis.com",
-                                     f"iam service-accounts describe {EMAIL}",
-                                     "iam service-accounts create jevadu-gemini"]  # fmt: skip
+    assert account.make_account(gcloud, "p-one", sleep=waits.append) == EMAIL
+    enabled = next(args for args in gcloud.asked if args[:2] == ["services", "enable"])
+    assert enabled[2:6] == ["iam.googleapis.com", "iamcredentials.googleapis.com",
+                            "sts.googleapis.com", "aiplatform.googleapis.com"]  # fmt: skip
+    assert "iam service-accounts create jevadu-gemini --display-name=Jevadu: Gemini only" in (
+        gcloud.commands())  # fmt: skip
     bindings = [args for args in gcloud.asked if args[:2] == ["projects", "add-iam-policy-binding"]]
     assert len(bindings) == 3 and waits == [account.PAUSE_SECONDS] * 2  # a new account waits
     assert "--role=roles/aiplatform.user" in bindings[-1] and "--condition=None" in bindings[-1]
-    deleted = [args[4] for args in gcloud.asked if args[:4] == ["iam", "service-accounts", "keys",
-                                                                 "delete"]]  # fmt: skip
-    assert deleted == ["old-1", "old-2"]  # never the new one
-    again = Gcloud(exists=True, older=())
-    account.make_key(again, "p-one", sleep=waits.append)
-    assert "iam service-accounts create jevadu-gemini" not in again.commands()  # made once
+    again = Gcloud(there=["account"])
+    account.make_account(again, "p-one", sleep=waits.append)
+    assert not any(args[:3] == ["iam", "service-accounts", "create"] for args in again.asked)
 
 
-def test_the_key_goes_into_env_on_one_line_and_the_client_reads_it(tmp_path: Path) -> None:
+def test_vercel_may_act_as_the_service_account_with_no_key() -> None:
+    gcloud = Gcloud()
+    audience = account.trust_vercel(gcloud, "p-one", "team-x", EMAIL)
+    assert audience == ("//iam.googleapis.com/projects/123456/locations/global/"
+                        "workloadIdentityPools/vercel/providers/vercel")  # fmt: skip
+    made = next(args for args in gcloud.asked if "create-oidc" in args)
+    assert "--issuer-uri=https://oidc.vercel.com/team-x" in made
+    assert "--allowed-audiences=https://vercel.com/team-x" in made
+    assert "--attribute-mapping=google.subject=assertion.sub" in made
+    binding = ["iam", "service-accounts", "add-iam-policy-binding"]
+    bound = next(args for args in gcloud.asked if args[:3] == binding)
+    assert "--role=roles/iam.workloadIdentityUser" in bound
+    assert ("--member=principal://iam.googleapis.com/projects/123456/locations/global/"
+            "workloadIdentityPools/vercel/subject/owner:team-x:project:jevadu:environment:"
+            "production") in bound  # fmt: skip
+    assert not any("keys" in args for args in gcloud.asked)  # no key, ever
+    again = Gcloud(there=["pool", "provider"])
+    account.trust_vercel(again, "p-one", "team-y", EMAIL)
+    assert not any("create" in args for args in again.asked)  # made once
+    assert any("update-oidc" in args for args in again.asked)  # the team may change
+
+
+def test_the_project_goes_into_env_in_place(tmp_path: Path) -> None:
     env = tmp_path / ".env"
-    env.write_text("A=1\nGOOGLE_SERVICE_ACCOUNT_KEY=old\nB=2\nGOOGLE_SERVICE_ACCOUNT_KEY=again\n",
-                   encoding="utf-8")  # fmt: skip
-    key = throwaway_key("p-one")
-    account.keep_line(env, account.KEY_SETTING, account.line_of(key))
+    before = ("A=1\nGOOGLE_CLOUD_PROJECT=old\nB=2\nGOOGLE_CLOUD_PROJECT=again\n"
+              "GOOGLE_APPLICATION_CREDENTIALS=C:/somewhere/login.json\n")  # fmt: skip
+    env.write_text(before, encoding="utf-8")
     account.keep_line(env, account.PROJECT_SETTING, "p-one")
-    lines = env.read_text(encoding="utf-8").splitlines()
-    assert lines[0] == "A=1" and lines[1].startswith("GOOGLE_SERVICE_ACCOUNT_KEY=")
-    assert lines[2:] == ["B=2", "GOOGLE_CLOUD_PROJECT=p-one"]  # one line each, in place
+    account.keep_line(env, account.SIGN_IN_SETTING, "")
+    assert env.read_text(encoding="utf-8").splitlines() == [
+        "A=1",
+        "GOOGLE_CLOUD_PROJECT=p-one",
+        "B=2",
+        "GOOGLE_APPLICATION_CREDENTIALS=",
+    ]
     settings = Settings(_env_file=env)
-    assert service_account_key(settings) == key and project_of(settings) == "p-one"
+    assert settings.google_cloud_project.get_secret_value() == "p-one"
 
 
-def test_a_key_is_proven_by_a_free_count_of_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_sign_in_is_proven_by_a_free_count_of_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     from hackathon_memory.finops import meter
 
     asked: list[str] = []
@@ -105,7 +123,7 @@ def test_a_key_is_proven_by_a_free_count_of_tokens(monkeypatch: pytest.MonkeyPat
         def count_tokens(self, *, model: str, contents: str) -> None:
             asked.append(model)
             if len(asked) <= self.fails:
-                raise RuntimeError("PERMISSION_DENIED")  # a new key, not yet known
+                raise RuntimeError("PERMISSION_DENIED")  # a new role, not yet applied
 
     class Counted:
         def __init__(self, fails: int) -> None:

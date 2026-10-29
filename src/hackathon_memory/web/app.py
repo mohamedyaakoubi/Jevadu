@@ -70,6 +70,7 @@ from hackathon_memory.hedera.mirror import (
 )
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
+from hackathon_memory.llm.client import vercel_token
 from hackathon_memory.pipeline import refresh as refresh_step
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import closeness, engine, listing, rerank, seen, stand_in
@@ -488,18 +489,23 @@ def create_app(
 
     @app.middleware("http")
     async def unlisted(request: Request, call_next: Callable) -> Any:
-        """No page is indexed (design 12.5); on the public copy, each request knows its visitor."""
+        """No page is indexed (design 12.5); on the public copy, each request knows its visitor;
+        on Vercel, the token that signs in to Google with no key goes with it (llm/client.py)."""
         token = None
         if limits is not None and public_copy.plain_http(request.headers):
             return RedirectResponse(str(request.url.replace(scheme="https")), 301)
         if limits is not None:
             peer = request.client.host if request.client else None
             token = public_copy.visitor.set(public_copy.visitor_of(request.headers, peer, salt))
+        oidc = request.headers.get("x-vercel-oidc-token")
+        signed = vercel_token.set(oidc) if oidc else None
         try:
             response = await call_next(request)
         finally:
             if token is not None:
                 public_copy.visitor.reset(token)
+            if signed is not None:
+                vercel_token.reset(signed)
         extra = public_copy.PUBLIC_HEADERS if limits is not None else {}
         for name, value in {**public_copy.HEADERS, **extra}.items():
             response.headers[name] = value

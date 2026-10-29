@@ -5,25 +5,26 @@ google-genai 2.29.0 the client takes `enterprise=True`, and `vertexai=True` is t
 The settings are passed in on purpose: pydantic-settings does not put the values of .env into the
 environment, so the library's own reading of GOOGLE_CLOUD_PROJECT would not see them.
 
-Signing in, first found: the service account key of GOOGLE_SERVICE_ACCOUNT_KEY, which also names
-the project (python -m hackathon_memory.llm.account switch writes it); the key file named by
-GOOGLE_APPLICATION_CREDENTIALS; else Application Default Credentials, which
-`gcloud auth application-default login` sets up.
+Signing in, first found: on the public copy's host, Workload Identity Federation with the token
+that Vercel gives each request, and no key (GOOGLE_FEDERATION_AUDIENCE and _ACCOUNT); the key
+file named by GOOGLE_APPLICATION_CREDENTIALS; else Application Default Credentials, which
+`gcloud auth login --update-adc` sets up (python -m hackathon_memory.llm.account switch).
 """
 
 from __future__ import annotations
 
-import base64
-import binascii
+import contextvars
 import json
+import os
 import time
 from collections.abc import Callable
 from typing import TypeVar
 
 import httpx
 from google import genai
+from google.auth import identity_pool
 from google.auth.credentials import Credentials
-from google.auth.exceptions import GoogleAuthError
+from google.auth.exceptions import GoogleAuthError, RefreshError
 from google.genai import types
 from google.oauth2 import credentials as user_credentials
 from google.oauth2 import service_account
@@ -88,48 +89,56 @@ def load_key_file(path: str) -> Credentials:
     )
 
 
-def service_account_key(settings: Settings) -> dict | None:
-    """The service account key of GOOGLE_SERVICE_ACCOUNT_KEY, read from its line of base64, or
-    None when the line is empty."""
-    line = settings.google_service_account_key.get_secret_value().strip()
-    if not line:
-        return None
-    try:
-        key = json.loads(base64.b64decode(line, validate=True))
-    except (ValueError, binascii.Error):
-        key = None
-    is_key = isinstance(key, dict) and key.get("type") == "service_account"
-    if not (is_key and key.get("project_id")):
-        raise GoogleSetupError(
-            "GOOGLE_SERVICE_ACCOUNT_KEY is not a service account key in base64. Write it again: "
-            "python -m hackathon_memory.llm.account switch"
-        )
-    return key
+# The token that Vercel gives each request of a function, in the header x-vercel-oidc-token
+# (vercel.com/docs/oidc, read 29 October 2026): the website keeps it here for the request.
+vercel_token: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "vercel_token", default=None
+)
+STS_URL = "https://sts.googleapis.com/v1/token"
+JWT = "urn:ietf:params:oauth:token-type:jwt"
+
+
+class VercelToken(identity_pool.SubjectTokenSupplier):
+    """The token of the request being answered, else VERCEL_OIDC_TOKEN (a build, or `vercel env
+    pull` on a laptop). google-auth 2.61.0 asks for it only when it needs a new access token."""
+
+    def get_subject_token(self, context: object, request: object) -> str:
+        token = vercel_token.get() or os.environ.get("VERCEL_OIDC_TOKEN", "")
+        if not token:
+            raise RefreshError("No token of Vercel was given with this request.")
+        return token
 
 
 def project_of(settings: Settings) -> str:
-    """The Google Cloud project that the models are asked and billed in: the project of the key
-    of GOOGLE_SERVICE_ACCOUNT_KEY when there is one, since the switch gives that key the right
-    to call Vertex AI there only; else GOOGLE_CLOUD_PROJECT."""
-    key = service_account_key(settings)
-    if key is not None:
-        return str(key["project_id"])
+    """The Google Cloud project that the models are asked and billed in."""
     return settings.google_cloud_project.get_secret_value().strip()
 
 
+def federated(audience: str, account: str) -> Credentials:
+    """A sign-in with no key: Google's Security Token Service takes the token of Vercel for the
+    pool's provider (`audience`) and lets it act as the service account `account`, which may only
+    call Vertex AI (vercel.com/docs/oidc/gcp, read 29 October 2026)."""
+    return identity_pool.Credentials(
+        audience=audience,
+        subject_token_type=JWT,
+        token_url=STS_URL,
+        subject_token_supplier=VercelToken(),
+        service_account_impersonation_url=(
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/"
+            f"{account}:generateAccessToken"
+        ),
+        scopes=SCOPES,
+    )
+
+
 def credentials_of(settings: Settings) -> Credentials | None:
-    """The sign-in of the settings: the key of GOOGLE_SERVICE_ACCOUNT_KEY, else the key file named
-    by GOOGLE_APPLICATION_CREDENTIALS, else None, and then the library uses Application Default
-    Credentials."""
-    key = service_account_key(settings)
-    if key is not None:
-        try:
-            return service_account.Credentials.from_service_account_info(key, scopes=SCOPES)
-        except (ValueError, KeyError, GoogleAuthError):
-            raise GoogleSetupError(
-                "The key of GOOGLE_SERVICE_ACCOUNT_KEY cannot be read. Write it again: "
-                "python -m hackathon_memory.llm.account switch"
-            ) from None
+    """The sign-in of the settings: on the host, the federation of GOOGLE_FEDERATION_AUDIENCE and
+    GOOGLE_FEDERATION_ACCOUNT; else the key file named by GOOGLE_APPLICATION_CREDENTIALS; else
+    None, and then the library uses Application Default Credentials."""
+    audience = settings.google_federation_audience.strip()
+    account = settings.google_federation_account.strip()
+    if audience and account:
+        return federated(audience, account)
     key_file = settings.google_application_credentials.get_secret_value().strip()
     return load_key_file(key_file) if key_file else None
 
