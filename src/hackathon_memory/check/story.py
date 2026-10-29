@@ -197,6 +197,7 @@ class Outside:
     by_service: tuple[tuple[str, int], ...]
     paid_by_named: int = 0  # the accounts that paid for some of them, that the project names
     paid_by_others: int = 0  # and those it does not name; the network's own accounts left out
+    payer_unknown: int = 0  # the transactions whose payer the mirror node does not give (a mint)
 
 
 @dataclass(frozen=True)
@@ -252,7 +253,8 @@ def _outside(events: Sequence[Event], *, first: bool, named: frozenset[str]) -> 
     day = (min(moments) if first else max(moments)).date()
     payers = {event.payer for event in events if event.payer} - NETWORK_ACCOUNTS
     return Outside(len(events), day, tuple((s, by_service[s]) for s in SERVICES if by_service[s]),
-                   len(payers & named), len(payers - named))  # fmt: skip
+                   len(payers & named), len(payers - named),
+                   sum(1 for event in events if not event.payer))  # fmt: skip
 
 
 def story_of(

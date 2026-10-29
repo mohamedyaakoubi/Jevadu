@@ -200,8 +200,9 @@ def test_before_and_after_count_only_the_own_things_with_their_first_and_last_da
         Event(DURING, CONSENSUS, False), Event(LONG_AFTER, CONSENSUS, False),
         Event(LATER, CONSENSUS, False), Event(LATER, HBAR, True),
     )  # fmt: skip
-    assert story.before == Outside(2, date(2026, 5, 1), ((TOKENS, 1), (CONTRACTS, 1)))
-    assert story.after == Outside(2, date(2026, 12, 24), ((CONSENSUS, 2),))
+    # no payer given here, so who paid is not known for any of them
+    assert story.before == Outside(2, date(2026, 5, 1), ((TOKENS, 1), (CONTRACTS, 1)), 0, 0, 2)
+    assert story.after == Outside(2, date(2026, 12, 24), ((CONSENSUS, 2),), 0, 0, 2)
     quiet = a_story(Event(DURING, CONSENSUS, False))
     assert quiet.before == quiet.after == Outside(0, None, ())
 
@@ -224,6 +225,7 @@ def test_the_time_before_and_after_says_who_paid() -> None:
                     ends_on=ENDS, named_ids=frozenset({"0.0.7001"}))  # fmt: skip
     assert (told.before.count, told.before.paid_by_named, told.before.paid_by_others) == (3, 0, 2)
     assert (told.after.count, told.after.paid_by_named, told.after.paid_by_others) == (3, 1, 0)
+    assert (told.before.payer_unknown, told.after.payer_unknown) == (0, 1)
     # the payer comes through the merging of the moments
     assert merged([("1.000000001", DURING, CONSENSUS, False, "0.0.7001")]) == (
         Event(DURING, CONSENSUS, False, "0.0.7001"),

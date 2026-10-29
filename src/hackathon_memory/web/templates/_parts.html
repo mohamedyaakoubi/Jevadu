@@ -110,6 +110,9 @@
 {%- elif part.paid_by_named %}; paid only by accounts that the {{ source }} names
 {%- elif part.paid_by_others %}; paid by {{ "{:,}".format(part.paid_by_others) }} account{{ "s" if part.paid_by_others != 1 }} that the {{ source }} does not name
 {%- endif %}
+{%- if part.payer_unknown == part.count %}; who paid is not known
+{%- elif part.payer_unknown %}; for {{ "{:,}".format(part.payer_unknown) }} of them, who paid is not known
+{%- endif %}
 {%- endmacro %}
 
 {# The words of the page that name one service, each a button that marks the places where the

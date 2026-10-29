@@ -479,7 +479,9 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
             "smart contracts.") in block  # fmt: skip
     assert re.search(r"<dt>Before \d+ \w+ \d{4}</dt><dd>none</dd>", block)  # by its date
     # after that time: the topic's message counts, and the account's transfer does not
-    assert "<dd>1 Consensus Service transaction, the last on 1 June 2026</dd>" in block
+    # its history kept no payer, so the line says that who paid is not known (29 October 2026)
+    assert ("<dd>1 Consensus Service transaction, the last on 1 June 2026; who paid is not "
+            "known</dd>") in block  # fmt: skip
     assert "Read from the mirror node on 23 October 2026: 2 of its own IDs." in block
 
 
