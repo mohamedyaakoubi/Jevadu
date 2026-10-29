@@ -9,6 +9,7 @@ and the check is forgotten; a check that nobody asks for again is forgotten afte
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import secrets
 import threading
@@ -128,7 +129,9 @@ class CheckJobs:
         self._clock = clock
 
     def start(self, work: Callable[[Progress], Answer]) -> CheckJob:
-        """Run `work` in a thread; it reports its steps, and returns what the page shows."""
+        """Run `work` in a thread; it reports its steps, and returns what the page shows. The
+        thread sees what the request that started it knew, such as the visitor of the public
+        copy (web/public.py): a thread of the pool starts with nothing of its own."""
         job = CheckJob(secrets.token_urlsafe(12), self._clock())
         with self._lock:
             self._forget_old()
@@ -148,7 +151,7 @@ class CheckJobs:
             with self._lock:
                 job.answer = answer
 
-        job.done = self._pool.submit(run)
+        job.done = self._pool.submit(contextvars.copy_context().run, run)
         return job
 
     def get(self, job_id: str) -> CheckJob | None:
