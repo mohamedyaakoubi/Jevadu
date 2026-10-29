@@ -89,10 +89,12 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
 
     def make(app_options: dict | None = None, **changes: object) -> TestClient:
         changed = settings.model_copy(update=changes)
+        options = dict(app_options or {})
+        google_client = options.pop("google", client)  # another stand-in Google, if one is given
         return TestClient(
-            create_app(changed, google=client, llm=client, github_client=asker, mirrors=mirrors,
-                       register_writer=writes, stand_in_client=open_client(stand_in),
-                       refresh_inline=True, **(app_options or {}))
+            create_app(changed, google=google_client, llm=client, github_client=asker,
+                       mirrors=mirrors, register_writer=writes,
+                       stand_in_client=open_client(stand_in), refresh_inline=True, **options)
         )  # fmt: skip
 
     served = make()
@@ -809,6 +811,28 @@ def test_without_google_the_words_are_searched_and_the_page_says_so(site) -> Non
     client, fake, ids, _ = site
     fake.fail_with = (503, "unavailable")
     page = client.get("/", params={"idea": "a vendor and a coin", "mode": "meaning"})
+    assert page.status_code == 200
+    assert "so these are keyword results" in page.text
+    assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
+
+
+def test_an_expired_google_sign_in_gives_the_keyword_results(site) -> None:  # noqa: ANN001
+    """A sign-in to Google that expired or was revoked fails before a request leaves: the page
+    falls back to the keyword results and says so (29 October 2026: it answered with an error)."""
+    import google.auth.credentials
+    import google.auth.exceptions
+    from google import genai
+
+    class Expired(google.auth.credentials.Credentials):
+        def refresh(self, request: object) -> None:
+            raise google.auth.exceptions.RefreshError("invalid_grant: the token expired")
+
+    expired = genai.Client(enterprise=True, project="test-project", location="global",
+                           credentials=Expired())  # fmt: skip
+    client, _, ids, _ = site
+    page = client.make({"google": expired}).get(
+        "/", params={"idea": "a coin for the street vendors of the night", "mode": "meaning"}
+    )
     assert page.status_code == 200
     assert "so these are keyword results" in page.text
     assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text

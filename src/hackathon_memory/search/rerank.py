@@ -15,6 +15,7 @@ from typing import Any
 
 import httpx
 import psycopg
+from google.auth.exceptions import GoogleAuthError
 from google.genai import errors as google_errors
 from google.genai import types
 from pydantic import BaseModel, ValidationError
@@ -31,9 +32,10 @@ POOL = 30  # the closest by meaning that the model puts in order
 TEXT_LETTERS = 300  # of the short line and of the first text, in each line the model reads
 # Part of the key of a kept order: it changes when the instructions or the lines change.
 INSTRUCTIONS_VERSION = "rerank-1"
-# The model's answer is not used when it fails, is not valid, is late, or the budget is spent.
+# The model's answer is not used when it fails, is not valid, is late, or the budget is spent,
+# or when the sign-in to Google expired or was revoked.
 NOT_ORDERED = (google_errors.APIError, httpx.HTTPError, ValidationError, BudgetExceeded,
-               OpenModelError)  # fmt: skip
+               OpenModelError, GoogleAuthError)  # fmt: skip
 # The level of an open model (llm/open_models.py) is DeepSeek's word for how hard it thinks, or
 # "off". Its thinking counts in its tokens and takes time: evals/search_fallback.py measures both.
 OPEN_EFFORT, OPEN_OFF = "high", "off"

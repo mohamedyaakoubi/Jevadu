@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+from google.auth.exceptions import GoogleAuthError
 from google.genai import errors as google_errors
 
 from hackathon_memory.db.embeddings import EmbeddingStore
@@ -23,9 +24,11 @@ from hackathon_memory.llm.embeddings import EmbeddingError, embed_documents
 STEP = "embed"
 # Google errors in a row (after the client's own retries) that stop the step: Google is away.
 MAX_ERRORS_IN_A_ROW = 3
-# What a call may end with when Google cannot be used: an error answer, or a network that stayed
-# away through every pause (llm/client.py). The project is left for the next run.
-FAILED_CALLS = (EmbeddingError, google_errors.APIError, httpx.TransportError)
+# What a call may end with when Google cannot be used: an error answer, a sign-in that expired or
+# was revoked (29 October 2026: the website answered a search by meaning with an error page), or a
+# network that stayed away through every pause (llm/client.py). The project is left for the next
+# run.
+FAILED_CALLS = (EmbeddingError, google_errors.APIError, GoogleAuthError, httpx.TransportError)
 
 
 class GoogleIsAway(Exception):
