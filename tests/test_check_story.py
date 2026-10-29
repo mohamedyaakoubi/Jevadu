@@ -20,6 +20,7 @@ from hackathon_memory.check.story import (
     Event,
     Outside,
     OwnId,
+    Stop,
     Story,
     merged,
     name_patterns,
@@ -230,6 +231,33 @@ def test_the_time_before_and_after_says_who_paid() -> None:
     assert merged([("1.000000001", DURING, CONSENSUS, False, "0.0.7001")]) == (
         Event(DURING, CONSENSUS, False, "0.0.7001"),
     )
+
+
+def test_a_reading_that_the_limit_stopped_says_what_is_not_known() -> None:
+    """A contract whose reading stopped at the limit long before the event, as a public contract
+    that thousands call: the time before is at least what was read, and the time after and the
+    table are short (29 October 2026). Before, the card said "none" after the event."""
+    stopped = OwnId("0.0.4513", "testnet", CONTRACT, ASKED, cut=True, read_until=LONG_BEFORE)
+    story = a_story(Event(LONG_BEFORE, CONTRACTS, False), Event(DURING, CONSENSUS, False),
+                    ids=(TOPIC_ID, stopped))  # fmt: skip
+    stop = Stop("0.0.4513", CONTRACT, LONG_BEFORE.date())
+    assert story.before.cut_off == (stop,) and story.before.count == 1
+    assert story.after == Outside(0, None, (), cut_off=(stop,))
+    assert story.cut_off == (stop,)
+    # a reading that went on past the time of the table: the time before and the table are
+    # whole, the time after is short
+    late = OwnId("0.0.4513", "testnet", CONTRACT, ASKED, cut=True, read_until=LONG_AFTER)
+    went_on = a_story(Event(LONG_AFTER, CONTRACTS, False), ids=(TOPIC_ID, late))
+    assert went_on.before.cut_off == () and went_on.cut_off == ()
+    assert went_on.after.cut_off == (Stop("0.0.4513", CONTRACT, LONG_AFTER.date()),)
+    # an account stopped during the event: the table is short; the time before and after, which
+    # counts no account, is not
+    busy = OwnId("0.0.4512", "testnet", ACCOUNT, ASKED, cut=True, read_until=DURING)
+    counted = a_story(Event(DURING, HBAR, True), ids=(TOPIC_ID, busy))
+    assert counted.cut_off == (Stop("0.0.4512", ACCOUNT, DURING.date()),)
+    assert counted.before.cut_off == counted.after.cut_off == ()
+    # a whole reading says nothing
+    assert a_story(Event(DURING, CONSENSUS, False)).cut_off == ()
 
 
 def test_with_accounts_only_the_time_before_and_after_is_not_counted() -> None:

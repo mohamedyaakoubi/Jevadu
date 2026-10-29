@@ -34,7 +34,8 @@ from datetime import date, timedelta
 
 from hackathon_memory.check.depth import Day, Strip
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
-from hackathon_memory.web.data import SERVICE_TRANSACTIONS
+from hackathon_memory.check.story import Stop
+from hackathon_memory.web.data import SERVICE_TRANSACTIONS, read_only
 
 WIDTH = 400  # the units of the drawing, about the pixels of a card's column
 LEFT = 72  # room for the short names of the services
@@ -52,6 +53,8 @@ LETTER = 7.2  # about the width of a letter of the marks (13 pixels), to keep th
 HINT = ("Point at a square, or move to it with the keyboard, to see its day and its number. "
         "A click opens its first transaction on HashScan. Ctrl and the mouse wheel, or the "
         "buttons + and −, widen the days.")  # fmt: skip
+LEGEND = ("A hatched band is a time of more than 30 days with no transaction, left out of the "
+          "strip; its length stands under it.")  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -88,13 +91,15 @@ class Tick:
 
 @dataclass(frozen=True)
 class Cut:
-    """A time with no transaction that the strip leaves out."""
+    """A time with no transaction that the strip leaves out, or a time after a reading that the
+    limit stopped, which was not read (29 October 2026)."""
 
     x: float
     width: float
     text: str  # how long it is, short: "1 yr 2 mo"
     note: str  # its first and last day, and how long, in words
     days: int = 0  # how many days it leaves out
+    unread: bool = False  # it comes after a reading that the limit stopped
 
 
 @dataclass(frozen=True)
@@ -125,6 +130,7 @@ class StripView:
     cuts: tuple[Cut, ...] = ()
     # the lengths of the cuts that keep clear of each other, the longest cuts first
     cut_marks: tuple[Mark, ...] = ()
+    legend: str = ""  # what a hatched band is, when the strip has one
 
     @property
     def names_share(self) -> float:
@@ -229,14 +235,22 @@ def strip_view(strip: Strip | None) -> StripView | None:
     event_x = x_of(strip.event_first)
     event_width = ((strip.event_last - strip.event_first).days + 1) * step
     cuts = []
+    used: set[Stop] = set()  # the stopped readings that a band comes after
     for number in range(len(parts) - 1):
         (first, last), after = parts[number], parts[number + 1][0]
         empty = (after - last).days - 1
         brief, words = length(empty)
         x = starts[number] + ((last - first).days + 1) * step
         since, until = in_words(last + timedelta(days=1)), in_words(after - timedelta(days=1))
-        note = f"No transaction for {words}, from {since} to {until}: left out of the strip."
-        cuts.append(Cut(round(x, 2), CUT, brief, note, empty))
+        # a reading that the limit stopped before this time: its transactions then were not read
+        stopped = [stop for stop in strip.cut_off if stop.day < after]
+        used.update(stopped)
+        if stopped:
+            note = (f"Not read: {read_only(stopped)}. The time from {since} to {until} ({words}) "
+                    "is left out of the strip.")  # fmt: skip
+        else:
+            note = f"No transaction for {words}, from {since} to {until}: left out of the strip."
+        cuts.append(Cut(round(x, 2), CUT, brief, note, empty, bool(stopped)))
     first_day, last_day = parts[0][0], parts[-1][1]
     marks = apart([Mark(event_x + event_width / 2, "the event", "middle", event=True),
                    Mark(0, short(first_day), "start"), Mark(width, short(last_day), "end")],
@@ -245,11 +259,23 @@ def strip_view(strip: Strip | None) -> StripView | None:
                  for number in range((last - first).days + 1)]  # fmt: skip
     ticks = tuple(Tick(round(x_of(day) + step / 2, 2), f"{day.day} {day:%b}") for day in every_day)
     active = len({one.day for _, days in strip.rows for one in days})
-    left_out = (f"; {len(cuts)} time{'s' if len(cuts) != 1 else ''} of more than {GAP} days "
-                "with no transaction left out" if cuts else "")  # fmt: skip
+    unread = [cut for cut in cuts if cut.unread]
+    empty_ones, unread_ones = len(cuts) - len(unread), len(unread)
+    said = ([f"{empty_ones} time{'s' if empty_ones != 1 else ''} of more than {GAP} days with no "
+             "transaction"] if empty_ones else [])  # fmt: skip
+    said += [f"{unread_ones} time{'s' if unread_ones != 1 else ''} not read"] if unread else []
+    left_out = f"; {' and '.join(said)} left out" if said else ""
     summary = (f"The days of its transactions from {in_words(first_day)} to "
                f"{in_words(last_day)}: {active} day{'s' if active != 1 else ''} with a "
                f"transaction{left_out}. The same numbers are in the table under it.")  # fmt: skip
+    legend = LEGEND if cuts and not unread else ""
+    if unread:
+        after_them = tuple(stop for stop in strip.cut_off if stop in used)
+        days = "that day" if len({stop.day for stop in after_them}) == 1 else "those days"
+        others = ", and the others are times with no transaction" if empty_ones else ""
+        legend = ("A hatched band is a time of more than 30 days left out of the strip; its "
+                  f"length stands under it. {read_only(after_them)}, so a band after {days} is a "
+                  f"time that was not read{others}.")  # fmt: skip
     table = tuple(sorted((TableRow(one.day, service, one.count)
                           for service, days in strip.rows for one in days),
                          key=lambda row: (row.day, row.service)))  # fmt: skip
@@ -259,7 +285,7 @@ def strip_view(strip: Strip | None) -> StripView | None:
                      round(step, 4), tuple(cuts),
                      apart([Mark(cut.x + cut.width / 2, cut.text, "middle")
                             for cut in sorted(cuts, key=lambda one: -one.days)],
-                           width))  # fmt: skip
+                           width), legend)  # fmt: skip
 
 
 __all__ = ["Day", "StripView", "strip_view"]

@@ -97,18 +97,24 @@
    follows: anyone can use a contract or a topic, so the accounts that the page does not name may
    be strangers (29 October 2026). #}
 {% macro outside(part, which, source="page") -%}
-{% if part is none %}not counted: its IDs are accounts only
+{%- set least = "at least " if part and part.cut_off else "" -%}
+{%- set read = " one read" if part and part.cut_off and which == "last" else "" -%}
+{%- if part is none %}not counted: its IDs are accounts only
+{%- elif not part.count and part.cut_off %}not known. {{ read_only(part.cut_off) }}.
 {%- elif not part.count %}none
-{%- elif part.by_service | length == 1 %}{{ transactions(part.by_service[0][0], part.count) }}, the {{ which }} on {{ part.day | day }}
-{%- else %}{{ "{:,}".format(part.count) }} transactions, the {{ which }} on {{ part.day | day }}: {% for service, count in part.by_service %}{{ transactions(service, count) }}{{ ", " if not loop.last }}{% endfor %}
+{%- elif part.by_service | length == 1 %}{{ least }}{{ transactions(part.by_service[0][0], part.count) }}, the {{ which }}{{ read }} on {{ part.day | day }}
+{%- else %}{{ least }}{{ "{:,}".format(part.count) }} transactions, the {{ which }}{{ read }} on {{ part.day | day }}: {% for service, count in part.by_service %}{{ transactions(service, count) }}{{ ", " if not loop.last }}{% endfor %}
 {%- endif %}
-{%- if part and part.count %}{{ paid_by(part, source) }}{% endif %}
+{%- if part and part.count %}{{ paid_by(part, source) }}{% if part.cut_off %}. {{ read_only(part.cut_off) }}.{% endif %}{% endif %}
 {%- endmacro %}
 
+{# Who paid; with a reading that the limit stopped, the numbers are at least these (29 October
+   2026). #}
 {% macro paid_by(part, source) -%}
-{% if part.paid_by_named and part.paid_by_others %}; paid by {{ part.paid_by_named }} account{{ "s" if part.paid_by_named != 1 }} that the {{ source }} lists and {{ "{:,}".format(part.paid_by_others) }} that it does not
-{%- elif part.paid_by_named %}; paid only by accounts that the {{ source }} lists
-{%- elif part.paid_by_others %}; paid by {{ "{:,}".format(part.paid_by_others) }} account{{ "s" if part.paid_by_others != 1 }} that the {{ source }} does not list
+{%- set least = "at least " if part.cut_off else "" -%}
+{%- if part.paid_by_named and part.paid_by_others %}; paid by {{ least }}{{ part.paid_by_named }} account{{ "s" if part.paid_by_named != 1 }} that the {{ source }} lists and {{ "{:,}".format(part.paid_by_others) }} that it does not
+{%- elif part.paid_by_named %}; paid only by accounts that the {{ source }} lists{{ ", in those read" if part.cut_off }}
+{%- elif part.paid_by_others %}; paid by {{ least }}{{ "{:,}".format(part.paid_by_others) }} account{{ "s" if part.paid_by_others != 1 }} that the {{ source }} does not list
 {%- endif %}
 {%- if part.payer_unknown == part.count %}; who paid is not known
 {%- elif part.payer_unknown %}; for {{ "{:,}".format(part.payer_unknown) }} of them, who paid is not known
@@ -138,6 +144,7 @@
     <p class="text-secondary">The history of its own Hedera IDs has not been read yet.</p>
     {% elif story %}
     {% set within = " in that time" if story.starts_on else "" %}
+    {% if story.cut_off %}<p class="hm-story-cut">{{ read_only(story.cut_off) }}. {{ "Its" if story.cut_off | length == 1 else "Their" }} later transactions are missing from this card, so its numbers are at least these.</p>{% endif %}
     {% if story.lines %}
     <div class="hm-story-scroll" tabindex="0" role="region" aria-label="The table of the Hedera services, which scrolls sideways when the card is narrow">
     <table class="table table-sm hm-story">
@@ -158,11 +165,11 @@
     {% if not story.code_read %}<p class="hm-small">Its code was not read, so the table leaves it out.</p>{% endif %}
     {% if story.contract_others or story.calls_cut %}<p class="hm-small">{% if story.contract_others %}Its contracts also reached {{ story.contract_others | join(", ") }}{{ within }}.{% endif %}{% if story.calls_cut %} Of a contract with more calls in that time, the first 100 were read.{% endif %}</p>{% endif %}
     {% else %}
-    <p class="text-secondary">Its IDs show no transaction{{ within }}, and the {{ source }} names none of the services that are looked for.</p>
+    <p class="text-secondary">{% if story.cut_off %}No transaction of its IDs was read{% else %}Its IDs show no transaction{% endif %}{{ within }}, and the {{ source }} names none of the services that are looked for.</p>
     {% endif %}
     {% if story.named_not_seen or story.seen_not_named or story.all_named_seen %}
     <ul class="hm-story-facts">
-      {% for service in story.named_not_seen %}<li>The {{ source }} names {{ SERVICE_SUBJECTS[service] }} {{ said_words(story.lines | selectattr("service", "equalto", service) | first, source=source, before="(", after=")") }}, and its IDs show no {{ SERVICE_TRANSACTIONS[service] }}{{ within }}.</li>{% endfor %}
+      {% for service in story.named_not_seen %}<li>The {{ source }} names {{ SERVICE_SUBJECTS[service] }} {{ said_words(story.lines | selectattr("service", "equalto", service) | first, source=source, before="(", after=")") }}, and {% if story.cut_off %}no {{ SERVICE_TRANSACTIONS[service] }} of its IDs were read{% else %}its IDs show no {{ SERVICE_TRANSACTIONS[service] }}{% endif %}{{ within }}.</li>{% endfor %}
       {% for service, count in story.seen_not_named %}<li>Its IDs show {{ transactions(service, count) }}{{ within }}, and the {{ source }} does not name {{ SERVICE_SUBJECTS[service] }}.</li>{% endfor %}
       {% if story.all_named_seen %}<li>Every service that the {{ source }} names has transactions of its IDs{% if story.lines | selectattr("from_contracts") | list %} or calls of its contracts{% endif %}{{ within }}.</li>{% endif %}
     </ul>
@@ -238,7 +245,7 @@
   </div>
   <figcaption class="hm-small">
     <span class="hm-strip-note" aria-live="polite">{{ view.hint }}</span>
-    {% if view.cuts %}<span class="d-block">A hatched band is a time of more than 30 days with no transaction, left out of the strip; its length stands under it.</span>{% endif %}
+    {% if view.legend %}<span class="d-block">{{ view.legend }}</span>{% endif %}
   </figcaption>
   <details class="hm-strip-table">
     <summary>The days as a table</summary>

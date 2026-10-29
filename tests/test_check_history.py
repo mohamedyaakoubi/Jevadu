@@ -96,6 +96,11 @@ def test_a_history_that_the_limit_cut_says_so() -> None:
     mirror.lists[("messages", "0.0.5002")] = [{"consensus_timestamp": s} for s in (ONE, TWO, THREE)]
     history = read_history(mirror, "0.0.5002", TOPIC, max_events=2)
     assert history == History({ONE: CONSENSUS, TWO: CONSENSUS}, cut=True)
+    # where it stopped: nothing after its last event read is known (29 October 2026)
+    from datetime import UTC, datetime
+
+    assert history.read_until == datetime.fromtimestamp(float(TWO), tz=UTC)
+    assert History({ONE: CONSENSUS}, cut=False).read_until is None
 
 
 def test_a_thing_that_the_node_does_not_know_gives_no_event() -> None:

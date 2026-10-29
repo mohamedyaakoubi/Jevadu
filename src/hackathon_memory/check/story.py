@@ -166,6 +166,26 @@ class OwnId:
     kind: str | None
     asked_at: datetime | None  # when its history was read; None while it is not read
     cut: bool = False  # the limit of events cut its history
+    # the moment of its last transaction read, when the limit cut it: nothing after was read
+    read_until: datetime | None = None
+
+
+@dataclass(frozen=True)
+class Stop:
+    """An own ID whose reading the limit of events stopped (MAX_EVENTS): only its transactions up
+    to `day` were read, so a count that its later ones belong to is at least what it says, and a
+    time after it is not known (29 October 2026). Before, the card said "none" there."""
+
+    entity_id: str
+    kind: str | None
+    day: date
+
+
+def stops(ids: Iterable[OwnId]) -> tuple[Stop, ...]:
+    """The readings that the limit stopped among these IDs, the earliest first."""
+    return tuple(sorted((Stop(one.entity_id, one.kind, one.read_until.date())
+                         for one in ids if one.cut and one.read_until is not None),
+                        key=lambda stop: (stop.day, stop.entity_id)))  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -198,6 +218,9 @@ class Outside:
     paid_by_named: int = 0  # the accounts that paid for some of them, that the project names
     paid_by_others: int = 0  # and those it does not name; the network's own accounts left out
     payer_unknown: int = 0  # the transactions whose payer the mirror node does not give (a mint)
+    # its own things whose reading stopped before the end of this time: its numbers are at least
+    # these, and with none counted, the time is not known
+    cut_off: tuple[Stop, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -217,6 +240,9 @@ class Story:
     contract_others: tuple[str, ...] = ()  # the system contracts with no row that its contracts
     #                                        reached, in words: "random numbers in 2 calls"
     calls_cut: bool = False  # a contract had more calls in that time than were read
+    # its own IDs whose reading stopped before the end of the time of the table: the numbers of
+    # the card are at least these
+    cut_off: tuple[Stop, ...] = ()
 
     @property
     def read(self) -> tuple[OwnId, ...]:
@@ -245,16 +271,18 @@ def time_of(starts_at: datetime | None, ends_on: date | None) -> tuple[datetime,
     return starts_at - WINDOW_BEFORE, datetime.combine(ends_on, time.max, tzinfo=UTC) + LIFE_LINE
 
 
-def _outside(events: Sequence[Event], *, first: bool, named: frozenset[str]) -> Outside:
+def _outside(
+    events: Sequence[Event], *, first: bool, named: frozenset[str], cut_off: tuple[Stop, ...]
+) -> Outside:
     if not events:
-        return Outside(0, None, ())
+        return Outside(0, None, (), cut_off=cut_off)
     by_service = Counter(event.service for event in events)
     moments = [event.at for event in events]
     day = (min(moments) if first else max(moments)).date()
     payers = {event.payer for event in events if event.payer} - NETWORK_ACCOUNTS
     return Outside(len(events), day, tuple((s, by_service[s]) for s in SERVICES if by_service[s]),
                    len(payers & named), len(payers - named),
-                   sum(1 for event in events if not event.payer))  # fmt: skip
+                   sum(1 for event in events if not event.payer), cut_off)  # fmt: skip
 
 
 def story_of(
@@ -305,8 +333,16 @@ def story_of(
     before = after = None
     if span is not None and any(one.kind != ACCOUNT for one in ids):
         own = [event for event in events if not event.of_an_account]
-        before = _outside([e for e in own if e.at < span[0]], first=True, named=named_ids)
-        after = _outside([e for e in own if e.at > span[1]], first=False, named=named_ids)
+        things = [one for one in ids if one.kind != ACCOUNT]
+        # a reading that stopped before that time leaves it short; every stopped reading leaves
+        # the time after it short, since its later transactions were not read
+        early = stops(one for one in things if one.read_until and one.read_until < span[0])
+        before = _outside([e for e in own if e.at < span[0]], first=True, named=named_ids,
+                          cut_off=early)  # fmt: skip
+        after = _outside([e for e in own if e.at > span[1]], first=False, named=named_ids,
+                         cut_off=stops(things))  # fmt: skip
+    short = stops(one for one in ids
+                  if span is None or (one.read_until and one.read_until < span[1]))  # fmt: skip
     return Story(
         tuple(ids),
         span[0].date() if span else None,
@@ -320,4 +356,5 @@ def story_of(
         after,
         others_in_words(calls),
         any(one.cut for one in calls),
+        short,
     )

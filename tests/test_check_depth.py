@@ -13,7 +13,7 @@ from hackathon_memory.check.depth import (
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, HBAR, TOKENS, Act
 from hackathon_memory.check.story import OwnId
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
-from hackathon_memory.web.strips import LIGHTEST, Mark, apart, length, strip_view
+from hackathon_memory.web.strips import LEGEND, LIGHTEST, Mark, apart, length, strip_view
 
 STARTS = datetime(2026, 4, 3, 9, tzinfo=UTC)  # an invented event of three days
 ENDS = date(2026, 4, 5)
@@ -174,6 +174,32 @@ def test_a_long_time_without_a_transaction_is_cut_out_of_the_strip() -> None:
     assert view.event_x < second.x < squares[CONSENSUS][-1] < view.days_width
     assert [mark.text for mark in view.cut_marks] == ["1 yr", "39 days"]
     assert view.height == 4 + 2 * 20 + 20 + 16  # one more line, for the lengths
+
+
+def test_a_time_after_a_reading_that_the_limit_stopped_is_not_read() -> None:
+    """A contract whose reading stopped at the limit a year before the event: the band after it is
+    a time that was not read, not a time with no transaction (29 October 2026). Before, it said
+    "No transaction for 1 year"."""
+    long_before = datetime(2025, 3, 10, tzinfo=UTC)
+    items = [done(long_before + timedelta(days=n), CONTRACT_ID, CONTRACT, CONTRACTS,
+                  Act("CONTRACTCALL", True, TEAM, ()), n) for n in range(3)]  # fmt: skip
+    items.append(message(STARTS, n=10))
+    stopped = OwnId(CONTRACT_ID, "testnet", CONTRACT, ASKED, cut=True,
+                    read_until=long_before + timedelta(days=2))  # fmt: skip
+    view = strip_view(depth((*own((TOPIC_ID, TOPIC)), stopped), items).strip)
+    (band,) = view.cuts
+    assert band.unread and band.text == "1 yr"
+    said = ("Jevadu read only the first 2,000 transactions of its contract 0.0.6003, up to 12 "
+            "March 2025")  # fmt: skip
+    assert band.note == (f"Not read: {said}. The time from 13 March 2025 to 3 March 2026 (1 year) "
+                         "is left out of the strip.")  # fmt: skip
+    assert view.legend == ("A hatched band is a time of more than 30 days left out of the strip; "
+                           f"its length stands under it. {said}, so a band after that day is a "
+                           "time that was not read.")  # fmt: skip
+    assert "; 1 time not read left out." in view.summary
+    # a whole reading: the band is a time with no transaction, as before
+    whole = strip_view(depth(own((TOPIC_ID, TOPIC), (CONTRACT_ID, CONTRACT)), items).strip)
+    assert not whole.cuts[0].unread and whole.legend == LEGEND
 
 
 def test_an_event_with_no_transaction_is_drawn_beside_the_days_after_it() -> None:

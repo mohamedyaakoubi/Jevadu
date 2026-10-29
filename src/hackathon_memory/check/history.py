@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from hackathon_memory.hedera.mirror import MirrorNode
 from hackathon_memory.parse.hedera_ids import (
@@ -70,6 +70,14 @@ class History:
     acts: dict[str, Act] = field(default_factory=dict, compare=False)
     holders: tuple[str, ...] | None = field(default=None, compare=False)  # a token only
     holders_cut: bool = field(default=False, compare=False)  # more than MAX_HOLDERS hold it
+
+    @property
+    def read_until(self) -> datetime | None:
+        """The moment of its last event read when MAX_EVENTS cut it: nothing after it was read
+        (29 October 2026). None for a whole history."""
+        if not self.cut or not self.events:
+            return None
+        return datetime.fromtimestamp(max(float(stamp) for stamp in self.events), tz=UTC)
 
 
 def service_of(transaction: Mapping) -> str:
