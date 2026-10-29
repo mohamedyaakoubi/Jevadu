@@ -31,7 +31,7 @@ from urllib.parse import parse_qs, urlencode
 import psycopg
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markupsafe import escape
@@ -464,6 +464,8 @@ def create_app(
     async def unlisted(request: Request, call_next: Callable) -> Any:
         """No page is indexed (design 12.5); on the public copy, each request knows its visitor."""
         token = None
+        if limits is not None and public_copy.plain_http(request.headers):
+            return RedirectResponse(str(request.url.replace(scheme="https")), 301)
         if limits is not None:
             peer = request.client.host if request.client else None
             token = public_copy.visitor.set(public_copy.visitor_of(request.headers, peer, salt))

@@ -24,7 +24,15 @@ def test_no_page_is_indexed_on_the_laptop_or_on_the_public_copy(site) -> None:  
         assert page.headers["X-Robots-Tag"] == "noindex, nofollow"
         assert '<meta name="robots" content="noindex, nofollow">' in page.text
     assert "X-Frame-Options" not in client.get("/").headers  # only the public copy adds these
-    assert public_site(client).get("/").headers["X-Frame-Options"] == "DENY"
+    open_copy = public_site(client)
+    assert open_copy.get("/").headers["X-Frame-Options"] == "DENY"
+    assert open_copy.get("/").headers["Strict-Transport-Security"] == "max-age=31536000"
+    # a visitor in plain HTTP, as Cloudflare says, goes to HTTPS
+    moved = open_copy.get("/?idea=pay", headers={"X-Forwarded-Proto": "http"},
+                          follow_redirects=False)  # fmt: skip
+    assert moved.status_code == 301 and moved.headers["location"] == "https://testserver/?idea=pay"
+    laptop = client.get("/", headers={"X-Forwarded-Proto": "http"}, follow_redirects=False)
+    assert laptop.status_code == 200  # the laptop's own site is never redirected
 
 
 def test_the_ai_stays_off_on_the_public_copy_until_it_is_turned_on(site) -> None:  # noqa: ANN001, F811

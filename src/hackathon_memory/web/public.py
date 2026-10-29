@@ -39,7 +39,16 @@ PUBLIC_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "X-Frame-Options": "DENY",
+    # HTTPS only, for this name alone (no includeSubDomains): the address is served by Cloudflare
+    "Strict-Transport-Security": "max-age=31536000",
 }
+
+
+def plain_http(headers: Mapping[str, str]) -> bool:
+    """A visitor who came in plain HTTP, as Cloudflare says in X-Forwarded-Proto: sent to HTTPS
+    (seen on 30 October 2026: the zone does not redirect by itself)."""
+    return headers.get("x-forwarded-proto", "").lower() == "http"
+
 
 # The visitor of the request being answered, for the calls to a model, which know no request.
 visitor: contextvars.ContextVar[str | None] = contextvars.ContextVar("visitor", default=None)
