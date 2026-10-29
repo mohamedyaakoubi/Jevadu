@@ -51,7 +51,9 @@ def test_the_counts_follow_the_depth_of_each_card() -> None:
             3,
             "not_found",
             Card(
-                depth(0, None, 0, "Its code names a Hedera package, and calls no Hedera service.")
+                depth(
+                    0, None, 0, "Its code lists a Hedera package but never calls a Hedera service."
+                )
             ),
         ),
     ]

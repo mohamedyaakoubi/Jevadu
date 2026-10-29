@@ -510,7 +510,9 @@ def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> No
     part = client.get(f"/project/{pebble}/panel").text
     block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
     assert "3 messages to a topic." in block
-    assert "2 accounts that the page does not name." in block
+    # who the other accounts can be, in plain words (29 October 2026)
+    assert ("2 accounts that the page does not list: outside users, or other accounts of the "
+            "team.") in block  # fmt: skip
     # the numbers say their dates, since the strip can draw more days (28 October 2026)
     assert "<dt>What its IDs did from 4 February 2026 to 7 April 2026</dt>" in block
     assert ("1 day with a transaction from 4 February 2026 to 7 April 2026: 1 during the event, 0 "
@@ -558,7 +560,7 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
     assert 'class="hm-strip-mark hm-strip-cut-mark"' in block and ">11 mo</text>" in block
     # who paid for the transactions before the time of the table (29 October 2026)
     assert ("1 Consensus Service transaction, the first on 7 March 2025; paid by 1 account that "
-            "the page does not name") in block  # fmt: skip
+            "the page does not list") in block  # fmt: skip
     assert ("A hatched band is a time of more than 30 days with no transaction, left out of the "
             "strip; its length stands under it.") in block  # fmt: skip
 
@@ -743,9 +745,9 @@ def test_the_card_says_who_holds_its_tokens_in_words(site) -> None:  # noqa: ANN
     with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
         conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
     minted = stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 1)
-    for holders, said in (((team,), "No account that it does not name holds its tokens now."),
-                          ((team, "0.0.9001"), "Its tokens are held now by 1 account that it "
-                                               "does not name.")):  # fmt: skip
+    for holders, said in (((team,), "No account outside the page's list holds its tokens now."),
+                          ((team, "0.0.9001"), "1 account outside the page's list holds its "
+                                               "tokens now.")):  # fmt: skip
         HistoryStore(database).save(coin, "testnet", "token",
                                     History({minted: TOKENS}, False,
                                             {minted: Act("TOKENMINT", True, team, (team,))},

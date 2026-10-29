@@ -173,29 +173,35 @@ def on_paper(
             continue  # not read: nothing is known
         acts = [done.act.name for done in by_id.get((one.entity_id, one.network), [])]
         if one.kind == TOPIC and MESSAGE not in acts:
-            found.append(f"Its topic {one.entity_id} has no message.")
+            found.append(f"Its topic {one.entity_id} has no message: nothing was ever written "
+                         "to it.")  # fmt: skip
         if one.kind == CONTRACT and acts and set(acts) == {DEPLOYED}:
-            found.append(f"Its contract {one.entity_id} was never called after its deployment.")
+            found.append(f"Its contract {one.entity_id} was never called after its deployment, "
+                         "so nothing ever used it.")  # fmt: skip
         accounts = holders.get((one.entity_id, one.network))
         if one.kind == TOKEN and accounts is not None:
             if not accounts:
-                found.append(f"No account holds its token {one.entity_id} now.")
+                found.append(f"No account holds its token {one.entity_id} now, so none of it "
+                             "is in use.")  # fmt: skip
             elif set(accounts) <= named:
                 found.append(f"Its token {one.entity_id} is held only by accounts that the "
-                             "project names.")  # fmt: skip
+                             "project itself lists, so no one outside the team holds "
+                             "it.")  # fmt: skip
     if (
         own
         and all(one.kind == ACCOUNT for one in own)
         and inside
         and all(one.service == HBAR for one in inside)
     ):
-        found.append("Its own accounts only moved HBAR in the time of the event, such as setting "
-                     "themselves up.")  # fmt: skip
+        found.append("Its own accounts only moved HBAR, Hedera's coin, from 30 days before the "
+                     "event to 30 days after it, for example to fund themselves, and used no other "
+                     "Hedera service.")  # fmt: skip
     if has_package and in_code is not None and not in_code and not set_up:
-        found.append("Its code names a Hedera package, and calls no Hedera service.")
+        found.append("Its code lists a Hedera package but never calls a Hedera service with "
+                     "it.")  # fmt: skip
     if shared_only:
-        found.append("Every Hedera ID that it names is named by other projects too: it has no ID "
-                     "of its own.")  # fmt: skip
+        found.append("Every Hedera ID that it lists is also listed by other projects, so it has "
+                     "no ID of its own.")  # fmt: skip
     return tuple(found)
 
 

@@ -105,19 +105,23 @@ def test_the_signs_that_stay_on_paper_are_facts() -> None:
     result = depth(ids, [deployed], holders={(TOKEN_ID, "testnet"): (TEAM,)},
                    has_package=True, in_code=frozenset())  # fmt: skip
     assert result.on_paper == (
-        f"Its topic {TOPIC_ID} has no message.",
-        f"Its token {TOKEN_ID} is held only by accounts that the project names.",
-        f"Its contract {CONTRACT_ID} was never called after its deployment.",
-        "Its code names a Hedera package, and calls no Hedera service.",
+        f"Its topic {TOPIC_ID} has no message: nothing was ever written to it.",
+        f"Its token {TOKEN_ID} is held only by accounts that the project itself lists, so no one "
+        "outside the team holds it.",
+        f"Its contract {CONTRACT_ID} was never called after its deployment, so nothing ever "
+        "used it.",
+        "Its code lists a Hedera package but never calls a Hedera service with it.",
     )  # in the order of its own IDs, then the code
     nobody = depth(own((TOKEN_ID, TOKEN)), [], holders={(TOKEN_ID, "testnet"): ()})
-    assert nobody.on_paper == (f"No account holds its token {TOKEN_ID} now.",)
+    assert nobody.on_paper == (
+        f"No account holds its token {TOKEN_ID} now, so none of it is in use.",
+    )
     hbar = depth(own((TEAM, ACCOUNT)), [done(STARTS, TEAM, ACCOUNT, HBAR,
                                              Act("CRYPTOTRANSFER", True, TEAM, ()))])  # fmt: skip
     assert "Its own accounts only moved HBAR" in hbar.on_paper[0]
     shared = depth((), [], shared_only=True)
-    assert shared.on_paper == ("Every Hedera ID that it names is named by other projects too: it "
-                               "has no ID of its own.",)  # fmt: skip
+    assert shared.on_paper == ("Every Hedera ID that it lists is also listed by other projects, so "
+                               "it has no ID of its own.",)  # fmt: skip
 
 
 def test_an_evm_project_set_up_for_hedera_is_not_said_to_call_nothing() -> None:
