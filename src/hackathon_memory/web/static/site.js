@@ -1007,7 +1007,8 @@
   });
   // An answer of 400, 404 or 503 says in plain words what happened, and so does an answer of 500
   // in the window of a project or a check: it takes the place of the waiting state. A 503 of the
-  // comparison carries the words of the failure for each result.
+  // comparison carries the words of the failure for each result. An answer of 429 comes from the
+  // public copy only, when a visitor's allowance is used, and says so wherever it was asked.
   document.addEventListener("htmx:beforeSwap", function (event) {
     // htmx 2 names the target of the swap as `elt` here; the element that asked is in the
     // request's config (htmx 2.0.11, seen in the browser on 18 October 2026).
@@ -1022,7 +1023,7 @@
     var inPlace = inWindow || (target && target.id === "workspace");
     if ((shown && (status === 503 || status === 400)) ||
         (inPlace && (status === 400 || status === 404 || status === 503)) ||
-        (inWindow && status === 500)) {
+        (inWindow && status === 500) || status === 429) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;
     }

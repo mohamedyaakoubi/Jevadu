@@ -10,7 +10,15 @@ import re
 import psycopg
 import pytest
 from pydantic import SecretStr
-from test_web import REPO, checkable, compare_answer, order_of, site  # noqa: F401  (its fixture)
+from test_web import (  # noqa: F401  (the fixtures of the website's tests)
+    REPO,
+    checkable,
+    chromium,
+    compare_answer,
+    order_of,
+    served,
+    site,
+)
 
 from hackathon_memory.finops import meter
 from hackathon_memory.finops.meter import Tags
@@ -158,6 +166,24 @@ def test_one_address_holds_the_allowances_of_a_few_visitors(site, monkeypatch) -
     assert third.status_code == 429
     elsewhere = {"CF-Connecting-IP": "198.51.100.9", "User-Agent": "Safari/18", **HX}
     assert open_copy.get("/check", params=asked, headers=elsewhere).status_code == 200
+
+
+@pytest.mark.browser
+def test_a_used_allowance_is_read_where_it_was_asked(site, chromium, monkeypatch) -> None:  # noqa: ANN001, F811
+    """An answer of 429 takes the place of the steps of the check: before 29 October 2026 the
+    page's script showed only answers of 400, 404 and 503, and the visitor saw nothing."""
+    client, _, _, database = site
+    monkeypatch.setitem(public.ALLOWANCE, public.CHECK, 1)
+    event = checkable(database)
+    page = served(chromium, public_site(client), viewport={"width": 1440, "height": 900})
+    for _ in range(2):
+        page.goto("http://site.test/")
+        page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+        page.select_option("#check-event", event)
+        page.locator("#check button[type=submit]").click()
+        page.wait_for_selector("#viewer[open]")
+    page.wait_for_selector("#viewer-body:has-text('gives each visitor 1 check, one time only')")
+    page.context.close()
 
 
 def test_the_gate_counts_each_call_and_refuses_what_it_cannot_count(site) -> None:  # noqa: ANN001, F811
