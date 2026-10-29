@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     # The header in which the host of the public copy writes the visitor's address itself:
     # Cloudflare's for the tunnel; x-vercel-forwarded-for on Vercel (web/vercel_app.py).
     public_address_header: str = Field("cf-connecting-ip", json_schema_extra=_PUBLIC)
+    # A token of Vercel, for the public copy's project there (web/vercel.py): the switch of the
+    # Google account moves the copy too when it is set.
+    vercel_token: SecretStr = SecretStr("")
+    # The database of the public copy on its host (Neon), seen from this computer: the switches
+    # of the public copy write there (web/switch.py).
+    public_database_url: SecretStr = SecretStr("")
     # How many times one visitor of the public copy may ask Gemini, one time only (design
     # 12.5): 30 dollars pay about 300 visitors who use all 12.
     public_ai_per_visitor: int = Field(12, ge=0, json_schema_extra=_PUBLIC)

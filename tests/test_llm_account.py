@@ -135,3 +135,56 @@ def test_a_sign_in_is_proven_by_a_free_count_of_tokens(monkeypatch: pytest.Monke
     assert len(asked) == 3 and len(waits) == 2
     monkeypatch.setattr(meter, "metered_client", lambda settings, purpose: Counted(99))
     assert not account.proven(lambda: Settings(_env_file=None), tries=2, sleep=waits.append)
+
+
+def test_the_public_copy_follows_the_account_with_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    from hackathon_memory.web import vercel
+
+    pushed: dict = {}
+    deployed: list[tuple] = []
+
+    class Api:
+        def __enter__(self):  # noqa: ANN204
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            return None
+
+    monkeypatch.setattr(vercel, "client", lambda token: Api())
+    monkeypatch.setattr(vercel, "team", lambda api: ("team_1", "team-slug"))
+    monkeypatch.setattr(vercel, "project_id", lambda api, team_id: "prj_1")
+    monkeypatch.setattr(vercel, "set_values", lambda api, team_id, values: pushed.update(values))
+    monkeypatch.setattr(vercel, "deploy", lambda token, team_id, project: deployed.append(
+        (team_id, project)) or 0)  # fmt: skip
+    monkeypatch.setattr(account, "hosted_health", lambda host: True)
+    gcloud = Gcloud(there=["account"])
+    account.update_host(gcloud, "p-one", EMAIL, "a-token", "jevadu.example.com")
+    made = next(args for args in gcloud.asked if "create-oidc" in args)
+    assert "--issuer-uri=https://oidc.vercel.com/team-slug" in made  # the token's own team
+    assert pushed == {"GOOGLE_CLOUD_PROJECT": ("p-one", True),
+                      "GOOGLE_FEDERATION_AUDIENCE": ("//iam.googleapis.com/projects/123456/"
+                                                     "locations/global/workloadIdentityPools/"
+                                                     "vercel/providers/vercel", False),
+                      "GOOGLE_FEDERATION_ACCOUNT": (EMAIL, False)}  # fmt: skip
+    assert deployed == [("team_1", "prj_1")]
+    monkeypatch.setattr(vercel, "deploy", lambda token, team_id, project: 1)
+    with pytest.raises(account.AccountError, match="deployment on Vercel failed"):
+        account.update_host(Gcloud(there=["account", "pool", "provider"]), "p-one", EMAIL,
+                            "a-token", "jevadu.example.com")  # fmt: skip
+
+
+def test_the_copy_is_read_until_google_takes_its_sign_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    answers = iter([{"database": True, "google": False}, {"database": True, "google": True}])
+
+    class Answer:
+        def __init__(self) -> None:
+            self.data = next(answers)
+
+        def json(self) -> dict:
+            return self.data
+
+    monkeypatch.setattr(httpx, "get", lambda url, timeout: Answer())
+    waits: list[float] = []
+    assert account.hosted_health("jevadu.example.com", sleep=waits.append) and waits == [10.0]

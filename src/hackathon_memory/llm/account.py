@@ -7,20 +7,23 @@
                                                                 one project
     python -m hackathon_memory.llm.account switch --no-login    when gcloud and its sign-in for
                                                                 programs already use the account
+    python -m hackathon_memory.llm.account switch --no-vercel   this computer only
 
 In the project of the account, it:
 
 1. turns on the APIs it needs, IAM, IAM Credentials, Security Token Service and Vertex AI (free);
 2. makes the service account `jevadu-gemini` once, with one role, Vertex AI User: it may call the
    models, and nothing else;
-3. for the public copy on Vercel (--vercel-team): makes once the workload identity pool `vercel`
-   and its provider, which trust the tokens of that Vercel team, and lets the production of the
-   Vercel project `jevadu` act as `jevadu-gemini`. No key is made: the organizations that Google
-   makes today forbid keys of service accounts, and a token of Vercel lives two hours;
-4. writes the project into .env, and, after the sign-in, an empty GOOGLE_APPLICATION_CREDENTIALS,
+3. writes the project into .env, and, after the sign-in, an empty GOOGLE_APPLICATION_CREDENTIALS,
    so that the models of this computer use the sign-in that gcloud has just made;
-5. asks Google for the size of a short text in tokens with that sign-in: a free call that proves
-   it works before anything depends on it.
+4. asks Google for the size of a short text in tokens with that sign-in: a free call that proves
+   it works before anything depends on it;
+5. when VERCEL_TOKEN is in .env (and not --no-vercel), moves the public copy on Vercel too: makes
+   once the workload identity pool `vercel` and its provider, which trust the tokens of the
+   token's Vercel team, lets the production of the Vercel project `jevadu` act as
+   `jevadu-gemini`, writes the three settings of Google on Vercel (web/vercel.py), deploys the
+   copy again and reads its /health. No key is made: the organizations that Google makes today
+   forbid keys of service accounts, and a token of Vercel lives two hours.
 
 No model is asked to write, so nothing is paid.
 
@@ -197,14 +200,57 @@ def proven(settings_of: Callable[[], object], *, tries: int = TRIES,
     return False
 
 
+def hosted_health(host: str, *, tries: int = TRIES,
+                  sleep: Callable[[float], None] = time.sleep) -> bool:  # fmt: skip
+    """Whether the public copy at `host` says that Google takes its sign-in (/health, free). A new
+    trust may take a minute before Google applies it."""
+    import httpx
+
+    for attempt in range(tries):
+        try:
+            if httpx.get(f"https://{host}/health", timeout=60).json().get("google") is True:
+                return True
+        except (httpx.HTTPError, ValueError):
+            pass
+        if attempt < tries - 1:
+            sleep(PAUSE_SECONDS)
+    return False
+
+
+def update_host(run: Run, project: str, email: str, token: str, host: str) -> None:
+    """The public copy on Vercel follows the account: the trust of its team in `project`, its
+    three settings of Google, a new deployment, and its /health."""
+    from hackathon_memory.web import vercel
+
+    with vercel.client(token) as api:
+        team_id, slug = vercel.team(api)
+        audience = trust_vercel(run, project, slug, email)
+        vercel.set_values(api, team_id, {PROJECT_SETTING: (project, True),
+                                         "GOOGLE_FEDERATION_AUDIENCE": (audience, False),
+                                         "GOOGLE_FEDERATION_ACCOUNT": (email, False)})  # fmt: skip
+        hosted = vercel.project_id(api, team_id)
+    print("The public copy's settings are written on Vercel. Deploying it again...")
+    if vercel.deploy(token, team_id, hosted) != 0:
+        raise AccountError("The new deployment on Vercel failed: its log is above.")
+    if not hosted_health(host):
+        raise AccountError(f"https://{host}/health does not show Google's sign-in yet. Wait a few "
+                           "minutes and open it again.")  # fmt: skip
+    print(f"https://{host} now uses this account too, with no key.")
+
+
 def main(argv: Sequence[str]) -> int:
+    from hackathon_memory.settings import Settings
+    from hackathon_memory.web.vercel import VercelError
+
     parser = argparse.ArgumentParser(prog="python -m hackathon_memory.llm.account")
     parser.add_argument("command", choices=["switch"])
     parser.add_argument("--project")
     parser.add_argument("--no-login", action="store_true")
-    parser.add_argument("--vercel-team")
+    parser.add_argument("--no-vercel", action="store_true")
     arguments = parser.parse_args(argv)
     env = ROOT / ".env"
+    settings = Settings()
+    token = settings.vercel_token.get_secret_value().strip()
     try:
         program = gcloud_program()
         if not arguments.no_login:  # a browser opens; gcloud and the models sign in together
@@ -213,25 +259,19 @@ def main(argv: Sequence[str]) -> int:
         project = choose_project(run, arguments.project)
         print(f"Project: {project}. Making the service account that may only call Vertex AI...")
         email = make_account(run, project)
-        if arguments.vercel_team:
-            audience = trust_vercel(run, project, arguments.vercel_team, email)
-            print("Vercel may now act as it, with no key. On the host:")
-            print(f"  GOOGLE_FEDERATION_AUDIENCE={audience}")
-            print(f"  GOOGLE_FEDERATION_ACCOUNT={email}")
         keep_line(env, PROJECT_SETTING, project)
         if not arguments.no_login:
             keep_line(env, SIGN_IN_SETTING, "")  # gcloud's own sign-in, just made
-    except AccountError as error:
+        print(f"Written into .env: {PROJECT_SETTING}. Checking the sign-in with a free call...")
+        if not proven(Settings):
+            raise AccountError("Google does not accept the sign-in yet. Wait a few minutes, then "
+                               "run: python -m hackathon_memory.setup_check")  # fmt: skip
+        print("The models of this computer now use this account.")
+        if token and not arguments.no_vercel:
+            update_host(run, project, email, token, settings.public_host)
+    except (AccountError, VercelError) as error:
         print(error)
         return 1
-    from hackathon_memory.settings import Settings
-
-    print(f"Written into .env: {PROJECT_SETTING}. Checking the sign-in with a free call...")
-    if not proven(Settings):
-        print("Google does not accept the sign-in yet. Wait a few minutes, then run: "
-              "python -m hackathon_memory.setup_check")  # fmt: skip
-        return 1
-    print("The models of this computer now use this account.")
     return 0
 
 

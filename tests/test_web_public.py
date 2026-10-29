@@ -248,3 +248,15 @@ def test_a_visitor_is_a_salted_hash_of_the_address_and_of_the_browser() -> None:
     assert home != public.visitor_of({"cf-connecting-ip": "2001:db8:1:3::5"}, None, SALT)
     with pytest.raises(ValueError):
         public.turn("unused", "everything", True)
+
+
+def test_the_switch_writes_into_the_public_copys_own_database(site, monkeypatch, capsys) -> None:  # noqa: ANN001, F811
+    """On its host, the copy reads its switches from its own database (Neon), not this
+    computer's: PUBLIC_DATABASE_URL names it."""
+    _, _, _, database = site
+    elsewhere = Settings(_env_file=None, database_url="postgresql://nobody@127.0.0.1:1/none",
+                         public_database_url=database)  # fmt: skip
+    monkeypatch.setattr(switch, "Settings", lambda: elsewhere)
+    assert switch.main(["register", "on"]) == 0
+    assert "the public copy's database: on its host" in capsys.readouterr().out
+    assert public.totals(database)[0][public.REGISTER] is True

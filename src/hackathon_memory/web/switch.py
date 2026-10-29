@@ -8,7 +8,9 @@
     python -m hackathon_memory.web.switch register on    registering on Hedera
     python -m hackathon_memory.web.switch ai off
 
-The laptop's own site (without --public) is never limited by these switches.
+The laptop's own site (without --public) is never limited by these switches. They are written
+into the public copy's database: PUBLIC_DATABASE_URL when it is set (the copy on its host), else
+this computer's.
 """
 
 from __future__ import annotations
@@ -32,7 +34,10 @@ KINDS = {public.AI: "asks of Gemini", public.EMBED: "searches by meaning",
 
 def main(argv: Sequence[str]) -> int:
     settings = Settings()
-    conninfo = settings.database_conninfo()
+    hosted = settings.public_database_url.get_secret_value().strip()
+    conninfo = hosted or settings.database_conninfo()
+    print("the public copy's database: " + ("on its host (PUBLIC_DATABASE_URL)" if hosted
+                                             else "this computer's"))  # fmt: skip
     if len(argv) == 2 and argv[0] in public.SWITCHES and argv[1] in ("on", "off"):
         public.turn(conninfo, argv[0], argv[1] == "on")
     elif argv:

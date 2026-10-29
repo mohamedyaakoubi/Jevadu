@@ -4,16 +4,18 @@ the sign-in to Google with no key. Everything is invented."""
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
+import httpx
 import pytest
 from pydantic import SecretStr
 from test_web import HX, REPO, checkable, site  # noqa: F401  (the fixture of the website's tests)
 
 from hackathon_memory.llm.client import vercel_token
 from hackathon_memory.search import engine
-from hackathon_memory.web import public, vercel_app
+from hackathon_memory.web import public, vercel, vercel_app
 
 
 def can_link(folder: Path) -> bool:
@@ -101,3 +103,42 @@ def test_the_health_says_what_the_site_reaches_and_asks_no_model(site) -> None: 
     answer = hosted.get("/health")  # no token of Vercel with this request: Google is never asked
     assert answer.status_code == 200 and answer.json() == {"database": True, "google": False}
     assert len(fake.requests) == asked  # no model was asked
+
+
+class VercelApi:
+    """Vercel's REST API, invented: the user's team, the project, and what was set."""
+
+    def __init__(self, refuse: bool = False) -> None:
+        self.refuse = refuse
+        self.set: list[dict] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        if self.refuse:
+            return httpx.Response(403, json={"error": {"message": "Not authorized"}})
+        path = request.url.path
+        if path == "/v2/user":
+            return httpx.Response(200, json={"user": {"defaultTeamId": "team_1"}})
+        if path == "/v2/teams/team_1":
+            return httpx.Response(200, json={"slug": "team-slug"})
+        if path == "/v9/projects/jevadu":
+            return httpx.Response(200, json={"id": "prj_1"})
+        if path == "/v10/projects/jevadu/env":
+            assert dict(request.url.params) == {"teamId": "team_1", "upsert": "true"}
+            self.set.append(json.loads(request.content))
+            return httpx.Response(201, json={})
+        return httpx.Response(404, json={"error": {"message": "unknown"}})
+
+
+def test_the_vercel_project_is_found_and_its_settings_are_set(monkeypatch) -> None:  # noqa: ANN001
+    fake = VercelApi()
+    api = httpx.Client(base_url=vercel.API, transport=httpx.MockTransport(fake))
+    assert vercel.team(api) == ("team_1", "team-slug")
+    assert vercel.project_id(api, "team_1") == "prj_1"
+    vercel.set_values(api, "team_1", {"A_SECRET": ("s", True), "A_NAME": ("n", False)})
+    assert fake.set == [
+        {"key": "A_SECRET", "value": "s", "target": ["production"], "type": "sensitive"},
+        {"key": "A_NAME", "value": "n", "target": ["production"], "type": "encrypted"},
+    ]
+    refused = httpx.Client(base_url=vercel.API, transport=httpx.MockTransport(VercelApi(True)))
+    with pytest.raises(vercel.VercelError, match="403 Not authorized"):
+        vercel.team(refused)
