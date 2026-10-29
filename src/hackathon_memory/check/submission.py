@@ -453,7 +453,7 @@ def histories(
         else:
             counts["histories_from_the_table"] += 1
         history, asked_at = kept
-        own.append(OwnId(entity, network, kind, asked_at, history.cut))
+        own.append(OwnId(entity, network, kind, asked_at, history.cut, history.read_until))
         for stamp, service in history.events.items():
             at = datetime.fromtimestamp(float(stamp), tz=UTC)
             act = history.acts.get(stamp) or Act(None, None, None)

@@ -565,6 +565,39 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
             "strip; its length stands under it.") in block  # fmt: skip
 
 
+def test_a_reading_that_the_limit_stopped_says_what_is_not_known(site) -> None:  # noqa: ANN001
+    """A topic whose reading the limit of 2,000 transactions stopped a year before the event, as
+    for a public contract that thousands call: the card says what was not read, and no longer
+    "none" after the event or "no transaction" in the band (29 October 2026)."""
+    from hackathon_memory.check.history import CONSENSUS, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4511", "topic")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+    messages = {stamp(datetime(2025, 3, 7, 12, tzinfo=UTC), 1): CONSENSUS,
+                stamp(datetime(2025, 3, 9, 12, tzinfo=UTC), 2): CONSENSUS}  # fmt: skip
+    acts = {key: Act("CONSENSUSSUBMITMESSAGE", True, "0.0.8001", ("0.0.8001",)) for key in messages}
+    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, True, acts),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    story = part.split('class="card project-section story-section"', 1)[1].split("</section>", 1)[0]
+    said = "Jevadu read only the first 2,000 transactions of its topic 0.0.4511, up to 9 March 2025"
+    assert (f'<p class="hm-story-cut">{said}. Its later transactions are missing from this card, '
+            "so its numbers are at least these.</p>") in story  # fmt: skip
+    # the lines after the note say it short, without the ID again
+    stopped = "the reading of its topic stopped at its limit of 2,000 transactions, on 9 March 2025"
+    assert ("<dd>at least 2 Consensus Service transactions, the first on 7 March 2025; paid by at "
+            f"least 1 account that the page does not list; {stopped}</dd>") in story  # fmt: skip
+    assert f"<dd>not known: {stopped}</dd>" in story and "<dd>none</dd>" not in story
+    assert (f"<title>Not read: {said}. The time from 10 March 2025 to 3 February 2026 (11 months) "
+            "is left out of the strip.</title>") in story  # fmt: skip
+    assert ("A band after 9 March 2025 was not read: the reading of its topic stopped there, at "
+            "its limit of 2,000 transactions.") in story  # fmt: skip
+
+
 def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
     """The kind, the custom fees and the keys of its own token, from the check of the IDs, with
     the day of that check (design 7.5, 28 October 2026)."""

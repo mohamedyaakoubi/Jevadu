@@ -28,7 +28,7 @@ from datetime import date, datetime
 
 from hackathon_memory.check.history import HBAR, NETWORK_ACCOUNTS, SERVICES, Act
 from hackathon_memory.check.setup import Setup, read_on, setup_words
-from hackathon_memory.check.story import OwnId, time_of
+from hackathon_memory.check.story import OwnId, Stop, stops, time_of
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
 
 MOST_KINDS = 6  # the kinds of transaction named; the others are counted together
@@ -96,6 +96,9 @@ class Strip:
     event_last: date
     rows: tuple[tuple[str, tuple[Day, ...]], ...]  # each service with a transaction, its days
     most: int  # the most transactions of one service on one day
+    # its own things whose reading the limit stopped: after that day, a time left out of the strip
+    # was not read, and is not a time with no transaction (29 October 2026)
+    cut_off: tuple[Stop, ...] = ()
 
     @property
     def days(self) -> int:
@@ -228,7 +231,8 @@ def strip_of(
                          for day, items in sorted(by_day.items()))  # fmt: skip
             most = max(most, *(one.count for one in days))
             rows.append((service, days))
-    return Strip(span[0].date(), span[1].date(), starts_at.date(), ends_on, tuple(rows), most)
+    return Strip(span[0].date(), span[1].date(), starts_at.date(), ends_on, tuple(rows), most,
+                 stops(one for one in own if one.kind != ACCOUNT))  # fmt: skip
 
 
 def depth_of(

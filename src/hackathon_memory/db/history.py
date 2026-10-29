@@ -16,7 +16,7 @@ history is then read on from its newest event (design 7.3), unless the limit of 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 import psycopg
@@ -225,6 +225,7 @@ def story_of_project(
         ids.setdefault((entity, network), OwnId(entity, network, kind, asked_at, cut))
     read = [one.entity_id for one in ids.values() if one.asked_at is not None]
     seen: list[tuple[str, datetime, str, bool, str | None]] = []
+    last: dict[tuple[str, str], datetime] = {}  # the last event read of each ID
     for entity, network, stamp, at, service, payer in conn.execute(
         "SELECT entity_id, network, stamp, at, service, payer FROM ledger_events "
         "WHERE entity_id = ANY(%s)",
@@ -233,6 +234,11 @@ def story_of_project(
         one = ids.get((entity, network))
         if one is not None and one.asked_at is not None:
             seen.append((stamp, at, service, one.kind == ACCOUNT, payer))
+            last[(entity, network)] = max(at, last.get((entity, network), at))
+    # where the limit stopped a reading: nothing after it was read (29 October 2026)
+    for key, one in ids.items():
+        if one.cut and key in last:
+            ids[key] = replace(one, read_until=last[key])
     named = frozenset(row[0] for row in conn.execute(
         "SELECT DISTINCT entity_id FROM hedera_ids WHERE project_id = %s",
         (project_id,)))  # fmt: skip
