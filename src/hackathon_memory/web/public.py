@@ -88,10 +88,12 @@ def plain_http(headers: Mapping[str, str]) -> bool:
 visitor: contextvars.ContextVar[Visitor | None] = contextvars.ContextVar("visitor", default=None)
 
 
-def visitor_of(headers: Mapping[str, str], peer: str | None, salt: str) -> Visitor:
-    """The visitor of a request: the address that Cloudflare gives, else the peer's, and the name
-    the browser gives itself, each kept as a salted hash only."""
-    raw = (headers.get("cf-connecting-ip") or peer or "").strip()
+def visitor_of(headers: Mapping[str, str], peer: str | None, salt: str,
+               header: str = "cf-connecting-ip") -> Visitor:  # fmt: skip
+    """The visitor of a request: the address in `header`, which the host writes itself so that a
+    visitor cannot give another (Cloudflare's CF-Connecting-IP; Vercel's x-vercel-forwarded-for),
+    else the peer's, and the name the browser gives itself, each kept as a salted hash only."""
+    raw = (headers.get(header) or peer or "").strip()
     try:
         address = ipaddress.ip_address(raw)
     except ValueError:

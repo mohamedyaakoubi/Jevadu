@@ -70,7 +70,7 @@ from hackathon_memory.hedera.mirror import (
 )
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
-from hackathon_memory.llm.client import vercel_token
+from hackathon_memory.llm.client import credentials_of, vercel_token
 from hackathon_memory.pipeline import refresh as refresh_step
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import closeness, engine, listing, rerank, seen, stand_in
@@ -462,6 +462,7 @@ def create_app(
     refresh_inline: bool = False,
     rehearsal: bool = False,
     public: bool = False,
+    serverless: bool = False,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
@@ -473,7 +474,10 @@ def create_app(
     on the thread of its request, for the tests (web/refresher.py). With `rehearsal`, the topic of
     `settings` is the one for rehearsals, and every page says so (design 9.3). With `public`, it is
     the public copy, with the switches and the counts of web/public.py, and the calls it makes are
-    counted against its own budget (design 12.5)."""
+    counted against its own budget (design 12.5). With `serverless`, it runs as functions on a host
+    such as Vercel, where a request may land on any copy and nothing runs between requests: a
+    check and a reading again are done within their request, and no round runs in the
+    background (web/vercel_app.py)."""
     settings = settings or Settings()
     if public:
         settings = settings.model_copy(update={"llm_environment": "public"})
@@ -496,7 +500,9 @@ def create_app(
             return RedirectResponse(str(request.url.replace(scheme="https")), 301)
         if limits is not None:
             peer = request.client.host if request.client else None
-            token = public_copy.visitor.set(public_copy.visitor_of(request.headers, peer, salt))
+            token = public_copy.visitor.set(
+                public_copy.visitor_of(request.headers, peer, salt, settings.public_address_header)
+            )
         oidc = request.headers.get("x-vercel-oidc-token")
         signed = vercel_token.set(oidc) if oidc else None
         try:
@@ -510,6 +516,32 @@ def create_app(
         for name, value in {**public_copy.HEADERS, **extra}.items():
             response.headers[name] = value
         return response
+
+    @app.get("/health")
+    def health() -> JSONResponse:
+        """For whoever runs the site: whether it reaches its database and, when it signs in to
+        Google with no key (llm/client.py), whether Google takes the sign-in. Nothing is paid: a
+        sign-in is free, and no model is asked."""
+        report: dict[str, bool | None] = {"database": False, "google": None}
+        try:
+            with psycopg.connect(database()) as conn:
+                conn.execute("SELECT 1")
+            report["database"] = True
+        except (SettingsError, psycopg.Error):
+            pass
+        if settings.google_federation_audience and settings.google_federation_account:
+            from google.auth.exceptions import GoogleAuthError
+            from google.auth.transport.requests import Request as GoogleRequest
+
+            signed = cache.get("signed") or credentials_of(settings)
+            cache["signed"] = signed  # a pass lasts an hour: not asked again before
+            try:
+                if not signed.valid:
+                    signed.refresh(GoogleRequest())
+                report["google"] = True
+            except GoogleAuthError:
+                report["google"] = False
+        return JSONResponse(report, status_code=200 if report["database"] else 503)
 
     @app.get("/robots.txt", response_class=PlainTextResponse)
     def robots() -> str:
@@ -1055,9 +1087,10 @@ def create_app(
                                  step=step)  # fmt: skip
 
     age = timedelta(hours=settings.refresh_after_hours)
-    reader = refreshing.Refresher(refresh_work, older_than=age, inline=refresh_inline)
+    reader = refreshing.Refresher(refresh_work, older_than=age,
+                                  inline=refresh_inline or serverless)  # fmt: skip
     app.state.refresher = reader
-    if settings.refresh_in_background:
+    if settings.refresh_in_background and not serverless:
         reader.start_rounds()
 
     def writer_or_why() -> tuple[Any, str | None]:
@@ -1168,7 +1201,7 @@ def create_app(
         if not allowed(public_copy.CHECK):
             return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
-        if name == "_check.html" and progress == "1":
+        if name == "_check.html" and progress == "1" and not serverless:
             job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report))
             return render(request, "_check_progress.html", view=jobs.view(job, announce=False),
                           repository=repository, event_name=days.name if days else None,
