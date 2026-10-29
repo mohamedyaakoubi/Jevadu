@@ -109,6 +109,37 @@ def test_the_second_counting_takes_the_accounts_of_a_single_transaction(
     assert recount(session, card, {}) == (1, took_part)  # type: ignore[arg-type]
 
 
+def test_what_the_page_alone_does_not_say_is_counted() -> None:
+    """For how many projects the ledger or the code shows something that the page alone does not
+    say, in all and for each reason (29 October 2026)."""
+    from hackathon_memory.check.history import CONSENSUS, TOKENS
+
+    def story(seen: tuple = (), named: tuple = ()) -> SimpleNamespace:
+        return SimpleNamespace(seen_not_named=seen, named_not_seen=named, lines=(),
+                               contract_others=())  # fmt: skip
+
+    def facts(code_only: bool = False) -> SimpleNamespace:
+        return SimpleNamespace(proven_by_code_only=code_only, mainnet=False)
+
+    quiet = SimpleNamespace(depth=depth(1, 0, 1), story=story(), facts=facts())
+    said, both = (
+        depth(4, 2, 3, "Its topic 0.0.6001 has no message."),
+        story(((TOKENS, 5),), (CONSENSUS,)),
+    )
+    tells = SimpleNamespace(depth=said, story=both, facts=facts(True))
+    late = SimpleNamespace(depth=depth(0, None, 0), story=None, facts=facts())
+    found = [(1, "proof_found", quiet), (2, "proof_found", tells), (3, "dates_do_not_fit", late)]
+    assert measure(found)["all"]["the_page_alone_misses"] == {
+        "any": 2,
+        "used_a_service_the_page_does_not_name": 1,
+        "named_a_service_with_no_transaction": 1,
+        "proof_only_in_the_code": 1,
+        "a_sign_on_paper": 1,
+        "the_page_id_does_not_fit": 1,
+    }
+    assert measure(found)["proof_found"]["the_page_alone_misses"]["any"] == 1
+
+
 def test_the_three_reads_of_the_cards_are_counted() -> None:
     """The setup, the calls of the contracts and the main network (28 October 2026)."""
     from hackathon_memory.check.history import TOKENS
