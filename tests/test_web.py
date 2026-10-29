@@ -19,6 +19,9 @@ from fakes import ARCHIVE_COMMIT, project_page
 from hackathon_memory.collect.polite import FetchResult
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.projects import ProjectStore
+from hackathon_memory.finops.budget import Budget
+from hackathon_memory.finops.calls import MemoryStore
+from hackathon_memory.finops.meter import Meter, MeteredClient, Tags
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.parse.ethglobal_page import read_project_page
 from hackathon_memory.settings import Settings
@@ -1230,6 +1233,23 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
     assert len(client.github_site.seen) == 10
     hidden = '<h2 class="visually-hidden">What the check found</h2>'
     assert hidden in page.text and hidden not in part.text
+
+
+def test_a_spent_budget_is_named_and_never_taken_for_google_away(site) -> None:  # noqa: ANN001
+    """Until 29 October 2026 a spent budget made the search by meaning say that Google's
+    embedding service did not respond."""
+    client, fake, _, database = site
+    meter = Meter(MemoryStore(), "test", budget=Budget("test", total_usd=0.0), location="global")
+    spent = MeteredClient(fake.client(), meter, Tags(purpose="embed_query"))
+    poor = client.make(app_options={"google": spent})
+    page = poor.get("/", params={"idea": "a coin box that counts what a vendor sold",
+                                 "mode": "meaning"})  # fmt: skip
+    assert "The budget for AI calls is spent, so these are keyword results." in page.text
+    assert "did not respond" not in page.text
+    asked = {"repo": REPO, "event": checkable(database)}
+    part = poor.get("/check", params=asked, headers=HX)
+    assert "cannot be shown: the budget for AI calls is spent." in part.text
+    assert "did not respond" not in part.text
 
 
 def test_a_rehearsal_says_so_at_the_top_of_every_page(site) -> None:  # noqa: ANN001

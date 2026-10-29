@@ -237,6 +237,8 @@ GOOGLE_AWAY_CHECK = (
     "The most similar past projects cannot be shown just now: Google's embedding service did "
     "not respond. Try again later."
 )
+MEANING_SPENT = "The budget for AI calls is spent, so these are keyword results."
+CHECK_SPENT = "The most similar past projects cannot be shown: the budget for AI calls is spent."
 NO_PAGE_EMBEDDINGS = "The projects have no embeddings yet, so these are keyword results."
 UNKNOWN_SHEET = "Page not found. Close this window."
 NO_SUCH_PAGE = "This page does not exist. The search is on the start page."
@@ -751,7 +753,7 @@ def create_app(
             # the kind of error only, for whoever runs the site: an expired sign-in to Google
             # (RefreshError) needs a new one, which the page cannot ask for
             LOG.warning("the search by meaning fell back to the words: %s", type(error).__name__)
-            notes.append(GOOGLE_AWAY)
+            notes.append(MEANING_SPENT if isinstance(error, BudgetExceeded) else GOOGLE_AWAY)
             return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
 
     def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
@@ -1002,7 +1004,9 @@ def create_app(
                 EmbeddingStore(conninfo), client("google", "embed_query"), words,
                 model=settings.gemini_embedding_model, limit=CLOSEST + len(check.seen),
             )  # fmt: skip
-        except (BudgetExceeded, *FAILED_CALLS):
+        except BudgetExceeded:
+            return [], CHECK_SPENT
+        except FAILED_CALLS:
             return [], GOOGLE_AWAY_CHECK
         known = {one.project_id for one in check.seen}
         ids = [pid for pid in ranking if pid not in known][:CLOSEST]
