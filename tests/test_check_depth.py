@@ -193,9 +193,11 @@ def test_a_time_after_a_reading_that_the_limit_stopped_is_not_read() -> None:
             "March 2025")  # fmt: skip
     assert band.note == (f"Not read: {said}. The time from 13 March 2025 to 3 March 2026 (1 year) "
                          "is left out of the strip.")  # fmt: skip
+    # the legend says it short: the note before the table names the ID (29 October 2026)
     assert view.legend == ("A hatched band is a time of more than 30 days left out of the strip; "
-                           f"its length stands under it. {said}, so a band after that day is a "
-                           "time that was not read.")  # fmt: skip
+                           "its length stands under it. A band after 12 March 2025 was not read: "
+                           "the reading of its contract stopped there, at its limit of 2,000 "
+                           "transactions.")  # fmt: skip
     assert "; 1 time not read left out." in view.summary
     # a whole reading: the band is a time with no transaction, as before
     whole = strip_view(depth(own((TOPIC_ID, TOPIC), (CONTRACT_ID, CONTRACT)), items).strip)

@@ -135,6 +135,21 @@ def read_only(cut_off: Sequence[Stop]) -> str:
     return f"Jevadu read only the first {MAX_EVENTS:,} transactions of {where}"
 
 
+def stopped_at(cut_off: Sequence[Stop], *, on_day: bool = True) -> str:
+    """The same, short, for the lines of the card after the note that names the IDs: "the reading
+    of its contract stopped at its limit of 2,000 transactions, on 5 July 2024"; without the day,
+    "stopped there", for a sentence that has just said it."""
+    things = " and ".join(f"its {stop.kind or 'ID'}" for stop in cut_off)
+    first = cut_off[0].day
+    one = len(cut_off) == 1
+    subject = f"the reading{'' if one else 's'} of {things} stopped"
+    limit = f"at {'its' if one else 'their'} limit of {MAX_EVENTS:,} transactions"
+    if not on_day:
+        return f"{subject} {'there' if one else 'from then on'}, {limit}"
+    day = f"{first.day} {first:%B} {first.year}"
+    return f"{subject} {limit}, {'on' if one else 'the first on'} {day}"
+
+
 @dataclass(frozen=True)
 class Judged:
     """What a card says about how its marks were judged (design 12.1, S2): the window of the

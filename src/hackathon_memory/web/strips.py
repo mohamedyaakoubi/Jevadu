@@ -35,7 +35,7 @@ from datetime import date, timedelta
 from hackathon_memory.check.depth import Day, Strip
 from hackathon_memory.check.history import CONSENSUS, CONTRACTS, FILES, HBAR, SCHEDULED, TOKENS
 from hackathon_memory.check.story import Stop
-from hackathon_memory.web.data import SERVICE_TRANSACTIONS, read_only
+from hackathon_memory.web.data import SERVICE_TRANSACTIONS, read_only, stopped_at
 
 WIDTH = 400  # the units of the drawing, about the pixels of a card's column
 LEFT = 72  # room for the short names of the services
@@ -269,13 +269,12 @@ def strip_view(strip: Strip | None) -> StripView | None:
                f"{in_words(last_day)}: {active} day{'s' if active != 1 else ''} with a "
                f"transaction{left_out}. The same numbers are in the table under it.")  # fmt: skip
     legend = LEGEND if cuts and not unread else ""
-    if unread:
+    if unread:  # the full words, with the IDs, are in the note before the table and in each band
         after_them = tuple(stop for stop in strip.cut_off if stop in used)
-        days = "that day" if len({stop.day for stop in after_them}) == 1 else "those days"
-        others = ", and the others are times with no transaction" if empty_ones else ""
+        others = " The others are times with no transaction." if empty_ones else ""
         legend = ("A hatched band is a time of more than 30 days left out of the strip; its "
-                  f"length stands under it. {read_only(after_them)}, so a band after {days} is a "
-                  f"time that was not read{others}.")  # fmt: skip
+                  f"length stands under it. A band after {in_words(after_them[0].day)} was not "
+                  f"read: {stopped_at(after_them, on_day=False)}.{others}")  # fmt: skip
     table = tuple(sorted((TableRow(one.day, service, one.count)
                           for service, days in strip.rows for one in days),
                          key=lambda row: (row.day, row.service)))  # fmt: skip

@@ -1314,6 +1314,7 @@ def create_app(
         "SERVICE_TRANSACTIONS": data.SERVICE_TRANSACTIONS,
         "MAX_EVENTS": MAX_EVENTS,
         "read_only": data.read_only,
+        "stopped_at": data.stopped_at,
         "hashscan_topic": hashscan_topic,
         "hackathon_groups": lambda collected: hackathons.groups(
             collected, listed.LISTED, datetime.now(UTC).date()

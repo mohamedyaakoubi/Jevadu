@@ -587,12 +587,15 @@ def test_a_reading_that_the_limit_stopped_says_what_is_not_known(site) -> None: 
     said = "Jevadu read only the first 2,000 transactions of its topic 0.0.4511, up to 9 March 2025"
     assert (f'<p class="hm-story-cut">{said}. Its later transactions are missing from this card, '
             "so its numbers are at least these.</p>") in story  # fmt: skip
+    # the lines after the note say it short, without the ID again
+    stopped = "the reading of its topic stopped at its limit of 2,000 transactions, on 9 March 2025"
     assert ("<dd>at least 2 Consensus Service transactions, the first on 7 March 2025; paid by at "
-            f"least 1 account that the page does not list. {said}.</dd>") in story  # fmt: skip
-    assert f"<dd>not known. {said}.</dd>" in story and "<dd>none</dd>" not in story
+            f"least 1 account that the page does not list; {stopped}</dd>") in story  # fmt: skip
+    assert f"<dd>not known: {stopped}</dd>" in story and "<dd>none</dd>" not in story
     assert (f"<title>Not read: {said}. The time from 10 March 2025 to 3 February 2026 (11 months) "
             "is left out of the strip.</title>") in story  # fmt: skip
-    assert f"{said}, so a band after that day is a time that was not read." in story
+    assert ("A band after 9 March 2025 was not read: the reading of its topic stopped there, at "
+            "its limit of 2,000 transactions.") in story  # fmt: skip
 
 
 def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001

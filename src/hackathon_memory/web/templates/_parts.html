@@ -100,12 +100,12 @@
 {%- set least = "at least " if part and part.cut_off else "" -%}
 {%- set read = " one read" if part and part.cut_off and which == "last" else "" -%}
 {%- if part is none %}not counted: its IDs are accounts only
-{%- elif not part.count and part.cut_off %}not known. {{ read_only(part.cut_off) }}.
+{%- elif not part.count and part.cut_off %}not known: {{ stopped_at(part.cut_off) }}
 {%- elif not part.count %}none
 {%- elif part.by_service | length == 1 %}{{ least }}{{ transactions(part.by_service[0][0], part.count) }}, the {{ which }}{{ read }} on {{ part.day | day }}
 {%- else %}{{ least }}{{ "{:,}".format(part.count) }} transactions, the {{ which }}{{ read }} on {{ part.day | day }}: {% for service, count in part.by_service %}{{ transactions(service, count) }}{{ ", " if not loop.last }}{% endfor %}
 {%- endif %}
-{%- if part and part.count %}{{ paid_by(part, source) }}{% if part.cut_off %}. {{ read_only(part.cut_off) }}.{% endif %}{% endif %}
+{%- if part and part.count %}{{ paid_by(part, source) }}{% if part.cut_off %}; {{ stopped_at(part.cut_off) }}{% endif %}{% endif %}
 {%- endmacro %}
 
 {# Who paid; with a reading that the limit stopped, the numbers are at least these (29 October
