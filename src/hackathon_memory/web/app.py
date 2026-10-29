@@ -654,18 +654,25 @@ def create_app(
         named = data.members(conninfo, [[pid] for pid, _ in found])
         return [(by, group[0]) for (_, by), group in zip(found, named, strict=True) if group]
 
-    def kept_comparison(conninfo: str, idea: str, project_id: int) -> Any:
-        """The comparison of the last day for this idea and project, or None: never asked here."""
-        items = comparing.items_for(conninfo, [project_id], model=settings.gemini_rewrite_model,
+    def kept_comparisons(conninfo: str, idea: str, ids: list[int]) -> dict[int, Any]:
+        """The comparisons of the last day for this idea, by project, for those of `ids` that
+        have one: never asked here."""
+        if not idea or not ids:
+            return {}
+        items = comparing.items_for(conninfo, ids, model=settings.gemini_rewrite_model,
                                     version=INSTRUCTIONS_VERSION)  # fmt: skip
-        if not idea or not items:
-            return None
-        kept = AnswerStore(conninfo).comparisons(
-            idea_fingerprint(idea), {project_id: comparing.input_fingerprint(items[0])},
+        if not items:
+            return {}
+        return AnswerStore(conninfo).comparisons(
+            idea_fingerprint(idea),
+            {item.project_id: comparing.input_fingerprint(item) for item in items},
             settings.gemini_search_model, settings.gemini_search_thinking_level,
             comparing.INSTRUCTIONS_VERSION,
         )  # fmt: skip
-        return kept.get(project_id)
+
+    def kept_comparison(conninfo: str, idea: str, project_id: int) -> Any:
+        """The comparison of the last day for this idea and project, or None: never asked here."""
+        return kept_comparisons(conninfo, idea, [project_id]).get(project_id)
 
     def render(request: Request, name: str, status: int = 200, **values: Any) -> HTMLResponse:
         return templates.TemplateResponse(request, name, values, status_code=status)
