@@ -265,7 +265,7 @@
 <div class="hm-depth-block" id="depth-{{ pid }}">
   {% if not depth.read %}<p class="text-secondary">Some of its IDs were read before the tool kept what each transaction was. They are read again with the next reading.</p>{% endif %}
   {% if view %}{{ strip(view, pid) }}{{ story_time(story, source) }}{% endif %}
-  {% if depth.did or depth.others is not none or depth.days %}
+  {% if depth.did or depth.others is not none or depth.days or depth.made %}
   {% set within = " from " ~ (story.starts_on | day) ~ " to " ~ (story.ends_on | day) if view and story and story.starts_on else "" %}
   <dl class="hm-depth">
     <dt>What its IDs did{{ within }}</dt>
@@ -274,6 +274,8 @@
     <dd>{% if depth.others is none %}not known{% elif depth.others == 0 %}only accounts that the {{ source }} itself lists{% else %}{{ "{:,}".format(depth.others) }} account{{ "s" if depth.others != 1 }} that the {{ source }} does not list: outside users, or other accounts of the team{% endif %}{% if depth.held_by_others == 0 %}. No account outside the {{ source }}'s list holds its tokens now{% elif depth.held_by_others is not none %}. {{ "{:,}".format(depth.held_by_others) }} account{{ "s" if depth.held_by_others != 1 }} outside the {{ source }}'s list hold{{ "s" if depth.held_by_others == 1 }} its tokens now{% endif %}.</dd>
     <dt>On how many days</dt>
     <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{{ within }}{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
+    {% if depth.made %}<dt>Who made its IDs</dt>
+    <dd>{% for line in depth.made %}<span class="d-block">{{ line }}</span>{% endfor %}</dd>{% endif %}
   </dl>
   {% endif %}
   {% if depth.setup %}

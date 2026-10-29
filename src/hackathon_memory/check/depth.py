@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 from hackathon_memory.check.history import HBAR, NETWORK_ACCOUNTS, SERVICES, Act
+from hackathon_memory.check.makers import Earlier, Made, made_lines
 from hackathon_memory.check.setup import Setup, read_on, setup_words
 from hackathon_memory.check.story import OwnId, Stop, stops, time_of
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
@@ -125,6 +126,7 @@ class Depth:
     more_count: int = 0  # the transactions of the kinds not named in `did`
     setup: tuple[str, ...] = ()  # how the own IDs are set up, each a sentence (check/setup.py)
     setup_read_at: datetime | None = None  # the day of the check that it comes from
+    made: tuple[str, ...] = ()  # who made its own things, each a sentence (check/makers.py)
 
 
 def merged(done: Sequence[Done]) -> list[Done]:
@@ -249,13 +251,16 @@ def depth_of(
     shared_only: bool = False,
     read: bool = True,
     setups: Sequence[Setup] = (),
+    made: Sequence[Made] = (),
+    earlier: Sequence[Earlier] = (),
 ) -> Depth:
     """The depth of use of one project. `own` are its own IDs on their network (the story's),
     `done` the transactions of those that were read, with what each was, `holders` the accounts
     that hold each own token now, `named` every ID that the project names, `in_code` and
     `set_up` what its code calls and sets up for (check/story.py), `read` whether every own
-    ID was read with what its transactions were, and `setups` what the check kept about how each
-    own ID is set up."""
+    ID was read with what its transactions were, `setups` what the check kept about how each own
+    ID is set up, `made` who made its own things, and `earlier` the earlier entries of the same
+    code (check/makers.py)."""
     span = time_of(starts_at, ends_on)
     moments = merged(done)
     inside = [one for one in moments if span is None or span[0] <= one.at <= span[1]]
@@ -285,4 +290,5 @@ def depth_of(
         len(inside) - failed - sum(count for _, count in did),
         setup_words(setups),
         read_on(setups),
+        made_lines(made, named, starts_at, earlier),
     )  # fmt: skip

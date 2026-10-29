@@ -470,3 +470,15 @@ def test_the_actions_of_a_contract_call_are_read_by_its_hash() -> None:
     with pytest.raises(MirrorError):
         mirror.contract_actions("0.0.6092626")  # not a hash: never sent
     assert len(site.seen) == 1
+
+
+def test_the_transactions_of_one_moment_are_asked_in_a_narrow_time() -> None:
+    """The step "makers" asks for the transaction that made a thing (29 October 2026)."""
+    since = datetime.fromtimestamp(1792665702, UTC)
+    until = datetime.fromtimestamp(1792665703, UTC)
+    path = (BASE + "/transactions?limit=25&order=asc&timestamp=gte:1792665702.000000000"
+            "&timestamp=lt:1792665703.000000000")  # fmt: skip
+    made = {"entity_id": "0.0.11126502", "transaction_id": "0.0.10941897-1792665693-564781427"}
+    mirror, site, _ = node({path: reply({"transactions": [made], "links": {"next": None}})})
+    assert mirror.transactions_at(since, until) == [made]
+    assert site.urls == [path]

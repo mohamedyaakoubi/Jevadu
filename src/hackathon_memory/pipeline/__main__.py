@@ -24,6 +24,8 @@
     python -m hackathon_memory.pipeline contract_calls     what the calls of each own contract
                                                            reached among Hedera's system
                                                            contracts, around its event (--limit N)
+    python -m hackathon_memory.pipeline makers             who made each own contract, topic,
+                                                           token and schedule (--limit N)
     python -m hackathon_memory.pipeline refresh            ask GitHub and the ledger again about
                                                            what is a day old, then write what
                                                            changed (--hours N, --repos N, --wait)
@@ -44,11 +46,11 @@ each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, b
 rule needs it and no page gives it (design 7.2). "readmes", "code" and "hedera_code" ask GitHub's
 API, which the maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait
 lets them wait for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a
-public API made for programs, and no site (design rule 17); so do "history" and "contract_calls",
-which are not part of "all" (evals/ledger_story, design 7.5). "embed" calls Google's embedding
-model through the meter and its budget (design 11.4). "cards" calls the REWRITE layer of Gemini,
-through the meter too, for the pages of a set only: it is not part of "all" (design 6.2, open
-question Q29).
+public API made for programs, and no site (design rule 17); so do "history", "contract_calls"
+and "makers", which are not part of "all" (evals/ledger_story, design 7.5). "embed" calls
+Google's embedding model through the meter and its budget (design 11.4). "cards" calls the
+REWRITE layer of Gemini, through the meter too, for the pages of a set only: it is not part of
+"all" (design 6.2, open question Q29).
 
 A step prints numbers. For a page or an id that it could not handle it prints the address or
 the id and the rule that failed. It never prints text of a page, and never the connection text
@@ -84,6 +86,7 @@ from hackathon_memory.db.contract_calls import ContractCallStore
 from hackathon_memory.db.embeddings import EmbeddingStore
 from hackathon_memory.db.history import HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
+from hackathon_memory.db.makers import MakerStore
 from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.db.runs import Run, recorded_run
@@ -100,6 +103,7 @@ from hackathon_memory.pipeline import (
     embed,
     hedera_code,
     history,
+    makers,
     parse_pages,
     readmes,
     refresh,
@@ -151,7 +155,15 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
     parser = _Quiet(prog="python -m hackathon_memory.pipeline", add_help=False)
     parser.add_argument(
         "step",
-        choices=[*ALL_STEPS, card_step.STEP, history.STEP, contract_calls.STEP, refresh.STEP, ALL],
+        choices=[
+            *ALL_STEPS,
+            card_step.STEP,
+            history.STEP,
+            contract_calls.STEP,
+            makers.STEP,
+            refresh.STEP,
+            ALL,
+        ],
     )
     parser.add_argument("--hours", type=float)
     parser.add_argument("--limit", type=int)
@@ -181,13 +193,12 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         )
     if arguments.limit is not None and (arguments.export_file or arguments.restore_file):
         raise ValueError("--limit goes with --set, not with --export or --restore")
-    limited = (
-        is_parse or is_embed or is_cards or arguments.step in (history.STEP, contract_calls.STEP)
-    )
+    reading_steps = (history.STEP, contract_calls.STEP, makers.STEP)
+    limited = is_parse or is_embed or is_cards or arguments.step in reading_steps
     if arguments.limit is not None and (not limited or arguments.limit < 1):
         raise ValueError(
-            "--limit goes with parse, embed, cards, history or contract_calls, and must be 1 or "
-            "more"
+            "--limit goes with parse, embed, cards, history, contract_calls or makers, and must be "
+            "1 or more"
         )
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
@@ -414,6 +425,9 @@ def _run_step(
             mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
             contract_calls.read_contract_calls(ContractCallStore(conninfo), mirrors, run,
                                                limit=arguments.limit)  # fmt: skip
+        elif step == makers.STEP:
+            mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
+            makers.read_makers(MakerStore(conninfo), mirrors, run, limit=arguments.limit)
         elif step == refresh.STEP:
             mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
             client, note = _github_client(settings, arguments, run)
@@ -455,6 +469,8 @@ def _run_step(
         lines = history.history_lines(run) + _problem_lines(run, "Not read, and why:")
     elif step == contract_calls.STEP:
         lines = contract_calls.contract_call_lines(run) + _problem_lines(run, "Not read, and why:")
+    elif step == makers.STEP:
+        lines = makers.maker_lines(run) + _problem_lines(run, "Not asked, and why:")
     elif step == refresh.STEP:
         lines = refresh.refresh_lines(run) + ([note] if note else [])
         lines += _problem_lines(run, "Stopped or not done, and why:")

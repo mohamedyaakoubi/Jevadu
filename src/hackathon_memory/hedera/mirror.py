@@ -239,6 +239,14 @@ class MirrorNode:
             parts.append(f"&timestamp=lt:{stamp_of(until)}")
         return "".join(parts)
 
+    def transactions_at(self, since: datetime, until: datetime, *, limit: int = 25) -> list[dict]:
+        """The transactions from `since` until just before `until`, oldest first: those of one
+        moment, to find the one that created a thing (check/makers.py). Read on 29 October 2026:
+        each has "entity_id" (for a creation, the thing it made), "name" (CONSENSUSCREATETOPIC)
+        and "transaction_id", whose first part is the account that paid."""
+        path = f"/transactions?limit={int(limit)}&order=asc" + self._range(since, until)
+        return (self._get(path) or {}).get("transactions") or []
+
     def topic_messages(
         self,
         topic_id: str,

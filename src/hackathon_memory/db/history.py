@@ -23,6 +23,7 @@ import psycopg
 
 from hackathon_memory.check.depth import Depth, Done, depth_of
 from hackathon_memory.check.history import Act, History
+from hackathon_memory.check.makers import Earlier, Made
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
 from hackathon_memory.check.setup import Setup
 from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of, time_of
@@ -334,6 +335,21 @@ def depth_of_project(
                   "SELECT entity_id, network, kind, details, asked_at FROM ledger_facts "
                   "WHERE found AND entity_id = ANY(%s)", ([one.entity_id for one in own_ids],))
               if (entity, network) in wanted]  # fmt: skip
+    # who made its own things, once the step "makers" asked (design 7.5, 29 October 2026)
+    made = [Made(entity, kind, created_at, by)
+            for entity, network, kind, created_at, by in conn.execute(
+                "SELECT entity_id, network, kind, created_at, made_by FROM ledger_facts "
+                "WHERE found AND made_by_asked_at IS NOT NULL AND created_at IS NOT NULL "
+                "AND entity_id = ANY(%s)", ([one.entity_id for one in own_ids],))
+            if (entity, network) in wanted and kind != ACCOUNT]  # fmt: skip
+    # the earlier entries of the same code: a thing may have been made for one of them
+    earlier = [Earlier(*row) for row in conn.execute(
+        "SELECT e.name, e.starts_at, e.ends_on FROM projects p "
+        "JOIN projects q ON q.repository_id = p.repository_id AND q.id <> p.id "
+        "JOIN events e ON e.id = q.event_id JOIN events mine ON mine.id = p.event_id "
+        "WHERE p.id = %s AND e.starts_at < mine.starts_at AND e.ends_on IS NOT NULL "
+        "ORDER BY e.starts_at", (project_id,))]  # fmt: skip
     return depth_of(own_ids, done, holders, named, starts_at=starts_at, ends_on=ends_on,
                     in_code=in_code, set_up=set_up, has_package=has_package,
-                    shared_only=shared_only, read=all_read, setups=setups)  # fmt: skip
+                    shared_only=shared_only, read=all_read, setups=setups,
+                    made=made, earlier=earlier)  # fmt: skip

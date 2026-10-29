@@ -598,6 +598,32 @@ def test_a_reading_that_the_limit_stopped_says_what_is_not_known(site) -> None: 
             "its limit of 2,000 transactions.") in story  # fmt: skip
 
 
+def test_the_card_says_who_made_its_own_ids(site) -> None:  # noqa: ANN001
+    """Who made each own thing, from the step "makers" (design 7.5, 29 October 2026): OmniShield's
+    README gave a contract made 20 months before its event by someone else."""
+    from hackathon_memory.check.history import CONSENSUS, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4511", "topic")  # made on 6 March 2026
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+        conn.execute("UPDATE ledger_facts SET made_by = '0.0.8001', made_by_asked_at = %s "
+                     "WHERE entity_id = '0.0.4511'",
+                     (datetime(2026, 10, 29, tzinfo=UTC),))  # fmt: skip
+    message = stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 1)
+    acts = {message: Act("CONSENSUSSUBMITMESSAGE", True, "0.0.8001", ("0.0.8001",))}
+    HistoryStore(database).save("0.0.4511", "testnet", "topic",
+                                History({message: CONSENSUS}, False, acts),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+    assert ("<dt>Who made its IDs</dt>\n    <dd><span class=\"d-block\">Its topic 0.0.4511, on 6 "
+            "March 2026: made by 0.0.8001, an account that the project does not "
+            "list.</span></dd>") in block  # fmt: skip
+
+
 def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
     """The kind, the custom fees and the keys of its own token, from the check of the IDs, with
     the day of that check (design 7.5, 28 October 2026)."""

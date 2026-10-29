@@ -41,9 +41,10 @@ from typing import Any
 
 from hackathon_memory.check import asking
 from hackathon_memory.check.depth import Depth, Done, depth_of
-from hackathon_memory.check.history import Act, read_history
+from hackathon_memory.check.history import Act, History, read_history
 from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.life import Life, life_of
+from hackathon_memory.check.makers import THINGS, Made, ask_maker, maker_in
 from hackathon_memory.check.numbers import Numbers
 from hackathon_memory.check.proof import (
     NO_ID_GIVEN,
@@ -430,6 +431,7 @@ def histories(
     events: list[tuple[str, datetime, str, bool, str | None]] = []
     done: list[Done] = []
     holders: dict[tuple[str, str], tuple[str, ...] | None] = {}
+    made: list[Made] = []
     for one in ids:
         if (one.status not in STORY_STATUSES or one.network is None or one.facts is None
                 or one.shared or one.named_elsewhere):  # fmt: skip
@@ -460,7 +462,32 @@ def histories(
             events.append((stamp, at, service, kind == ACCOUNT, act.payer))
             done.append(Done(stamp, at, service, entity, kind or "", network, act))
         holders[(entity, network)] = history.holders
-    return Read(own, events, done, holders)
+        if kind in THINGS and one.facts.created_at is not None:
+            made.append(_made(entity, kind, one.facts.ledger_id or entity, one.facts.created_at,
+                              history, mirrors.get(network), counts))  # fmt: skip
+    return Read(own, events, done, holders, made)
+
+
+def _made(
+    entity: str,
+    kind: str,
+    ledger_id: str,
+    at: datetime,
+    history: History,
+    mirror: MirrorNode | None,
+    counts: Counter[str],
+) -> Made:
+    """Who made an own thing of a README (check/makers.py): the payer of its creation when its
+    history holds it, or else one question to the mirror node."""
+    moments = ((datetime.fromtimestamp(float(stamp), tz=UTC), act.payer)
+               for stamp, act in history.acts.items())  # fmt: skip
+    by = maker_in(moments, at)
+    if by is None and mirror is not None:
+        try:
+            by = ask_maker(mirror, ledger_id, at)
+        except MirrorError:
+            counts["makers_not_asked"] += 1
+    return Made(entity, kind, at, by)
 
 
 @dataclass(frozen=True)
@@ -472,6 +499,7 @@ class Read:
     events: list[tuple[str, datetime, str, bool]]
     done: list[Done]
     holders: dict[tuple[str, str], tuple[str, ...] | None]
+    made: list[Made] = field(default_factory=list)  # who made its own things (check/makers.py)
 
 
 def depth_of_check(check: SubmissionCheck, read: Read) -> Depth | None:
@@ -498,7 +526,7 @@ def depth_of_check(check: SubmissionCheck, read: Read) -> Depth | None:
                     set_up=set_up_in_code(found or []), has_package=has_package,
                     shared_only=shared_only,
                     read=all(one.asked_at is not None for one in read.own),
-                    setups=setups)  # fmt: skip
+                    setups=setups, made=read.made)  # fmt: skip
 
 
 def story_of_check(check: SubmissionCheck, own: list[OwnId], events: list[tuple]) -> Story | None:
