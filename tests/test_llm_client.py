@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 
@@ -17,9 +18,11 @@ from hackathon_memory.llm import embeddings
 from hackathon_memory.llm.client import (
     GoogleSetupError,
     again_if_dropped,
+    credentials_of,
     default_http_options,
     load_key_file,
     make_client,
+    project_of,
 )
 from hackathon_memory.settings import Settings
 
@@ -68,32 +71,58 @@ def test_no_sign_in_gives_the_command_to_run(monkeypatch: pytest.MonkeyPatch) ->
         make_client(settings(google_cloud_project="p", google_cloud_location="global"))
 
 
-def test_a_service_account_key_file_is_read(tmp_path: Path) -> None:
+def throwaway_key(project: str = "test-project") -> dict:
+    """A service account key with a private key made for the test, never a real one."""
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
 
-    private = rsa.generate_private_key(public_exponent=65537, key_size=2048)  # a throwaway key
+    private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = private.private_bytes(
         serialization.Encoding.PEM,
         serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption(),
     ).decode()
+    return {
+        "type": "service_account",
+        "project_id": project,
+        "private_key_id": "x",
+        "private_key": pem,
+        "client_email": f"tool@{project}.iam.gserviceaccount.com",
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+
+
+def test_a_service_account_key_file_is_read(tmp_path: Path) -> None:
     path = tmp_path / "service-account.json"
-    path.write_text(
-        json.dumps(
-            {
-                "type": "service_account",
-                "project_id": "test-project",
-                "private_key_id": "x",
-                "private_key": pem,
-                "client_email": "tool@test-project.iam.gserviceaccount.com",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        ),
-        encoding="utf-8",
-    )
+    path.write_text(json.dumps(throwaway_key()), encoding="utf-8")
     loaded = load_key_file(str(path))
     assert loaded.service_account_email == "tool@test-project.iam.gserviceaccount.com"
+
+
+def test_the_one_line_key_signs_in_and_names_its_own_project(tmp_path: Path) -> None:
+    """One line of .env holds the whole Google account (llm/account.py writes it): its project
+    wins over GOOGLE_CLOUD_PROJECT, and it comes before a key file."""
+    line = base64.b64encode(json.dumps(throwaway_key("key-project")).encode()).decode()
+    other = tmp_path / "other.json"
+    other.write_text(json.dumps(throwaway_key("file-project")), encoding="utf-8")
+    file = {"google_cloud_project": "env-project", "google_application_credentials": str(other)}
+    chosen = settings(google_service_account_key=line, google_cloud_location="global", **file)
+    assert project_of(chosen) == "key-project"
+    assert credentials_of(chosen).service_account_email.startswith("tool@key-project.")
+    assert make_client(chosen)._api_client.project == "key-project"
+    plain = settings(**file)  # without the line, as before
+    assert project_of(plain) == "env-project"
+    assert credentials_of(plain).service_account_email.startswith("tool@file-project.")
+
+
+NOT_KEYS = ["not base64 at all!", base64.b64encode(b"[1, 2]").decode(),
+            base64.b64encode(b'{"type": "authorized_user"}').decode()]  # fmt: skip
+
+
+@pytest.mark.parametrize("line", NOT_KEYS)
+def test_a_line_that_is_not_a_service_account_key_is_refused_in_plain_words(line: str) -> None:
+    with pytest.raises(GoogleSetupError, match="python -m hackathon_memory.llm.account switch"):
+        project_of(settings(google_service_account_key=line))
 
 
 def test_a_user_login_file_is_read(tmp_path: Path) -> None:

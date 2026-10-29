@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     google_cloud_project: SecretStr = SecretStr("")
     google_cloud_location: str = Field("", json_schema_extra=_PUBLIC)
     google_application_credentials: SecretStr = SecretStr("")
+    # A key of a Google service account that may only call Vertex AI, on one line: its JSON in
+    # base64 (python -m hackathon_memory.llm.account switch writes it). When set, it is the
+    # sign-in, and its own project is the project: one line holds the whole Google account, here
+    # and on the public copy's host.
+    google_service_account_key: SecretStr = SecretStr("")
 
     # The two Gemini layers. The maintainer decided on 9 October 2026 (design rule 7):
     # the first layer reads and rewrites project pages into cards with Gemini 3.1 Pro, for the

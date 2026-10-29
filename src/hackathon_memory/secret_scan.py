@@ -25,6 +25,8 @@ scan: it is never read as "not found".
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import shutil
 import subprocess
@@ -38,6 +40,8 @@ from hackathon_memory.settings import Settings
 
 MIN_LENGTH = 8
 SIGN_IN_FILE_SETTING = "GOOGLE_APPLICATION_CREDENTIALS"
+# A service account key on one line of base64 (llm/client.py): its line and its fields.
+KEY_LINE_SETTING = "GOOGLE_SERVICE_ACCOUNT_KEY"
 # The fields of a Google key file that must stay secret. A service account key has private_key.
 # A user login file (gcloud auth application-default login) has refresh_token and client_secret.
 SIGN_IN_SECRET_FIELDS = ("private_key", "refresh_token", "client_secret")
@@ -74,20 +78,36 @@ def _one_line(value: str) -> str:
     return max(text.splitlines(), key=len).strip() if "\n" in text else text
 
 
-def sign_in_file_values(path: str) -> dict[str, str]:
-    """The secret fields of a Google key file, by field name. Empty if the file cannot be read."""
-    try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+def _secret_fields(data: object, label: str) -> dict[str, str]:
+    """The secret fields of a Google key, by `label` and field name."""
     if not isinstance(data, dict):
         return {}
     found: dict[str, str] = {}
     for field in SIGN_IN_SECRET_FIELDS:
         value = data.get(field)
         if isinstance(value, str) and len(_one_line(value)) >= MIN_LENGTH:
-            found[f"{SIGN_IN_FILE_SETTING} file, field {field}"] = _one_line(value)
+            found[f"{label}, field {field}"] = _one_line(value)
     return found
+
+
+def sign_in_file_values(path: str) -> dict[str, str]:
+    """The secret fields of a Google key file, by field name. Empty if the file cannot be read."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return _secret_fields(data, f"{SIGN_IN_FILE_SETTING} file")
+
+
+def key_line_values(line: str) -> dict[str, str]:
+    """The line of GOOGLE_SERVICE_ACCOUNT_KEY as it is, and the secret fields of the key in it:
+    a key pasted somewhere as JSON is found too."""
+    found = {KEY_LINE_SETTING: _one_line(line)} if len(_one_line(line)) >= MIN_LENGTH else {}
+    try:
+        data = json.loads(base64.b64decode(line, validate=True))
+    except (ValueError, binascii.Error):
+        return found
+    return {**found, **_secret_fields(data, f"{KEY_LINE_SETTING} key")}
 
 
 def secret_values(settings: Settings) -> dict[str, str]:
@@ -100,6 +120,8 @@ def secret_values(settings: Settings) -> dict[str, str]:
         text = value.get_secret_value().strip()
         if field_name.upper() == SIGN_IN_FILE_SETTING:
             found.update(sign_in_file_values(text) if text else {})
+        elif field_name.upper() == KEY_LINE_SETTING:
+            found.update(key_line_values(text) if text else {})
         elif len(_one_line(text)) >= MIN_LENGTH:
             found[field_name.upper()] = _one_line(text)
     return found

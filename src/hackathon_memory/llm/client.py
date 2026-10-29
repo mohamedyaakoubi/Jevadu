@@ -5,12 +5,16 @@ google-genai 2.29.0 the client takes `enterprise=True`, and `vertexai=True` is t
 The settings are passed in on purpose: pydantic-settings does not put the values of .env into the
 environment, so the library's own reading of GOOGLE_CLOUD_PROJECT would not see them.
 
-Signing in: if GOOGLE_APPLICATION_CREDENTIALS names a key file, it is used. If not, the library
-uses Application Default Credentials, which `gcloud auth application-default login` sets up.
+Signing in, first found: the service account key of GOOGLE_SERVICE_ACCOUNT_KEY, which also names
+the project (python -m hackathon_memory.llm.account switch writes it); the key file named by
+GOOGLE_APPLICATION_CREDENTIALS; else Application Default Credentials, which
+`gcloud auth application-default login` sets up.
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import time
 from collections.abc import Callable
@@ -84,14 +88,48 @@ def load_key_file(path: str) -> Credentials:
     )
 
 
+def service_account_key(settings: Settings) -> dict | None:
+    """The service account key of GOOGLE_SERVICE_ACCOUNT_KEY, read from its line of base64, or
+    None when the line is empty."""
+    line = settings.google_service_account_key.get_secret_value().strip()
+    if not line:
+        return None
+    try:
+        key = json.loads(base64.b64decode(line, validate=True))
+    except (ValueError, binascii.Error):
+        key = None
+    is_key = isinstance(key, dict) and key.get("type") == "service_account"
+    if not (is_key and key.get("project_id")):
+        raise GoogleSetupError(
+            "GOOGLE_SERVICE_ACCOUNT_KEY is not a service account key in base64. Write it again: "
+            "python -m hackathon_memory.llm.account switch"
+        )
+    return key
+
+
 def project_of(settings: Settings) -> str:
-    """The Google Cloud project that the models are asked and billed in."""
+    """The Google Cloud project that the models are asked and billed in: the project of the key
+    of GOOGLE_SERVICE_ACCOUNT_KEY when there is one, since the switch gives that key the right
+    to call Vertex AI there only; else GOOGLE_CLOUD_PROJECT."""
+    key = service_account_key(settings)
+    if key is not None:
+        return str(key["project_id"])
     return settings.google_cloud_project.get_secret_value().strip()
 
 
 def credentials_of(settings: Settings) -> Credentials | None:
-    """The sign-in of the settings: the key file named by GOOGLE_APPLICATION_CREDENTIALS, or None,
-    and then the library uses Application Default Credentials."""
+    """The sign-in of the settings: the key of GOOGLE_SERVICE_ACCOUNT_KEY, else the key file named
+    by GOOGLE_APPLICATION_CREDENTIALS, else None, and then the library uses Application Default
+    Credentials."""
+    key = service_account_key(settings)
+    if key is not None:
+        try:
+            return service_account.Credentials.from_service_account_info(key, scopes=SCOPES)
+        except (ValueError, KeyError, GoogleAuthError):
+            raise GoogleSetupError(
+                "The key of GOOGLE_SERVICE_ACCOUNT_KEY cannot be read. Write it again: "
+                "python -m hackathon_memory.llm.account switch"
+            ) from None
     key_file = settings.google_application_credentials.get_secret_value().strip()
     return load_key_file(key_file) if key_file else None
 

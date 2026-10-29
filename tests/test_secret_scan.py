@@ -5,6 +5,7 @@ Every secret in this file is built from parts, so that the file itself holds no 
 
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 from pathlib import Path
@@ -18,6 +19,7 @@ from hackathon_memory.secret_scan import (
     WORKING_FOLDER,
     ScanError,
     find_git,
+    key_line_values,
     main,
     scan,
     secret_values,
@@ -186,6 +188,21 @@ def test_a_private_key_is_searched_by_its_longest_line(tmp_path: Path) -> None:
     assert sign_in_file_values(str(path)) == {
         "GOOGLE_APPLICATION_CREDENTIALS file, field private_key": KEY_BODY
     }
+
+
+def test_the_one_line_key_is_searched_as_it_is_and_by_its_private_key() -> None:
+    """GOOGLE_SERVICE_ACCOUNT_KEY holds a key in base64: the line is searched, and so is its
+    private key, in case the key was ever pasted somewhere as JSON."""
+    pem = "-----BEGIN " + "PRIVATE KEY-----\n" + KEY_BODY + "\n-----END " + "PRIVATE KEY-----\n"
+    key = {"type": "service_account", "project_id": "p", "private_key": pem}
+    line = base64.b64encode(json.dumps(key).encode()).decode()
+    assert key_line_values(line) == {
+        "GOOGLE_SERVICE_ACCOUNT_KEY": line,
+        "GOOGLE_SERVICE_ACCOUNT_KEY key, field private_key": KEY_BODY,
+    }
+    assert secret_values(Settings(_env_file=None, google_service_account_key=line)) == (
+        key_line_values(line))  # fmt: skip
+    assert key_line_values(PLANTED) == {"GOOGLE_SERVICE_ACCOUNT_KEY": PLANTED}  # not base64 JSON
 
 
 @pytest.mark.parametrize("content", ["not json at all", "[1, 2, 3]", '{"type": "authorized_user"}'])

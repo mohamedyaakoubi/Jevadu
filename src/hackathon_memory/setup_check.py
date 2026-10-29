@@ -109,6 +109,23 @@ def google_sign_in_note(settings: Settings, root: Path) -> tuple[bool, str]:
     return True, f"{where}. Git ignores it. It is better kept outside."
 
 
+def service_account_key_note(settings: Settings) -> tuple[bool, str, bool]:
+    """The key of GOOGLE_SERVICE_ACCOUNT_KEY: whether it reads, and whether one is set. Neither
+    the key nor its project is shown."""
+    from hackathon_memory.llm.client import GoogleSetupError, service_account_key
+
+    try:
+        key = service_account_key(settings)
+    except GoogleSetupError:
+        return False, "set, but not a service account key in base64", True
+    if key is None:
+        return True, "empty: the sign-in below is used", False
+    named = settings.google_cloud_project.get_secret_value().strip()
+    if named and named != key["project_id"]:
+        return True, "set; its own project is used, not the one of GOOGLE_CLOUD_PROJECT", True
+    return True, "set, a service account key; its own project is used", True
+
+
 def _hedera_key_note(settings: Settings) -> tuple[bool, str]:
     text = settings.hedera_operator_key.get_secret_value()
     if not text:
@@ -166,8 +183,11 @@ def report(
     add("2", "GITHUB_TOKEN", has_token, "set" if has_token else "empty (needed from Phase B)")
 
     # step 3: Google
+    key_ok, key_note, has_key = service_account_key_note(settings)
     has_project = bool(settings.google_cloud_project.get_secret_value().strip())
-    add("3", "GOOGLE_CLOUD_PROJECT", has_project, "set" if has_project else "empty")
+    add("3", "GOOGLE_CLOUD_PROJECT", has_project or has_key,
+        "set" if has_project else "empty: the project of the key below is used" if has_key
+        else "empty")  # fmt: skip
     location = settings.google_cloud_location.strip()
     add(
         "3",
@@ -178,7 +198,10 @@ def report(
         if location
         else "empty (use: global)",
     )
+    add("3", "GOOGLE_SERVICE_ACCOUNT_KEY", key_ok, key_note)
     ok, note = google_sign_in_note(settings, root)
+    if has_key:
+        note = "not used while GOOGLE_SERVICE_ACCOUNT_KEY is set (" + note + ")"
     add("3", "GOOGLE_APPLICATION_CREDENTIALS", ok, note)
     for layer, model, level in (
         ("rewrite", settings.gemini_rewrite_model, settings.gemini_rewrite_thinking_level),

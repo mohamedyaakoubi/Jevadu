@@ -215,6 +215,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | 1 | `HEDERA_OPERATOR_ID`, `HEDERA_OPERATOR_KEY` | A free test account at [portal.hedera.com](https://portal.hedera.com). Copy the account ID and the private key in the DER form (a long text that starts with `30`). The tool writes to the test network only. |
 | 2 | `GITHUB_TOKEN` | GitHub, Settings, Developer settings, Personal access tokens, Fine-grained tokens. Choose "Public repositories (read-only)" and add no permission. It is used to read facts about public repositories. To let the tool read the READMEs, also set `COLLECT_GITHUB=on`. |
 | 3 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_APPLICATION_CREDENTIALS` | A Google Cloud project with the Vertex AI API turned on. The location is `global`. Sign in with `gcloud auth application-default login`. If you name a sign-in file, keep it outside the project folder. |
+| 3 | `GOOGLE_SERVICE_ACCOUNT_KEY` | Optional, and first when set: one line that holds a key of a service account that may only call Vertex AI, with its own project. `python -m hackathon_memory.llm.account switch` writes it. |
 | 4 | `POSTGRES_PASSWORD` | Any password you choose. Then `docker compose up -d --wait db`. |
 | optional | `PUBLIC_SALT` | Any random text of 32 characters or more. The public copy needs it to count each visitor by a salted hash of their address and browser name, never by the address itself. |
 | optional | `PUBLIC_AI_PER_VISITOR` | How many times one visitor of the public copy may ask Gemini, one time only: 12 by default, so that about 300 visitors who use them all stay within its budget of 30 dollars. |
@@ -280,6 +281,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m proofs.gate_b --questions Q --results R` | Gate B, part 1, for the ideas of another file of `data/by-hand`. |
 | `python -m proofs.gate_b --marks R1 R2` | Gate B, part 2: reads the marks of one or more results files. An idea that expects close projects needs at least one result marked "yes"; an idea that says `expect: none` needs only its marks. |
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
+| `python -m hackathon_memory.llm.account switch` | Switches the Google account of the models in one step: signs in with gcloud (a browser opens), makes in that account's project a key that may only call Vertex AI, deletes its older keys, writes it into `.env` (`GOOGLE_SERVICE_ACCOUNT_KEY`) and checks it with a free call. `--project ID` when the account sees several projects. |
 | `python -m hackathon_memory.finops budget` | Where the three budgets stand: the test work, the tool in use and the public copy |
 | `python -m hackathon_memory.finops prices` | The prices in use, with the day each one begins |
 | `python -m hackathon_memory.finops reconcile --billed 1.23` | Our own count against the amount on Google's bill |
