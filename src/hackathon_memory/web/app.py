@@ -269,7 +269,7 @@ NO_README_TO_SEARCH = (
 NOT_AN_ACCOUNT = "A Hedera account ID looks like 0.0.12345. Leave it empty to register without one."
 # The signature of a team's own wallet (design 9.6, 29 October 2026).
 NOT_SIGNED_RIGHT = "The signature came back incomplete from the wallet. Sign again."
-# The public copy (web/public.py, design 12.5, 30 October 2026).
+# The public copy (web/public.py, design 12.5, 29 October 2026).
 PUBLIC_AI_OFF = (
     "On this public copy of Jevadu, the AI is turned off, so these are keyword results. The search "
     "by meaning and the AI's order work on the full version, shown in the video."

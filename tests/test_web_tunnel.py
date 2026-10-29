@@ -83,7 +83,7 @@ def test_a_name_that_points_elsewhere_is_never_replaced() -> None:
 
 
 def test_a_refusal_says_what_was_refused_and_never_the_account() -> None:
-    """Matafi's token could read tunnels but not make one (30 October 2026)."""
+    """Matafi's token could read tunnels but not make one (29 October 2026)."""
     with pytest.raises(tunnel.TunnelError) as refused:
         tunnel.setup(api(Cloudflare(refuse="POST")), ACCOUNT, HOST, 8020)
     assert "Authentication error" in str(refused.value) and ACCOUNT not in str(refused.value)

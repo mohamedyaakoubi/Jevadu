@@ -1,4 +1,4 @@
-"""The Cloudflare tunnel of the public copy (design 12.5, 30 October 2026).
+"""The Cloudflare tunnel of the public copy (design 12.5, 29 October 2026).
 
     python -m hackathon_memory.web.tunnel setup   once: the tunnel "jevadu", its route to the
                                                   public copy and the name in PUBLIC_HOST; the
@@ -13,7 +13,7 @@ permissions (Account, Cloudflare Tunnel, Edit; Zone, DNS, Edit, for the zone of 
 CLOUDFLARE_ACCOUNT_ID; and the program cloudflared (CLOUDFLARED_PATH, by default
 .local-tools/cloudflared/cloudflared.exe or the one on the PATH).
 
-The API's shapes, read on 30 October 2026 at developers.cloudflare.com: POST
+The API's shapes, read on 29 October 2026 at developers.cloudflare.com: POST
 /accounts/{account}/cfd_tunnel with config_src "cloudflare" makes a tunnel whose routes Cloudflare
 keeps; PUT .../configurations sets its ingress; GET .../token gives the token that `cloudflared
 tunnel run` reads from TUNNEL_TOKEN; the name is a proxied CNAME to {id}.cfargotunnel.com.

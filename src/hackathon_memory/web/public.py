@@ -1,4 +1,4 @@
-"""The public copy of the website (design 12.5, 30 October 2026).
+"""The public copy of the website (design 12.5, 29 October 2026).
 
 The same site runs a second time on the laptop that holds the collection, started with --public,
 and a Cloudflare tunnel brings jevadu.mohamedyaakoubi.com to it: nothing of the collection leaves
@@ -46,7 +46,7 @@ PUBLIC_HEADERS = {
 
 def plain_http(headers: Mapping[str, str]) -> bool:
     """A visitor who came in plain HTTP, as Cloudflare says in X-Forwarded-Proto: sent to HTTPS
-    (seen on 30 October 2026: the zone does not redirect by itself)."""
+    (seen on 29 October 2026: the zone does not redirect by itself)."""
     return headers.get("x-forwarded-proto", "").lower() == "http"
 
 
