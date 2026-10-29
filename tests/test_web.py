@@ -624,6 +624,33 @@ def test_the_card_says_who_made_its_own_ids(site) -> None:  # noqa: ANN001
             "list.</span></dd>") in block  # fmt: skip
 
 
+def test_a_public_service_that_the_page_names_is_said_and_not_owned(site) -> None:  # noqa: ANN001
+    """The price oracle of Pyth, given by a page as one of its contracts: the card says what it
+    is, with its owner's list, and draws none of its transactions (migration 0022)."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    pyth = "0xa2aa501b19aff244d90cc15a4cf739d2725b5729"
+    LedgerStore(database).save_facts(LedgerFacts(
+        pyth, "testnet", datetime(2026, 10, 29, tzinfo=UTC), found=True, kind="contract",
+        ledger_id="0.0.3042133", created_at=datetime(2024, 2, 9, tzinfo=UTC),
+    ))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, %s, 'testnet', 'contract', 'page', "
+            "'invented', true) RETURNING id", (pebble, pyth)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    assert (f'It also names <span class="id">{pyth}</span>, the price oracle of Pyth: a public '
+            "service that many projects use, so its transactions are not counted as the "
+            "project's here.") in part  # fmt: skip
+    assert 'href="https://github.com/pyth-network/pyth-crosschain/' in part
+
+
 def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
     """The kind, the custom fees and the keys of its own token, from the check of the IDs, with
     the day of that check (design 7.5, 28 October 2026)."""

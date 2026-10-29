@@ -55,3 +55,13 @@ def test_the_links_of_one_project_say_why() -> None:
 
 def test_a_name_alone_links_nothing() -> None:
     assert groups([Member(1, A, None), Member(2, B, None)], []) == []
+
+
+def test_a_public_service_that_its_owner_lists_links_nothing() -> None:
+    """Two teams at two events that both read Pyth's price oracle are not the same team
+    (migration 0022, 29 October 2026)."""
+    members = [Member(1, A, 10), Member(2, B, 11)]
+    found = [(1, "testnet:0.0.3042133"), (2, "testnet:0.0.3042133")]
+    assert groups(members, found) == [[1, 2]]
+    assert groups(members, found, public={"testnet:0.0.3042133"}) == []
+    assert links(members, found, found, 1, public={"testnet:0.0.3042133"}) == []

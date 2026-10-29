@@ -14,10 +14,12 @@ Exact matching, with no AI.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
 
 import psycopg
+
+from hackathon_memory.db.public_services import public_keys
 
 # The checks that found the ID as the kind the project gave: the ledger knows what it is.
 CONFIRMED = ("proof_found", "window_not_known", "dates_do_not_fit", "found_but_empty")
@@ -72,18 +74,20 @@ def groups(
     members: Iterable[Member],
     ids: Iterable[tuple[int, str]],
     named: Iterable[tuple[int, str]] | None = None,
+    public: Collection[str] = frozenset(),
 ) -> list[list[int]]:
     """The groups of projects that share a repository or a Hedera ID and stand at two events or
     more, each group in the order of its project ids. `ids` holds the (project, network:ID) pairs
     that the ledger found, which may join projects; `named` holds every pair that a page or a
-    README names, found or not, and decides which IDs are shared services (by default `ids`)."""
+    README names, found or not, and decides which IDs are shared services (by default `ids`);
+    `public` the public services that their owners list, which join nothing either."""
     found = {member.project_id: member for member in members}
     ids = list(ids)
     shared = shared_services(
         (key, found[pid].repository_id or -pid, found[pid].event)
         for pid, key in (ids if named is None else named)
         if pid in found
-    )
+    ) | set(public)
     parent = {pid: pid for pid in found}
 
     def root(pid: int) -> int:
@@ -132,7 +136,8 @@ def came_back(conninfo: str) -> list[list[int]]:
     """The groups of projects that came back, read from the tables."""
     with psycopg.connect(conninfo) as conn:
         members, ids, named = _collection(conn)
-    return groups(members, ids, named)
+        public = public_keys(conn)
+    return groups(members, ids, named, public)
 
 
 def links(
@@ -140,6 +145,7 @@ def links(
     ids: Iterable[tuple[int, str]],
     named: Iterable[tuple[int, str]],
     project_id: int,
+    public: Collection[str] = frozenset(),
 ) -> list[tuple[int, str]]:
     """The projects that one project shares its repository or a Hedera ID with, by the rule of
     `groups` but with no chain, at its own event or at another: each as (project, "repository")
@@ -153,7 +159,7 @@ def links(
         (key, found[pid].repository_id or -pid, found[pid].event)
         for pid, key in named
         if pid in found
-    )
+    ) | set(public)
     linked: dict[int, str] = {}
     if own.repository_id is not None:
         for pid, member in found.items():
@@ -170,7 +176,8 @@ def links_of(conninfo: str, project_id: int) -> list[tuple[int, str]]:
     """The links of one project, read from the tables."""
     with psycopg.connect(conninfo) as conn:
         members, ids, named = _collection(conn)
-    return links(members, ids, named, project_id)
+        public = public_keys(conn)
+    return links(members, ids, named, project_id, public)
 
 
 @dataclass(frozen=True)
@@ -205,6 +212,7 @@ def submission_matches(
         named = conn.execute(_NAMED + " WHERE h.entity_id = ANY(%s) "
                              "OR coalesce(f.ledger_id, h.entity_id) = ANY(%s)",
                              (names, names)).fetchall()  # fmt: skip
+        public = public_keys(conn)
     other_code: set[str] = set()
     for _, key, repository_id, _, name in named:
         if own_code is None or repository_id != own_code:
@@ -212,7 +220,7 @@ def submission_matches(
     users = [(key, repository_id or -pid, event) for pid, key, repository_id, event, _ in named]
     # The submission, with no event of the collection; 0 is no project's number.
     users += [(key, own_code or 0, None) for key in keys]
-    shared = shared_services(users) & set(keys)
+    shared = (shared_services(users) | public) & set(keys)
     same_id: dict[str, list[int]] = defaultdict(list)
     for pid, key in sorted(found):
         if key in keys and key not in shared and pid not in same_id[key]:

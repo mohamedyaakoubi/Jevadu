@@ -136,10 +136,11 @@
    strip of its days; `source` names the text whose words it compares (the page, or the README of a
    check); `lines` are the lines of a text that the card does not
    show, such as a README, that name a service. #}
-{% macro ledger_story(story, pid, source="page", source_title="Page", no_days="The days of the event are not known.", tip="story", lines=none, depth=none, view=none) -%}
+{% macro ledger_story(story, pid, source="page", source_title="Page", no_days="The days of the event are not known.", tip="story", lines=none, depth=none, view=none, public=()) -%}
 <section class="card project-section story-section" aria-labelledby="story-{{ pid }}-title" data-said-in="{{ "in the " if source == "README" else "on the " }}{{ source }}">
   <div class="card-body">
     <h3 id="story-{{ pid }}-title">Hedera services: {{ source }}, code and ledger{{ info(tip, "Hedera services: " ~ source ~ ", code and ledger") }}</h3>
+    {% for one in public %}<p class="hm-story-public">It also names <span class="id">{{ one.entity_id }}</span>, {{ one.name }}: a public service that many projects use, so its transactions are not counted as the project's here. Source: <a href="{{ one.source }}" target="_blank" rel="noopener">its owner's own list<span class="visually-hidden"> (opens in a new tab)</span></a>, read on {{ one.read_on | day }}.</p>{% endfor %}
     {% if story and not story.read %}
     <p class="text-secondary">The history of its own Hedera IDs has not been read yet.</p>
     {% elif story %}

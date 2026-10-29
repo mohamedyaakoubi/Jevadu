@@ -3,10 +3,11 @@
 An own ID is named by one project only, or only by projects that share one repository: an ID
 that several teams name is often a shared service (design 8.4), and its history would say nothing
 about one team; the entries of one team's code at several hackathons share its IDs (28 October
-2026). It counts by the thing that the ledger names: an EVM address and the 0.0 ID of one contract
-are one thing, which two teams can name in its two forms. Only an ID whose kind
-fits what its page says is read: the statuses of the proof rule "proof found", "the dates do not
-fit" and "found, but empty" (design 7.2).
+2026). A public service that its owner lists, such as the price oracle of Pyth, is no project's
+own however few name it (db/public_services.py, 29 October 2026). It counts by the thing that the
+ledger names: an EVM address and the 0.0 ID of one contract are one thing, which two teams can
+name in its two forms. Only an ID whose kind fits what its page says is read: the statuses of
+the proof rule "proof found", "the dates do not fit" and "found, but empty" (design 7.2).
 
 Since 25 October 2026 each event also keeps what it was, and a token the accounts that hold it
 (DEPTH 1, design 7.5). A history read before has none of it: it is read again, whole, once. A
@@ -40,7 +41,12 @@ OWN = (
     "WITH own_named AS (SELECT DISTINCT h.project_id, h.entity_id, "
     "                          coalesce(f.ledger_id, h.entity_id) AS thing "
     "                   FROM hedera_ids h LEFT JOIN ledger_facts f "
-    "                   ON f.entity_id = h.entity_id AND f.found), "
+    "                   ON f.entity_id = h.entity_id AND f.found "
+    # a public service that many projects use is no project's own (migration 0022)
+    "                   WHERE NOT EXISTS (SELECT 1 FROM public_services s "
+    "                         WHERE s.evm_address = lower(h.entity_id) "
+    "                         OR (s.network = f.network "
+    "                             AND s.ledger_id = coalesce(f.ledger_id, h.entity_id)))), "
     "     own_shared AS (SELECT n.thing FROM own_named n JOIN projects p ON p.id = n.project_id "
     "                    GROUP BY n.thing HAVING count(DISTINCT n.project_id) > 1 "
     "                    AND NOT (count(DISTINCT p.repository_id) = 1 "

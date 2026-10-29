@@ -54,6 +54,7 @@ from hackathon_memory.check.story import (
 )
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.history import depth_of_project, story_of_project
+from hackathon_memory.db.public_services import NamedService, public_services_of
 from hackathon_memory.db.readings import Reading, latest_reading
 from hackathon_memory.parse.hedera_code import PACKAGE
 from hackathon_memory.read.quotes import FIELDS, KEPT
@@ -287,6 +288,8 @@ class ProjectCard:
     story: Story | None = None  # the ledger story (design 7.5), or None when it has none
     depth: Depth | None = None  # the depth of use of its own IDs (design 7.5), or None
     reading: Reading | None = None  # its newest reading, whoever made it (design 7.3)
+    # the public services that it names, which are not its own (design 8.4, 29 October 2026)
+    public: tuple[NamedService, ...] = ()
 
 
 def first_sentence(text: str) -> str:
@@ -374,6 +377,7 @@ def project_card(
                                  set_up=set_up_of(code_reading),
                                  has_package=has_a_package(code_reading))  # fmt: skip
         reading = latest_reading(conn, project_id)
+        public = public_services_of(conn, project_id)
     card = None
     if row is not None:
         fields, made_at = row
@@ -385,7 +389,7 @@ def project_card(
     return ProjectCard(found[0], short_line, sections, links, prizes, parsed_at,
                        collected_at(raw_dir, found[0].page_url), language, card,
                        event_page(site, slug, found[0].page_url), code_reading, story,
-                       depth, reading)  # fmt: skip
+                       depth, reading, public)  # fmt: skip
 
 
 def said(text: str) -> Markup:
