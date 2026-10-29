@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+import psycopg
 import pytest
 
 from evals import overview
@@ -29,8 +30,30 @@ def test_the_counts_of_each_event_hold_numbers_only(empty_database: str) -> None
     assert event["projects"] == 3 and sum(event["prize"].values()) == 3
     assert sum(event["proof"]["all"].values()) == 3 and sum(event["life"]["all"].values()) == 3
     assert found["came_back"] == {"groups": 0, "projects": 0}  # one event: nothing to link
+    assert found["proof_from_the_code_only"] == 0
     text = json.dumps(found)
     assert "Pebble" not in text and "invented" not in text  # no text of a page
+
+
+def test_a_proof_that_only_the_code_gives_is_counted(empty_database: str) -> None:
+    """A project whose only proof is an ID of its code counts; one with a proof from its page
+    too does not (design 7.3, 29 October 2026)."""
+    database = three_projects(empty_database)
+    found = (("0.0.7001", "code", "config/ids.ts"), ("0.0.7002", "code", "config/ids.ts"),
+             ("0.0.7003", "page", None))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        first, second, _ = [row[0] for row in conn.execute("SELECT id FROM projects ORDER BY id")]
+        for project, (entity, found_in, path) in zip((first, second, second), found, strict=True):
+            (hedera_id,) = conn.execute(
+                "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+                "words_around, in_hashscan_link, found_at) VALUES (%s, %s, 'testnet', NULL, %s, "
+                "'', false, %s) RETURNING id",
+                (project, entity, found_in, path)).fetchone()  # fmt: skip
+            conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                         "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    found_now = overview.counts(database, model="m", version="v",
+                                now=datetime(2026, 10, 29, 8, 0, tzinfo=UTC))  # fmt: skip
+    assert found_now["proof_from_the_code_only"] == 1
 
 
 def test_the_cards_of_the_model_and_version_are_counted(empty_database: str) -> None:

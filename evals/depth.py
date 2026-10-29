@@ -9,6 +9,12 @@ transactions with accounts that their page does not name, how many have tokens h
 accounts, on how many days they were active, and each sign that stays on paper. Counts only, each
 share with its range by project.
 
+What the page alone does not say (29 October 2026): for how many projects the ledger or the code
+shows something that a reader of the page would miss: its IDs used a Hedera service that its page
+does not name, its page names a service that its IDs did not use in the time of the table, its only
+proof is in its code, a sign stays on paper, or the ID of its page does not fit the event. A
+project with no depth of use has nothing to read on the ledger, so it can have none of these.
+
 A check of the counting (--check): for projects drawn at random among those with transactions in
 the time of the table, the transactions of their own IDs in that time, and the accounts that took
 part, are counted a second time by a plain reading of the mirror node's lists, apart from the
@@ -37,7 +43,7 @@ import requests
 from evals.test1.report import Counts, share
 from hackathon_memory import __version__
 from hackathon_memory.check.history import NETWORK_ACCOUNTS
-from hackathon_memory.check.proof import PROOF_FOUND
+from hackathon_memory.check.proof import ANOTHER_KIND, DATES_DO_NOT_FIT, PROOF_FOUND
 from hackathon_memory.check.story import time_of
 from hackathon_memory.hedera.mirror import MIRROR_URLS
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
@@ -68,6 +74,31 @@ SETUP = {
     "account_with_an_ecdsa_key": ("ECDSA key",),
     "account_with_several_keys": ("several keys",),
 }
+
+
+# What the ledger and the code show that the page alone does not say (29 October 2026).
+MISSES = (
+    "used_a_service_the_page_does_not_name",
+    "named_a_service_with_no_transaction",
+    "proof_only_in_the_code",
+    "a_sign_on_paper",
+    "the_page_id_does_not_fit",
+)
+
+
+def what_the_page_misses(proof: str, card: object) -> set[str]:
+    """The reasons for which the ledger or the code of one project shows something that its page
+    alone does not say (MISSES)."""
+    story = getattr(card, "story", None)
+    facts = getattr(card, "facts", None)
+    found = {
+        "used_a_service_the_page_does_not_name": bool(getattr(story, "seen_not_named", ())),
+        "named_a_service_with_no_transaction": bool(getattr(story, "named_not_seen", ())),
+        "proof_only_in_the_code": bool(getattr(facts, "proven_by_code_only", False)),
+        "a_sign_on_paper": bool(card.depth.on_paper),  # type: ignore[attr-defined]
+        "the_page_id_does_not_fit": proof in (DATES_DO_NOT_FIT, ANOTHER_KIND),
+    }
+    return {key for key, yes in found.items() if yes}
 
 
 def cards(conninfo: str, model: str) -> list[tuple[int, str, object]]:
@@ -129,6 +160,7 @@ def measure(found: Sequence[tuple[int, str, object]]) -> dict:
             "reached": dict(reached),
             "mainnet": sum(bool(getattr(getattr(card, "facts", None), "mainnet", False))
                            for _, _, card in chosen),
+            "the_page_alone_misses": misses_of(chosen),
         }  # fmt: skip
     result["per_project"] = [
         {"project": pid, "proof": proof, "transactions": card.depth.total,
@@ -139,6 +171,14 @@ def measure(found: Sequence[tuple[int, str, object]]) -> dict:
         for pid, proof, card in found
     ]  # fmt: skip
     return result
+
+
+def misses_of(chosen: Sequence[tuple[int, str, object]]) -> dict[str, int]:
+    """How many projects show something that their page alone does not say, in all and for each
+    reason."""
+    each = [what_the_page_misses(proof, card) for _, proof, card in chosen]
+    return {"any": sum(bool(reasons) for reasons in each),
+            **{key: sum(key in reasons for reasons in each) for key in MISSES}}  # fmt: skip
 
 
 # ---------------------------------------------------------------------------- a second counting

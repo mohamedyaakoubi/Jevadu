@@ -93,12 +93,25 @@
 {%- endmacro %}
 
 {# The transactions of a project's own things before or after the time of the ledger story:
-   `part` is an Outside of check/story.py, or none when they are not counted. #}
-{% macro outside(part, which) -%}
+   `part` is an Outside of check/story.py, or none when they are not counted. Who paid for them
+   follows: anyone can use a contract or a topic, so the accounts that the page does not name may
+   be strangers (29 October 2026). #}
+{% macro outside(part, which, source="page") -%}
 {% if part is none %}not counted: its IDs are accounts only
 {%- elif not part.count %}none
 {%- elif part.by_service | length == 1 %}{{ transactions(part.by_service[0][0], part.count) }}, the {{ which }} on {{ part.day | day }}
 {%- else %}{{ "{:,}".format(part.count) }} transactions, the {{ which }} on {{ part.day | day }}: {% for service, count in part.by_service %}{{ transactions(service, count) }}{{ ", " if not loop.last }}{% endfor %}
+{%- endif %}
+{%- if part and part.count %}{{ paid_by(part, source) }}{% endif %}
+{%- endmacro %}
+
+{% macro paid_by(part, source) -%}
+{% if part.paid_by_named and part.paid_by_others %}; paid by {{ part.paid_by_named }} account{{ "s" if part.paid_by_named != 1 }} that the {{ source }} names and {{ "{:,}".format(part.paid_by_others) }} that it does not
+{%- elif part.paid_by_named %}; paid only by accounts that the {{ source }} names
+{%- elif part.paid_by_others %}; paid by {{ "{:,}".format(part.paid_by_others) }} account{{ "s" if part.paid_by_others != 1 }} that the {{ source }} does not name
+{%- endif %}
+{%- if part.payer_unknown == part.count %}; who paid is not known
+{%- elif part.payer_unknown %}; for {{ "{:,}".format(part.payer_unknown) }} of them, who paid is not known
 {%- endif %}
 {%- endmacro %}
 
@@ -162,7 +175,7 @@
     </details>
     {% endif %}
     <p class="hm-small hm-said-status" aria-live="polite"></p>
-    {% if not (depth and view) %}{{ story_time(story) }}{% endif %}
+    {% if not (depth and view) %}{{ story_time(story, source) }}{% endif %}
     {% endif %}
     {% if depth %}{{ depth_block(depth, view, pid, source, story) }}{% endif %}
     {% if story and story.read %}
@@ -175,13 +188,13 @@
 
 {# The transactions of its own things before and after the time of the ledger story, when the
    days of the event are known. #}
-{% macro story_time(story) -%}
+{% macro story_time(story, source="page") -%}
 {% if story and story.starts_on and story.before is none and story.after is none %}
 <p class="hm-story-time-none">Before {{ story.starts_on | day }} and after {{ story.ends_on | day }}: not counted, since its own IDs are accounts only.</p>
 {% elif story and story.starts_on %}
 <dl class="hm-story-time">
-  <dt>Before {{ story.starts_on | day }}</dt><dd>{{ outside(story.before, "first") }}</dd>
-  <dt>After {{ story.ends_on | day }}</dt><dd>{{ outside(story.after, "last") }}</dd>
+  <dt>Before {{ story.starts_on | day }}</dt><dd>{{ outside(story.before, "first", source) }}</dd>
+  <dt>After {{ story.ends_on | day }}</dt><dd>{{ outside(story.after, "last", source) }}</dd>
 </dl>
 {% endif %}
 {%- endmacro %}
@@ -244,7 +257,7 @@
 {% macro depth_block(depth, view, pid, source="page", story=none) -%}
 <div class="hm-depth-block" id="depth-{{ pid }}">
   {% if not depth.read %}<p class="text-secondary">Some of its IDs were read before the tool kept what each transaction was. They are read again with the next reading.</p>{% endif %}
-  {% if view %}{{ strip(view, pid) }}{{ story_time(story) }}{% endif %}
+  {% if view %}{{ strip(view, pid) }}{{ story_time(story, source) }}{% endif %}
   {% if depth.did or depth.others is not none or depth.days %}
   {% set within = " from " ~ (story.starts_on | day) ~ " to " ~ (story.ends_on | day) if view and story and story.starts_on else "" %}
   <dl class="hm-depth">

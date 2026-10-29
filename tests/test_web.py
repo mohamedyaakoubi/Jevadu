@@ -89,10 +89,12 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
 
     def make(app_options: dict | None = None, **changes: object) -> TestClient:
         changed = settings.model_copy(update=changes)
+        options = dict(app_options or {})
+        google_client = options.pop("google", client)  # another stand-in Google, if one is given
         return TestClient(
-            create_app(changed, google=client, llm=client, github_client=asker, mirrors=mirrors,
-                       register_writer=writes, stand_in_client=open_client(stand_in),
-                       refresh_inline=True, **(app_options or {}))
+            create_app(changed, google=google_client, llm=client, github_client=asker,
+                       mirrors=mirrors, register_writer=writes,
+                       stand_in_client=open_client(stand_in), refresh_inline=True, **options)
         )  # fmt: skip
 
     served = make()
@@ -479,7 +481,9 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
             "smart contracts.") in block  # fmt: skip
     assert re.search(r"<dt>Before \d+ \w+ \d{4}</dt><dd>none</dd>", block)  # by its date
     # after that time: the topic's message counts, and the account's transfer does not
-    assert "<dd>1 Consensus Service transaction, the last on 1 June 2026</dd>" in block
+    # its history kept no payer, so the line says that who paid is not known (29 October 2026)
+    assert ("<dd>1 Consensus Service transaction, the last on 1 June 2026; who paid is not "
+            "known</dd>") in block  # fmt: skip
     assert "Read from the mirror node on 23 October 2026: 2 of its own IDs." in block
 
 
@@ -530,7 +534,7 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
     """The strip draws the messages of its topic a year before the event too, and cuts out the
     time between them, a hatched band with its length (design 7.5, 28 October 2026). Before, it
     stopped 30 days before the event."""
-    from hackathon_memory.check.history import CONSENSUS, History
+    from hackathon_memory.check.history import CONSENSUS, Act, History
     from hackathon_memory.db.history import HistoryStore
 
     client, _, ids, database = site
@@ -538,9 +542,12 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
     own_id(database, pebble, "0.0.4511", "topic")
     with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
         conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
-    messages = {stamp(datetime(2025, 3, 7, 12, tzinfo=UTC), 1): CONSENSUS,
-                stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 2): CONSENSUS}  # fmt: skip
-    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, False, {}),
+    early, during = stamp(datetime(2025, 3, 7, 12, tzinfo=UTC), 1), stamp(
+        datetime(2026, 3, 7, 12, tzinfo=UTC), 2)  # fmt: skip
+    messages = {early: CONSENSUS, during: CONSENSUS}
+    # a stranger paid for the early message: an account that the page does not name
+    acts = {early: Act("CONSENSUSSUBMITMESSAGE", True, "0.0.8001", ("0.0.8001",))}
+    HistoryStore(database).save("0.0.4511", "testnet", "topic", History(messages, False, acts),
                                 datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
     part = client.get(f"/project/{pebble}/panel").text
     block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
@@ -549,6 +556,9 @@ def test_the_strip_cuts_out_a_long_time_without_a_transaction(site) -> None:  # 
     assert ("<title>No transaction for 11 months, from 8 March 2025 to 3 February 2026: left out "
             "of the strip.</title>") in block  # fmt: skip
     assert 'class="hm-strip-mark hm-strip-cut-mark"' in block and ">11 mo</text>" in block
+    # who paid for the transactions before the time of the table (29 October 2026)
+    assert ("1 Consensus Service transaction, the first on 7 March 2025; paid by 1 account that "
+            "the page does not name") in block  # fmt: skip
     assert ("A hatched band is a time of more than 30 days with no transaction, left out of the "
             "strip; its length stands under it.") in block  # fmt: skip
 
@@ -801,6 +811,28 @@ def test_without_google_the_words_are_searched_and_the_page_says_so(site) -> Non
     client, fake, ids, _ = site
     fake.fail_with = (503, "unavailable")
     page = client.get("/", params={"idea": "a vendor and a coin", "mode": "meaning"})
+    assert page.status_code == 200
+    assert "so these are keyword results" in page.text
+    assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text
+
+
+def test_an_expired_google_sign_in_gives_the_keyword_results(site) -> None:  # noqa: ANN001
+    """A sign-in to Google that expired or was revoked fails before a request leaves: the page
+    falls back to the keyword results and says so (29 October 2026: it answered with an error)."""
+    import google.auth.credentials
+    import google.auth.exceptions
+    from google import genai
+
+    class Expired(google.auth.credentials.Credentials):
+        def refresh(self, request: object) -> None:
+            raise google.auth.exceptions.RefreshError("invalid_grant: the token expired")
+
+    expired = genai.Client(enterprise=True, project="test-project", location="global",
+                           credentials=Expired())  # fmt: skip
+    client, _, ids, _ = site
+    page = client.make({"google": expired}).get(
+        "/", params={"idea": "a coin for the street vendors of the night", "mode": "meaning"}
+    )
     assert page.status_code == 200
     assert "so these are keyword results" in page.text
     assert f"/project/{ids['Pebble Pay']}/panel?idea=" in page.text

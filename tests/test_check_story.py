@@ -200,10 +200,36 @@ def test_before_and_after_count_only_the_own_things_with_their_first_and_last_da
         Event(DURING, CONSENSUS, False), Event(LONG_AFTER, CONSENSUS, False),
         Event(LATER, CONSENSUS, False), Event(LATER, HBAR, True),
     )  # fmt: skip
-    assert story.before == Outside(2, date(2026, 5, 1), ((TOKENS, 1), (CONTRACTS, 1)))
-    assert story.after == Outside(2, date(2026, 12, 24), ((CONSENSUS, 2),))
+    # no payer given here, so who paid is not known for any of them
+    assert story.before == Outside(2, date(2026, 5, 1), ((TOKENS, 1), (CONTRACTS, 1)), 0, 0, 2)
+    assert story.after == Outside(2, date(2026, 12, 24), ((CONSENSUS, 2),), 0, 0, 2)
     quiet = a_story(Event(DURING, CONSENSUS, False))
     assert quiet.before == quiet.after == Outside(0, None, ())
+
+
+def test_the_time_before_and_after_says_who_paid() -> None:
+    """Anyone can send a transaction to a contract or a topic, so the time before and after
+    counts the accounts that paid: those the project names, and the others, who may be strangers
+    (29 October 2026). The network's own accounts and a transaction with no payer count for
+    neither."""
+    hour = timedelta(hours=1)
+    events = (
+        Event(LONG_BEFORE, CONTRACTS, False, "0.0.9001"),
+        Event(LONG_BEFORE + hour, CONTRACTS, False, "0.0.9002"),
+        Event(LONG_BEFORE + 2 * hour, CONTRACTS, False, "0.0.9002"),
+        Event(LATER, CONSENSUS, False, "0.0.7001"),
+        Event(LATER + hour, CONSENSUS, False, "0.0.2"),  # the treasury of the network
+        Event(LATER + 2 * hour, TOKENS, False, None),  # a mint: no payer known
+    )
+    told = story_of((TOPIC_ID, ACCOUNT_ID), events, "", frozenset(), starts_at=STARTS,
+                    ends_on=ENDS, named_ids=frozenset({"0.0.7001"}))  # fmt: skip
+    assert (told.before.count, told.before.paid_by_named, told.before.paid_by_others) == (3, 0, 2)
+    assert (told.after.count, told.after.paid_by_named, told.after.paid_by_others) == (3, 1, 0)
+    assert (told.before.payer_unknown, told.after.payer_unknown) == (0, 1)
+    # the payer comes through the merging of the moments
+    assert merged([("1.000000001", DURING, CONSENSUS, False, "0.0.7001")]) == (
+        Event(DURING, CONSENSUS, False, "0.0.7001"),
+    )
 
 
 def test_with_accounts_only_the_time_before_and_after_is_not_counted() -> None:

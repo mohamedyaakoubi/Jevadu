@@ -676,7 +676,10 @@ def create_app(
                 return order + rest, how, stand_in.NAME
             notes.append(AI_SPENT if how == rerank.SPENT else told(BOTH_FAILED))
             return ranking, how, None
-        except (*FAILED_CALLS, BudgetExceeded):
+        except (*FAILED_CALLS, BudgetExceeded) as error:
+            # the kind of error only, for whoever runs the site: an expired sign-in to Google
+            # (RefreshError) needs a new one, which the page cannot ask for
+            LOG.warning("the search by meaning fell back to the words: %s", type(error).__name__)
             notes.append(GOOGLE_AWAY)
             return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
 
