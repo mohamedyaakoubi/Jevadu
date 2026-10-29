@@ -15,7 +15,8 @@ depth of use says what that use was, as facts that the ledger gives and that a p
 
 It also gives the strip of days that the card draws (Strip). No score, no rank and no word such
 as "meaningful": the code counts, and a person reads (design 3.3). The time is the time of the
-ledger story's table (check/story.py).
+ledger story's table (check/story.py); the strip also draws the days of the project's own things
+before and after it.
 """
 
 from __future__ import annotations
@@ -86,7 +87,8 @@ class Day:
 
 @dataclass(frozen=True)
 class Strip:
-    """The days of the time of the table, as the card draws them (design 7.5)."""
+    """The days of a project's transactions, as the card draws them (design 7.5): `first` and
+    `last` are the time of the table, and the rows can hold days before and after it."""
 
     first: date
     last: date
@@ -201,13 +203,18 @@ def strip_of(
     moments: Sequence[Done], own: Sequence[OwnId], span: tuple[datetime, datetime],
     starts_at: datetime, ends_on: date,
 ) -> Strip:  # fmt: skip
-    """The days of the time of the table, each service on a row of its own."""
-    inside = [one for one in moments if span[0] <= one.at <= span[1]]
+    """The days of the strip, each service on a row of its own: in the time of the table those of
+    every own ID; before and after it those of its own things only, as the ledger story counts
+    the time before and after, since an account is often kept for years and across projects.
+    The days before and after are drawn since 28 October 2026: a project whose things were busy
+    long before or after its event showed nothing of it, and one whose things were busy only
+    then showed no strip."""
+    shown = [one for one in moments if span[0] <= one.at <= span[1] or one.kind != ACCOUNT]
     rows: list[tuple[str, tuple[Day, ...]]] = []
     most = 0
     for service in SERVICES:
         by_day: dict[date, list[Done]] = {}
-        for one in inside:
+        for one in shown:
             if one.service == service:
                 by_day.setdefault(one.at.date(), []).append(one)
         if by_day:

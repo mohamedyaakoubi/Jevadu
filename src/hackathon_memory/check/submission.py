@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
@@ -354,9 +354,15 @@ def judge_ids(
     return results
 
 
+def thing_of(one: IdResult) -> str:
+    """The ID that the ledger gives the thing that an ID of the README names: the 0.0 ID of a
+    contract that the README names by its EVM address (design 8.4)."""
+    return (one.facts.ledger_id if one.facts is not None else None) or one.found.entity_id
+
+
 def judge_code_ids(
     scan: CodeScan | None,
-    readme: list[FoundId],
+    readme: Collection[str],
     window: Window | None,
     mirrors: Mapping[str, MirrorNode],
     ledger: LedgerStore,
@@ -367,13 +373,14 @@ def judge_code_ids(
     counts: Counter[str] | None = None,
 ) -> tuple[list[IdResult], int]:
     """The IDs of the code that count for the submission (design 7.3): its own (no page or README
-    of the collection names one, nor the code of another repository, nor its own README) and made
-    on the ledger during the hackathon (counts_from_the_code). Without a hackathon none can be
-    weighed: then the number of its own IDs of the code comes back, to be said."""
+    of the collection names one, nor the code of another repository, nor its own README, in any of
+    its forms) and made on the ledger during the hackathon (counts_from_the_code). `readme` holds
+    the IDs of the README, as it writes them and as the ledger gives them. Without a hackathon
+    none can be weighed: then the number of its own IDs of the code comes back, to be said."""
     counts = Counter() if counts is None else counts
     if scan is None or not scan.ids:
         return [], 0
-    named = {one.entity_id for one in readme}
+    named = set(readme)
     candidates = sorted((one for one in scan.ids.values() if one.entity_id not in named),
                         key=lambda one: -one.seen.files)  # fmt: skip
     elsewhere = code_ids.named_elsewhere([one.entity_id for one in candidates], repository)
@@ -394,12 +401,17 @@ def judge_code_ids(
             except MirrorError:
                 counts["errors_of_the_node"] += 1
                 continue
+            if facts.ledger_id in named:
+                break  # an address of the code for a thing that the README names
             if counts_from_the_code(facts, window):
                 found = FoundId(one.entity_id, network, None, "")
                 results.append(IdResult(found, PROOF_FOUND, network, facts,
                                         in_code=one.seen.examples[0]))  # fmt: skip
                 break
-    return results, 0
+    # The answers are in the table now, so an address that stands for a thing that the collection
+    # names by its 0.0 ID shows.
+    again = code_ids.named_elsewhere([one.found.entity_id for one in results], repository)
+    return [one for one in results if one.found.entity_id not in again], 0
 
 
 def histories(
@@ -579,19 +591,21 @@ def check_submission(
     asked_node: Counter[str] = Counter()
     judged = judge_ids(found[:MAX_IDS], window, mirrors, LedgerStore(conninfo), now=now,
                        counts=asked_node)  # fmt: skip
+    in_the_readme = {one.entity_id for one in found} | {thing_of(one) for one in judged}
     from_code, check.code_ids_not_judged = judge_code_ids(
-        scan, found, window, mirrors, LedgerStore(conninfo), CodeIdStore(conninfo), repository,
-        now=now, counts=asked_node,
+        scan, in_the_readme, window, mirrors, LedgerStore(conninfo), CodeIdStore(conninfo),
+        repository, now=now, counts=asked_node,
     )  # fmt: skip
     if found or (scan and scan.ids):
         progress(LEDGER, DONE if asked_node["answers_from_the_node"] else SAVED)
-    keys = [f"{one.network}:{one.found.entity_id}" for one in judged
-            if one.network and one.status in seen.CONFIRMED]  # fmt: skip
-    known = seen.submission_matches(conninfo, repository, keys)
+    confirmed = [(one.network, one.found.entity_id, thing_of(one)) for one in judged
+                 if one.network and one.status in seen.CONFIRMED]  # fmt: skip
+    known = seen.submission_matches(conninfo, repository, confirmed)
     check.ids = [
         IdResult(one.found, one.status, one.network, one.facts,
-                 shared=f"{one.network}:{one.found.entity_id}" in known.shared,
-                 named_elsewhere=one.found.entity_id in known.named_by_other_code)
+                 shared=f"{one.network}:{thing_of(one)}" in known.shared,
+                 named_elsewhere=bool({one.found.entity_id, thing_of(one)}
+                                      & known.named_by_other_code))
         for one in judged
     ] + from_code  # fmt: skip
     if found and all(one.status == NOT_ASKED for one in check.ids):

@@ -16,6 +16,7 @@ from checkfakes import (
     CODE_FILES,
     COMMIT,
     DOWNLOAD,
+    DURING,
     NOW,
     README,
     REPO,
@@ -29,12 +30,14 @@ from checkfakes import (
 )
 from fakes import ARCHIVE_COMMIT, Reply, StandInMirror, archive, project_page
 from hackathon_memory.check import submission
+from hackathon_memory.check.ledger import LedgerFacts
 from hackathon_memory.check.submission import EventDays
 from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.github import archive_address, readme_address
 from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.ledger import LedgerStore
 from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
@@ -232,6 +235,60 @@ def test_an_id_that_many_projects_with_other_code_name_links_nothing(
     result = run(database, tmp_path, found_code(tmp_path)[0])
     assert result.ids[0].shared
     assert [one.by for one in result.seen] == ["repository"]
+
+
+ADDRESS, CONTRACT = "0x8004a818bfb912233c491871b3d84c89a494bd9e", "0.0.7919997"
+
+
+def names_the_contract(database: str, name: str, entity: str) -> None:
+    """The project `name` names the invented contract on the test network as `entity`, and the
+    ledger found it there as CONTRACT."""
+    with psycopg.connect(database) as conn:
+        (project,) = conn.execute("SELECT id FROM projects WHERE name = %s", (name,)).fetchone()
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, %s, 'testnet', 'contract', 'page', "
+            "'invented', false) RETURNING id", (project, entity)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    LedgerStore(database).save_facts(LedgerFacts(entity, "testnet", NOW, found=True,
+                                                 kind="contract", ledger_id=CONTRACT))  # fmt: skip
+
+
+def knows_the_contract(entity: str) -> dict[str, StandInMirror]:
+    mirrors = nodes()
+    mirrors["testnet"].things["contract"] = {
+        entity: {"contract_id": CONTRACT, "created_timestamp": DURING, "evm_address": ADDRESS}
+    }
+    return mirrors
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("in_the_readme", "on_the_page"),
+    [(ADDRESS, CONTRACT), (CONTRACT, ADDRESS)],
+    ids=["readme-address", "page-address"],
+)
+def test_a_contract_named_in_its_other_form_is_seen_before(
+    database: str, tmp_path: Path, in_the_readme: str, on_the_page: str
+) -> None:
+    """A README and a page that name one contract, one by its EVM address and one by its 0.0
+    ID, name one thing of the ledger (28 October 2026: they were two IDs)."""
+    names_the_contract(database, "Cedar Post", on_the_page)
+    readme = (
+        f"# Pebble Pay\n\nOur [contract](https://hashscan.io/testnet/contract/{in_the_readme}).\n"
+    )
+    result = run(
+        database, tmp_path, found_code(tmp_path, readme)[0], knows_the_contract(in_the_readme)
+    )
+    with psycopg.connect(database) as conn:
+        ids = dict(conn.execute("SELECT name, id FROM projects").fetchall())
+    assert [(one.found.entity_id, one.network) for one in result.ids] == [
+        (in_the_readme, "testnet")
+    ]
+    assert [(one.project_id, one.by) for one in result.seen] == [
+        (ids["Pebble Pay"], "repository"), (ids["Cedar Post"], f"testnet:{CONTRACT}")]  # fmt: skip
+    assert result.ids[0].named_elsewhere and not result.ids[0].shared
 
 
 @pytest.mark.integration
