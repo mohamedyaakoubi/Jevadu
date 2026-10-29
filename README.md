@@ -109,7 +109,7 @@ Two more things work, and both were run on the real services:
 - **The cost of the models is counted.** Every call to a model leaves one line in a ledger: the model, the tokens, the time, the cost. A budget stops a call before it is made when it could go over the cap. `python -m hackathon_memory.finops report` shows where the money went. The ledger holds numbers only, never the text of a call.
 - **The history is searched for secrets.** `python -m hackathon_memory.secret_scan` looks for each secret of `.env` in every commit.
 
-The tests (1,939 of them on 29 October 2026) run before every commit, and again on GitHub at every push, on a clean Ubuntu machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
+The tests (1,940 of them on 29 October 2026) run before every commit, and again on GitHub at every push, on a clean Ubuntu machine. They do not prove that the services answer as the code expects. That is what the live runs of the proofs are for.
 
 ### On the real data
 
