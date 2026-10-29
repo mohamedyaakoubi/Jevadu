@@ -500,7 +500,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-story-cut { margin: 0 0 0.5rem; padding-left: 0.5rem; border-left: 3px solid var(--tblr-warning); }
 /* the team signs its registration with its own wallet (29 October 2026) */
 .hm-sign { margin: 0.75rem 0 0; padding: 0.75rem; border: 1px solid var(--tblr-border-color); border-radius: 6px; }
-.hm-sign-title { float: none; width: auto; margin: 0 0 0.25rem; font-size: 1rem; font-weight: 600; }
+.hm-sign-title { float: left; width: 100%; margin: 0 0 0.25rem; font-size: 1rem; font-weight: 600; }
 .hm-sign-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
 /* a public service that the project names, not its own (29 October 2026) */
 .hm-story-public { margin: 0 0 0.5rem; padding-left: 0.5rem; border-left: 3px solid var(--tblr-info); }
