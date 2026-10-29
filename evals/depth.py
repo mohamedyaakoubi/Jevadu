@@ -59,10 +59,10 @@ MANY_DAYS = 3
 SIGNS = {
     "topic_with_no_message": "has no message",
     "contract_never_called": "was never called after its deployment",
-    "token_held_only_by_its_own": "is held only by accounts that the project names",
+    "token_held_only_by_its_own": "is held only by accounts that the project itself lists",
     "token_held_by_nobody": "No account holds its token",
     "accounts_only_moved_hbar": "only moved HBAR",
-    "package_with_no_call": "names a Hedera package, and calls no Hedera service",
+    "package_with_no_call": "lists a Hedera package but never calls a Hedera service",
     "no_id_of_its_own": "has no ID of its own",
 }
 # What "How they are set up" says, by the words of its sentences (check/setup.py, 28 October 2026).
