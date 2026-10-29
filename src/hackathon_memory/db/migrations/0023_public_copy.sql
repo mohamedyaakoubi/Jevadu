@@ -1,4 +1,4 @@
--- The public copy of the website (design 12.5, 29 October 2026): the same site, served at
+-- The public copy of the website (design 12.5, 30 October 2026): the same site, served at
 -- jevadu.mohamedyaakoubi.com through a Cloudflare tunnel, with the limits of 21 October.
 --
 -- A switch turns a part of it on: "ai" (the search by meaning, the order and the comparisons of
