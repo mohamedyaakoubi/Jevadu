@@ -126,11 +126,14 @@ def test_the_database_adds_up_like_the_memory_store(empty_database: str) -> None
     store.add(call(environment="prod", model=FLASH))
     store.add(call(called_at=NOW - timedelta(days=2)))
     store.add(call(model="gemini-embedding-001", output_tokens=0, thinking_tokens=0))
+    store.add(call(environment="public", called_at=NOW - timedelta(days=3)))  # design 12.5
     assert store.spent("test") == pytest.approx(0.016)
     assert store.spent("prod") == pytest.approx(0.002625)
+    assert store.spent("public") == pytest.approx(0.008)
     assert store.spent("test", since=NOW - timedelta(hours=1)) == pytest.approx(0.008)
-    # Oldest first: the call of two days ago, then the three of today in the order they were added.
-    assert [c.environment for c in store.calls()] == ["test", "test", "prod", "test"]
+    # Oldest first: the calls of three and two days ago, then the three of today in the order
+    # they were added.
+    assert [c.environment for c in store.calls()] == ["public", "test", "test", "prod", "test"]
     assert len(store.calls("test", since=NOW)) == 2
     assert store.calls("test", since=NOW)[-1].cost_usd is None  # the price was not known
 

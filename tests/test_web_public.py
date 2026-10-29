@@ -7,7 +7,9 @@ import pytest
 from pydantic import SecretStr
 from test_web import REPO, checkable, site  # noqa: F401  (the fixture of the website's tests)
 
+from hackathon_memory.finops import meter
 from hackathon_memory.web import public
+from searchfakes import google
 
 SALT = "s" * 40
 
@@ -47,6 +49,25 @@ def test_the_ai_stays_off_on_the_public_copy_until_it_is_turned_on(site) -> None
     public.turn(database, public.AI, True)
     turned_on = open_copy.get("/", params={"idea": "pay a vendor in coins", "mode": "meaning"})
     assert "the AI is turned off" not in turned_on.text and len(fake.requests) > asked
+
+
+def test_the_public_copy_spends_from_a_budget_of_its_own(site, monkeypatch) -> None:  # noqa: ANN001, F811
+    client, _, _, database = site
+    counted, _, _ = google()
+    environments = []
+
+    def made(settings, purpose, **_):  # noqa: ANN001, ANN003, ANN202
+        environments.append(settings.llm_environment)
+        return counted
+
+    monkeypatch.setattr(meter, "metered_client", made)
+    idea = {"idea": "pay a vendor in coins", "mode": "meaning"}
+    client.make(app_options={"google": None}).get("/", params=idea)
+    public.turn(database, public.AI, True)
+    open_copy = client.make(app_options={"public": True, "google": None},
+                            public_salt=SecretStr(SALT))  # fmt: skip
+    open_copy.get("/", params=idea)
+    assert environments == ["test", "public"]  # the laptop's site, then the public copy
 
 
 def test_each_visitor_has_a_count_of_checks_a_day(site, monkeypatch) -> None:  # noqa: ANN001, F811

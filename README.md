@@ -279,7 +279,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m proofs.gate_b --questions Q --results R` | Gate B, part 1, for the ideas of another file of `data/by-hand`. |
 | `python -m proofs.gate_b --marks R1 R2` | Gate B, part 2: reads the marks of one or more results files. An idea that expects close projects needs at least one result marked "yes"; an idea that says `expect: none` needs only its marks. |
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
-| `python -m hackathon_memory.finops budget` | Where the two budgets stand |
+| `python -m hackathon_memory.finops budget` | Where the three budgets stand: the test work, the tool in use and the public copy |
 | `python -m hackathon_memory.finops prices` | The prices in use, with the day each one begins |
 | `python -m hackathon_memory.finops reconcile --billed 1.23` | Our own count against the amount on Google's bill |
 | `python -m hackathon_memory.secret_scan` | Looks for the secrets of `.env` in every commit. It prints names, never values. |

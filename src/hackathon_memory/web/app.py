@@ -452,8 +452,11 @@ def create_app(
     is made, counted by the meter, when it is first needed. `refresh_inline` reads a card again
     on the thread of its request, for the tests (web/refresher.py). With `rehearsal`, the topic of
     `settings` is the one for rehearsals, and every page says so (design 9.3). With `public`, it is
-    the public copy, with the switches and the counts of web/public.py (design 12.5)."""
+    the public copy, with the switches and the counts of web/public.py, and the calls it makes are
+    counted against its own budget (design 12.5)."""
     settings = settings or Settings()
+    if public:
+        settings = settings.model_copy(update={"llm_environment": "public"})
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
     # 6 is zlib's own default: almost as small as 9, and faster.

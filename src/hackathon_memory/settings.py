@@ -89,13 +89,18 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = Field("gemini-embedding-2", json_schema_extra=_PUBLIC)
 
     # What the models may cost (finops). "test" is all the work before the tool is shown: the
-    # proofs, the tests, the first runs. "prod" is the tool while people use it. Each has its own
-    # budget in dollars, and a call that could go over it is not made. The defaults are small on
-    # purpose: about 70 project pages cost about 3 dollars with the two layers.
-    llm_environment: Literal["test", "prod"] = Field("test", json_schema_extra=_PUBLIC)
+    # proofs, the tests, the first runs. "prod" is the tool while people use it. "public" is the
+    # public copy of the website (design 12.5), which always counts under it, whatever
+    # LLM_ENVIRONMENT says. Each has its own budget in dollars, and a call that could go over it
+    # is not made. The defaults are small on purpose: about 70 project pages cost about 3
+    # dollars with the two layers. The public copy has 30 dollars in all and 5 a day (29 October
+    # 2026).
+    llm_environment: Literal["test", "prod", "public"] = Field("test", json_schema_extra=_PUBLIC)
     llm_budget_test_usd: float = Field(15.0, ge=0, json_schema_extra=_PUBLIC)
     llm_budget_prod_usd: float = Field(30.0, ge=0, json_schema_extra=_PUBLIC)
     llm_budget_prod_per_day_usd: float = Field(5.0, ge=0, json_schema_extra=_PUBLIC)
+    llm_budget_public_usd: float = Field(30.0, ge=0, json_schema_extra=_PUBLIC)
+    llm_budget_public_per_day_usd: float = Field(5.0, ge=0, json_schema_extra=_PUBLIC)
     llm_budget_warn_percent: int = Field(80, ge=1, le=100, json_schema_extra=_PUBLIC)
 
     # The local PostgreSQL that Docker Compose starts
