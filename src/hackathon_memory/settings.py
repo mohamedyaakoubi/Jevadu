@@ -61,6 +61,15 @@ class Settings(BaseSettings):
     # The salt of the hash that counts each visitor of the public copy (web/public.py): any long
     # random text, kept so that the counts of a day hold across a restart.
     public_salt: SecretStr = SecretStr("")
+    # The Cloudflare tunnel of the public copy (web/tunnel.py): where it is, its port on this
+    # computer, the API token that makes it (Cloudflare Tunnel: Edit, DNS: Edit), the account,
+    # the token of the tunnel itself, and the program cloudflared when it is not found alone.
+    public_host: str = Field("jevadu.mohamedyaakoubi.com", json_schema_extra=_PUBLIC)
+    public_port: int = Field(8020, json_schema_extra=_PUBLIC)
+    cloudflare_api_token: SecretStr = SecretStr("")
+    cloudflare_account_id: str = Field("", json_schema_extra=_PUBLIC)
+    cloudflare_tunnel_token: SecretStr = SecretStr("")
+    cloudflared_path: str = Field("", json_schema_extra=_PUBLIC)
 
     # Google Cloud: the Gemini models and the embedding model on Vertex AI (step 3)
     google_cloud_project: SecretStr = SecretStr("")
