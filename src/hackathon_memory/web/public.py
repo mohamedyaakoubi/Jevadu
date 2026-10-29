@@ -1,8 +1,8 @@
 """The public copy of the website (design 12.5, 29 October 2026).
 
-The same site runs a second time on the laptop that holds the collection, started with --public,
-and a Cloudflare tunnel brings jevadu.mohamedyaakoubi.com to it: nothing of the collection leaves
-the laptop. The limits are those of a public site with no accounts:
+The same site runs a second time as the public copy at jevadu.mohamedyaakoubi.com: on Vercel, with
+its database on Neon (web/vercel_app.py), or started on the laptop with --public behind a
+Cloudflare tunnel (web/tunnel.py). The limits are those of a public site with no accounts:
 
 * Search engines are told not to index it (robots.txt, the header X-Robots-Tag and the page's own
   meta), so it is reached by its link only. This holds for the laptop's site too.
@@ -16,8 +16,9 @@ the laptop. The limits are those of a public site with no accounts:
   each of its buttons pressed for an idea (press_key), however many calls the answer takes; an
   answer kept for a day costs nothing again. The count is made by the meter, just before a call
   to a model (Limits.admit), so only what is really asked of a model is counted.
-* A visitor is a salted hash of the address that Cloudflare gives (an IPv6 address by its /64
-  network, since one home holds a whole /64) and of the name the browser gives itself
+* A visitor is a salted hash of the address that the host gives (Vercel's or Cloudflare's header;
+  an IPv6 address by its /64 network, since one home holds a whole /64) and of the name the
+  browser gives itself
   (User-Agent): people who share an address, on a campus or behind a mobile network, each have
   their own allowance. Never a cookie, which a visitor could delete, and never the address
   itself. One address holds the allowances of at most SHARED visitors, so another browser name is
