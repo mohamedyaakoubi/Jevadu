@@ -7,8 +7,9 @@ python -m hackathon_memory.web --rehearsal  registrations go to the rehearsal to
 python -m hackathon_memory.web --public --port 8020
                                             the public copy, which a Cloudflare tunnel brings to
                                             jevadu.mohamedyaakoubi.com: the AI and registering stay
-                                            off until turned on (web/switch.py), and each visitor
-                                            has a count a day (design 12.5)
+                                            off until turned on (web/switch.py), it spends from a
+                                            budget of its own, and each visitor has an allowance,
+                                            one time only (design 12.5)
 """
 
 from __future__ import annotations

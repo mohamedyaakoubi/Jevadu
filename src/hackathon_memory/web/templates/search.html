@@ -86,6 +86,7 @@
               <a class="btn btn-sm{% if not with_ai %} active{% endif %}" href="/?{{ quick_query }}" hx-get="/?{{ quick_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if not with_ai %} aria-current="true"{% endif %}>Search order</a>
               <a class="btn btn-sm{% if with_ai %} active{% endif %}" href="/?{{ ai_query }}" hx-get="/?{{ ai_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true" data-asks-gemini{% if with_ai %} aria-current="true"{% endif %}>Gemini's order</a>
             </div>{{ parts.info("orders", "the two orders") }}
+            {% if gemini_left %}<span class="hm-small ms-2">You can ask Gemini {{ gemini_left }} more time{{ "s" if gemini_left != 1 }} on this public copy.</span>{% endif %}
           </div>
           {% endif %}
           <div class="hm-switch">

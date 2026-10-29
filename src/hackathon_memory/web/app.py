@@ -280,10 +280,17 @@ PUBLIC_REGISTER_OFF = (
     "On this public copy of Jevadu, registering on Hedera is paused for now. Everything else of "
     "the check works."
 )
-PUBLIC_LIMIT = (
-    "This public copy of Jevadu allows {count} {what} a day for each visitor, and that is reached. "
-    "Try again tomorrow."
+PUBLIC_USED = (
+    "This public copy of Jevadu gives each visitor {count} {what}, one time only, and you have "
+    "used {them}{so}. The full version, shown in the video, has no such limit."
 )
+PUBLIC_WHAT = {
+    public_copy.AI: ("ask of Gemini", "asks of Gemini"),
+    public_copy.EMBED: ("search by meaning", "searches by meaning"),
+    public_copy.CHECK: ("check", "checks"),
+    public_copy.REFRESH: ("reading again", "readings again"),
+    public_copy.REGISTER: ("registration", "registrations"),
+}
 SIGNED_OLD_COMMIT = (
     "A new commit reached the repository after you signed: the record must name the latest one. "
     "Sign again, then register."
@@ -430,6 +437,18 @@ def page_numbers(page: int, pages: int) -> list[int | None]:
     return numbers
 
 
+def used_up(count: int, kind: str, so: str = "") -> str:
+    """The words for a visitor of the public copy whose allowance of `kind` is used, with what
+    follows from it (design 12.5)."""
+    one, many = PUBLIC_WHAT[kind]
+    return PUBLIC_USED.format(
+        count=count,
+        what=one if count == 1 else many,
+        them="it" if count == 1 else "them",
+        so=f", so {so}" if so else "",
+    )
+
+
 def create_app(
     settings: Settings | None = None,
     google: Any = None,
@@ -462,7 +481,9 @@ def create_app(
     # 6 is zlib's own default: almost as small as 9, and faster.
     app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
     app.mount("/static", Revalidated(directory=HERE / "static"), name="static")
-    limits = public_copy.Limits(lambda: database()) if public else None
+    limits = (public_copy.Limits(lambda: database(), settings.public_ai_per_visitor)
+              if public else None)  # fmt: skip
+    gate = limits.admit if limits is not None else None  # the meter asks it before each call
     salt = settings.public_salt.get_secret_value()
 
     @app.middleware("http")
@@ -489,14 +510,27 @@ def create_app(
         return public_copy.ROBOTS
 
     def allowed(kind: str) -> bool:
-        """On the public copy, whether the visitor of this request may do `kind` once more today;
-        always on the laptop's own site."""
+        """On the public copy, whether the visitor of this request may do `kind` once more, out
+        of an allowance that is never renewed; always on the laptop's own site."""
         return limits is None or limits.take(kind, public_copy.visitor.get())
 
     def ai_closed() -> bool:
-        """On the public copy, a call to a model is refused while the AI is off, or past the
-        visitor's count of the day; every caller then falls back as for a spent budget."""
-        return limits is not None and not (limits.on(public_copy.AI) and allowed(public_copy.AI))
+        """On the public copy, a call to a model is refused while the AI is off; every caller
+        then falls back as for a spent budget. What each visitor may still ask is counted by the
+        meter, just before each call (public_copy.Limits.admit)."""
+        return limits is not None and not limits.on(public_copy.AI)
+
+    def used(kind: str, so: str = "") -> str:
+        """The words for a visitor whose allowance of `kind` on the public copy is used."""
+        return used_up(limits.allowance[kind] if limits is not None else 0, kind, so)
+
+    def gemini_closed(idea: str) -> bool:
+        """On the public copy, whether the visitor may no longer ask Gemini's order for `idea`: an
+        ask counted before stays open, since its answers cost nothing more."""
+        if limits is None:
+            return False
+        who, key = public_copy.visitor.get(), public_copy.press_key(idea, "order")
+        return not limits.pressed(who, key) and limits.left(public_copy.AI, who) == 0
 
     templates = Jinja2Templates(directory=HERE / "templates")
     jobs = checks.CheckJobs()  # the checks that run while their page waits
@@ -505,6 +539,10 @@ def create_app(
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
                                "github": github_client, "mirrors": mirrors,
                                "writer": register_writer, "stand_in": stand_in_client}  # fmt: skip
+    if gate is not None:  # on the public copy, every model passes the visitor's gate
+        for name in ("google", "llm", "rerank", "stand_in"):
+            if clients[name] is not None:
+                clients[name] = clients[name].gated(gate)
     breaker = stand_in.Breaker()  # Gemini's failures in a row (design 8.2)
     answers = Answers(github.raw_dir(settings))  # GitHub's newest answers (design 7.3)
     app.state.breaker = breaker
@@ -514,24 +552,31 @@ def create_app(
     def database() -> str:
         return make_conninfo(settings.database_conninfo(), connect_timeout=CONNECT_SECONDS)
 
-    def client(name: str, purpose: str) -> Any:
+    def client(name: str, purpose: str, press: str | None = None) -> Any:
+        """The client `name`, counted under `purpose`. On the public copy, it carries the ask of
+        Gemini that it answers (public_copy.press_key), which the visitor's gate counts once."""
         if ai_closed():
             raise BudgetExceeded("The AI is turned off on this public copy.")
         if clients[name] is None:
             from hackathon_memory.finops.meter import metered_client
 
-            clients[name] = metered_client(settings, purpose)
-        return clients[name]
+            clients[name] = metered_client(settings, purpose, gate=gate)
+        if limits is None:
+            return clients[name]
+        return clients[name].tagged(purpose=purpose, item_ref=press)
 
-    def standing_in(purpose: str) -> Any:
-        """The client of the stand-in of the search model, counted under `purpose`."""
+    def standing_in(purpose: str, press: str | None = None) -> Any:
+        """The client of the stand-in of the search model, counted under `purpose`, with the ask
+        of Gemini that it answers in its place."""
         if ai_closed():
             raise BudgetExceeded("The AI is turned off on this public copy.")
         if clients["stand_in"] is None:
             from hackathon_memory.llm.open_models import open_models
 
-            clients["stand_in"] = open_models(settings, purpose)
-        return clients["stand_in"].tagged(purpose=purpose)
+            clients["stand_in"] = open_models(settings, purpose, gate=gate)
+        if limits is None:
+            return clients["stand_in"].tagged(purpose=purpose)
+        return clients["stand_in"].tagged(purpose=purpose, item_ref=press)
 
     def told(words: str) -> str:
         """A message about Gemini and its stand-in, with the numbers of the switch."""
@@ -726,9 +771,16 @@ def create_app(
                 return ranking, None, None
             pool, rest = ranking[: rerank.POOL], ranking[rerank.POOL :]
             scope = scope_of(chosen.chosen(), FILTERS)
+            ask = public_copy.press_key(idea, "order")  # counted once on the public copy
+
+            def spent() -> str:
+                if gemini_closed(idea):
+                    return used(public_copy.AI, "these results are in the search order")
+                return AI_SPENT
+
             if not breaker.standing_in():
                 order, how = rerank.order_pool(
-                    conninfo, client("rerank", "rerank"), idea, pool,
+                    conninfo, client("rerank", "rerank", ask), idea, pool,
                     model=settings.gemini_search_model,
                     level=settings.gemini_search_thinking_level, scope=scope,
                     timeout_seconds=RERANK_SECONDS,
@@ -738,25 +790,28 @@ def create_app(
                         breaker.answered()
                     return order + rest, how, "Gemini"
                 if how == rerank.SPENT:
-                    notes.append(AI_SPENT)
+                    notes.append(spent())
                     return ranking, how, None
                 if not breaker.failed():
                     notes.append(told(AI_LATE if how == rerank.LATE else AI_FAILED))
                     return ranking, how, None
             order, how = rerank.order_pool(
-                conninfo, standing_in("rerank"), idea, pool, model=stand_in.MODEL,
+                conninfo, standing_in("rerank", ask), idea, pool, model=stand_in.MODEL,
                 level=STAND_IN_LEVEL, scope=scope, timeout_seconds=STAND_IN_RERANK_SECONDS,
             )  # fmt: skip
             if how in rerank.ORDERED:
                 notes.append(told(STAND_IN_USED))
                 return order + rest, how, stand_in.NAME
-            notes.append(AI_SPENT if how == rerank.SPENT else told(BOTH_FAILED))
+            notes.append(spent() if how == rerank.SPENT else told(BOTH_FAILED))
             return ranking, how, None
         except (*FAILED_CALLS, BudgetExceeded) as error:
             # the kind of error only, for whoever runs the site: an expired sign-in to Google
             # (RefreshError) needs a new one, which the page cannot ask for
             LOG.warning("the search by meaning fell back to the words: %s", type(error).__name__)
-            notes.append(MEANING_SPENT if isinstance(error, BudgetExceeded) else GOOGLE_AWAY)
+            if isinstance(error, public_copy.Refused):
+                notes.append(used(public_copy.EMBED, "these are keyword results"))
+            else:
+                notes.append(MEANING_SPENT if isinstance(error, BudgetExceeded) else GOOGLE_AWAY)
             return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
 
     def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
@@ -798,11 +853,21 @@ def create_app(
             mode = MEANING  # 28 October 2026 asked for its order with no mode
         mode = mode if mode in MODES else DEFAULT_MODE
         with_ai = ai == "1" and mode == MEANING and bool(idea)
-        # The public copy with its AI off searches by keyword, and says so (design 12.5).
+        # The public copy with its AI off searches by keyword, and says so (design 12.5). So does a
+        # visitor whose searches by meaning are used; one whose asks of Gemini are used keeps the
+        # search order.
         ai_off = (limits is not None and bool(idea) and mode == MEANING
                   and not limits.on(public_copy.AI))  # fmt: skip
+        public_note = PUBLIC_AI_OFF if ai_off else None
         if ai_off:
             mode, with_ai = WORDS, False
+        elif limits is not None and idea and mode == MEANING:
+            if limits.left(public_copy.EMBED, public_copy.visitor.get()) == 0:
+                mode, with_ai = WORDS, False
+                public_note = used(public_copy.EMBED, "these are keyword results")
+            elif with_ai and gemini_closed(idea):
+                with_ai = False
+                public_note = used(public_copy.AI, "these results are in the search order")
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
@@ -818,7 +883,7 @@ def create_app(
             if not idea:  # the start page needs no database; the list waits for it
                 return render(request, "search.html", asked=False, **down)
             return render(request, "search.html", 503, asked=True, **down)
-        notes = [PUBLIC_AI_OFF] if ai_off else []
+        notes = [public_note] if public_note else []
         unknown = [name for name, value in asked.chosen().items() if not every.knows(name, value)]
         if unknown:
             notes.append("No project has the value given for "
@@ -872,6 +937,8 @@ def create_app(
                 notes.append(IDEA_CUT)
             ordered = how in rerank.ORDERED
             shown["sorted_by"] = sorted_by
+            if limits is not None and not ai_off and mode == MEANING:  # after this search's ask
+                shown["gemini_left"] = limits.left(public_copy.AI, public_copy.visitor.get())
             none_close = bool(only) and not ranking  # the filters match, but none is close
             if view == CHARTS:
                 built, groups, said = charts_of(conninfo, ranking)
@@ -1007,6 +1074,8 @@ def create_app(
                 EmbeddingStore(conninfo), client("google", "embed_query"), words,
                 model=settings.gemini_embedding_model, limit=CLOSEST + len(check.seen),
             )  # fmt: skip
+        except public_copy.Refused:
+            return [], used(public_copy.EMBED, "the most similar past projects cannot be shown")
         except BudgetExceeded:
             return [], CHECK_SPENT
         except FAILED_CALLS:
@@ -1091,8 +1160,7 @@ def create_app(
         if wrong:
             return render(request, name, 400, problem=wrong)
         if not allowed(public_copy.CHECK):
-            return render(request, name, 429, problem=PUBLIC_LIMIT.format(
-                count=public_copy.PER_DAY[public_copy.CHECK], what="checks"))  # fmt: skip
+            return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
         if name == "_check.html" and progress == "1":
             job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report))
@@ -1135,8 +1203,7 @@ def create_app(
         if limits is not None and not limits.on(public_copy.REGISTER):
             return render(request, name, 503, problem=PUBLIC_REGISTER_OFF)
         if not allowed(public_copy.REGISTER):
-            return render(request, name, 429, problem=PUBLIC_LIMIT.format(
-                count=public_copy.PER_DAY[public_copy.REGISTER], what="registrations"))  # fmt: skip
+            return render(request, name, 429, problem=used(public_copy.REGISTER))
         repository = submission.repository_link(form.get("repo", "")[:300])
         if repository is None:
             return render(request, name, 400, problem=NOT_A_REPOSITORY)
@@ -1289,8 +1356,7 @@ def create_app(
     def read_again_now(request: Request, project_id: int) -> HTMLResponse:
         """S2: read GitHub and the mirror node again for one project, before the next round."""
         if not allowed(public_copy.REFRESH):
-            words = PUBLIC_LIMIT.format(count=public_copy.PER_DAY[public_copy.REFRESH],
-                                        what="readings again")  # fmt: skip
+            words = used(public_copy.REFRESH)
             return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 429)
         return read_again_shown(request, project_id, reader.ask(project_id))
 
@@ -1326,15 +1392,20 @@ def create_app(
                           **place)  # fmt: skip
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
                     BudgetExceeded, *FAILED_CALLS, *rerank.NOT_ORDERED)  # fmt: skip
+        # On the public copy, the comparison of the first ten counts with Gemini's order; a
+        # project's own window and a check count once each.
+        button = ("check" if place["check_place"] else
+                  f"one:{project_ids[0]}" if place["one_place"] else "order")  # fmt: skip
+        ask = public_copy.press_key(idea, button)
 
         def compared(conninfo: str, items: list, by_stand_in: bool) -> tuple[dict, int]:
             if by_stand_in:
                 return comparing.kept_or_compared(
-                    conninfo, standing_in("compare"), idea, items, model=stand_in.MODEL,
+                    conninfo, standing_in("compare", ask), idea, items, model=stand_in.MODEL,
                     thinking_level=STAND_IN_LEVEL, timeout_seconds=STAND_IN_COMPARE_SECONDS,
                 )  # fmt: skip
             return comparing.kept_or_compared(
-                conninfo, client("llm", "compare"), idea, items,
+                conninfo, client("llm", "compare", ask), idea, items,
                 model=settings.gemini_search_model,
                 thinking_level=settings.gemini_search_thinking_level,
                 timeout_seconds=COMPARE_SECONDS,
@@ -1356,6 +1427,9 @@ def create_app(
                     raise
                 by_stand_in = True
                 found, _ = compared(conninfo, items, by_stand_in)
+        except public_copy.Refused:
+            return render(request, "_compare.html", 429, found={}, failed=True,
+                          asked_ids=project_ids, used_up=used(public_copy.AI), **place)  # fmt: skip
         except failures:
             return render(request, "_compare.html", 503, found={}, failed=True,
                           asked_ids=project_ids, **place)  # fmt: skip

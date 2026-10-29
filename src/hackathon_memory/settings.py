@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # the token of the tunnel itself, and the program cloudflared when it is not found alone.
     public_host: str = Field("jevadu.mohamedyaakoubi.com", json_schema_extra=_PUBLIC)
     public_port: int = Field(8020, json_schema_extra=_PUBLIC)
+    # How many times one visitor of the public copy may ask Gemini, one time only (design
+    # 12.5): 30 dollars pay about 300 visitors who use all 12.
+    public_ai_per_visitor: int = Field(12, ge=0, json_schema_extra=_PUBLIC)
     cloudflare_api_token: SecretStr = SecretStr("")
     cloudflare_account_id: str = Field("", json_schema_extra=_PUBLIC)
     cloudflare_tunnel_token: SecretStr = SecretStr("")

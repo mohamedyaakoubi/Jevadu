@@ -25,7 +25,7 @@ from typing import Any
 
 import httpx
 
-from hackathon_memory.finops.meter import Meter, Tags
+from hackathon_memory.finops.meter import Gate, Meter, Tags
 
 DEEPSEEK_FLASH = "deepseek-v4.1-flash-maas"
 PUBLISHERS = {DEEPSEEK_FLASH: "deepseek-ai"}
@@ -86,6 +86,11 @@ class OpenModels:
         return OpenModels(self._project, self._meter, replace(self._tags, **changes), self._token,
                           http=self._http, clock=self._clock)  # fmt: skip
 
+    def gated(self, gate: Gate) -> OpenModels:
+        """The same client and ledger, behind a gate (finops/meter.py); this one stays without."""
+        return OpenModels(self._project, self._meter.with_gate(gate), self._tags, self._token,
+                          http=self._http, clock=self._clock)  # fmt: skip
+
     def chat(
         self,
         model: str,
@@ -101,7 +106,7 @@ class OpenModels:
         """One answer of the model, counted. Raises OpenModelError, an error of httpx, or
         BudgetExceeded before the call."""
         guessed = (len(system) + len(user)) // LETTERS_A_TOKEN + 1
-        self._meter.before_call(model, guessed, max_tokens)
+        self._meter.before_call(model, guessed, max_tokens, self._tags)
         body: dict[str, Any] = {
             "model": f"{PUBLISHERS[model]}/{model}",
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -179,12 +184,15 @@ def google_token(settings: Any) -> Callable[[], str]:
     return token
 
 
-def open_models(settings: Any, purpose: str, *, run_id: str | None = None) -> OpenModels:
-    """The client of the open models, counted by the meter of the environment in use."""
+def open_models(
+    settings: Any, purpose: str, *, run_id: str | None = None, gate: Gate | None = None
+) -> OpenModels:
+    """The client of the open models, counted by the meter of the environment in use, and behind
+    `gate` when one is given."""
     from hackathon_memory.finops import budget as budgets
     from hackathon_memory.finops.calls import PostgresStore
 
     meter = Meter(PostgresStore(settings.database_conninfo()), settings.llm_environment,
-                  budget=budgets.from_settings(settings), location="global")  # fmt: skip
+                  budget=budgets.from_settings(settings), location="global", gate=gate)  # fmt: skip
     return OpenModels(settings.google_cloud_project.get_secret_value().strip(), meter,
                       Tags(purpose=purpose, run_id=run_id), google_token(settings))  # fmt: skip

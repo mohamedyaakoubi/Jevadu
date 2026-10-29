@@ -90,6 +90,19 @@ def test_a_tagged_client_keeps_its_meter() -> None:
     assert (call.purpose, call.item_ref) == ("rerank", "case 3")
 
 
+def test_a_gate_refuses_a_call_of_the_stand_in_before_it_is_sent() -> None:
+    """The public copy's visitors are counted for the stand-in too (finops/meter.py)."""
+    endpoint, store = Endpoint((200, answer("{}"))), MemoryStore()
+
+    def refuse(tags) -> None:  # noqa: ANN001
+        raise BudgetExceeded(f"no more for {tags.item_ref}")
+
+    with pytest.raises(BudgetExceeded, match="no more for idea:order"):
+        gated = client(endpoint, store).gated(refuse).tagged(item_ref="idea:order")
+        gated.chat(DEEPSEEK_FLASH, "s", "u", thinking=False, max_tokens=500, timeout_seconds=5)
+    assert endpoint.sent == [] and store.calls() == []
+
+
 def test_the_search_order_can_come_from_an_open_model() -> None:
     endpoint, store = Endpoint((200, answer('{"closest": [3, 9, 1, 3]}'))), MemoryStore()
     lines = ["1. A: a", "2. B: b", "3. C: c"]

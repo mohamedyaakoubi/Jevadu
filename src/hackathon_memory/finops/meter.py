@@ -4,7 +4,9 @@
 change: it gets a metered client and uses it as before. Each call then does three things:
 
 1. BEFORE: the budget guard looks at the worst case of the call. If it could go over the budget,
-   the call is not made (BudgetExceeded).
+   the call is not made (BudgetExceeded). Then a gate, when the meter has one, may refuse the call
+   for who asks it: the public copy of the website counts there what each visitor used
+   (web/public.py).
 2. The real call, with its time measured.
 3. AFTER: one line goes to the ledger, with the tokens that Google reported. A call that failed
    gets a line too, with the class of its error.
@@ -43,6 +45,9 @@ class Tags:
     item_ref: str | None = None
 
 
+Gate = Callable[[Tags], None]  # raises BudgetExceeded to refuse a call, before it is made
+
+
 class Meter:
     def __init__(
         self,
@@ -51,6 +56,7 @@ class Meter:
         budget: budgets.Budget | None = None,
         location: str | None = None,
         now: Callable[[], datetime] | None = None,
+        gate: Gate | None = None,
     ) -> None:
         if budget is not None and budget.environment != environment:
             raise ValueError("The budget belongs to another environment than the meter.")
@@ -59,20 +65,29 @@ class Meter:
         self.budget = budget
         self.location = location
         self.now = now or (lambda: datetime.now(UTC))
+        self.gate = gate
 
-    def before_call(self, model: str, input_tokens: int, max_output_tokens: int) -> None:
-        """Refuse the call if its worst case could go over the budget."""
-        if self.budget is None:
-            return
-        moment = self.now()
-        worst = prices.cost_usd(
-            model,
-            moment.astimezone(UTC).date(),
-            input_tokens=input_tokens,
-            output_tokens=max_output_tokens,
-        )
-        # A model with no known price cannot be guarded: its calls are still counted.
-        budgets.require(self.budget, self.store, moment, next_call_usd=worst or 0.0)
+    def with_gate(self, gate: Gate) -> Meter:
+        """The same ledger and budget, with a gate: the meter it was made from stays as it was."""
+        return Meter(self.store, self.environment, self.budget, self.location, self.now, gate)
+
+    def before_call(
+        self, model: str, input_tokens: int, max_output_tokens: int, tags: Tags | None = None
+    ) -> None:
+        """Refuse the call if its worst case could go over the budget, then if the gate refuses
+        it: what a gate counts is counted only for a call that the budget lets through."""
+        if self.budget is not None:
+            moment = self.now()
+            worst = prices.cost_usd(
+                model,
+                moment.astimezone(UTC).date(),
+                input_tokens=input_tokens,
+                output_tokens=max_output_tokens,
+            )
+            # A model with no known price cannot be guarded: its calls are still counted.
+            budgets.require(self.budget, self.store, moment, next_call_usd=worst or 0.0)
+        if self.gate is not None:
+            self.gate(tags or Tags(purpose="unknown"))
 
     def record(
         self,
@@ -165,7 +180,7 @@ class _MeteredModels:
         self, *, model: str, contents: Any, config: Any = None, **more: Any
     ) -> Any:
         limit = getattr(config, "max_output_tokens", None) or DEFAULT_MAX_OUTPUT_TOKENS
-        self._meter.before_call(model, _estimate_tokens(contents, config), int(limit))
+        self._meter.before_call(model, _estimate_tokens(contents, config), int(limit), self._tags)
 
         def record(response: Any, latency_ms: int) -> None:
             meta = getattr(response, "usage_metadata", None)
@@ -189,7 +204,7 @@ class _MeteredModels:
         )
 
     def embed_content(self, *, model: str, contents: Any, config: Any = None, **more: Any) -> Any:
-        self._meter.before_call(model, _estimate_tokens(contents, None), 0)
+        self._meter.before_call(model, _estimate_tokens(contents, None), 0, self._tags)
 
         def record(response: Any, latency_ms: int) -> None:
             tokens = 0
@@ -242,6 +257,10 @@ class MeteredClient:
         """The same client and the same meter, for another purpose, run or item."""
         return MeteredClient(self._client, self._meter, replace(self._tags, **changes), self._clock)
 
+    def gated(self, gate: Gate) -> MeteredClient:
+        """The same client and ledger, behind a gate; this one stays without it."""
+        return MeteredClient(self._client, self._meter.with_gate(gate), self._tags, self._clock)
+
 
 def metered_client(
     settings: Any,
@@ -251,8 +270,10 @@ def metered_client(
     store: CallStore | None = None,
     run_id: str | None = None,
     item_ref: str | None = None,
+    gate: Gate | None = None,
 ) -> MeteredClient:
-    """The Google client of the settings, counted, with the budget of the environment in use.
+    """The Google client of the settings, counted, with the budget of the environment in use,
+    and behind `gate` when one is given.
 
     This is the one door to the models. The ledger is the table llm_calls of the database, unless
     another store is given (a test gives a MemoryStore).
@@ -266,6 +287,7 @@ def metered_client(
         settings.llm_environment,
         budget=budgets.from_settings(settings),
         location=settings.google_cloud_location or None,
+        gate=gate,
     )
     real = client if client is not None else make_client(settings)
     return MeteredClient(real, meter, Tags(purpose=purpose, run_id=run_id, item_ref=item_ref))
