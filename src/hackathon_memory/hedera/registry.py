@@ -9,6 +9,16 @@ The record is the fixed form of design 9.3, version 2, in compact JSON, and noth
 
 Version 1 had no "commit"; none was ever written, because the topic did not exist yet.
 
+Version 3 (29 October 2026) is a record that the team signed with its own wallet
+(hedera/signing.py): the account in plain words, how it signed, and the signature, in base64,
+of the text that signing.signed_text writes from the other parts:
+
+    {"v":3,"event":"...","code":"<64 hex>","commit":"<40 hex>","account":"0.0.12345",
+     "scheme":"hedera","sig":"<base64 of 64 or 65 bytes>"}
+
+An account in plain words is the team's choice: it signs, and a signature can only be checked
+against a known account. Without a signature the record stays of version 2.
+
 * "code" is the SHA-256 of the link of the repository, in the one spelling of collect/github.py.
   The link itself is never written: it holds the name of its owner, and a message can never be
   deleted (design rule 8). Anybody can compute the fingerprint again from the link and find its
@@ -65,9 +75,11 @@ from hackathon_memory.hedera.mirror import (
     when,
 )
 from hackathon_memory.hedera.register import MessageSubmitted, RegisterError
+from hackathon_memory.hedera.signing import SCHEMES, AccountKey, check, signed_text
 from hackathon_memory.settings import Settings
 
 VERSION = 2
+SIGNED = 3  # a record that the team signed with its own wallet
 MAX_RECORD = 384  # bytes; one message holds 1,024, and the record must stay far below (design 9.3)
 PAGE = 100  # messages asked for at once
 MAX_PAGES = 50  # 5,000 registrations; more would need another way to find a fingerprint
@@ -75,6 +87,7 @@ _HEX = re.compile(r"^[0-9a-f]{64}$")
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _EVENT = re.compile(r"^(?:[a-z0-9.-]+/[a-z0-9._-]+|days/\d{4}-\d{2}-\d{2}/\d{4}-\d{2}-\d{2})$")
 _ACCOUNT = re.compile(r"^0\.0\.[1-9]\d{0,11}$")
+_SIGNATURE = re.compile(r"^[A-Za-z0-9+/]{86}(?:==|[A-Za-z0-9+/]=)$")  # 64 or 65 bytes, base64
 
 Write = Callable[[bytes], MessageSubmitted]
 
@@ -127,6 +140,24 @@ def record(event: str, code: str, commit: str, account: str | None = None) -> by
     body = {"v": VERSION, "event": event, "code": code, "commit": commit}
     if account:
         body["account"] = account
+    return _within(body)
+
+
+def signed_record(
+    event: str, code: str, commit: str, account: str, scheme: str, signature: bytes
+) -> bytes:
+    """The bytes of a record that the team signed (version 3). Refuses anything else."""
+    if (not _EVENT.match(event) or not _HEX.match(code) or not _COMMIT.match(commit)
+            or not _ACCOUNT.match(account) or scheme not in SCHEMES
+            or len(signature) not in (64, 65)):  # fmt: skip
+        raise RegisterError("A signed record holds the event, the fingerprints, the account and "
+                            "its signature only (design 9.3, 9.6).")  # fmt: skip
+    return _within({"v": SIGNED, "event": event, "code": code, "commit": commit,
+                    "account": account, "scheme": scheme,
+                    "sig": base64.b64encode(signature).decode()})  # fmt: skip
+
+
+def _within(body: dict) -> bytes:
     payload = json.dumps(body, separators=(",", ":")).encode("utf-8")
     if len(payload) > MAX_RECORD:
         raise RegisterError(f"The record is {len(payload)} bytes; it must stay below {MAX_RECORD}.")
@@ -142,7 +173,10 @@ class Registration:
     event: str
     code: str
     commit: str
-    account: str | None
+    account: str | None  # version 2: the fingerprint of an account that the team typed
+    signer: str | None = None  # version 3: the account that signed it, in plain words
+    scheme: str | None = None  # how it signed (hedera/signing.py)
+    signature: str | None = None  # in base64
 
     @property
     def registered_at(self) -> datetime:
@@ -150,6 +184,14 @@ class Registration:
 
     def link(self, network: str) -> str:
         return hashscan_transaction(network, self.consensus_timestamp)
+
+    def check_signature(self, key: AccountKey) -> None:
+        """Check again, from the record alone, that its signature is that of `key`: raises a
+        SignatureError when it is not, or when the record is not signed."""
+        if not (self.signer and self.scheme and self.signature):
+            raise RegisterError("This record is not signed.")
+        text = signed_text(self.event, self.code, self.commit, self.signer)
+        check(self.scheme, text, base64.b64decode(self.signature), key)
 
 
 def read_record(message: dict) -> Registration | None:
@@ -159,12 +201,19 @@ def read_record(message: dict) -> Registration | None:
         sequence, stamp = int(message["sequence_number"]), str(message["consensus_timestamp"])
     except (KeyError, TypeError, ValueError):
         return None
-    if not isinstance(body, dict) or body.get("v") != VERSION:
+    if not isinstance(body, dict) or body.get("v") not in (VERSION, SIGNED):
         return None
     event, code, account = body.get("event"), body.get("code"), body.get("account")
     commit = body.get("commit")
     parts = ((event, _EVENT), (code, _HEX), (commit, _COMMIT))
     parts_fit = all(isinstance(value, str) and pattern.match(value) for value, pattern in parts)
+    if body.get("v") == SIGNED:
+        scheme, signature = body.get("scheme"), body.get("sig")
+        signed = (isinstance(account, str) and bool(_ACCOUNT.match(account)) and scheme in SCHEMES
+                  and isinstance(signature, str) and bool(_SIGNATURE.match(signature)))  # fmt: skip
+        if not (parts_fit and signed):
+            return None
+        return Registration(sequence, stamp, event, code, commit, None, account, scheme, signature)
     account_fits = account is None or (isinstance(account, str) and bool(_HEX.match(account)))
     if not (parts_fit and account_fits):
         return None

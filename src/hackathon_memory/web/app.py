@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+import re
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -30,7 +31,7 @@ from urllib.parse import parse_qs, urlencode
 import psycopg
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg.conninfo import make_conninfo
@@ -58,7 +59,7 @@ from hackathon_memory.db.idea_answers import AnswerStore, scope_of
 from hackathon_memory.db.runs import recorded_run
 from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.finops.budget import BudgetExceeded
-from hackathon_memory.hedera import listed, registry
+from hackathon_memory.hedera import listed, registry, signing
 from hackathon_memory.hedera.mirror import (
     MIRROR_URLS,
     MirrorError,
@@ -264,6 +265,19 @@ NO_README_TO_SEARCH = (
     "idea in the search box instead."
 )
 NOT_AN_ACCOUNT = "A Hedera account ID looks like 0.0.12345. Leave it empty to register without one."
+# The signature of a team's own wallet (design 9.6, 29 October 2026).
+NOT_SIGNED_RIGHT = "The signature came back incomplete from the wallet. Sign again."
+SIGNED_OLD_COMMIT = (
+    "A new commit reached the repository after you signed: the record must name the latest one. "
+    "Sign again, then register."
+)
+NO_SUCH_SIGNER = (
+    "The account {account} is not on the Hedera test network. Sign with an account of it."
+)
+NO_ACCOUNT_FOR_ADDRESS = (
+    "This MetaMask address has no Hedera account on the test network yet. Send it some test "
+    "HBAR from the faucet of portal.hedera.com, which makes the account, then sign again."
+)
 CHECK_FIRST = "Check the repository first: only a repository that GitHub shows can be registered."
 NO_LINE = (
     "The README on GitHub does not contain the line {line} yet. Add it to the README on the "
@@ -1049,10 +1063,16 @@ def create_app(
         repository = submission.repository_link(form.get("repo", "")[:300])
         if repository is None:
             return render(request, name, 400, problem=NOT_A_REPOSITORY)
-        typed = form.get("account", "").strip()
-        account = registry.account_of(typed) if typed else None
-        if typed and account is None:
+        # The team's own signature (design 9.6): its account, how its wallet signed, the
+        # signature, and the commit that the signed text named.
+        signer_text, scheme = form.get("signer", "").strip(), form.get("scheme", "").strip()
+        signature, signed_commit = form.get("signature", "").strip(), form.get("signed_commit", "")
+        signs = bool(signer_text or scheme or signature)
+        signer = signing.account_of(signer_text) if signs else None
+        if signs and signer is None:
             return render(request, name, 400, problem=NOT_AN_ACCOUNT)
+        if signs and (scheme not in signing.SCHEMES or not signature):
+            return render(request, name, 400, problem=NOT_SIGNED_RIGHT)
         try:
             days, wrong = event_days(database(), form.get("event", ""), form.get("starts", ""),
                                      form.get("ends", ""))  # fmt: skip
@@ -1088,11 +1108,27 @@ def create_app(
             return render(request, name, 400, problem=NO_LINE.format(line=view.line))
         if version is None or version.status != VERSION_FOUND or version.sha is None:
             return render(request, name, 400, problem=NO_VERSION)
+        payload = registry.record(view.event, view.code, version.sha)
+        if signer is not None:  # checked against the key that the ledger shows for the account
+            if signed_commit.strip() != version.sha:
+                return render(request, name, 400, problem=SIGNED_OLD_COMMIT)
+            try:
+                key = signing.account_key(mirror_nodes()[view.network], signer)
+                if key is None:
+                    return render(request, name, 400, problem=NO_SUCH_SIGNER.format(account=signer))
+                raw = signing.raw_signature(scheme, signature)
+                text = signing.signed_text(view.event, view.code, version.sha, signer)
+                signing.check(scheme, text, raw, key)
+            except signing.SignatureError as error:
+                return render(request, name, 400, problem=str(error))
+            except MirrorError:
+                return render(request, name, 503, problem=REGISTER_UNREAD)
+            payload = registry.signed_record(
+                view.event, view.code, version.sha, signer, scheme, raw
+            )
         write, why = writer_or_why()
         if write is None:
             return render(request, name, 503, problem=why)
-        account_print = registry.account_fingerprint(account) if account else None
-        payload = registry.record(view.event, view.code, version.sha, account_print)
         try:
             done = registry.register_submission(write, mirror_nodes()[view.network],
                                                 view.topic_id, payload)  # fmt: skip
@@ -1107,6 +1143,20 @@ def create_app(
         except MirrorError:
             return render(request, name, 202, problem=NOT_YET_VISIBLE)
         return render(request, name, done=done, already=False, **values)
+
+    @app.get("/register/account")
+    def register_account(address: str = "") -> JSONResponse:
+        """The Hedera account of a MetaMask address, which the text that the team signs names
+        (design 9.6). MetaMask knows only the address; the mirror node gives the account."""
+        if not re.fullmatch(r"0x[0-9a-fA-F]{40}", address):
+            return JSONResponse({"problem": "This is not an address of MetaMask."}, 400)
+        try:
+            key = signing.account_key(mirror_nodes()["testnet"], address.lower())
+        except MirrorError:
+            return JSONResponse({"problem": REGISTER_UNREAD}, 503)
+        if key is None:
+            return JSONResponse({"problem": NO_ACCOUNT_FOR_ADDRESS}, 404)
+        return JSONResponse({"account": key.account, "key": key.key_type})
 
     @app.get("/project/{project_id}", response_class=HTMLResponse)
     def project(request: Request, project_id: int) -> HTMLResponse:
@@ -1302,6 +1352,7 @@ def create_app(
         "strip_view": strips.strip_view,
         "hashscan_moment": hashscan_transaction,
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
+        "WALLETCONNECT_PROJECT_ID": settings.walletconnect_project_id.strip(),
         "REFRESH_IN_BACKGROUND": settings.refresh_in_background,
         "reason_of": data.reason_of,
         "static_url": static_url,

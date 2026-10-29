@@ -743,7 +743,7 @@ If the same fingerprint appears again later, at any event, the tool says "seen b
 
 ### 9.4 What the register proves, and what it does not
 
-It proves that a fingerprint was registered through the tool at a given time, and that the README of the repository carried the team's line at that time, which only someone who could change the repository can add. It does not prove that the team took part in the hackathon: only its organiser knows that. Nor does it prove who pressed the button: in the first version the tool's account does the writing. A stronger form, where the team signs with its own account, is not in the first version.
+It proves that a fingerprint was registered through the tool at a given time, and that the README of the repository carried the team's line at that time, which only someone who could change the repository can add. It does not prove that the team took part in the hackathon: only its organiser knows that. Nor does it prove who pressed the button: in the first version the tool's account does the writing. A stronger form, where the team signs with its own account, came on 29 October 2026 (section 9.6).
 
 ### 9.5 The keys of the topic
 
@@ -757,6 +757,17 @@ The topic is created with **no admin key**, and with a **submit key** that the t
 - **Why no admin key.** The register must belong to nobody. With an admin key the register could be deleted, or the right to write could be handed to somebody else quietly. Without it this is impossible, and anybody can check that on HashScan.
 - **Why a submit key.** Without it, any stranger could post false records.
 - **The price.** A lost or stolen submit key cannot be replaced. A new topic would be created, and the method screen would say so.
+
+### 9.6 The team signs with its own wallet
+
+Since 29 October 2026 a team can sign its registration with its own Hedera account. Before, a record proved that a registration went through the tool at a given time, not which account agreed to it: the tool's account wrote every record (section 9.4).
+
+- **What is signed.** A short text that every part of the record gives again: "Jevadu register", the hackathon, the fingerprint of the repository, the commit and the account, one per line. The wallet shows it before the team signs.
+- **Two wallets.** HashPack, or another wallet made for Hedera, signs through Hedera's own WalletConnect library (`@hashgraph/hedera-wallet-connect` 2.1.3, the method `hedera_signMessage`), for an account with either kind of key. WalletConnect is a standard bridge between a website and a wallet; it needs a project ID from its maker, Reown, which is free and not a secret (`WALLETCONNECT_PROJECT_ID`). MetaMask, an Ethereum wallet, signs with `personal_sign` (EIP-191), and only for an account whose key is of the ECDSA kind, the one that also has a 0x address; the mirror node gives the Hedera account of that address.
+- **What the site checks.** Before it writes, the site reads the account's key from the mirror node and checks the signature with the Hedera SDK: an Ed25519 signature of the prefixed text, or an ECDSA signature of its Keccak-256 hash, which is what both wallets sign. It also checks that the signed commit is still the latest one. A wrong or stale signature writes nothing.
+- **The record.** Version 3 of the record adds the account in plain words, how it signed (`hedera` or `eip191`) and the signature in base64 (section 9.3). An account in plain words is the team's own choice: a signature can only be checked against a known account. Without a signature, the record stays of version 2.
+- **Who pays.** The tool still writes the record and pays for it, and the topic keeps its one submit key (section 9.5): the team only signs, so its account pays nothing.
+- **What it proves.** That the holder of that account agreed to this record, which anybody can check again from the record and the account's key on the ledger. It still does not prove that the team took part in the hackathon.
 
 One trap: the Python example in Hedera's own tutorial sets an admin key. This topic must not.
 

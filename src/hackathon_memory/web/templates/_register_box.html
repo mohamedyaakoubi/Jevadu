@@ -12,7 +12,7 @@
     {% else %}
       {% if view.earlier %}
       <p><b>Already registered.</b> This repository is in the register {{ view.earlier | length }} time{{ "s" if view.earlier | length != 1 }}:</p>
-      <ul class="hm-link-list">{% for one in view.earlier %}<li><a href="{{ one.link(view.network) }}" target="_blank" rel="noopener">{{ one.registered_at | day }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>, for <span class="id">{{ one.event }}</span>, sequence number {{ one.sequence_number }}</li>{% endfor %}</ul>
+      <ul class="hm-link-list">{% for one in view.earlier %}<li><a href="{{ one.link(view.network) }}" target="_blank" rel="noopener">{{ one.registered_at | day }}<span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>, for <span class="id">{{ one.event }}</span>, sequence number {{ one.sequence_number }}{% if one.signer %}, signed by the account <span class="id">{{ one.signer }}</span>{% endif %}</li>{% endfor %}</ul>
       {% else %}
       <p class="text-secondary">This repository is not registered yet.</p>
       {% endif %}
@@ -29,7 +29,7 @@
         <li>the hackathon: <span class="id">{{ view.event }}</span></li>
         <li>a hash of the repository link: <span class="id">{{ view.code[:16] }}&hellip;</span></li>
         <li>the latest commit at the moment you click (now <span class="id">{{ result.version.sha[:12] }}&hellip;</span>)</li>
-        <li>a hash of your Hedera account, if you enter one below</li>
+        <li>your Hedera account and its signature, if you sign below</li>
       </ul>
       <p class="hm-small">Nothing else: no link, no name, no text. Hedera adds a sequence number and a timestamp. A record can never be changed or deleted.</p>
       <form id="register-form" method="post" action="/register" hx-post="/register" hx-target="#register-box" hx-swap="outerHTML" hx-disabled-elt="find button">
@@ -37,8 +37,17 @@
         <input type="hidden" name="event" value="{{ asked.event }}">
         <input type="hidden" name="starts" value="{{ asked.starts }}">
         <input type="hidden" name="ends" value="{{ asked.ends }}">
-        <label class="form-label" for="register-account">Your Hedera account (optional)</label>
-        <input class="form-control" id="register-account" name="account" placeholder="0.0.12345" autocomplete="off" spellcheck="false" pattern="0\.0\.[1-9][0-9]{0,11}">
+        {# The team signs with its own wallet (design 9.6): static/sign.js fills the hidden fields. #}
+        <fieldset class="hm-sign" data-sign data-event="{{ view.event }}" data-code="{{ view.code }}" data-commit="{{ result.version.sha }}" data-project-id="{{ WALLETCONNECT_PROJECT_ID }}">
+          <legend class="hm-sign-title">Sign it with your own Hedera account (optional)</legend>
+          <p class="hm-small mb-2">Your wallet signs the text of the record. The record then holds your account and its signature, and anyone can check them against your account's key on the ledger. Your account pays nothing: the site still writes the record.</p>
+          <div class="hm-sign-buttons">
+            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="metamask">Sign with MetaMask</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="hashpack"{% if not WALLETCONNECT_PROJECT_ID %} disabled{% endif %}>Sign with HashPack</button>
+          </div>
+          <p class="hm-small hm-sign-status mb-0" aria-live="polite">{% if not WALLETCONNECT_PROJECT_ID %}HashPack signs through WalletConnect, which needs a project ID that this site does not have yet.{% endif %}</p>
+          <input type="hidden" name="signer"><input type="hidden" name="scheme"><input type="hidden" name="signature"><input type="hidden" name="signed_commit">
+        </fieldset>
         <button class="btn btn-primary mt-3" type="submit">Register on Hedera testnet</button>
       </form>
       {% endif %}
