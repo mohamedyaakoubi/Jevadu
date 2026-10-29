@@ -168,13 +168,10 @@ def google_token(settings: Any) -> Callable[[], str]:
     import google.auth
     from google.auth.transport.requests import Request
 
-    from hackathon_memory.llm.client import load_key_file
+    from hackathon_memory.llm.client import credentials_of
 
-    key_file = settings.google_application_credentials.get_secret_value().strip()
-    if key_file:
-        credentials = load_key_file(key_file)  # with the scope of the Gemini client, the same
-    else:
-        credentials, _ = google.auth.default(scopes=[SCOPE])
+    # the sign-in of the Gemini client, with its scope; else Application Default Credentials
+    credentials = credentials_of(settings) or google.auth.default(scopes=[SCOPE])[0]
 
     def token() -> str:
         if not credentials.valid:
@@ -191,8 +188,9 @@ def open_models(
     `gate` when one is given."""
     from hackathon_memory.finops import budget as budgets
     from hackathon_memory.finops.calls import PostgresStore
+    from hackathon_memory.llm.client import project_of
 
     meter = Meter(PostgresStore(settings.database_conninfo()), settings.llm_environment,
                   budget=budgets.from_settings(settings), location="global", gate=gate)  # fmt: skip
-    return OpenModels(settings.google_cloud_project.get_secret_value().strip(), meter,
-                      Tags(purpose=purpose, run_id=run_id), google_token(settings))  # fmt: skip
+    return OpenModels(project_of(settings), meter, Tags(purpose=purpose, run_id=run_id),
+                      google_token(settings))  # fmt: skip

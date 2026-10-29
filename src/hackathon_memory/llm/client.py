@@ -84,6 +84,18 @@ def load_key_file(path: str) -> Credentials:
     )
 
 
+def project_of(settings: Settings) -> str:
+    """The Google Cloud project that the models are asked and billed in."""
+    return settings.google_cloud_project.get_secret_value().strip()
+
+
+def credentials_of(settings: Settings) -> Credentials | None:
+    """The sign-in of the settings: the key file named by GOOGLE_APPLICATION_CREDENTIALS, or None,
+    and then the library uses Application Default Credentials."""
+    key_file = settings.google_application_credentials.get_secret_value().strip()
+    return load_key_file(key_file) if key_file else None
+
+
 def default_http_options(
     *,
     attempts: int = 4,
@@ -117,16 +129,15 @@ def make_client(
     credentials: Credentials | None = None,
     http_options: types.HttpOptions | None = None,
 ) -> genai.Client:
-    project = settings.google_cloud_project.get_secret_value().strip()
+    project = project_of(settings)
     location = settings.google_cloud_location.strip()
     if not project or not location:
         raise GoogleSetupError(
             "GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION must both be set in .env "
             "(design 15, step 3)."
         )
-    key_file = settings.google_application_credentials.get_secret_value().strip()
-    if credentials is None and key_file:
-        credentials = load_key_file(key_file)
+    if credentials is None:
+        credentials = credentials_of(settings)
     try:
         return genai.Client(
             enterprise=True,
