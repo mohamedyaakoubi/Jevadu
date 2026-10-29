@@ -1053,6 +1053,22 @@ def test_a_comparison_is_kept_for_a_day_and_shown_in_the_window(site) -> None:  
     assert model_calls(fake, before) == 1
 
 
+def test_a_comparison_kept_for_the_idea_shows_on_its_card_in_the_list(site) -> None:  # noqa: ANN001
+    """A comparison asked in a project's window shows on its card when the list comes again
+    (30 October 2026: the card kept no trace of it)."""
+    client, fake, ids, _ = site
+    pebble = ids["Pebble Pay"]
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    client.get("/compare", params={"idea": VENDOR, "ids": str(pebble), "one": "1"})
+    before = len(fake.requests)
+    page = client.get("/", params={"idea": VENDOR, "mode": "meaning"})  # no order of Gemini
+    card = page.text.split(f'id="result-{pebble}"', 1)[1].split("</li>", 1)[0]
+    assert "Same 1." in card and "By Gemini, from what it does." in card
+    assert model_calls(fake, before) == 0  # kept, never asked again
+    other = client.get("/", params={"idea": "a market of old books", "mode": "meaning"})
+    assert "Same 1." not in other.text  # kept for its own idea only
+
+
 def test_one_comparison_in_the_window_replaces_its_button(site) -> None:  # noqa: ANN001
     client, fake, ids, _ = site
     fern = ids["Fern Vote"]
@@ -2299,6 +2315,22 @@ def served(chromium, client, before_compare=lambda: None, **context):  # noqa: A
 
     page.route(lambda url: url.startswith("http://site.test/"), answer)
     return page
+
+
+@pytest.mark.browser
+def test_a_comparison_in_the_window_shows_on_its_card_at_once(site, chromium) -> None:  # noqa: ANN001
+    client, fake, ids, _ = site
+    pebble = ids["Pebble Pay"]
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(SEARCH)
+    assert page.locator(f"#result-{pebble} .hm-compare").count() == 0
+    page.locator(f"#result-{pebble} .result-link").click()
+    page.locator(f"#one-compare-{pebble} button").click()
+    page.wait_for_selector(f"#one-compare-{pebble} .hm-compare-text")
+    page.wait_for_selector(f"#result-{pebble} .hm-compare-text")  # the card, behind the window
+    assert "Same 1." in page.locator(f"#result-{pebble} .hm-compare").inner_text()
+    page.context.close()
 
 
 @pytest.mark.browser

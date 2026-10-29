@@ -113,7 +113,7 @@
       {% elif results %}
         <ol class="hm-grid" id="result-list">
         {% for card, summary, line, snippet in results %}
-          {{ parts.result(card, summary, line, snippet, (first_shown + loop.index0) if asked else none, search_query, card.hit.project_id in compare_ids) }}
+          {{ parts.result(card, summary, line, snippet, (first_shown + loop.index0) if asked else none, search_query, card.hit.project_id in compare_ids, (kept_compared or {}).get(card.hit.project_id)) }}
         {% endfor %}
         </ol>
         {{ parts.pager(page, pages, search_query, "Pages of the results" if asked else "Pages of the list") }}

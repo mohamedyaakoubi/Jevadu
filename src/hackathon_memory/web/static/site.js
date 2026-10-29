@@ -920,6 +920,29 @@
       }, 12000);
     }
   });
+  // A comparison asked in a project's window shows on the project's card in the list too, at
+  // once (30 October 2026: the card kept no trace of it until the list was asked again).
+  function comparedOnCards() {
+    document.querySelectorAll(".compare-place[id^='one-compare-']").forEach(function (place) {
+      var text = place.querySelector(".hm-compare-text");
+      var pid = place.id.slice("one-compare-".length);
+      var card = document.querySelector("#result-" + pid + " .hm-card");
+      if (!text || !card) return;
+      var slot = $("compare-" + pid);
+      if (!slot) {
+        slot = document.createElement("div");
+        slot.id = "compare-" + pid;
+        slot.className = "hm-compare compare";
+        card.appendChild(slot);
+      }
+      slot.classList.remove("waiting");
+      slot.removeAttribute("aria-busy");
+      slot.innerHTML = text.outerHTML;
+    });
+  }
+  // After the settle, not the swap: htmx keeps the old attributes of an element with the same id
+  // until it settles, so at the swap the place still has the class of the button's box.
+  document.addEventListener("htmx:afterSettle", comparedOnCards);
   document.addEventListener("htmx:afterSwap", function (event) {
     var target = event.detail.target;
     if (target && target.id === "viewer-body") {

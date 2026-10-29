@@ -1004,6 +1004,9 @@ def create_app(
             page_number = min(page_number, pages)
             first = (page_number - 1) * PAGE_SIZE
             results = results_of(conninfo, ranking[first : first + PAGE_SIZE], idea, mode == WORDS)
+            # a comparison kept for this idea shows on its card, wherever it was asked
+            shown_ids = [card.hit.project_id for card, *_ in results]
+            kept_compared = kept_comparisons(conninfo, idea, shown_ids)
         except (SettingsError, psycopg.OperationalError):
             return render(request, "search.html", 503, asked=True, **down)
         # Gemini compares the ten that it put first, on the first page only.
@@ -1013,6 +1016,7 @@ def create_app(
                       pages=pages, page=page_number, first_shown=first + 1,
                       last_shown=first + len(results), nothing_matches=only == [],
                       none_close=none_close, panel_card=panel_card, offer=offer,
+                      kept_compared=kept_compared,
                       **{**shown, "elapsed": elapsed, "with_ai": ordered,
                          "compare_ids": compare_ids})  # fmt: skip
 
