@@ -2976,9 +2976,36 @@ def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -
     page.locator("[data-sign-with=evm]").click()
     page.wait_for_function("document.querySelector('[name=signer]').value !== ''")
     assert f"Signed by the account {account}." in page.locator(".hm-sign-status").inner_text()
+    assert page.locator(".hm-sign-status").get_attribute("data-state") == "done"
     message = page.evaluate("window.ethereum.asked[1].params[0]")
     assert bytes.fromhex(message[2:]).decode().endswith(f"Commit: {COMMIT}\nAccount: {account}")
     page.locator("#register-form button[type=submit]").click()
     page.wait_for_selector("#register-box dt:has-text('Signed by')")
     assert json.loads(client.writes.written[0])["scheme"] == "eip191"
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_an_address_with_no_account_is_said_plainly_with_the_faucet(site, chromium) -> None:  # noqa: ANN001
+    """An EVM wallet connects, and its address has no Hedera account: the line under the buttons
+    says so in a box that shows, with the faucet as a link (30 October 2026: it went unseen)."""
+    client, _, _, database = site
+    event = checkable(database)
+    page = served(chromium, client, reduced_motion="reduce")
+    page.add_init_script(
+        "window.ethereum = { async request(call) {"
+        f' if (call.method === "eth_requestAccounts") return ["0x{"12" * 20}"];'
+        ' throw new Error("not asked in this test"); } };'
+    )
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] [data-sign-with=evm]")
+    page.locator("[data-sign-with=evm]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=problem]")
+    status = page.locator(".hm-sign-status")
+    assert "has no Hedera account on the test network yet" in status.inner_text()
+    assert status.locator("a").get_attribute("href") == "https://portal.hedera.com/faucet"
+    assert page.locator("[data-sign-with=evm]").is_enabled()  # it can be tried again
     page.context.close()

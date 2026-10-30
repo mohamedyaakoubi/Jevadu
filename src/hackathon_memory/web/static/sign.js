@@ -22,9 +22,29 @@ function signedText(box, account) {
   ].join("\n");
 }
 
-function say(box, words) {
+// The line under the buttons says each step, and a problem or the end plainly, in a box that shows
+// (30 October 2026: a problem in small grey words went unseen). An address in it is a link.
+function say(box, words, state = "step") {
   const status = box.querySelector(".hm-sign-status");
-  if (status) status.textContent = words;
+  if (!status) return;
+  status.dataset.state = state;
+  status.replaceChildren();
+  for (const part of words.split(/(https:\/\/\S*[^\s.,)])/)) {
+    if (!part.startsWith("https://")) {
+      status.append(part);
+      continue;
+    }
+    const link = document.createElement("a");
+    link.href = part;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = part.slice("https://".length);
+    status.append(link);
+  }
+}
+
+function short(address) {
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
 function keep(box, signed) {
@@ -46,11 +66,13 @@ async function withEvmWallet(box) {
       + "with a Hedera wallet.");
   }
   const [address] = await ethereum.request({ method: "eth_requestAccounts" });
+  say(box, `Connected to ${short(address)}. Looking for its Hedera account on the test network.`);
   // An EVM wallet knows only the address: the mirror node gives its Hedera account.
   const answer = await fetch(`/register/account?address=${encodeURIComponent(address)}`);
   const found = await answer.json();
   if (!answer.ok) throw new Error(found.problem || "The account of this address was not found.");
-  say(box, `Sign the text in your wallet, for the account ${found.account}.`);
+  say(box, `Found the Hedera account ${found.account} of ${short(address)}. Sign the text in `
+    + "your wallet.");
   const signature = await ethereum.request({
     method: "personal_sign",
     params: [hexOf(signedText(box, found.account)), address],
@@ -95,7 +117,7 @@ async function withHederaWallet(box) {
   const signer = connector.signers[connector.signers.length - 1];
   if (!signer) throw new Error("No account was connected. Approve the connection in your wallet.");
   const account = signer.getAccountId().toString();
-  say(box, `Sign the text in your wallet, for the account ${account}.`);
+  say(box, `Connected to the account ${account}. Sign the text in your wallet.`);
   const result = await connector.signMessage({
     signerAccountId: `hedera:testnet:${account}`,
     message: signedText(box, account),
@@ -115,12 +137,13 @@ document.addEventListener("click", async (event) => {
     const signed = button.dataset.signWith === "evm"
       ? await withEvmWallet(box) : await withHederaWallet(box);
     keep(box, signed);
-    say(box, `Signed by the account ${signed.account}. Now click "Register on Hedera testnet".`);
+    say(box, `Signed by the account ${signed.account}. Now click "Register on Hedera testnet".`,
+      "done");
   } catch (error) {
     // 4001: the person declined in the wallet (EIP-1193)
     say(box, error && error.code === 4001
       ? "You declined in the wallet, so nothing was signed."
-      : (error && error.message) || String(error));
+      : (error && error.message) || String(error), "problem");
   } finally {
     buttons.forEach((one) => {
       one.disabled = one.dataset.signWith === "hedera" && !box.dataset.projectId;
