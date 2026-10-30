@@ -3273,8 +3273,8 @@ def test_a_newer_commit_lets_the_old_signature_go_and_the_next_one_names_it(site
 def test_an_address_with_no_account_is_shown_how_to_make_one(site, chromium) -> None:  # noqa: ANN001
     """An EVM wallet connects, and its address has no Hedera account yet: the box says so where it
     names the wallet, with the address to copy and the faucet that makes the account, and once the
-    faucet made it, the same button finds it and signs (30 October 2026: "did you remove
-    metamask", and no word on how to make the account)."""
+    faucet made it, the same button finds it and signs (30 October 2026: one red line said that
+    the account was missing, and not how to make it)."""
     client, _, _, database = site
     event = checkable(database)
     key, account, address = signing_account(client)
