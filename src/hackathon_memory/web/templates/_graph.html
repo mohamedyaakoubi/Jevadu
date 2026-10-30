@@ -47,6 +47,7 @@
     <ul class="hm-graph-key" aria-label="What the colours and lines mean">
       {% for group in graph.groups %}<li><span class="hm-graph-swatch hm-g{{ group.number }}" aria-hidden="true"></span>{{ group.title }}</li>{% endfor %}
       {% if graph.lines %}<li><span class="hm-graph-stroke" aria-hidden="true"></span>Same code or Hedera ID</li>{% endif %}
+      {% if count > 1 %}<li><span class="hm-graph-stroke is-dashed" aria-hidden="true"></span>Closest project in meaning, for a dot you point at or keep</li>{% endif %}
     </ul>
   </div>
 </div>

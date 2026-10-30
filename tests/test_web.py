@@ -2013,6 +2013,9 @@ def test_the_graph_draws_the_whole_collection_or_a_filtered_list(site, monkeypat
     assert page.count('<a class="hm-dot ') == 3 and 'class="hm-graph-idea"' not in page
     assert '<svg class="hm-graph-svg"' in page and 'aria-hidden="true"' in page
     assert "The whole collection:" not in page and 'data-proof="not checked yet"' in page
+    # the key names the dashed line to the closest project too (30 October 2026: it had none)
+    dashed = '<span class="hm-graph-stroke is-dashed" aria-hidden="true"></span>'
+    assert f"{dashed}Closest project in meaning, for a dot you point at or keep</li>" in page
     # The same projects as lists of links, for a keyboard and a screen reader.
     assert page.count("data-graph-link=") == 3
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel?view=graph&amp;event={event}"' in page
