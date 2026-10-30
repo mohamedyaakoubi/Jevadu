@@ -1479,7 +1479,7 @@ def create_app(
                 found, _ = compared(conninfo, items, by_stand_in)
         except public_copy.Refused:
             return render(request, "_compare.html", 429, found={}, failed=True,
-                          asked_ids=project_ids, used_up=used(public_copy.AI), **place)  # fmt: skip
+                          asked_ids=project_ids, refused=used(public_copy.AI), **place)  # fmt: skip
         except failures:
             return render(request, "_compare.html", 503, found={}, failed=True,
                           asked_ids=project_ids, **place)  # fmt: skip
