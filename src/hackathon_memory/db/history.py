@@ -3,10 +3,11 @@
 An own ID is named by one project only, or only by projects that share one repository: an ID
 that several teams name is often a shared service (design 8.4), and its history would say nothing
 about one team; the entries of one team's code at several hackathons share its IDs (28 October
-2026). It counts by the thing that the ledger names: an EVM address and the 0.0 ID of one contract
-are one thing, which two teams can name in its two forms. Only an ID whose kind
-fits what its page says is read: the statuses of the proof rule "proof found", "the dates do not
-fit" and "found, but empty" (design 7.2).
+2026). A public service that its owner lists, such as the price oracle of Pyth, is no project's
+own however few name it (db/public_services.py, 29 October 2026). It counts by the thing that the
+ledger names: an EVM address and the 0.0 ID of one contract are one thing, which two teams can
+name in its two forms. Only an ID whose kind fits what its page says is read: the statuses of
+the proof rule "proof found", "the dates do not fit" and "found, but empty" (design 7.2).
 
 Since 25 October 2026 each event also keeps what it was, and a token the accounts that hold it
 (DEPTH 1, design 7.5). A history read before has none of it: it is read again, whole, once. A
@@ -23,6 +24,7 @@ import psycopg
 
 from hackathon_memory.check.depth import Depth, Done, depth_of
 from hackathon_memory.check.history import Act, History
+from hackathon_memory.check.makers import Earlier, Made
 from hackathon_memory.check.proof import DATES_DO_NOT_FIT, FOUND_BUT_EMPTY, PROOF_FOUND
 from hackathon_memory.check.setup import Setup
 from hackathon_memory.check.story import OwnId, Story, merged, on_its_network, story_of, time_of
@@ -39,7 +41,12 @@ OWN = (
     "WITH own_named AS (SELECT DISTINCT h.project_id, h.entity_id, "
     "                          coalesce(f.ledger_id, h.entity_id) AS thing "
     "                   FROM hedera_ids h LEFT JOIN ledger_facts f "
-    "                   ON f.entity_id = h.entity_id AND f.found), "
+    "                   ON f.entity_id = h.entity_id AND f.found "
+    # a public service that many projects use is no project's own (migration 0022)
+    "                   WHERE NOT EXISTS (SELECT 1 FROM public_services s "
+    "                         WHERE s.evm_address = lower(h.entity_id) "
+    "                         OR (s.network = f.network "
+    "                             AND s.ledger_id = coalesce(f.ledger_id, h.entity_id)))), "
     "     own_shared AS (SELECT n.thing FROM own_named n JOIN projects p ON p.id = n.project_id "
     "                    GROUP BY n.thing HAVING count(DISTINCT n.project_id) > 1 "
     "                    AND NOT (count(DISTINCT p.repository_id) = 1 "
@@ -334,6 +341,21 @@ def depth_of_project(
                   "SELECT entity_id, network, kind, details, asked_at FROM ledger_facts "
                   "WHERE found AND entity_id = ANY(%s)", ([one.entity_id for one in own_ids],))
               if (entity, network) in wanted]  # fmt: skip
+    # who made its own things, once the step "makers" asked (design 7.5, 29 October 2026)
+    made = [Made(entity, kind, created_at, by)
+            for entity, network, kind, created_at, by in conn.execute(
+                "SELECT entity_id, network, kind, created_at, made_by FROM ledger_facts "
+                "WHERE found AND made_by_asked_at IS NOT NULL AND created_at IS NOT NULL "
+                "AND entity_id = ANY(%s)", ([one.entity_id for one in own_ids],))
+            if (entity, network) in wanted and kind != ACCOUNT]  # fmt: skip
+    # the earlier entries of the same code: a thing may have been made for one of them
+    earlier = [Earlier(*row) for row in conn.execute(
+        "SELECT e.name, e.starts_at, e.ends_on FROM projects p "
+        "JOIN projects q ON q.repository_id = p.repository_id AND q.id <> p.id "
+        "JOIN events e ON e.id = q.event_id JOIN events mine ON mine.id = p.event_id "
+        "WHERE p.id = %s AND e.starts_at < mine.starts_at AND e.ends_on IS NOT NULL "
+        "ORDER BY e.starts_at", (project_id,))]  # fmt: skip
     return depth_of(own_ids, done, holders, named, starts_at=starts_at, ends_on=ends_on,
                     in_code=in_code, set_up=set_up, has_package=has_package,
-                    shared_only=shared_only, read=all_read, setups=setups)  # fmt: skip
+                    shared_only=shared_only, read=all_read, setups=setups,
+                    made=made, earlier=earlier)  # fmt: skip

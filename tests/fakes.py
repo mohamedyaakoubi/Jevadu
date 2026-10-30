@@ -415,6 +415,8 @@ class StandInMirror:
         self.lists: dict[tuple[str, str], list[dict]] = {}  # (what, id) -> oldest first
         self.asked: list[tuple] = []
         self.since: dict[str, datetime | None] = {}  # account -> the start of its history
+        self.made: list[dict] = []  # the transactions that made things (transactions_at)
+        self.moments: list[tuple[datetime, datetime]] = []  # what transactions_at was asked
 
     @property
     def requests_made(self) -> int:
@@ -443,6 +445,15 @@ class StandInMirror:
         """The answer of /transactions/{id}: a list, the parent first, or nothing."""
         found = self._one("transaction", entity)
         return {"transactions": [found]} if found is not None else None
+
+    def transactions_at(self, since: datetime, until: datetime, *, limit: int = 25) -> list[dict]:
+        """The transactions of one moment, for who made a thing (check/makers.py): those of
+        `made`, a list of answers with their "consensus_timestamp". Kept apart from `asked`, which
+        the tests of the other questions compare whole (29 October 2026)."""
+        self.moments.append((since, until))
+        return [one for one in self.made
+                if since <= datetime.fromtimestamp(float(one["consensus_timestamp"]), UTC) < until
+                ][:limit]  # fmt: skip
 
     def _end(
         self,

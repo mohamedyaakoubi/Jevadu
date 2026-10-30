@@ -136,10 +136,11 @@
    strip of its days; `source` names the text whose words it compares (the page, or the README of a
    check); `lines` are the lines of a text that the card does not
    show, such as a README, that name a service. #}
-{% macro ledger_story(story, pid, source="page", source_title="Page", no_days="The days of the event are not known.", tip="story", lines=none, depth=none, view=none) -%}
+{% macro ledger_story(story, pid, source="page", source_title="Page", no_days="The days of the event are not known.", tip="story", lines=none, depth=none, view=none, public=()) -%}
 <section class="card project-section story-section" aria-labelledby="story-{{ pid }}-title" data-said-in="{{ "in the " if source == "README" else "on the " }}{{ source }}">
   <div class="card-body">
     <h3 id="story-{{ pid }}-title">Hedera services: {{ source }}, code and ledger{{ info(tip, "Hedera services: " ~ source ~ ", code and ledger") }}</h3>
+    {% for one in public %}<p class="hm-story-public">It also names <span class="id">{{ one.entity_id }}</span>, {{ one.name }}: a public service that many projects use, so its transactions are not counted as the project's here. Source: <a href="{{ one.source }}" target="_blank" rel="noopener">its owner's own list<span class="visually-hidden"> (opens in a new tab)</span></a>, read on {{ one.read_on | day }}.</p>{% endfor %}
     {% if story and not story.read %}
     <p class="text-secondary">The history of its own Hedera IDs has not been read yet.</p>
     {% elif story %}
@@ -265,7 +266,7 @@
 <div class="hm-depth-block" id="depth-{{ pid }}">
   {% if not depth.read %}<p class="text-secondary">Some of its IDs were read before the tool kept what each transaction was. They are read again with the next reading.</p>{% endif %}
   {% if view %}{{ strip(view, pid) }}{{ story_time(story, source) }}{% endif %}
-  {% if depth.did or depth.others is not none or depth.days %}
+  {% if depth.did or depth.others is not none or depth.days or depth.made %}
   {% set within = " from " ~ (story.starts_on | day) ~ " to " ~ (story.ends_on | day) if view and story and story.starts_on else "" %}
   <dl class="hm-depth">
     <dt>What its IDs did{{ within }}</dt>
@@ -274,6 +275,8 @@
     <dd>{% if depth.others is none %}not known{% elif depth.others == 0 %}only accounts that the {{ source }} itself lists{% else %}{{ "{:,}".format(depth.others) }} account{{ "s" if depth.others != 1 }} that the {{ source }} does not list: outside users, or other accounts of the team{% endif %}{% if depth.held_by_others == 0 %}. No account outside the {{ source }}'s list holds its tokens now{% elif depth.held_by_others is not none %}. {{ "{:,}".format(depth.held_by_others) }} account{{ "s" if depth.held_by_others != 1 }} outside the {{ source }}'s list hold{{ "s" if depth.held_by_others == 1 }} its tokens now{% endif %}.</dd>
     <dt>On how many days</dt>
     <dd>{{ depth.days }} day{{ "s" if depth.days != 1 }} with a transaction{{ within }}{% if view %}: {{ depth.days_during }} during the event, {{ depth.days_before }} in the 30 days before it, {{ depth.days_after }} in the 30 days after it{% endif %}.</dd>
+    {% if depth.made %}<dt>Who made its IDs</dt>
+    <dd>{% for line in depth.made %}<span class="d-block">{{ line }}</span>{% endfor %}</dd>{% endif %}
   </dl>
   {% endif %}
   {% if depth.setup %}

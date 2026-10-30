@@ -1,0 +1,115 @@
+"""Teams sign their own registration (hedera/signing.py, hedera/registry.py, design 9.6): the text,
+the two ways of signing, and the signed record, with keys made by the Hedera SDK for the test.
+Every account is invented."""
+
+from __future__ import annotations
+
+import base64
+
+import pytest
+from hiero_sdk_python.crypto.private_key import PrivateKey
+from hiero_sdk_python.hapi.services.basic_types_pb2 import SignatureMap, SignaturePair
+
+from hackathon_memory.hedera import registry
+from hackathon_memory.hedera.register import RegisterError
+from hackathon_memory.hedera.signing import (
+    ECDSA,
+    ED25519,
+    ETHEREUM,
+    HEDERA,
+    AccountKey,
+    SignatureError,
+    check,
+    ethereum_message,
+    hedera_message,
+    raw_signature,
+    signed_text,
+)
+
+EVENT, CODE, COMMIT = "ethglobal.com/ethonline2026", "ab" * 32, "cd" * 20
+TEXT = signed_text(EVENT, CODE, COMMIT, "0.0.7001")
+
+
+def key_of(private: PrivateKey, account: str = "0.0.7001") -> AccountKey:
+    """The account as the mirror node gives it: the raw public key in hex (compressed for ECDSA)."""
+    kind = ED25519 if private.public_key().is_ed25519() else ECDSA
+    return AccountKey(account, kind, private.public_key().to_bytes_raw().hex(), None)
+
+
+def signature_map(signature: bytes, ecdsa: bool) -> str:
+    """What a Hedera wallet answers through WalletConnect: a SignatureMap in base64."""
+    pair = SignaturePair(ECDSA_secp256k1=signature) if ecdsa else SignaturePair(ed25519=signature)
+    return base64.b64encode(SignatureMap(sigPair=[pair]).SerializeToString()).decode()
+
+
+def test_the_signed_text_holds_every_part_of_the_record_and_its_prefixes() -> None:
+    assert TEXT == (f"Jevadu register\nHackathon: {EVENT}\nRepository fingerprint: {CODE}\n"
+                    f"Commit: {COMMIT}\nAccount: 0.0.7001")  # fmt: skip
+    assert hedera_message("Hello") == b"\x19Hedera Signed Message:\n5Hello"
+    assert ethereum_message("Hello") == b"\x19Ethereum Signed Message:\n5Hello"
+
+
+@pytest.mark.parametrize("ecdsa", [False, True])
+def test_a_hedera_wallet_signature_is_checked_for_both_kinds_of_key(ecdsa: bool) -> None:
+    private = PrivateKey.generate_ecdsa() if ecdsa else PrivateKey.generate_ed25519()
+    answer = signature_map(private.sign(hedera_message(TEXT)), ecdsa)
+    signature = raw_signature(HEDERA, answer)
+    check(HEDERA, TEXT, signature, key_of(private))  # no error: it is that account's signature
+    with pytest.raises(SignatureError, match="not that of the key of 0.0.7001"):
+        check(HEDERA, TEXT.replace(COMMIT, "ef" * 20), signature, key_of(private))
+    with pytest.raises(SignatureError):
+        check(HEDERA, TEXT, signature, key_of(PrivateKey.generate_ed25519()))
+
+
+def test_a_metamask_signature_is_checked_for_an_ecdsa_account_only() -> None:
+    """MetaMask signs the Keccak-256 of the EIP-191 message, as the SDK signs with an ECDSA key;
+    it answers 65 bytes in hex, the last one v."""
+    private = PrivateKey.generate_ecdsa()
+    answer = "0x" + (private.sign(ethereum_message(TEXT)) + bytes([27])).hex()
+    signature = raw_signature(ETHEREUM, answer)
+    assert len(signature) == 65
+    check(ETHEREUM, TEXT, signature, key_of(private))
+    with pytest.raises(SignatureError, match="MetaMask can sign only for an account with an ECDSA"):
+        check(ETHEREUM, TEXT, signature, key_of(PrivateKey.generate_ed25519()))
+    # its record keeps the 65 bytes, and reads back (base64 with one "=" at the end)
+    payload = registry.signed_record(EVENT, CODE, COMMIT, "0.0.7001", ETHEREUM, signature)
+    message = {"sequence_number": 5, "consensus_timestamp": "1792665702.157973275",
+               "message": base64.b64encode(payload).decode()}  # fmt: skip
+    found = registry.read_record(message)
+    assert found is not None and found.scheme == ETHEREUM
+    found.check_signature(key_of(private))
+    with pytest.raises(SignatureError):  # the Hedera prefix is not MetaMask's
+        check(HEDERA, TEXT, signature, key_of(private))
+
+
+def test_a_signature_of_an_unknown_form_or_an_account_with_a_list_of_keys_is_refused() -> None:
+    for scheme, answer in ((ETHEREUM, "0x1234"), (HEDERA, "not base64!"), ("bitcoin", "x")):
+        with pytest.raises(SignatureError):
+            raw_signature(scheme, answer)
+    with pytest.raises(SignatureError, match="no signature"):
+        raw_signature(HEDERA, base64.b64encode(SignatureMap().SerializeToString()).decode())
+    listed = AccountKey("0.0.7002", "ProtobufEncoded", "0a2212", None)
+    with pytest.raises(SignatureError, match="list of keys"):
+        check(HEDERA, TEXT, bytes(64), listed)
+
+
+def test_a_signed_record_is_version_3_and_can_be_checked_again_from_the_ledger() -> None:
+    private = PrivateKey.generate_ed25519()
+    signature = private.sign(hedera_message(TEXT))
+    payload = registry.signed_record(EVENT, CODE, COMMIT, "0.0.7001", HEDERA, signature)
+    assert len(payload) <= registry.MAX_RECORD
+    message = {"sequence_number": 4, "consensus_timestamp": "1792665702.157973275",
+               "message": base64.b64encode(payload).decode()}  # fmt: skip
+    found = registry.read_record(message)
+    assert found is not None and (found.signer, found.scheme) == ("0.0.7001", HEDERA)
+    assert found.account is None and found.commit == COMMIT
+    found.check_signature(key_of(private))  # anyone can do it again from the record
+    with pytest.raises(SignatureError):
+        found.check_signature(key_of(PrivateKey.generate_ed25519()))
+    with pytest.raises(RegisterError):  # only the fixed form
+        registry.signed_record(EVENT, CODE, COMMIT, "Alice", HEDERA, signature)
+    unsigned = registry.read_record({**message, "message": base64.b64encode(
+        registry.record(EVENT, CODE, COMMIT)).decode()})  # fmt: skip
+    assert unsigned is not None and unsigned.signer is None
+    with pytest.raises(RegisterError, match="not signed"):
+        unsigned.check_signature(key_of(private))

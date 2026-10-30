@@ -102,6 +102,7 @@ def site(empty_database: str, tmp_path: Path):  # noqa: ANN201
     served.github_site = github_site  # what the stand-in GitHub was asked
     served.writes = writes  # what was written to the stand-in register
     served.make = make  # the same site with other settings
+    served.mirrors = mirrors  # the stand-in mirror nodes, to add an account that signs
     return served, fake, ids, database
 
 
@@ -596,6 +597,59 @@ def test_a_reading_that_the_limit_stopped_says_what_is_not_known(site) -> None: 
             "is left out of the strip.</title>") in story  # fmt: skip
     assert ("A band after 9 March 2025 was not read: the reading of its topic stopped there, at "
             "its limit of 2,000 transactions.") in story  # fmt: skip
+
+
+def test_the_card_says_who_made_its_own_ids(site) -> None:  # noqa: ANN001
+    """Who made each own thing, from the step "makers" (design 7.5, 29 October 2026): OmniShield's
+    README gave a contract made 20 months before its event by someone else."""
+    from hackathon_memory.check.history import CONSENSUS, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4511", "topic")  # made on 6 March 2026
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+        conn.execute("UPDATE ledger_facts SET made_by = '0.0.8001', made_by_asked_at = %s "
+                     "WHERE entity_id = '0.0.4511'",
+                     (datetime(2026, 10, 29, tzinfo=UTC),))  # fmt: skip
+    message = stamp(datetime(2026, 3, 7, 12, tzinfo=UTC), 1)
+    acts = {message: Act("CONSENSUSSUBMITMESSAGE", True, "0.0.8001", ("0.0.8001",))}
+    HistoryStore(database).save("0.0.4511", "testnet", "topic",
+                                History({message: CONSENSUS}, False, acts),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+    assert ("<dt>Who made its IDs</dt>\n    <dd><span class=\"d-block\">Its topic 0.0.4511, on 6 "
+            "March 2026: made by 0.0.8001, an account that the project does not "
+            "list.</span></dd>") in block  # fmt: skip
+
+
+def test_a_public_service_that_the_page_names_is_said_and_not_owned(site) -> None:  # noqa: ANN001
+    """The price oracle of Pyth, given by a page as one of its contracts: the card says what it
+    is, with its owner's list, and draws none of its transactions (migration 0022)."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    pyth = "0xa2aa501b19aff244d90cc15a4cf739d2725b5729"
+    LedgerStore(database).save_facts(LedgerFacts(
+        pyth, "testnet", datetime(2026, 10, 29, tzinfo=UTC), found=True, kind="contract",
+        ledger_id="0.0.3042133", created_at=datetime(2024, 2, 9, tzinfo=UTC),
+    ))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, %s, 'testnet', 'contract', 'page', "
+            "'invented', true) RETURNING id", (pebble, pyth)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    assert (f'It also names <span class="id">{pyth}</span>, the price oracle of Pyth: a public '
+            "service that many projects use, so its transactions are not counted as the "
+            "project's here.") in part  # fmt: skip
+    assert 'href="https://github.com/pyth-network/pyth-crosschain/' in part
 
 
 def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
@@ -1648,7 +1702,7 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     check = client.get("/check", params=asked, headers=HX)
     assert "This repository is not registered yet." in check.text
     assert "ethglobal.com/sample-event" in check.text and "Register on Hedera testnet" in check.text
-    form = {**asked, "starts": "", "ends": "", "account": "0.0.4567891"}
+    form = {**asked, "starts": "", "ends": ""}  # no signature: a record of version 2
     asked_before = len(client.github_site.seen)
     missing = client.post("/register", data=form, headers=HX)
     assert missing.status_code == 400 and "does not contain the line" in missing.text
@@ -1664,7 +1718,6 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
         "v": 2, "event": "ethglobal.com/sample-event",
         "commit": "7260ea7290637399c6ac181ed893a567144d96eb",
         "code": hashlib.sha256(REPO.encode()).hexdigest(),
-        "account": hashlib.sha256(b"0.0.4567891").hexdigest(),
     }  # fmt: skip
     assert b"github" not in payload and b"pebble" not in payload  # no link in clear text
     again = client.post("/register", data=form, headers=HX)
@@ -1677,12 +1730,13 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
 def test_a_registration_needs_a_checked_repository_and_a_real_account(site) -> None:  # noqa: ANN001
     client, _, _, database = site
     event = checkable(database)
-    form = {"repo": REPO, "event": event, "starts": "", "ends": "", "account": ""}
+    form = {"repo": REPO, "event": event, "starts": "", "ends": ""}
     first = client.post("/register", data=form, headers=HX)
     assert first.status_code == 400 and "Check the repository first" in first.text
     check = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
     with_line(client, check.text)
-    wrong = client.post("/register", data={**form, "account": "my wallet"}, headers=HX)
+    signed = {"signer": "my wallet", "scheme": "eip191", "signature": "0x00"}
+    wrong = client.post("/register", data={**form, **signed}, headers=HX)
     assert wrong.status_code == 400 and "A Hedera account ID looks like 0.0.12345" in wrong.text
     assert client.writes.written == []
     page = client.post("/register", data=form)  # without JavaScript: a page of its own
@@ -2646,4 +2700,116 @@ def test_axe_finds_no_problem(site, chromium, monkeypatch, width, scheme) -> Non
     page.locator("#register-form button[type=submit]").click()  # the register, with its receipt
     page.wait_for_selector("#register-box .hm-receipt")
     assert problems(page) == []
+    page.context.close()
+
+
+# ----------------------------------------------------------- a team signs its own record (9.6)
+
+COMMIT = "7260ea7290637399c6ac181ed893a567144d96eb"  # the latest commit of the stand-in GitHub
+
+
+def signing_account(client) -> tuple[object, str, str]:  # noqa: ANN001
+    """An ECDSA account of the test network, as the stand-in mirror node gives it by its ID and by
+    its 0x address: the key that signs, the account and the address."""
+    from hiero_sdk_python.crypto.private_key import PrivateKey
+
+    key = PrivateKey.generate_ecdsa()
+    address = "0x" + key.public_key().to_evm_address().to_string().removeprefix("0x").lower()
+    answer = {
+        "account": "0.0.7001",
+        "evm_address": address,
+        "deleted": False,
+        "key": {"_type": "ECDSA_SECP256K1", "key": key.public_key().to_bytes_raw().hex()},
+    }
+    accounts = client.mirrors["testnet"].things.setdefault("account", {})
+    accounts["0.0.7001"] = accounts[address] = answer
+    return key, "0.0.7001", address
+
+
+def metamask_signature(key, event_key: str, commit: str = COMMIT) -> str:  # noqa: ANN001
+    import hashlib
+
+    from hackathon_memory.hedera.signing import ethereum_message, signed_text
+
+    text = signed_text(event_key, hashlib.sha256(REPO.encode()).hexdigest(), commit, "0.0.7001")
+    return "0x" + (key.sign(ethereum_message(text)) + bytes([27])).hex()
+
+
+def test_a_team_signs_its_registration_and_the_record_holds_the_signature(site) -> None:  # noqa: ANN001
+    """The server checks the signature against the key that the ledger shows for the account,
+    then writes a record of version 3 (design 9.6, 29 October 2026)."""
+    client, _, _, database = site
+    event = checkable(database)
+    key, account, address = signing_account(client)
+    found = client.get("/register/account", params={"address": address})
+    assert found.json() == {"account": account, "key": "ECDSA_SECP256K1"}
+    assert client.get("/register/account", params={"address": "0x" + "12" * 20}).status_code == 404
+    asked = {"repo": REPO, "event": event}
+    check = client.get("/check", params=asked, headers=HX)
+    assert 'data-sign-with="metamask"' in check.text and f'data-commit="{COMMIT}"' in check.text
+    assert 'data-sign-with="hashpack" disabled' in check.text  # no WalletConnect project ID here
+    with_line(client, check.text)
+    form = {**asked, "starts": "", "ends": "", "signer": account, "scheme": "eip191",
+            "signed_commit": COMMIT}  # fmt: skip
+    other = metamask_signature(type(key).generate_ecdsa(), "ethglobal.com/sample-event")
+    wrong = client.post("/register", data={**form, "signature": other}, headers=HX)
+    assert wrong.status_code == 400 and "not that of the key of 0.0.7001" in wrong.text
+    old = metamask_signature(key, "ethglobal.com/sample-event", "ab" * 20)
+    late = client.post("/register", data={**form, "signature": old, "signed_commit": "ab" * 20},
+                       headers=HX)  # fmt: skip
+    assert late.status_code == 400 and "A new commit reached the repository" in late.text
+    assert client.writes.written == []
+    good = metamask_signature(key, "ethglobal.com/sample-event")
+    done = client.post("/register", data={**form, "signature": good}, headers=HX)
+    assert done.status_code == 200 and "<dt>Signed by</dt>" in done.text and "MetaMask" in done.text
+    (payload,) = client.writes.written
+    record = json.loads(payload)
+    assert (record["v"], record["account"], record["scheme"]) == (3, account, "eip191")
+    later = client.get("/check", params=asked, headers=HX)
+    assert f'signed by the account <span class="id">{account}</span>' in later.text
+
+
+def test_the_box_offers_hashpack_once_walletconnect_has_a_project_id(site) -> None:  # noqa: ANN001
+    client, _, _, database = site
+    event = checkable(database)
+    with_id = client.make(walletconnect_project_id="0123456789abcdef0123456789abcdef")
+    check = with_id.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    assert 'data-project-id="0123456789abcdef0123456789abcdef"' in check.text
+    assert 'data-sign-with="hashpack">' in check.text
+
+
+@pytest.mark.browser
+def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -> None:  # noqa: ANN001
+    """The page's script with a stand-in MetaMask: it asks for the account of the address, has the
+    exact text signed, fills the form, and the receipt says who signed (static/sign.js)."""
+    import hashlib
+
+    from hackathon_memory.hedera.registry import readme_line
+
+    client, _, _, database = site
+    event = checkable(database)
+    key, account, address = signing_account(client)
+    signature = metamask_signature(key, "ethglobal.com/sample-event")
+    line = readme_line("ethglobal.com/sample-event", hashlib.sha256(REPO.encode()).hexdigest())
+    with_line(client, line)
+    page = served(chromium, client, reduced_motion="reduce")
+    page.add_init_script(
+        "window.ethereum = { asked: [], async request(call) { this.asked.push(call);"
+        f' if (call.method === "eth_requestAccounts") return ["{address}"];'
+        f' if (call.method === "personal_sign") return "{signature}";'
+        ' throw new Error("not asked in this test"); } };'
+    )
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] [data-sign-with=metamask]")
+    page.locator("[data-sign-with=metamask]").click()
+    page.wait_for_function("document.querySelector('[name=signer]').value !== ''")
+    assert f"Signed by the account {account}." in page.locator(".hm-sign-status").inner_text()
+    message = page.evaluate("window.ethereum.asked[1].params[0]")
+    assert bytes.fromhex(message[2:]).decode().endswith(f"Commit: {COMMIT}\nAccount: {account}")
+    page.locator("#register-form button[type=submit]").click()
+    page.wait_for_selector("#register-box dt:has-text('Signed by')")
+    assert json.loads(client.writes.written[0])["scheme"] == "eip191"
     page.context.close()
