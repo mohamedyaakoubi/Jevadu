@@ -17,12 +17,14 @@ are searched and the page says so.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import logging
 import math
 import re
+import secrets
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -91,6 +93,7 @@ from hackathon_memory.web import (
     code_reading,
     data,
     evidence,
+    github_app,
     graph,
     hackathons,
     insights,
@@ -323,6 +326,28 @@ NO_LINE = (
     "default branch, then click the button again. It proves that the repository is yours, and "
     "that you agree to the record."
 )
+# Jevadu's GitHub App, which adds the line of the register to a team's README (design 9.2).
+GITHUB_APP_MISSING = (
+    "This copy of Jevadu has no GitHub App, so it cannot add the line for you. Add the line to "
+    "your README yourself, then click the button of the register."
+)
+GITHUB_LOST = (
+    "The sign-in with GitHub did not come back to this browser in time, so nothing was added. Go "
+    "back to the check and click \u201cAdd it for me with GitHub\u201d again."
+)
+GITHUB_INSTALLED = (
+    "Jevadu's GitHub App is installed. Go back to the check of your repository and click "
+    "\u201cAdd it for me with GitHub\u201d again."
+)
+GITHUB_NO_PUSH = (
+    "Your GitHub account cannot write to this repository, so the line cannot be added for you. "
+    "Ask someone who can write to it."
+)
+GITHUB_DOWN = "GitHub did not answer, so nothing was added. Try again in a minute."
+# The sign-in of the public copy's owner (web/public.py, OWNERS_OWN).
+OWNER_NONE = "This copy has no sign-in for its owner."
+OWNER_NOT_YOU = "This GitHub account is not the copy's owner, so nothing changed."
+OWNER_SILENT = "GitHub did not answer, so you are not signed in. Try again in a minute."
 NOT_LISTED = (
     "Registering needs a hackathon from the list, so that every team of one hackathon names it "
     "the same way. Pick it in the list. Custom dates can be checked, but not registered."
@@ -474,6 +499,7 @@ def create_app(
     register_writer: Any = None,
     stand_in_client: Any = None,
     turnstile_client: httpx.Client | None = None,
+    github_app_client: httpx.Client | None = None,
     refresh_inline: bool = False,
     rehearsal: bool = False,
     public: bool = False,
@@ -487,7 +513,9 @@ def create_app(
     `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
     is made, counted by the meter, when it is first needed. `turnstile_client` asks Cloudflare
     whether a visitor of the public copy is a person (web/turnstile.py); by default it is made
-    when first needed. `refresh_inline` reads a card again on the thread of its request, for the
+    when first needed. `github_app_client` talks with GitHub for Jevadu's GitHub App, which adds
+    the line of the register to a team's README (web/github_app.py); by default it is made when
+    first needed. `refresh_inline` reads a card again on the thread of its request, for the
     tests (web/refresher.py). With `rehearsal`, the topic of `settings` is the one for
     rehearsals, and every page says so (design 9.3). With `public`, it is
     the public copy, with the switches and the counts of web/public.py, and the calls it makes are
@@ -521,9 +549,11 @@ def create_app(
             return RedirectResponse(str(request.url.replace(scheme="https")), 301)
         if limits is not None:
             peer = request.client.host if request.client else None
-            token = public_copy.visitor.set(
-                public_copy.visitor_of(request.headers, peer, salt, settings.public_address_header)
-            )
+            address_header = settings.public_address_header
+            who = public_copy.visitor_of(request.headers, peer, salt, address_header)
+            if owner_here(request):  # its checks, readings again and registrations: no count
+                who = replace(who, owner=True)
+            token = public_copy.visitor.set(who)
         oidc = request.headers.get("x-vercel-oidc-token")
         signed = vercel_token.set(oidc) if oidc else None
         try:
@@ -628,13 +658,18 @@ def create_app(
         return not limits.pressed(who, key) and limits.left(public_copy.AI, who) == 0
 
     templates = Jinja2Templates(directory=HERE / "templates")
+    github_app_ready = bool(
+        settings.github_app_slug.strip() and settings.github_app_client_id.strip()
+        and settings.github_app_client_secret.get_secret_value()
+    )  # fmt: skip
     jobs = checks.CheckJobs()  # the checks that run while their page waits
     app.state.check_jobs = jobs
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
                                "github": github_client, "mirrors": mirrors,
                                "writer": register_writer, "stand_in": stand_in_client,
-                               "turnstile": turnstile_client}  # fmt: skip
+                               "turnstile": turnstile_client,
+                               "github_app": github_app_client}  # fmt: skip
     if gate is not None:  # on the public copy, every model passes the visitor's gate
         for name in ("google", "llm", "rerank", "stand_in"):
             if clients[name] is not None:
@@ -1257,11 +1292,15 @@ def create_app(
         starts: str = "",
         ends: str = "",
         progress: str = "",
+        line: str = "",
+        commit: str = "",
     ) -> HTMLResponse:
         """S3: the check of one submission (design 12.1), in the window over the page, or as a
         page of its own without JavaScript. Programs read every fact; no model writes. Asked by
         the page's script with progress=1, it runs in a thread of its own, and the window shows
-        its steps until the answer is there (/check/progress)."""
+        its steps until the answer is there (/check/progress). Back from Jevadu's GitHub App,
+        `line` says whether the line was added to the README or was there, and `commit` names
+        the commit that added it; both serve the words of the page only."""
         name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
         repository = submission.repository_link(repo[:300])
         if repository is None:
@@ -1284,7 +1323,11 @@ def create_app(
                           repository=repository, event_name=days.name if days else None,
                           step_notes=evidence.check_notes())  # fmt: skip
         status, shown = check_answer(conninfo, repository, days, asked)
-        return render(request, name, status, **shown)
+        added = None
+        if line in ("added", "there"):
+            named = commit if re.fullmatch(r"[0-9a-f]{7,40}", commit) else ""
+            added = {"state": line, "commit": named}
+        return render(request, name, status, **shown, github_line=added)
 
     @app.get("/check/progress", response_class=HTMLResponse)
     def check_progress(request: Request, job: str = "") -> HTMLResponse:
@@ -1304,6 +1347,187 @@ def create_app(
         """The answer takes the place of the whole window, not only of the steps."""
         response.headers["HX-Retarget"] = "#viewer-body"
         response.headers["HX-Reswap"] = "innerHTML"
+        return response
+
+    # Jevadu's GitHub App adds the line of the register to a team's README at its request (design
+    # 9.2, 30 October 2026): GitHub signs the person in, the site checks the person's rights on
+    # the repository, and the line becomes a commit of theirs (web/github_app.py).
+    def github_http() -> httpx.Client:
+        if clients["github_app"] is None:
+            clients["github_app"] = httpx.Client(timeout=20)
+        return clients["github_app"]
+
+    def github_page(
+        request: Request,
+        words: str,
+        status: int = 200,
+        asked: github_app.Asked | None = None,
+        kind: str = "warning",
+    ) -> HTMLResponse:
+        """A page that says how the request to GitHub ended, with the way back to the check."""
+        back = "/"
+        if asked is not None:
+            back = "/check?" + urlencode({"repo": asked.repository, "event": asked.event,
+                                          "starts": asked.starts, "ends": asked.ends})  # fmt: skip
+        return render(request, "github.html", status, words=words, back=back, kind=kind)
+
+    def github_callback_url(request: Request) -> str:
+        """Where GitHub sends the person back: one of the app's callback URLs."""
+        host = request.url.hostname or ""
+        if host == settings.public_host.strip():
+            return f"https://{host}/github/callback"
+        return f"{request.url.scheme}://{request.url.netloc}/github/callback"
+
+    def owner_here(request: Request) -> str | None:
+        """The GitHub account of the copy's owner, when this browser holds a pass for it."""
+        owner = settings.public_owner_github.strip()
+        if not (owner and github_app_ready):
+            return None
+        secret = settings.github_app_client_secret.get_secret_value()
+        cookie = request.cookies.get(github_app.OWNER_COOKIE, "")
+        login = github_app.owner_of(cookie, secret, time.time())
+        return login if login and login.lower() == owner.lower() else None
+
+    def github_request(request: Request) -> github_app.Asked | None:
+        secret = settings.github_app_client_secret.get_secret_value()
+        return github_app.opened(request.cookies.get(github_app.COOKIE, ""), secret, time.time())
+
+    def to_github(request: Request, asked: github_app.Asked) -> RedirectResponse:
+        """Off to GitHub's sign-in, with the request sealed in a cookie for the way back."""
+        address = github_app.authorize_url(settings.github_app_client_id.strip(),
+                                           github_callback_url(request), asked.state)  # fmt: skip
+        response = RedirectResponse(address, 303)
+        secure = request.url.scheme == "https" or request.url.hostname == settings.public_host
+        response.set_cookie(
+            github_app.COOKIE,
+            github_app.sealed(asked, settings.github_app_client_secret.get_secret_value()),
+            max_age=github_app.WAIT_SECONDS, path="/github", httponly=True, secure=secure,
+            samesite="lax",
+        )  # fmt: skip
+        return response
+
+    @app.get("/github/start", response_model=None)
+    def github_start(
+        request: Request, repo: str = "", event: str = "", starts: str = "", ends: str = ""
+    ) -> Response:
+        """S4: the team asks the site to add the line to its README through GitHub."""
+        if not github_app_ready:
+            return github_page(request, GITHUB_APP_MISSING, 503)
+        if limits is not None and not limits.on(public_copy.REGISTER):
+            return github_page(request, PUBLIC_REGISTER_OFF, 503)
+        repository = submission.repository_link(repo[:300])
+        if repository is None:
+            return github_page(request, NOT_A_REPOSITORY, 400)
+        until = time.time() + github_app.WAIT_SECONDS
+        asked = github_app.Asked(repository, event[:40], starts[:20], ends[:20],
+                                 secrets.token_urlsafe(24), until)  # fmt: skip
+        return to_github(request, asked)
+
+    @app.get("/github/installed", response_model=None)
+    def github_installed(request: Request) -> Response:
+        """The app's setup URL: GitHub sends the person here after the install. The installation
+        ID that it adds is not trusted (GitHub's docs, "About the setup URL"): the sign-in starts
+        again for the request that this browser keeps, if any."""
+        asked = github_request(request) if github_app_ready else None
+        if asked is None:
+            return github_page(request, GITHUB_INSTALLED, kind="success")
+        again = replace(asked, state=secrets.token_urlsafe(24),
+                        until=time.time() + github_app.WAIT_SECONDS)  # fmt: skip
+        return to_github(request, again)
+
+    @app.get("/github/callback", response_model=None)
+    def github_callback(request: Request, code: str = "", state: str = "") -> Response:
+        """GitHub's way back after the sign-in: the line goes into the README, as a commit of the
+        person who signed in, when the app is installed on the repository and that person may
+        write to it; the token serves this request only."""
+        asked = github_request(request) if github_app_ready else None
+        if asked is None or not code or not hmac.compare_digest(state, asked.state):
+            return github_page(request, GITHUB_LOST, 400)
+        if asked.purpose == "owner":
+            return owner_signed_in(request, code)
+        try:
+            days, wrong = event_days(database(), asked.event, asked.starts, asked.ends)
+        except (SettingsError, psycopg.OperationalError):
+            return github_page(request, DATABASE_DOWN, 503, asked)
+        if days is None or days.typed:
+            return github_page(request, wrong or (NOT_LISTED if days else EVENT_FOR_REGISTER), 400,
+                               asked)  # fmt: skip
+        line = registry.readme_line(days.key, registry.code_fingerprint(asked.repository))
+        owner, name = github_app.owner_and_name(asked.repository)
+        http = github_http()
+        try:
+            token = github_app.user_token(
+                http, settings.github_app_client_id.strip(),
+                settings.github_app_client_secret.get_secret_value(), code,
+                github_callback_url(request),
+            )  # fmt: skip
+            found = github_app.access(http, token, owner, name)
+            if not found.installed:  # the cookie stays, for the way back through the setup URL
+                return RedirectResponse(github_app.install_url(settings.github_app_slug.strip()),
+                                        303)  # fmt: skip
+            if not found.push:
+                return github_page(request, GITHUB_NO_PUSH, 403, asked)
+            commit = github_app.add_line(http, token, owner, name, line, found.branch)
+        except github_app.GitHubAppError as error:
+            return github_page(request, str(error), 502, asked)
+        except httpx.HTTPError:
+            return github_page(request, GITHUB_DOWN, 503, asked)
+        back = {"repo": asked.repository, "event": asked.event, "starts": asked.starts,
+                "ends": asked.ends, "line": "added" if commit else "there"}  # fmt: skip
+        if commit:
+            back["commit"] = commit
+        response = RedirectResponse("/check?" + urlencode(back), 303)
+        response.delete_cookie(github_app.COOKIE, path="/github")
+        return response
+
+    # The copy's owner signs in with GitHub on an unlisted page, and its browser then checks,
+    # reads again and registers with no count (web/public.py, OWNERS_OWN, 30 October 2026).
+    def owner_ready() -> bool:
+        return bool(settings.public_owner_github.strip() and github_app_ready)
+
+    @app.get("/owner", response_class=HTMLResponse)
+    def owner_page(request: Request) -> HTMLResponse:
+        """Where the copy's owner signs in with GitHub, or sees that this browser is signed in."""
+        return render(request, "owner.html", login=owner_here(request), ready=owner_ready())
+
+    @app.get("/owner/start", response_model=None)
+    def owner_start(request: Request) -> Response:
+        if not owner_ready():
+            return render(request, "owner.html", 503, login=None, ready=False, problem=OWNER_NONE)
+        until = time.time() + github_app.WAIT_SECONDS
+        asked = github_app.Asked("", "", "", "", secrets.token_urlsafe(24), until, "owner")
+        return to_github(request, asked)
+
+    @app.get("/owner/sign-out", response_model=None)
+    def owner_sign_out() -> Response:
+        response = RedirectResponse("/owner", 303)
+        response.delete_cookie(github_app.OWNER_COOKIE, path="/")
+        return response
+
+    def owner_signed_in(request: Request, code: str) -> Response:
+        """The way back of the sign-in of the copy's owner: a pass for this browser, for
+        OWNER_DAYS, when the account that signed in is the one of the settings; the token serves
+        this request only."""
+        http = github_http()
+        secret = settings.github_app_client_secret.get_secret_value()
+        try:
+            token = github_app.user_token(http, settings.github_app_client_id.strip(), secret,
+                                          code, github_callback_url(request))  # fmt: skip
+            login = github_app.login_of(http, token)
+        except github_app.GitHubAppError as error:
+            return render(request, "owner.html", 502, login=None, ready=True, problem=str(error))
+        except httpx.HTTPError:
+            return render(request, "owner.html", 503, login=None, ready=True, problem=OWNER_SILENT)
+        if login.lower() != settings.public_owner_github.strip().lower():
+            return render(request, "owner.html", 403, login=None, ready=True, problem=OWNER_NOT_YOU)
+        days = github_app.OWNER_DAYS * 86400
+        response = RedirectResponse("/owner", 303)
+        secure = request.url.scheme == "https" or request.url.hostname == settings.public_host
+        response.set_cookie(github_app.OWNER_COOKIE,
+                            github_app.owner_pass(login, secret, time.time() + days),
+                            max_age=days, path="/", httponly=True, secure=secure,
+                            samesite="lax")  # fmt: skip
+        response.delete_cookie(github_app.COOKIE, path="/github")
         return response
 
     @app.post("/register", response_class=HTMLResponse)
@@ -1648,6 +1872,8 @@ def create_app(
         "hashscan_moment": hashscan_transaction,
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
         "WALLETCONNECT_PROJECT_ID": settings.walletconnect_project_id.strip(),
+        "GITHUB_APP": github_app_ready,
+        "OWNER_DAYS": github_app.OWNER_DAYS,
         "REFRESH_IN_BACKGROUND": settings.refresh_in_background,
         "PUBLIC_COPY": public,
         "reason_of": data.reason_of,

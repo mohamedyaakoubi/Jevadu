@@ -9,7 +9,7 @@ import json
 import re
 from datetime import UTC, date, datetime
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import psycopg
 import pytest
@@ -1860,6 +1860,149 @@ def test_a_closed_register_is_said_and_offers_no_button(site) -> None:  # noqa: 
     check = closed.get("/check", params={"repo": REPO, "event": event}, headers=HX)
     assert "The public register is not open yet" in check.text
     assert "Register on Hedera testnet" not in check.text
+
+
+# --------------------------------------------- the line of the register, through GitHub (9.2)
+
+
+def with_github_app(client, stand_in):  # noqa: ANN001, ANN201
+    """The same site with Jevadu's GitHub App set, talking with a stand-in GitHub."""
+    import httpx
+    from pydantic import SecretStr
+
+    talk = httpx.Client(transport=httpx.MockTransport(stand_in))
+    return client.make({"github_app_client": talk}, github_app_slug="jevadu-register",
+                       github_app_client_id="Iv1.standin",
+                       github_app_client_secret=SecretStr("standin-secret"))  # fmt: skip
+
+
+def started(site_with, event: str) -> str:  # noqa: ANN001
+    """The state that the site sends to GitHub's sign-in, for Pebble Pay and `event`."""
+    start = site_with.get("/github/start", params={"repo": REPO, "event": event},
+                          follow_redirects=False)  # fmt: skip
+    assert start.status_code == 303
+    return parse_qs(urlsplit(start.headers["location"]).query)["state"][0]
+
+
+def came_back(site_with, state: str):  # noqa: ANN001, ANN201
+    return site_with.get("/github/callback", params={"code": "the-code", "state": state},
+                         follow_redirects=False)  # fmt: skip
+
+
+def test_the_box_offers_github_for_the_line_only_with_the_app(site) -> None:  # noqa: ANN001
+    from test_github_app import StandInGitHub
+
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": REPO, "event": event}
+    assert "Add it for me with GitHub" not in client.get("/check", params=asked, headers=HX).text
+    box = with_github_app(client, StandInGitHub()).get("/check", params=asked, headers=HX).text
+    assert ">Add it for me with GitHub</a>" in box
+    assert 'href="/github/start?repo=https%3A%2F%2Fgithub.com%2Fsample-org%2Fpebble-pay' in box
+    missing = client.get("/github/start", params=asked)  # a copy with no app
+    assert missing.status_code == 503 and "has no GitHub App" in missing.text
+
+
+def test_the_github_app_adds_the_line_as_a_commit_of_the_person(site) -> None:  # noqa: ANN001
+    """GitHub signs the person in; the site checks that the app is installed on the repository
+    and that the person may write to it, adds the line to the README as a commit of theirs, and
+    goes back to the check, which says so. A way back with another state is refused, the token
+    never shows, and a request serves once (design 9.2, 30 October 2026)."""
+    from test_github_app import StandInGitHub
+
+    client, _, _, database = site
+    event = checkable(database)
+    stand_in = StandInGitHub()
+    site_with = with_github_app(client, stand_in)
+    start = site_with.get("/github/start", params={"repo": REPO, "event": event},
+                          follow_redirects=False)  # fmt: skip
+    there = urlsplit(start.headers["location"])
+    query = parse_qs(there.query)
+    assert (there.netloc, there.path) == ("github.com", "/login/oauth/authorize")
+    assert query["client_id"] == ["Iv1.standin"]
+    assert query["redirect_uri"] == ["http://testserver/github/callback"]
+    cookie = start.headers["set-cookie"].lower()
+    assert "httponly" in cookie and "path=/github" in cookie and "samesite=lax" in cookie
+    forged = came_back(site_with, "forged")
+    assert forged.status_code == 400 and "did not come back" in forged.text
+    assert stand_in.written == [] and stand_in.asked == []  # GitHub was not even asked
+    back = came_back(site_with, query["state"][0])
+    assert back.status_code == 303
+    location = back.headers["location"]
+    assert location.startswith("/check?") and "line=added" in location
+    assert "commit=c0ffee" in location
+    (written,) = stand_in.written
+    check = site_with.get("/check", params={"repo": REPO, "event": event}, headers=HX).text
+    line = re.search(r"jevadu: [A-Z2-7]{8}", check).group(0)
+    assert stand_in.readme == f"# Pebble Pay\n\n{line}\n" and written["branch"] == "main"
+    shown = site_with.get(location).text
+    # news of its own, with the way to the commit, not the box's standing words
+    notice = shown.split('<div class="alert alert-success mb-2" role="status">', 1)[1]
+    notice = notice.split("</div>", 1)[0]
+    assert notice.startswith("<b>Added just now.</b> Jevadu's GitHub App added this line")
+    commit = "c0ffee" + "0" * 34
+    assert f'href="https://github.com/sample-org/pebble-pay/commit/{commit}"' in notice
+    assert "Add it for me with GitHub" not in shown
+    assert "ghu_STANDIN" not in back.text + shown + str(back.headers) + str(start.headers)
+    assert came_back(site_with, query["state"][0]).status_code == 400  # spent: its cookie is gone
+
+
+def test_the_app_is_installed_first_and_the_sign_in_starts_again(site) -> None:  # noqa: ANN001
+    """The first time, the app is not installed on the repository: GitHub's page of the install
+    comes first. GitHub then sends the person to the setup URL, whose installation ID is not
+    trusted, and the sign-in starts again, with a new state, for the request of this browser."""
+    from test_github_app import StandInGitHub
+
+    client, _, _, database = site
+    event = checkable(database)
+    stand_in = StandInGitHub(installed=False)
+    site_with = with_github_app(client, stand_in)
+    state = started(site_with, event)
+    first = came_back(site_with, state)
+    assert first.status_code == 303
+    assert first.headers["location"] == "https://github.com/apps/jevadu-register/installations/new"
+    assert stand_in.written == []
+    stand_in.installed = True  # the person installs the app on the repository
+    setup = site_with.get("/github/installed", params={"installation_id": "1",
+                          "setup_action": "install"}, follow_redirects=False)  # fmt: skip
+    assert setup.status_code == 303
+    again = parse_qs(urlsplit(setup.headers["location"]).query)["state"][0]
+    assert again != state
+    assert came_back(site_with, state).status_code == 400  # the first state serves no more
+    done = came_back(site_with, again)
+    assert "line=added" in done.headers["location"] and len(stand_in.written) == 1
+    alone = with_github_app(client, StandInGitHub()).get("/github/installed")  # nothing kept
+    assert alone.status_code == 200 and "GitHub App is installed" in alone.text
+
+
+def test_a_person_who_cannot_write_gets_no_line(site) -> None:  # noqa: ANN001
+    from test_github_app import StandInGitHub
+
+    client, _, _, database = site
+    event = checkable(database)
+    stand_in = StandInGitHub(push=False)
+    site_with = with_github_app(client, stand_in)
+    refused = came_back(site_with, started(site_with, event))
+    assert refused.status_code == 403 and "cannot write to this repository" in refused.text
+    assert stand_in.written == []
+    assert '<a href="/check?repo=https%3A%2F%2Fgithub.com%2Fsample-org%2Fpebble-pay' in refused.text
+
+
+def test_a_readme_with_the_line_is_left_as_it_is(site) -> None:  # noqa: ANN001
+    from test_github_app import StandInGitHub
+
+    client, _, _, database = site
+    event = checkable(database)
+    check = client.get("/check", params={"repo": REPO, "event": event}, headers=HX).text
+    line = re.search(r"jevadu: [A-Z2-7]{8}", check).group(0)
+    stand_in = StandInGitHub(readme=f"# Pebble Pay\n\n{line}\n")
+    site_with = with_github_app(client, stand_in)
+    back = came_back(site_with, started(site_with, event))
+    assert "line=there" in back.headers["location"] and "commit=" not in back.headers["location"]
+    assert stand_in.written == []
+    shown = site_with.get(back.headers["location"]).text
+    assert ('<div class="alert alert-info mb-2" role="status"><b>Already there.</b> The README on '
+            "GitHub has this line already, so nothing was added.</div>") in shown  # fmt: skip
 
 
 # ----------------------------------------------------------------- the charts (design 12.1, S5)

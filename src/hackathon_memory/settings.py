@@ -58,6 +58,13 @@ class Settings(BaseSettings):
 
     # GitHub (step 2)
     github_token: SecretStr = SecretStr("")
+    # Jevadu's GitHub App (web/github_app.py, design 9.2): at a team's request, it adds the line
+    # of the register to the team's README, as a commit of the person who signs in with GitHub.
+    # Made once with GitHub's manifest flow. Its slug and its client ID are public (every link
+    # to the app shows them); its client secret is not. Empty: the box offers no such button.
+    github_app_slug: str = Field("", json_schema_extra=_PUBLIC)
+    github_app_client_id: str = Field("", json_schema_extra=_PUBLIC)
+    github_app_client_secret: SecretStr = SecretStr("")
     # The salt of the hash that counts each visitor of the public copy (web/public.py): any long
     # random text, kept so that the counts of a day hold across a restart.
     public_salt: SecretStr = SecretStr("")
@@ -78,6 +85,10 @@ class Settings(BaseSettings):
     # How many times one visitor of the public copy may ask Gemini, one time only (design
     # 12.5): 30 dollars pay about 300 visitors who use all 12.
     public_ai_per_visitor: int = Field(12, ge=0, json_schema_extra=_PUBLIC)
+    # The GitHub account of the public copy's owner: once signed in with GitHub on /owner, through
+    # Jevadu's GitHub App, its browser checks, reads again and registers with no count (web/
+    # public.py, OWNERS_OWN). Public, like the name of every GitHub account. Empty: nobody.
+    public_owner_github: str = Field("", json_schema_extra=_PUBLIC)
     # Cloudflare's Turnstile on the public copy (web/turnstile.py): the site key, which every
     # page that shows the widget carries, and the secret that spends its tokens. With both set,
     # a visitor confirms being a person before asking Gemini, checking, reading again or
