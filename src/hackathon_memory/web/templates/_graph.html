@@ -13,7 +13,7 @@
 <p class="hm-graph-note">{% if not graph.ranked and not chosen.chosen() %}The whole collection: {% endif %}{{ "{:,}".format(count) }} project{{ "s" if count != 1 }}{% if graph.ranked %}, the closest to your idea,{% endif %} in {{ graph.groups | length }} group{{ "s" if graph.groups | length != 1 }} by meaning.
   {%- if graph.ranked %} {% if graph.by_meaning %}The closer a dot stands to your idea, the closer the project is in meaning, compared with the others of this list.{% else %}The closer a dot stands to your idea, the higher the project is in the list.{% endif %} The first 10 are numbered as in the list
   {%- if graph.by_meaning and with_ai %}, which is Gemini's order: Gemini reads the texts, while the distance follows meaning, so a number can stand farther out than a later one{% elif graph.by_meaning and mode == "words" %}, which is the keyword order, while the distance follows meaning, so a number can stand farther out than a later one{% endif %}.{% endif %}
-  Point at a dot to see the project and a dashed line to its closest project; a click opens its card and keeps the line, also while you point at other dots, until you click an empty place. Hold Ctrl and scroll over the graph, or pinch, to zoom; then drag it, or scroll with two fingers, to move it.
+  Point at a dot to see the project and a dashed line to its closest project; a click opens its card and keeps the line, also while you point at other dots, until you click an empty place. A right click keeps a dot lit with its closest project, for as many dots as you like; a right click on it again lets it go, and a click on an empty place lets them all go. Hold Ctrl and scroll over the graph, or pinch, to zoom; then drag it, or scroll with two fingers, to move it.
   {%- if graph.left_out %} {{ graph.left_out }} project{{ "s have" if graph.left_out != 1 else " has" }} no embedding yet, so {{ "they are" if graph.left_out != 1 else "it is" }} not drawn.{% endif %}</p>
 <div class="card hm-graph-card">
   <div class="card-body hm-graph" data-graph>
@@ -27,6 +27,7 @@
         {% for line in graph.lines %}<line x1="{{ line.x1 }}" y1="{{ line.y1 }}" x2="{{ line.x2 }}" y2="{{ line.y2 }}" data-ends="{{ line.a }} {{ line.b }}"/>{% endfor %}
         <line class="hm-graph-hover" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/>
         <line class="hm-graph-kept" x1="0" y1="0" x2="0" y2="0" visibility="hidden"/>
+        <g class="hm-graph-pins"></g>
       </g>
       {% if graph.ranked %}<g class="hm-graph-idea"><circle cx="0" cy="0" r="7" data-r="7"/><text class="hm-graph-small" x="0" y="1.85em" text-anchor="middle">Your idea</text></g>{% endif %}
       <g class="hm-graph-dots">

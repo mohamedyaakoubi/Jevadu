@@ -304,6 +304,11 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
    empty place */
 .hm-dot:is(.is-kept, .is-kept-near) .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
 .hm-graph-lines line.is-kept { stroke-opacity: 1; }
+/* the dots that a right click keeps, each with its closest project and their line (30 October
+   2026) */
+.hm-dot:is(.is-pinned, .is-pinned-near) .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
+.hm-graph-lines line.is-pinned { stroke-opacity: 1; }
+.hm-graph-pins line { stroke-width: calc(1.5px / var(--hm-zoom, 1)); stroke-dasharray: calc(5px / var(--hm-zoom, 1)) calc(3px / var(--hm-zoom, 1)); stroke-opacity: 1; }
 .hm-graph-names text { fill: var(--tblr-body-color); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: calc(5px / var(--hm-zoom, 1)); stroke-linejoin: round; }
 .hm-graph-name { cursor: pointer; }
 /* The theme underlines a link on hover, and under the outline of a word of the picture the line

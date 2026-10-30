@@ -2039,6 +2039,37 @@ def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None
 
 
 @pytest.mark.browser
+def test_right_clicks_keep_dots_lit_until_an_empty_place_lets_them_go(site, chromium) -> None:  # noqa: ANN001
+    """A right click keeps a dot lit with its closest project and their line, for as many dots as
+    one likes, in the order of the clicks; a right click on it again lets it go, and a click on
+    an empty place lets them all go (30 October 2026)."""
+    client, _, ids, database = site
+    with psycopg.connect(database) as conn:
+        (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
+    page = served(chromium, client, viewport={"width": 1280, "height": 900})
+    page.goto(f"http://site.test/?event={event}&view=graph")
+    page.evaluate("document.addEventListener('contextmenu', (e) => { window.hmMenu = "
+                  "e.defaultPrevented; })")  # fmt: skip
+    pebble = page.locator(f'.hm-dot[data-graph-id="{ids["Pebble Pay"]}"]')
+    fern = page.locator(f'.hm-dot[data-graph-id="{ids["Fern Vote"]}"]')
+    pebble.click(button="right")
+    assert page.evaluate("window.hmMenu") is True  # the browser's menu does not open on a dot
+    fern.click(button="right")
+    lines = page.locator(".hm-graph-pins line")
+    assert lines.count() == 2
+    assert page.locator("[data-graph]").get_attribute("data-pinned") == (
+        f"{ids['Pebble Pay']} {ids['Fern Vote']}")  # fmt: skip
+    assert "is-pinned" in (pebble.get_attribute("class") or "")
+    assert page.locator("#viewer[open]").count() == 0  # a right click opens no card
+    pebble.click(button="right")  # again: it lets go
+    assert lines.count() == 1 and "is-pinned " not in (pebble.get_attribute("class") or "") + " "
+    page.mouse.move(5, 5)
+    box = page.locator(".hm-graph-svg").bounding_box()
+    page.mouse.click(box["x"] + 3, box["y"] + 3)
+    assert lines.count() == 0 and page.locator(".is-pinned, .is-pinned-near").count() == 0
+    page.context.close()
+
+
 def test_a_dot_of_the_graph_shows_its_project_and_opens_its_card(site, chromium) -> None:  # noqa: ANN001
     client, _, ids, database = site
     with psycopg.connect(database) as conn:

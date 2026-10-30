@@ -530,6 +530,41 @@
     var other = joinNearest(graph, dot, kept);
     if (other) other.classList.add("is-kept-near");
   }
+  // A right click keeps a dot lit with its closest project and their line, for as many dots as
+  // one likes, kept in the order of the clicks; a right click on it again lets it go, and a click
+  // on an empty place lets them all go (30 October 2026).
+  function pinnedOf(graph) {
+    return (graph.getAttribute("data-pinned") || "").split(" ").filter(Boolean);
+  }
+  function drawPins(graph) {
+    graph.querySelectorAll(".is-pinned, .is-pinned-near").forEach(function (one) {
+      one.classList.remove("is-pinned", "is-pinned-near");
+    });
+    var lines = graph.querySelector(".hm-graph-pins");
+    if (lines) lines.replaceChildren();
+    pinnedOf(graph).forEach(function (id) {
+      var dot = dotOf(graph, id);
+      if (!dot) return;
+      dot.classList.add("is-pinned");
+      strongLines(graph, dot).forEach(function (line) { line.classList.add("is-pinned"); });
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      if (lines) lines.appendChild(line);
+      var other = joinNearest(graph, dot, line);
+      if (other) other.classList.add("is-pinned-near");
+    });
+  }
+  function pin(graph, ids) {
+    if (ids.length) graph.setAttribute("data-pinned", ids.join(" "));
+    else graph.removeAttribute("data-pinned");
+    drawPins(graph);
+  }
+  document.addEventListener("contextmenu", function (event) {
+    var dot = graphDot(event.target);
+    if (!dot) return;
+    event.preventDefault(); // the menu of the browser has nothing to do on a dot
+    var graph = graphOf(dot), id = dot.getAttribute("data-graph-id"), ids = pinnedOf(graph);
+    pin(graph, ids.indexOf(id) >= 0 ? ids.filter(function (one) { return one !== id; }) : ids.concat([id]));
+  });
   function showGraphTip(graph, dot) {
     var tip = graph.querySelector(".hm-graph-tip");
     if (!tip) return;
@@ -616,11 +651,14 @@
     var dot = link && document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
     if (dot && event.isTrusted) keepDot(graphOf(dot), dot);
   });
-  document.addEventListener("click", function (event) { // an empty place lets go of the kept dot
+  document.addEventListener("click", function (event) { // an empty place lets go of the kept dots
     var svg = event.target.closest && event.target.closest(".hm-graph-svg");
     if (!svg) return;
     if (svg.hmDragged) { svg.hmDragged = false; return; } // the click that ends a drag
-    if (!graphDot(event.target) && !graphName(event.target)) keepDot(graphOf(svg), null);
+    if (!graphDot(event.target) && !graphName(event.target)) {
+      keepDot(graphOf(svg), null);
+      pin(graphOf(svg), []);
+    }
   });
 
   // Ctrl and the wheel, or the pinch of a touchpad, which the browser sends the same way, zoom the
