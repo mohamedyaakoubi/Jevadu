@@ -1699,7 +1699,8 @@ def test_a_project_of_a_check_opens_over_it_and_the_check_comes_back(site, chrom
 
 @pytest.mark.browser
 def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # noqa: ANN001
-    """An answer of 400 takes the place of the steps of the check, and of the register's form."""
+    """An answer of 400 takes the place of the steps of the check, and shows above the register's
+    form, which stays as it was, to be sent again (30 October 2026)."""
     client, _, _, database = site
     event = checkable(database)
     page = served(chromium, client, viewport={"width": 1440, "height": 900})
@@ -1713,7 +1714,11 @@ def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # 
     page.locator("#check button[type=submit]").click()
     page.wait_for_selector("#viewer[open] .check-result")
     page.locator("#register-form button[type=submit]").click()  # no line in the README yet
-    page.wait_for_selector("#register-box:has-text('does not contain the line')")
+    page.wait_for_selector("#register-problem:has-text('does not contain the line')")
+    assert page.locator("#register-form").count() == 1  # the box stays
+    problem, form = (page.locator(name).bounding_box()["y"]
+                     for name in ("#register-problem", "#register-form"))  # fmt: skip
+    assert problem < form  # at the top of the box
     page.context.close()
 
 
@@ -1786,6 +1791,11 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     asked_before = len(client.github_site.seen)
     missing = client.post("/register", data=form, headers=HX)
     assert missing.status_code == 400 and "does not contain the line" in missing.text
+    # above the box of the register, which stays as it was, with the newest commit read again
+    assert missing.headers["HX-Retarget"] == "#register-problem"
+    assert missing.text.strip().startswith('<div class="alert alert-warning mb-3" role="alert"')
+    assert 'id="register-box"' not in missing.text
+    assert f'data-latest-commit="{COMMIT}"' in missing.text
     assert len(client.github_site.seen) == asked_before + 2  # the README and the version, again
     assert client.writes.written == []  # nothing is written without the team's line
     with_line(client, check.text)
@@ -2391,9 +2401,12 @@ def served(chromium, client, before_compare=lambda: None, **context):  # noqa: A
             got = client.post(address, content=route.request.post_data_buffer, headers=headers)
         else:
             got = client.get(address, headers=headers)
+        # the headers that htmx reads, such as HX-Retarget, go with the answer as from a server
+        back = {k: v for k, v in got.headers.items() if k.lower().startswith("hx-")}
         kind = got.headers.get("content-type")  # an answer of 204 has none
-        route.fulfill(status=got.status_code, body=got.content,
-                      headers={"content-type": kind} if kind else {})  # fmt: skip
+        if kind:
+            back["content-type"] = kind
+        route.fulfill(status=got.status_code, body=got.content, headers=back)
 
     page.route(lambda url: url.startswith("http://site.test/"), answer)
     return page
@@ -3013,6 +3026,69 @@ def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -
     page.locator("#register-form button[type=submit]").click()
     page.wait_for_selector("#register-box dt:has-text('Signed by')")
     assert json.loads(client.writes.written[0])["scheme"] == "eip191"
+    page.context.close()
+
+
+def fake_metamask(address: str, signatures: dict[str, str]) -> str:
+    """A stand-in MetaMask (EIP-1193) for the page: it gives its address, and signs a text with
+    the signature made for the commit that the text names. Each call is kept in
+    window.ethereum.asked; a method that it does not know is refused as one that does not exist."""
+    return f"""window.ethereum = {{ asked: [], async request(call) {{
+      this.asked.push(call);
+      const asks = call.method === "eth_requestAccounts" || call.method === "eth_accounts";
+      if (asks) return ["{address}"];
+      if (call.method === "personal_sign") {{
+        const text = new TextDecoder().decode(new Uint8Array(
+          call.params[0].slice(2).match(/../g).map((pair) => parseInt(pair, 16))));
+        const signatures = {json.dumps(signatures)};
+        for (const [commit, signature] of Object.entries(signatures)) {{
+          if (text.includes(commit)) return signature;
+        }}
+      }}
+      throw Object.assign(new Error("not known to this stand-in"), {{ code: -32601 }});
+    }} }};"""
+
+
+@pytest.mark.browser
+def test_a_newer_commit_lets_the_old_signature_go_and_the_next_one_names_it(site, chromium) -> None:  # noqa: ANN001
+    """The team signs, then adds its line to the README, which makes a commit. The register
+    refuses the signature of the older commit above its box, which stays; the box lets that
+    signature go, and the next one names the newer commit (30 October 2026: with the box kept,
+    every new signature would have named the old commit)."""
+    from checkfakes import commits_answer
+    from fakes import Reply
+    from hackathon_memory.collect.github_commits import commits_address
+
+    client, _, _, database = site
+    event = checkable(database)
+    key, account, address = signing_account(client)
+    newer = "ab" * 20
+    signatures = {made: metamask_signature(key, "ethglobal.com/sample-event", made)
+                  for made in (COMMIT, newer)}  # fmt: skip
+    page = served(chromium, client, reduced_motion="reduce")
+    page.add_init_script(fake_metamask(address, signatures))
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] [data-sign-with=evm]")
+    page.locator("[data-sign-with=evm]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    with_line(client, page.content())  # the line makes a commit
+    client.github_site.pages[commits_address(REPO)] = Reply(200, commits_answer(newer))
+    page.locator("#register-form button[type=submit]").click()
+    page.wait_for_selector("#register-problem:has-text('A new commit reached the repository')")
+    page.wait_for_function(f"document.querySelector('[data-sign]').dataset.commit === '{newer}'")
+    assert page.locator("[name=signature]").input_value() == ""
+    assert page.locator(".hm-commit-now").inner_text() == f"{newer[:12]}…"
+    assert page.locator(".hm-sign-status").get_attribute("data-state") == "problem"
+    page.locator("[data-sign-with=evm]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    assert page.locator("#register-problem").inner_text() == ""  # the new signature answers it
+    page.locator("#register-form button[type=submit]").click()
+    page.wait_for_selector("#register-box dt:has-text('Signed by')")
+    record = json.loads(client.writes.written[0])
+    assert (record["commit"], record["account"]) == (newer, account)
     page.context.close()
 
 

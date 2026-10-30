@@ -5,6 +5,7 @@
 <section class="card project-section check-register-section" id="register-box" aria-labelledby="register-title">
   <div class="card-body">
     <h3 id="register-title" tabindex="-1">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
+    <div id="register-problem" tabindex="-1">{# what stops the record: _register_problem.html #}</div>
     {% if not view.open %}
     <p class="text-secondary">The public register is not open yet: its topic on Hedera testnet has not been created.</p>
     {% elif view.problem %}
@@ -28,7 +29,7 @@
       <ul class="hm-written">
         <li>the hackathon: <span class="id">{{ view.event }}</span></li>
         <li>a hash of the repository link: <span class="id">{{ view.code[:16] }}&hellip;</span></li>
-        <li>the latest commit at the moment you click (now <span class="id">{{ result.version.sha[:12] }}&hellip;</span>)</li>
+        <li>the latest commit at the moment you click (now <span class="id hm-commit-now">{{ result.version.sha[:12] }}&hellip;</span>)</li>
         <li>your Hedera account and its signature, if you sign below</li>
       </ul>
       <p class="hm-small">Nothing else: no link, no name, no text. Hedera adds a sequence number and a timestamp. A record can never be changed or deleted.</p>

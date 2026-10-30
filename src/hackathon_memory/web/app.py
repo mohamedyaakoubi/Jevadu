@@ -1316,10 +1316,20 @@ def create_app(
 
     def registered(request: Request, form: dict[str, str]) -> HTMLResponse:
         name = "_register.html" if request.headers.get("HX-Request") == "true" else "register.html"
+        newest: str | None = None  # the newest commit, once GitHub was asked again
 
         def refused(status: int, problem: str) -> HTMLResponse:
-            """What stops the record, in plain words."""
-            return render(request, name, status, problem=problem)
+            """What stops the record, in plain words. In the page it shows above the register's
+            box, which stays as it was, so the team can put it right and click again (30 October
+            2026: it took the place of the whole box). It names the newest commit when GitHub was
+            asked again: static/sign.js has the next signature name it."""
+            if name == "register.html":  # without JavaScript: a page of its own
+                return render(request, name, status, problem=problem)
+            response = render(request, "_register_problem.html", status, problem=problem,
+                              latest=newest)  # fmt: skip
+            response.headers["HX-Retarget"] = "#register-problem"
+            response.headers["HX-Reswap"] = "innerHTML"
+            return response
 
         if limits is not None and not limits.on(public_copy.REGISTER):
             return refused(503, PUBLIC_REGISTER_OFF)
@@ -1368,6 +1378,8 @@ def create_app(
             asker, answers, repository,
             collector=f"{settings.collector_name.strip()}/{__version__}",
         )  # fmt: skip
+        if version is not None and version.status == VERSION_FOUND:
+            newest = version.sha
         if problems:
             return refused(503, problems[0])
         readme_text = readme.text if readme and readme.status == README_FOUND else ""

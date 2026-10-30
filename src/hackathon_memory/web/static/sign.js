@@ -54,6 +54,11 @@ function keep(box, signed) {
   box.querySelector('[name="signed_commit"]').value = box.dataset.commit;
 }
 
+function unsign(box) {
+  keep(box, { account: "", scheme: "", signature: "" });
+  box.querySelector('[name="signed_commit"]').value = "";
+}
+
 function hexOf(text) {
   const bytes = new TextEncoder().encode(text);
   return "0x" + Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -127,6 +132,29 @@ async function withHederaWallet(box) {
   return { account, scheme: "hedera", signature: signatureMap };
 }
 
+// A problem of the register shows above its box, which stays as it was (30 October 2026). The
+// answer names the newest commit when GitHub was asked again. A team that adds its line to the
+// README makes a commit, and the record names the newest one, so the next signature must name it:
+// a signature of an older commit is let go, else every new signature would name the old one.
+document.addEventListener("htmx:afterSettle", (event) => {
+  const place = event.detail.target;
+  if (!place || place.id !== "register-problem") return;
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  place.focus({ preventScroll: true });
+  place.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+  const latest = place.querySelector("[data-latest-commit]")?.dataset.latestCommit;
+  const register = place.closest("#register-box");
+  const box = register && register.querySelector("[data-sign]");
+  if (!latest || !box || box.dataset.commit === latest) return;
+  box.dataset.commit = latest;
+  const now = register.querySelector(".hm-commit-now");
+  if (now) now.textContent = `${latest.slice(0, 12)}…`;
+  if (!box.querySelector('[name="signature"]').value) return;
+  unsign(box);
+  say(box, `The repository has a newer commit, ${latest.slice(0, 12)}…, and the record will name `
+    + "it. Sign again.", "problem");
+});
+
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-sign-with]");
   const box = button && button.closest("[data-sign]");
@@ -137,6 +165,7 @@ document.addEventListener("click", async (event) => {
     const signed = button.dataset.signWith === "evm"
       ? await withEvmWallet(box) : await withHederaWallet(box);
     keep(box, signed);
+    box.closest("#register-box")?.querySelector("#register-problem")?.replaceChildren();
     say(box, `Signed by the account ${signed.account}. Now click "Register on Hedera testnet".`,
       "done");
   } catch (error) {
