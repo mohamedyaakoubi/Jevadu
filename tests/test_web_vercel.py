@@ -142,3 +142,31 @@ def test_the_vercel_project_is_found_and_its_settings_are_set(monkeypatch) -> No
     refused = httpx.Client(base_url=vercel.API, transport=httpx.MockTransport(VercelApi(True)))
     with pytest.raises(vercel.VercelError, match="403 Not authorized"):
         vercel.team(refused)
+
+
+def test_a_deployment_finds_node_when_this_shell_does_not(monkeypatch) -> None:  # noqa: ANN001
+    """Node's npx.cmd runs the node beside it: with no npx on the PATH, Node's own folder goes first
+    in the PATH of the command (30 October 2026: a deployment stopped on "node is not
+    recognized"). The token travels in the environment, never on the command line."""
+    import subprocess
+
+    ran: list[tuple[list[str], dict]] = []
+
+    def run(command, cwd, env, check):  # noqa: ANN001, ANN202
+        ran.append((command, env))
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(vercel.subprocess, "run", run)
+    monkeypatch.setenv("ProgramFiles", r"C:\Program Files")
+    monkeypatch.setattr(vercel.shutil, "which", lambda name: None)
+    assert vercel.deploy("the-token", "team_1", "prj_1") == 0
+    command, env = ran[-1]
+    node = Path(r"C:\Program Files") / "nodejs"
+    assert command[0] == str(node / "npx.cmd") and "the-token" not in command
+    assert env["PATH"].split(os.pathsep)[0] == str(node)
+    assert (env["VERCEL_TOKEN"], env["VERCEL_ORG_ID"], env["VERCEL_PROJECT_ID"]) == (
+        "the-token", "team_1", "prj_1")  # fmt: skip
+    monkeypatch.setattr(vercel.shutil, "which", lambda name: r"C:\tools\npx.cmd")
+    vercel.deploy("the-token", "team_1", "prj_1")
+    command, env = ran[-1]
+    assert command[0] == r"C:\tools\npx.cmd" and env["PATH"] == os.environ["PATH"]  # left alone

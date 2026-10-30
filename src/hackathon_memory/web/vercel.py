@@ -68,9 +68,12 @@ def deploy(token: str, team_id: str, project: str) -> int:
     """A new deployment of production, from this folder, with the project's variables as they are
     now. The exit code of the CLI."""
     installed = Path(os.environ.get("ProgramFiles", "")) / "nodejs" / "npx.cmd"
-    npx = shutil.which("npx") or str(installed)
+    npx = shutil.which("npx")
     environment = {**os.environ, "VERCEL_TOKEN": token, "VERCEL_ORG_ID": team_id,
                    "VERCEL_PROJECT_ID": project}  # fmt: skip
+    if npx is None:  # Node's own npx.cmd, which runs the node beside it: its folder goes first
+        npx = str(installed)
+        environment["PATH"] = os.pathsep.join((str(installed.parent), os.environ.get("PATH", "")))
     command = [npx, *CLI[1:], "deploy", "--prod", "--yes", "--archive=tgz", "--non-interactive"]
     done = subprocess.run(command, cwd=ROOT, env=environment, check=False)  # noqa: S603
     return done.returncode
