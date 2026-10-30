@@ -2311,8 +2311,14 @@ SEARCH = "http://site.test/?idea=help+a+street+vendor+get+paid+with+a+coin&mode=
 
 
 def served(chromium, client, before_compare=lambda: None, **context):  # noqa: ANN001, ANN201
-    """A page whose every request is answered by the website's test client: no server runs."""
+    """A page whose every request is answered by the website's test client: no server runs.
+
+    The visit counts as seen, so the name of the tool never covers its first page: a test that
+    pointed or clicked within its 1.45 seconds made Playwright scroll to try again while the page
+    scrolls smoothly, and the pointer landed elsewhere (30 October 2026, after a restart of the
+    computer made the race lose every time)."""
     page = chromium.new_context(**context).new_page()
+    page.add_init_script("try { window.sessionStorage.setItem('hm-seen', '1'); } catch (e) {}")
 
     def answer(route) -> None:  # noqa: ANN001
         parts = urlsplit(route.request.url)
