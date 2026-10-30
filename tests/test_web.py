@@ -2830,12 +2830,17 @@ def signing_account(client) -> tuple[object, str, str]:  # noqa: ANN001
 
 
 def metamask_signature(key, event_key: str, commit: str = COMMIT) -> str:  # noqa: ANN001
+    """What MetaMask's personal_sign answers: r, s, and the v with which its address is found."""
     import hashlib
 
-    from hackathon_memory.hedera.signing import ethereum_message, signed_text
+    from hackathon_memory.hedera.signing import ethereum_message, signed_text, signer_address
 
     text = signed_text(event_key, hashlib.sha256(REPO.encode()).hexdigest(), commit, "0.0.7001")
-    return "0x" + (key.sign(ethereum_message(text)) + bytes([27])).hex()
+    raw = key.sign(ethereum_message(text))
+    address = "0x" + key.public_key().to_evm_address().to_string().removeprefix("0x").lower()
+    v = next(v for v in (27, 28)
+             if signer_address(ethereum_message(text), raw + bytes([v])) == address)  # fmt: skip
+    return "0x" + (raw + bytes([v])).hex()
 
 
 def test_a_team_signs_its_registration_and_the_record_holds_the_signature(site) -> None:  # noqa: ANN001
@@ -2874,6 +2879,30 @@ def test_a_team_signs_its_registration_and_the_record_holds_the_signature(site) 
     assert (record["v"], record["account"], record["scheme"]) == (3, account, "eip191")
     later = client.get("/check", params=asked, headers=HX)
     assert f'signed by the account <span class="id">{account}</span>' in later.text
+
+
+def test_an_account_made_by_the_faucet_signs_by_its_address(site) -> None:  # noqa: ANN001
+    """Test HBAR sent to a 0x address makes an account with no key on the ledger until it pays for
+    a first transaction (30 October 2026): its EVM wallet's signature is checked by the address
+    that made it, and the record is written."""
+    client, _, _, database = site
+    event = checkable(database)
+    key, account, address = signing_account(client)
+    client.mirrors["testnet"].things["account"][account]["key"] = None  # by its ID and its address
+    found = client.get("/register/account", params={"address": address})
+    assert found.status_code == 200 and found.json()["account"] == account
+    asked = {"repo": REPO, "event": event}
+    with_line(client, client.get("/check", params=asked, headers=HX).text)
+    form = {**asked, "starts": "", "ends": "", "signer": account, "scheme": "eip191",
+            "signed_commit": COMMIT}  # fmt: skip
+    other = metamask_signature(type(key).generate_ecdsa(), "ethglobal.com/sample-event")
+    wrong = client.post("/register", data={**form, "signature": other}, headers=HX)
+    assert wrong.status_code == 400 and "not that of the address of 0.0.7001" in wrong.text
+    good = metamask_signature(key, "ethglobal.com/sample-event")
+    done = client.post("/register", data={**form, "signature": good}, headers=HX)
+    assert done.status_code == 200 and "<dt>Signed by</dt>" in done.text
+    (payload,) = client.writes.written
+    assert json.loads(payload)["account"] == account
 
 
 def test_the_box_offers_hedera_wallets_once_walletconnect_has_a_project_id(site) -> None:  # noqa: ANN001

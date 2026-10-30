@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from cryptography.exceptions import InvalidSignature
 from hiero_sdk_python.crypto.public_key import PublicKey
 from hiero_sdk_python.hapi.services.basic_types_pb2 import SignatureMap
+from hiero_sdk_python.utils.crypto_utils import keccak256
 
 from hackathon_memory.hedera.mirror import MirrorNode
 
@@ -81,6 +82,64 @@ def ethereum_message(text: str) -> bytes:
     return b"\x19Ethereum Signed Message:\n" + str(len(data)).encode() + data
 
 
+# The curve secp256k1 (SEC 2, section 2.4.1), for the address that made a signature of an EVM
+# wallet: the ledger knows the 0x address of an account made by sending HBAR to it, but not its key
+# until the account pays for a first transaction (docs.hedera.com, the testnet faucet: "Auto
+# Account Creation"), so such a signature is checked by the address that it comes from.
+_P = 2**256 - 2**32 - 977
+_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+_G = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+      0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)  # fmt: skip
+_Point = tuple[int, int] | None  # None is the point at infinity
+
+
+def _add(a: _Point, b: _Point) -> _Point:
+    if a is None:
+        return b
+    if b is None:
+        return a
+    if a[0] == b[0] and (a[1] + b[1]) % _P == 0:
+        return None
+    if a == b:
+        slope = 3 * a[0] * a[0] * pow(2 * a[1], -1, _P) % _P
+    else:
+        slope = (b[1] - a[1]) * pow(b[0] - a[0], -1, _P) % _P
+    x = (slope * slope - a[0] - b[0]) % _P
+    return x, (slope * (a[0] - x) - a[1]) % _P
+
+
+def _times(k: int, point: _Point) -> _Point:
+    total = None
+    while k:
+        if k & 1:
+            total = _add(total, point)
+        point = _add(point, point)
+        k >>= 1
+    return total
+
+
+def signer_address(message: bytes, signature: bytes) -> str | None:
+    """The 0x address whose key made `signature` (r, s and v, 65 bytes) of the Keccak-256 hash of
+    `message`, as ecrecover finds it; None for a signature of no point of the curve."""
+    if len(signature) != 65:
+        return None
+    r, s = int.from_bytes(signature[:32], "big"), int.from_bytes(signature[32:64], "big")
+    parity = signature[64] - 27 if signature[64] >= 27 else signature[64]
+    if not (0 < r < _N and 0 < s < _N) or parity not in (0, 1):
+        return None
+    square = (pow(r, 3, _P) + 7) % _P
+    y = pow(square, (_P + 1) // 4, _P)
+    if y * y % _P != square:
+        return None
+    if y % 2 != parity:
+        y = _P - y
+    hashed = int.from_bytes(keccak256(message), "big")
+    key = _times(pow(r, -1, _N), _add(_times(s, (r, y)), _times(-hashed % _N, _G)))
+    if key is None:
+        return None
+    return "0x" + keccak256(key[0].to_bytes(32, "big") + key[1].to_bytes(32, "big"))[-20:].hex()
+
+
 def account_key(mirror: MirrorNode, account: str) -> AccountKey | None:
     """The key of an account, or of the account of a 0x address, from the mirror node; None when
     the network has no such account."""
@@ -115,6 +174,12 @@ def raw_signature(scheme: str, signature: str) -> bytes:
 def check(scheme: str, text: str, signature: bytes, key: AccountKey) -> None:
     """Raise a SignatureError unless `signature` is that of `key` for `text`, made by a wallet of
     the kind `scheme`."""
+    if scheme == ETHEREUM and not key.key_hex and key.evm_address:
+        # an account that the ledger knows by its 0x address only: the one that signed must be it
+        if signer_address(ethereum_message(text), signature) != key.evm_address.lower():
+            raise SignatureError(f"The signature is not that of the address of {key.account} on "
+                                 "the ledger. Sign again with that account.")  # fmt: skip
+        return
     if key.key_type not in (ED25519, ECDSA) or not key.key_hex:
         raise SignatureError(f"The account {key.account} has a list of keys, or no key yet: only "
                              "an account with one key can sign here.")  # fmt: skip
