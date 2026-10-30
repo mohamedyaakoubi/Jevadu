@@ -615,6 +615,33 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
    warning, so that a rehearsal is never taken for the register. */
 .hm-rehearsal { margin: 0; padding: 0.5rem 1rem; text-align: center; background: var(--tblr-warning-lt, #fff3cd); color: var(--tblr-body-color); border-bottom: 2px solid var(--tblr-warning); }
 
+/* The tour of the search page (design 12.1, S8, 30 October 2026). The offer stands in the lower
+   left corner on a first visit; the steps are Driver.js 1.10.1 (vendor/driver.css), in the site's
+   own type, colours and boxes, light or dark. */
+.hm-tour-offer {
+  position: fixed; left: 1rem; bottom: 1rem; z-index: 1040; max-width: min(20rem, calc(100vw - 2rem));
+  padding: 0.75rem 1rem; background: var(--tblr-bg-surface); color: var(--tblr-body-color);
+  border: 1px solid var(--tblr-border-color); border-radius: 6px; box-shadow: var(--tblr-shadow-dropdown);
+}
+.hm-tour-offer-title { margin: 0 0 0.25rem; font-weight: 600; }
+.hm-tour-offer-buttons { display: flex; gap: 0.5rem; }
+.driver-popover.hm-tour {
+  --driver-popover-font-family: var(--tblr-font-sans-serif);
+  max-width: 340px; color: var(--tblr-body-color); background: var(--tblr-bg-surface);
+  border: 1px solid var(--tblr-border-color); border-radius: 6px; box-shadow: var(--tblr-shadow-dropdown);
+}
+.driver-popover.hm-tour .driver-popover-title { padding-right: 1.5rem; font-size: 1rem; font-weight: 600; }
+.driver-popover.hm-tour .driver-popover-description { font-size: 0.875rem; }
+.driver-popover.hm-tour .driver-popover-progress-text { color: var(--tblr-secondary); font-size: 0.8125rem; }
+.driver-popover.hm-tour .driver-popover-arrow { display: none; }
+.driver-popover.hm-tour .driver-popover-close-btn { color: var(--tblr-secondary); }
+.driver-popover.hm-tour :is(.driver-popover-footer-btn, .hm-tour-skip) {
+  padding: 0.25rem 0.625rem; font-size: 0.8125rem; line-height: 1.4; text-shadow: none; color: var(--tblr-body-color);
+  background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color); border-radius: 4px; cursor: pointer;
+}
+.driver-popover.hm-tour .driver-popover-next-btn { color: var(--tblr-primary-fg, #fff); background: var(--tblr-primary); border-color: var(--tblr-primary); }
+.driver-popover.hm-tour .hm-tour-skip { margin-right: auto; border-color: transparent; color: var(--tblr-secondary); }
+
 /* Cloudflare's Turnstile on the public copy (web/turnstile.py): a corner of the page that stays
    empty, its widget unseen, unless Cloudflare asks for a click or its check cannot run. The
    widget is never in a hidden box: Turnstile itself decides when it shows. */
