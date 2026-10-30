@@ -3095,6 +3095,10 @@ def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -
     shown = f"MetaMask, address {address[:6]}…{address[-4:]}, Hedera account {account}"
     assert page.locator(".hm-wallet-who").inner_text() == shown
     assert page.locator(".hm-sign-choice").is_hidden()
+    # signed: the box says so, offers no signing again, and the next step has the focus
+    assert page.locator(".hm-wallet-state").inner_text() == "Signed:"
+    assert page.locator("[data-sign-now]").is_hidden()
+    assert page.evaluate("document.activeElement.matches('#register-form [type=submit]')")
     asked = page.evaluate("window.ethereum.asked")
     methods = [call["method"] for call in asked]
     assert methods == ["wallet_requestPermissions", "eth_accounts", "personal_sign"]
@@ -3262,6 +3266,7 @@ def test_a_newer_commit_lets_the_old_signature_go_and_the_next_one_names_it(site
     assert page.locator("[name=signature]").input_value() == ""
     assert page.locator(".hm-commit-now").inner_text() == f"{newer[:12]}…"
     assert page.locator(".hm-sign-status").get_attribute("data-state") == "problem"
+    assert page.locator(".hm-wallet-state").inner_text() == "Connected:"  # to sign again
     page.locator("[data-sign-now]").click()
     page.wait_for_selector(".hm-sign-status[data-state=done]")
     assert page.locator("#register-problem").inner_text() == ""  # the new signature answers it
