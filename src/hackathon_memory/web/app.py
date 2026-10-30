@@ -1316,15 +1316,20 @@ def create_app(
 
     def registered(request: Request, form: dict[str, str]) -> HTMLResponse:
         name = "_register.html" if request.headers.get("HX-Request") == "true" else "register.html"
+
+        def refused(status: int, problem: str) -> HTMLResponse:
+            """What stops the record, in plain words."""
+            return render(request, name, status, problem=problem)
+
         if limits is not None and not limits.on(public_copy.REGISTER):
-            return render(request, name, 503, problem=PUBLIC_REGISTER_OFF)
+            return refused(503, PUBLIC_REGISTER_OFF)
         if not person():
-            return render(request, name, 403, problem=PERSON_FIRST)
+            return refused(403, PERSON_FIRST)
         if not allowed(public_copy.REGISTER):
-            return render(request, name, 429, problem=used(public_copy.REGISTER))
+            return refused(429, used(public_copy.REGISTER))
         repository = submission.repository_link(form.get("repo", "")[:300])
         if repository is None:
-            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+            return refused(400, NOT_A_REPOSITORY)
         # The team's own signature (design 9.6): its account, how its wallet signed, the
         # signature, and the commit that the signed text named.
         signer_text, scheme = form.get("signer", "").strip(), form.get("scheme", "").strip()
@@ -1332,24 +1337,24 @@ def create_app(
         signs = bool(signer_text or scheme or signature)
         signer = signing.account_of(signer_text) if signs else None
         if signs and signer is None:
-            return render(request, name, 400, problem=NOT_AN_ACCOUNT)
+            return refused(400, NOT_AN_ACCOUNT)
         if signs and (scheme not in signing.SCHEMES or not signature):
-            return render(request, name, 400, problem=NOT_SIGNED_RIGHT)
+            return refused(400, NOT_SIGNED_RIGHT)
         try:
             days, wrong = event_days(database(), form.get("event", ""), form.get("starts", ""),
                                      form.get("ends", ""))  # fmt: skip
         except (SettingsError, psycopg.OperationalError):
-            return render(request, name, 503, problem=DATABASE_DOWN)
+            return refused(503, DATABASE_DOWN)
         if days is None:
-            return render(request, name, 400, problem=wrong or EVENT_FOR_REGISTER)
+            return refused(400, wrong or EVENT_FOR_REGISTER)
         if days.typed:
-            return render(request, name, 400, problem=NOT_LISTED)
+            return refused(400, NOT_LISTED)
         code = saved_facts(answers, repository)
         if code is None or code.status != CODE_FOUND:
-            return render(request, name, 400, problem=CHECK_FIRST)
+            return refused(400, CHECK_FIRST)
         view = register_view(repository, days)
         if not view.open or view.problem:
-            return render(request, name, 503, problem=view.problem or REGISTER_CLOSED)
+            return refused(503, view.problem or REGISTER_CLOSED)
         values = {"view": view, "network": view.network, "topic_id": view.topic_id}
         if view.same_event is not None:  # never written twice: the first record stands
             return render(request, name, done=view.same_event, already=True, **values)
@@ -1358,39 +1363,39 @@ def create_app(
         # replaced (collect/answers.py).
         asker, why = github_or_why()
         if asker is None:
-            return render(request, name, 503, problem=why)
+            return refused(503, why)
         readme, version, problems = submission.read_again(
             asker, answers, repository,
             collector=f"{settings.collector_name.strip()}/{__version__}",
         )  # fmt: skip
         if problems:
-            return render(request, name, 503, problem=problems[0])
+            return refused(503, problems[0])
         readme_text = readme.text if readme and readme.status == README_FOUND else ""
         if not registry.carries_line(readme_text, view.line):
-            return render(request, name, 400, problem=NO_LINE.format(line=view.line))
+            return refused(400, NO_LINE.format(line=view.line))
         if version is None or version.status != VERSION_FOUND or version.sha is None:
-            return render(request, name, 400, problem=NO_VERSION)
+            return refused(400, NO_VERSION)
         payload = registry.record(view.event, view.code, version.sha)
         if signer is not None:  # checked against the key that the ledger shows for the account
             if signed_commit.strip() != version.sha:
-                return render(request, name, 400, problem=SIGNED_OLD_COMMIT)
+                return refused(400, SIGNED_OLD_COMMIT)
             try:
                 key = signing.account_key(mirror_nodes()[view.network], signer)
                 if key is None:
-                    return render(request, name, 400, problem=NO_SUCH_SIGNER.format(account=signer))
+                    return refused(400, NO_SUCH_SIGNER.format(account=signer))
                 raw = signing.raw_signature(scheme, signature)
                 text = signing.signed_text(view.event, view.code, version.sha, signer)
                 signing.check(scheme, text, raw, key)
             except signing.SignatureError as error:
-                return render(request, name, 400, problem=str(error))
+                return refused(400, str(error))
             except MirrorError:
-                return render(request, name, 503, problem=REGISTER_UNREAD)
+                return refused(503, REGISTER_UNREAD)
             payload = registry.signed_record(
                 view.event, view.code, version.sha, signer, scheme, raw
             )
         write, why = writer_or_why()
         if write is None:
-            return render(request, name, 503, problem=why)
+            return refused(503, why)
         try:
             done = registry.register_submission(write, mirror_nodes()[view.network],
                                                 view.topic_id, payload)  # fmt: skip
@@ -1401,7 +1406,7 @@ def create_app(
                 else "the site could not write the record"
             )
             LOG.warning("the register refused a record: %s", error)
-            return render(request, name, 503, problem=REGISTER_FAILED.format(why=why))
+            return refused(503, REGISTER_FAILED.format(why=why))
         except MirrorError:
             return render(request, name, 202, problem=NOT_YET_VISIBLE)
         return render(request, name, done=done, already=False, **values)
