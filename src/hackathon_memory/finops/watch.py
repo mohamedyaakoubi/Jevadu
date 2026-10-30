@@ -18,6 +18,11 @@ job installs one package. The role was made once, by the role that owns the data
     GRANT USAGE ON SCHEMA public TO costs_reader;
     GRANT SELECT ON llm_calls, visitor_uses, site_switches TO costs_reader;
 
+On a laptop, a setting that is not in the environment is read from the .env of the working
+folder, as the settings read it (31 October 2026: the command of the README said "not set" there,
+since only the job gives its settings in the environment). The environment wins, as for the
+settings, and a value is never printed.
+
 Exit codes: 0 all is well, 1 a share of a cap is spent, 2 the database cannot be read.
 """
 
@@ -37,6 +42,7 @@ ENVIRONMENT = "public"
 TOTAL_USD, PER_DAY_USD = 30.0, 5.0
 ALERT_SHARE = 0.8
 DATABASE = "PUBLIC_COSTS_DATABASE_URL"
+GIVEN = (DATABASE, "LLM_BUDGET_PUBLIC_USD", "LLM_BUDGET_PUBLIC_PER_DAY_USD")  # by the job or .env
 WHAT = {"ai": "asks of Gemini", "embed": "searches by meaning", "check": "checks",
         "refresh": "readings again", "register": "registrations"}  # fmt: skip
 SWITCHES = ("ai", "register")  # those of web/public.py (a test keeps them equal): unset is off
@@ -135,11 +141,33 @@ def report(found: Standing, total_usd: float, per_day_usd: float, warned: Sequen
     return "\n".join(lines) + "\n"
 
 
-def main(environ: Mapping[str, str] | None = None) -> int:
-    environ = os.environ if environ is None else environ
+def from_dotenv(path: Path, names: Sequence[str]) -> dict[str, str]:
+    """The values of `names` in a .env file (NAME=value, the value maybe in quotes), with the
+    standard library only, like the rest of the watch. No file, no values."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    found = {}
+    for line in lines:
+        name, equals, value = line.strip().removeprefix("export ").partition("=")
+        if equals and name.strip() in names:
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+                value = value[1:-1]
+            found[name.strip()] = value
+    return found
+
+
+def main(environ: Mapping[str, str] | None = None, dotenv: Path | None = None) -> int:
+    if environ is None:  # a real run: the environment, then the .env of the working folder
+        environ, dotenv = os.environ, Path(".env")
+    if dotenv is not None:
+        environ = {**from_dotenv(dotenv, GIVEN), **environ}
     conninfo = environ.get(DATABASE, "")
     if not conninfo:
-        print(f"{DATABASE} is not set: the watch cannot read the public copy's database.")
+        print(f"{DATABASE} is not set, in the environment or in .env: the watch cannot read the "
+              "public copy's database.")  # fmt: skip
         return 2
     total = float(environ.get("LLM_BUDGET_PUBLIC_USD") or TOTAL_USD)
     per_day = float(environ.get("LLM_BUDGET_PUBLIC_PER_DAY_USD") or PER_DAY_USD)
