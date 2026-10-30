@@ -506,6 +506,35 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
     assert "Read from the mirror node on 23 October 2026: 2 of its own IDs." in block
 
 
+def test_the_hbar_row_says_not_checked_and_its_mark_says_why(site) -> None:  # noqa: ANN001
+    """The page is not checked for HBAR, since nearly every project moves HBAR to set itself up;
+    its cell says so with a mark of its own (30 October 2026: "not compared" alone was unclear).
+    Every mark of the page and of its window has its text on the page."""
+    from hackathon_memory.check.history import HBAR, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    own_id(database, pebble, "0.0.4512", "account")
+    with psycopg.connect(database) as conn:  # the event: 6 to 8 March 2026
+        conn.execute("UPDATE events SET ends_on = %s", (date(2026, 3, 8),))
+    paid = datetime(2026, 3, 7, 12, tzinfo=UTC)
+    HistoryStore(database).save("0.0.4512", "testnet", "account",
+                                History({stamp(paid, n): HBAR for n in range(2)}, False),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    page = client.get("/", params={"open": pebble}).text
+    row = re.search(r'<th scope="row">Accounts and HBAR transfers</th>(.*?)</tr>', page, re.DOTALL)
+    assert row and '<span class="text-secondary">not checked</span>' in row.group(1)
+    assert 'popovertarget="tip-hbar"' in row.group(1) and ">2</td>" in row.group(1)
+    assert "not compared" not in page
+    tip = page.split('id="tip-hbar" popover>', 1)[1].split("</div>", 1)[0]
+    assert "Nearly every project moves HBAR" in tip and "not checked" in tip
+    marks = set(re.findall(r'popovertarget="tip-([a-z0-9-]+)"', page))
+    assert "hbar" in marks and "story" in marks
+    for key in marks:
+        assert page.count(f'id="tip-{key}" popover') == 1, key
+
+
 def test_the_card_shows_the_depth_of_use_and_the_days_of_its_own_ids(site) -> None:  # noqa: ANN001
     """Depth of use (design 7.5, 25 October 2026): what its IDs did, who took part, on how many
     days, the page's own words about Hedera, and a strip of days whose squares open HashScan."""
