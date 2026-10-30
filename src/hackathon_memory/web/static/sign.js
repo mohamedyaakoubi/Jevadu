@@ -55,6 +55,17 @@ async function withMetaMask(box) {
   return { account: found.account, scheme: "eip191", signature };
 }
 
+// The window of a check is a modal dialog, and the page behind a modal dialog cannot be reached.
+// WalletConnect adds its list of wallets at the end of the page (the element wcm-modal, made by
+// the constructor of @walletconnect/modal 2.7.0, dist/index.js), so the list opened behind the
+// window (30 October 2026). It goes into the open window as soon as it is added.
+function walletsInWindow() {
+  const list = document.querySelector("wcm-modal");
+  const open = document.querySelector("dialog[open]");
+  if (list && open && list.parentElement !== open) open.appendChild(list);
+}
+new MutationObserver(walletsInWindow).observe(document.body, { childList: true });
+
 let connector = null; // one WalletConnect connection for the page
 
 async function withHashPack(box) {
@@ -75,7 +86,10 @@ async function withHashPack(box) {
     await made.init({ logger: "error" });
     connector = made;
   }
-  if (connector.signers.length === 0) await connector.openModal();
+  if (connector.signers.length === 0) {
+    walletsInWindow(); // the list may have been made before this window opened
+    await connector.openModal();
+  }
   const signer = connector.signers[connector.signers.length - 1];
   if (!signer) throw new Error("No account was connected. Approve the connection in HashPack.");
   const account = signer.getAccountId().toString();

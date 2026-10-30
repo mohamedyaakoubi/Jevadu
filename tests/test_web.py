@@ -2882,6 +2882,26 @@ def test_the_box_offers_hashpack_once_walletconnect_has_a_project_id(site) -> No
 
 
 @pytest.mark.browser
+def test_the_list_of_wallets_opens_inside_the_window(site, chromium) -> None:  # noqa: ANN001
+    """WalletConnect adds its list of wallets (wcm-modal) at the end of the page. Behind the modal
+    window of a check it could not be reached (30 October 2026): it goes into the open window."""
+    client, _, ids, _ = site
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(f"http://site.test/?open={ids['Pebble Pay']}")
+    page.wait_for_selector("#viewer[open] .project")
+    page.evaluate("""() => {
+      const list = document.createElement('wcm-modal');
+      list.innerHTML = '<div id="wallets" style="position: fixed; inset: 0; z-index: 99">x</div>';
+      document.body.insertAdjacentElement('beforeend', list);
+    }""")
+    page.wait_for_function("document.querySelector('wcm-modal').parentElement.id === 'viewer'")
+    on_top = page.evaluate("document.elementFromPoint(innerWidth / 2, innerHeight / 2).id")
+    assert on_top == "wallets"
+    page.locator("#wallets").click(timeout=3000)  # a modal window leaves the page behind inert
+    page.context.close()
+
+
+@pytest.mark.browser
 def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -> None:  # noqa: ANN001
     """The page's script with a stand-in MetaMask: it asks for the account of the address, has the
     exact text signed, fills the form, and the receipt says who signed (static/sign.js)."""
