@@ -2013,6 +2013,9 @@ def test_the_graph_draws_the_whole_collection_or_a_filtered_list(site, monkeypat
     assert page.count('<a class="hm-dot ') == 3 and 'class="hm-graph-idea"' not in page
     assert '<svg class="hm-graph-svg"' in page and 'aria-hidden="true"' in page
     assert "The whole collection:" not in page and 'data-proof="not checked yet"' in page
+    # the key names the dashed line to the closest project too (30 October 2026: it had none)
+    dashed = '<span class="hm-graph-stroke is-dashed" aria-hidden="true"></span>'
+    assert f"{dashed}Closest project in meaning, for a dot you point at or keep</li>" in page
     # The same projects as lists of links, for a keyboard and a screen reader.
     assert page.count("data-graph-link=") == 3
     assert f'hx-get="/project/{ids["Pebble Pay"]}/panel?view=graph&amp;event={event}"' in page
@@ -2069,10 +2072,11 @@ def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None
 
 
 @pytest.mark.browser
-def test_right_clicks_keep_dots_lit_until_an_empty_place_lets_them_go(site, chromium) -> None:  # noqa: ANN001
+def test_right_clicks_keep_dots_lit_and_each_empty_click_lets_the_latest_go(site, chromium) -> None:  # noqa: ANN001
     """A right click keeps a dot lit with its closest project and their line, for as many dots as
-    one likes, in the order of the clicks; a right click on it again lets it go, and a click on
-    an empty place lets them all go (30 October 2026)."""
+    one likes, in the order of the clicks; a right click on it again lets it go, and each click on
+    an empty place lets go of the latest dot kept, by a click or by a right click (30 October
+    2026: a click on an empty place let them all go at once)."""
     client, _, ids, database = site
     with psycopg.connect(database) as conn:
         (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
@@ -2093,10 +2097,32 @@ def test_right_clicks_keep_dots_lit_until_an_empty_place_lets_them_go(site, chro
     assert page.locator("#viewer[open]").count() == 0  # a right click opens no card
     pebble.click(button="right")  # again: it lets go
     assert lines.count() == 1 and "is-pinned " not in (pebble.get_attribute("class") or "") + " "
-    page.mouse.move(5, 5)
+    graph = page.locator("[data-graph]")
     box = page.locator(".hm-graph-svg").bounding_box()
-    page.mouse.click(box["x"] + 3, box["y"] + 3)
+
+    def empty_click() -> None:
+        page.mouse.move(5, 5)
+        page.mouse.click(box["x"] + 3, box["y"] + 3)
+
+    cedar = page.locator(f'.hm-dot[data-graph-id="{ids["Cedar Post"]}"]')
+    pebble.click(button="right")
+    cedar.click(button="right")
+    order = [ids[name] for name in ("Fern Vote", "Pebble Pay", "Cedar Post")]
+    assert graph.get_attribute("data-pinned") == " ".join(map(str, order))
+    empty_click()  # the latest only
+    assert graph.get_attribute("data-pinned") == f"{ids['Fern Vote']} {ids['Pebble Pay']}"
+    assert lines.count() == 2
+    fern.click()  # a click keeps a dot too, and opens its card
+    page.wait_for_selector("#viewer[open]")
+    page.keyboard.press("Escape")
+    page.wait_for_function("!document.getElementById('viewer').open")
+    assert graph.get_attribute("data-kept") == str(ids["Fern Vote"])
+    empty_click()  # the kept dot is the latest
+    assert graph.get_attribute("data-kept") is None and lines.count() == 2
+    empty_click()
+    empty_click()
     assert lines.count() == 0 and page.locator(".is-pinned, .is-pinned-near").count() == 0
+    empty_click()  # nothing is left: nothing happens
     page.context.close()
 
 
@@ -3072,6 +3098,10 @@ def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -
     shown = f"MetaMask, address {address[:6]}…{address[-4:]}, Hedera account {account}"
     assert page.locator(".hm-wallet-who").inner_text() == shown
     assert page.locator(".hm-sign-choice").is_hidden()
+    # signed: the box says so, offers no signing again, and the next step has the focus
+    assert page.locator(".hm-wallet-state").inner_text() == "Signed:"
+    assert page.locator("[data-sign-now]").is_hidden()
+    assert page.evaluate("document.activeElement.matches('#register-form [type=submit]')")
     asked = page.evaluate("window.ethereum.asked")
     methods = [call["method"] for call in asked]
     assert methods == ["wallet_requestPermissions", "eth_accounts", "personal_sign"]
@@ -3239,6 +3269,7 @@ def test_a_newer_commit_lets_the_old_signature_go_and_the_next_one_names_it(site
     assert page.locator("[name=signature]").input_value() == ""
     assert page.locator(".hm-commit-now").inner_text() == f"{newer[:12]}…"
     assert page.locator(".hm-sign-status").get_attribute("data-state") == "problem"
+    assert page.locator(".hm-wallet-state").inner_text() == "Connected:"  # to sign again
     page.locator("[data-sign-now]").click()
     page.wait_for_selector(".hm-sign-status[data-state=done]")
     assert page.locator("#register-problem").inner_text() == ""  # the new signature answers it
@@ -3253,8 +3284,8 @@ def test_a_newer_commit_lets_the_old_signature_go_and_the_next_one_names_it(site
 def test_an_address_with_no_account_is_shown_how_to_make_one(site, chromium) -> None:  # noqa: ANN001
     """An EVM wallet connects, and its address has no Hedera account yet: the box says so where it
     names the wallet, with the address to copy and the faucet that makes the account, and once the
-    faucet made it, the same button finds it and signs (30 October 2026: "did you remove
-    metamask", and no word on how to make the account)."""
+    faucet made it, the same button finds it and signs (30 October 2026: one red line said that
+    the account was missing, and not how to make it)."""
     client, _, _, database = site
     event = checkable(database)
     key, account, address = signing_account(client)

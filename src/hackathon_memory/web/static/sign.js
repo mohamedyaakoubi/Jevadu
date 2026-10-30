@@ -121,6 +121,8 @@ function name(line, one) {
   }));
 }
 
+// Once the wallet has signed, the box says so and offers no signing again: the next step is
+// the register's button (30 October 2026: "Sign with this account" stayed after the signature).
 function show(box) {
   const connected = box.querySelector(".hm-wallet");
   const choice = box.querySelector(".hm-sign-choice");
@@ -128,6 +130,9 @@ function show(box) {
   connected.hidden = !wallet;
   choice.hidden = Boolean(wallet);
   if (!wallet) return;
+  const signed = Boolean(box.querySelector('[name="signature"]').value);
+  connected.querySelector(".hm-wallet-state").textContent = signed ? "Signed:" : "Connected:";
+  connected.querySelector("[data-sign-now]").hidden = signed;
   name(connected.querySelector(".hm-wallet-who"), wallet);
   const make = connected.querySelector(".hm-wallet-new");
   make.hidden = wallet.kind !== "evm" || Boolean(wallet.account);
@@ -389,6 +394,7 @@ document.addEventListener("htmx:afterSettle", (event) => {
   if (now) now.textContent = `${latest.slice(0, 12)}…`;
   if (!box.querySelector('[name="signature"]').value) return;
   unsign(box);
+  show(box);
   say(box, `The repository has a newer commit, ${latest.slice(0, 12)}…, and the record will name `
     + "it. Sign again.", "problem");
 });
@@ -419,9 +425,15 @@ document.addEventListener("click", async (event) => {
     if (wallet.kind === "evm" && !wallet.account) throw problem(NO_ACCOUNT);
     const signed = wallet.kind === "evm" ? await signEvm(box) : await signHedera(box);
     keep(box, signed);
+    show(box);
     box.closest("#register-box")?.querySelector("#register-problem")?.replaceChildren();
     say(box, `Signed by the account ${signed.account}. Now click "Register on Hedera testnet".`,
       "done");
+    const next = box.closest("form")?.querySelector('button[type="submit"]');
+    if (next) {
+      next.focus({ preventScroll: true });
+      next.scrollIntoView({ block: "nearest" });
+    }
   } catch (error) {
     if (error && error.ends) setWallet(null);
     // 4001: the person declined in the wallet (EIP-1193)

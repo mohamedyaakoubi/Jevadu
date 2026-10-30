@@ -13,7 +13,7 @@
 <p class="hm-graph-note">{% if not graph.ranked and not chosen.chosen() %}The whole collection: {% endif %}{{ "{:,}".format(count) }} project{{ "s" if count != 1 }}{% if graph.ranked %}, the closest to your idea,{% endif %} in {{ graph.groups | length }} group{{ "s" if graph.groups | length != 1 }} by meaning.
   {%- if graph.ranked %} {% if graph.by_meaning %}The closer a dot stands to your idea, the closer the project is in meaning, compared with the others of this list.{% else %}The closer a dot stands to your idea, the higher the project is in the list.{% endif %} The first 10 are numbered as in the list
   {%- if graph.by_meaning and with_ai %}, which is Gemini's order: Gemini reads the texts, while the distance follows meaning, so a number can stand farther out than a later one{% elif graph.by_meaning and mode == "words" %}, which is the keyword order, while the distance follows meaning, so a number can stand farther out than a later one{% endif %}.{% endif %}
-  Point at a dot to see the project and a dashed line to its closest project; a click opens its card and keeps the line, also while you point at other dots, until you click an empty place. A right click keeps a dot lit with its closest project, for as many dots as you like; a right click on it again lets it go, and a click on an empty place lets them all go. Hold Ctrl and scroll over the graph, or pinch, to zoom; then drag it, or scroll with two fingers, to move it.
+  Point at a dot to see the project and a dashed line to its closest project; a click opens its card and keeps the line, also while you point at other dots. A right click keeps a dot lit with its closest project, for as many dots as you like; a right click on it again lets it go. Each click on an empty place lets go of the latest dot that you kept. Hold Ctrl and scroll over the graph, or pinch, to zoom; then drag it, or scroll with two fingers, to move it.
   {%- if graph.left_out %} {{ graph.left_out }} project{{ "s have" if graph.left_out != 1 else " has" }} no embedding yet, so {{ "they are" if graph.left_out != 1 else "it is" }} not drawn.{% endif %}</p>
 <div class="card hm-graph-card">
   <div class="card-body hm-graph" data-graph>
@@ -47,6 +47,7 @@
     <ul class="hm-graph-key" aria-label="What the colours and lines mean">
       {% for group in graph.groups %}<li><span class="hm-graph-swatch hm-g{{ group.number }}" aria-hidden="true"></span>{{ group.title }}</li>{% endfor %}
       {% if graph.lines %}<li><span class="hm-graph-stroke" aria-hidden="true"></span>Same code or Hedera ID</li>{% endif %}
+      {% if count > 1 %}<li><span class="hm-graph-stroke is-dashed" aria-hidden="true"></span>Closest project in meaning, for a dot you point at or keep</li>{% endif %}
     </ul>
   </div>
 </div>
