@@ -9,6 +9,9 @@ ibm-plex-sans-*.woff2       @fontsource/ibm-plex-sans 5.3.0, latin subset, weigh
                             SIL Open Font License 1.1 (ibm-plex-sans-LICENSE.txt)
 atkinson-mono-400.woff2     @fontsource/atkinson-hyperlegible-mono 5.3.0, latin subset,
                             SIL Open Font License 1.1 (atkinson-mono-LICENSE.txt), for the IDs
+driver.js.iife.js           driver.js 1.10.1, the tour of the search page, loaded only when a
+driver.css                  visitor takes it; license MIT (driver-LICENSE.txt). The newest
+                            release at least 14 days old on 30 October 2026.
 
 The page uses Tabler's own components (cards, badges, buttons, tables, alerts, pagination,
 placeholders) with its theme "teal" on the base "stone". It does not load Tabler's script: the

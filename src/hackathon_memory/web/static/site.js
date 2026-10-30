@@ -1304,8 +1304,119 @@
     document.head.appendChild(script);
   }
 
+  // ------------------------------------------------------------- the tour (design 12.1, S8)
+  // Offered once on a first visit of the search page, when its first screen is gone, and never
+  // started by itself; the choice is kept in this browser. Driver.js (vendor, 1.10.1) is loaded
+  // only when the tour starts. A step whose part is not on the page is left out. "Take the tour"
+  // at the bottom of a page starts it again: at once here, elsewhere through /?tour=1.
+  var TOUR_KEPT = "hm-tour";
+  function tourChoice(how) {
+    var local = store("localStorage");
+    try {
+      if (how && local) local.setItem(TOUR_KEPT, how);
+      return local ? local.getItem(TOUR_KEPT) : null;
+    } catch (error) { return null; }
+  }
+  function withDriver(then) {
+    if (window.driver && window.driver.js) { then(); return; }
+    var style = document.createElement("link");
+    style.rel = "stylesheet";
+    style.href = "/static/vendor/driver.css";
+    document.head.appendChild(style);
+    var script = document.createElement("script");
+    script.src = "/static/vendor/driver.js.iife.js";
+    script.onload = then;
+    document.head.appendChild(script);
+  }
+  function tourSteps() {
+    var holder = $("tour-steps");
+    if (!holder) return [];
+    var steps = [];
+    holder.content.querySelectorAll("[data-step]").forEach(function (part) {
+      var where = part.getAttribute("data-element");
+      var element = where ? document.querySelector(where) : null;
+      if (where && !element) return;
+      steps.push({ element: element || undefined, popover: {
+        title: part.querySelector("h3").textContent, description: part.querySelector("p").textContent,
+        side: part.getAttribute("data-side") || undefined, align: "start" } });
+    });
+    return steps;
+  }
+  function startTour() {
+    var offer = $("tour-offer");
+    if (offer) offer.hidden = true;
+    var steps = tourSteps();
+    if (!steps.length) return;
+    // Taken is seen, however it ends: Driver.js calls onDestroyed only once a step is in place,
+    // not when the tour is skipped while its first step still moves in (driver.js 1.10.1, y()).
+    tourChoice("seen");
+    // A dark page dims less under the same shade, so the shade is deeper there (30 October 2026:
+    // in the dark theme the lit part hardly stood out); the ring of style.css marks it in both.
+    var dark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+    withDriver(function () {
+      var tour = window.driver.js.driver({
+        steps: steps, showProgress: true, progressText: "{{current}} of {{total}}",
+        nextBtnText: "Next", prevBtnText: "Back", doneBtnText: "Done", popoverClass: "hm-tour",
+        overlayOpacity: dark ? 0.72 : 0.45, stagePadding: 6, stageRadius: 6,
+        disableActiveInteraction: true,
+        animate: !LESS_MOTION.matches, smoothScroll: !LESS_MOTION.matches,
+        onPopoverRender: function (popover) {
+          var skip = document.createElement("button");
+          skip.type = "button";
+          skip.className = "hm-tour-skip";
+          skip.textContent = "Skip the tour";
+          skip.addEventListener("click", function () { tour.destroy(); });
+          popover.footer.insertBefore(skip, popover.footer.firstChild);
+        }
+      });
+      // Any click but on the note ends the tour, on its lit part too: while the tour runs, the
+      // page does not react, so no click starts a search, Gemini or a window by mistake (30
+      // October 2026: a click on the lit part went through to the page, and the tour went on).
+      function outside(event) {
+        if (!tour.isActive()) { document.removeEventListener("click", outside, true); return; }
+        if (event.target.closest && event.target.closest(".driver-popover")) return;
+        document.removeEventListener("click", outside, true);
+        tour.destroy();
+      }
+      tour.drive();
+      setTimeout(function () { document.addEventListener("click", outside, true); }, 0);
+    });
+  }
+  function offerTour() {
+    var offer = $("tour-offer");
+    if (!offer) return;
+    var address = new URL(window.location.href);
+    if (address.searchParams.get("tour") === "1") {
+      address.searchParams.delete("tour"); // a reload does not start it again
+      history.replaceState(history.state, "", address.pathname + address.search + address.hash);
+      startTour();
+      return;
+    }
+    if (tourChoice() || address.searchParams.get("idea")) return;
+    var root = document.documentElement;
+    var wait = window.setInterval(function () { // after the name of the tool, not over it
+      if (root.classList.contains("hm-splash")) return;
+      window.clearInterval(wait);
+      offer.hidden = false;
+    }, 200);
+  }
+  document.addEventListener("click", function (event) {
+    if (event.target.closest("[data-tour-start]")) { startTour(); return; }
+    if (event.target.closest("[data-tour-decline]")) {
+      tourChoice("declined");
+      var offer = $("tour-offer");
+      if (offer) offer.hidden = true;
+      return;
+    }
+    if (event.target.closest("[data-tour-again]") && $("tour-steps")) {
+      event.preventDefault();
+      startTour();
+    }
+  });
+
   document.addEventListener("DOMContentLoaded", function () {
     checkPerson();
+    offerTour();
     applyTheme(chosenTheme());
     var themes = document.querySelector("[data-theme-switch]");
     if (themes) themes.hidden = false; // it needs this script, so it is hidden without it

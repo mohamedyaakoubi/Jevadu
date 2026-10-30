@@ -2426,15 +2426,18 @@ def chromium():  # noqa: ANN201
 SEARCH = "http://site.test/?idea=help+a+street+vendor+get+paid+with+a+coin&mode=meaning"
 
 
-def served(chromium, client, before_compare=lambda: None, **context):  # noqa: ANN001, ANN201
+def served(chromium, client, before_compare=lambda: None, tour_offer=False, **context):  # noqa: ANN001, ANN201
     """A page whose every request is answered by the website's test client: no server runs.
 
     The visit counts as seen, so the name of the tool never covers its first page: a test that
     pointed or clicked within its 1.45 seconds made Playwright scroll to try again while the page
     scrolls smoothly, and the pointer landed elsewhere (30 October 2026, after a restart of the
-    computer made the race lose every time)."""
+    computer made the race lose every time). The tour counts as seen too, so its offer stands in
+    no corner, unless the test is about it (`tour_offer`)."""
     page = chromium.new_context(**context).new_page()
     page.add_init_script("try { window.sessionStorage.setItem('hm-seen', '1'); } catch (e) {}")
+    if not tour_offer:
+        page.add_init_script("try { window.localStorage.setItem('hm-tour', 'seen'); } catch (e) {}")
 
     def answer(route) -> None:  # noqa: ANN001
         parts = urlsplit(route.request.url)
@@ -3307,3 +3310,126 @@ def test_an_address_with_no_account_is_shown_how_to_make_one(site, chromium) -> 
     assert page.locator(".hm-wallet-new").is_hidden()
     assert page.locator("[name=signer]").input_value() == account
     page.context.close()
+
+
+# ------------------------------------------------------------------ the tour (design 12.1, S8)
+
+
+def test_the_search_page_holds_the_tour_and_every_page_offers_it_again(site) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = client.get("/").text
+    offer = '<aside class="hm-tour-offer" id="tour-offer" aria-label="A tour of this page" hidden>'
+    assert offer in page  # hidden until the page's script offers it
+    steps = page.split('<template id="tour-steps">', 1)[1].split("</template>", 1)[0]
+    assert steps.count("<div data-step") == 10 and "<h3>Welcome to Jevadu</h3>" in steps
+    for address in ("/", "/about/how", "/check?repo=github.com/sample-org/pebble-pay"):
+        assert '<a href="/?tour=1" data-tour-again>Take the tour</a>' in client.get(address).text
+    for name in ("driver.js.iife.js", "driver.css", "driver-LICENSE.txt"):
+        assert client.get(f"/static/vendor/{name}").status_code == 200
+
+
+@pytest.mark.browser
+def test_a_first_visit_is_offered_a_tour_that_can_be_skipped_at_any_step(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = served(chromium, client, tour_offer=True, viewport={"width": 1440, "height": 900})
+    page.goto("http://site.test/")
+    page.wait_for_selector("#tour-offer:not([hidden])")
+    page.locator("[data-tour-start]").click()
+    popover = page.locator(".driver-popover.hm-tour")
+    popover.wait_for()
+    assert page.locator("#tour-offer").is_hidden()
+    assert popover.locator(".driver-popover-title").inner_text() == "Welcome to Jevadu"
+    assert popover.locator(".driver-popover-progress-text").inner_text() == "1 of 10"
+    popover.locator(".driver-popover-next-btn").click()
+    page.wait_for_function("document.querySelector('.driver-popover-title').textContent === "
+                           "'Your idea'")  # fmt: skip
+    assert "driver-active-element" in (page.locator("#idea").get_attribute("class") or "")
+    popover.locator(".hm-tour-skip").click()  # on any step
+    page.wait_for_selector(".driver-popover", state="detached")
+    assert page.evaluate("localStorage.getItem('hm-tour')") == "seen"
+    page.reload()
+    page.wait_for_timeout(500)
+    assert page.locator("#tour-offer").is_hidden()  # never offered again in this browser
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_no_thanks_is_kept_and_the_link_at_the_bottom_starts_the_tour(site, chromium) -> None:  # noqa: ANN001
+    client, _, _, _ = site
+    page = served(chromium, client, tour_offer=True, viewport={"width": 1440, "height": 900})
+    page.goto("http://site.test/")
+    page.wait_for_selector("#tour-offer:not([hidden])")
+    page.locator("[data-tour-decline]").click()
+    assert page.locator("#tour-offer").is_hidden()
+    assert page.evaluate("localStorage.getItem('hm-tour')") == "declined"
+    page.goto("http://site.test/about/how")  # another page: its link loads the search page
+    page.locator("[data-tour-again]").click()
+    page.locator(".driver-popover.hm-tour").wait_for()
+    assert "tour=1" not in page.url  # a reload does not start it again
+    page.keyboard.press("Escape")  # Escape skips it too
+    page.wait_for_selector(".driver-popover", state="detached")
+    assert page.evaluate("localStorage.getItem('hm-tour')") == "seen"
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_click_anywhere_but_the_note_ends_the_tour_and_reaches_nothing(site, chromium) -> None:  # noqa: ANN001
+    """While the tour runs, the page does not react: a click on the part that a step lights ends
+    the tour and opens nothing, and a click on the shade ends it too (30 October 2026: a click on
+    the lit part went through to the page, which opened a project's window, and the tour went
+    on)."""
+    client, _, _, _ = site
+    page = served(chromium, client, tour_offer=True, viewport={"width": 1440, "height": 900},
+                  reduced_motion="reduce")  # fmt: skip
+    page.goto("http://site.test/?tour=1")
+    popover = page.locator(".driver-popover.hm-tour")
+    popover.wait_for()
+    for at in range(2, 7):  # step 6 lights the list of projects
+        popover.locator(".driver-popover-next-btn").click()
+        page.wait_for_function("document.querySelector('.driver-popover-progress-text')"
+                               f".textContent === '{at} of 10'")  # fmt: skip
+    link = page.locator("#result-list .result-link").first.bounding_box()
+    x, y = link["x"] + 10, link["y"] + link["height"] / 2
+    lit = page.locator(".driver-active-element").bounding_box()  # the point is in the lit part
+    assert lit["x"] < x < lit["x"] + lit["width"] and lit["y"] < y < lit["y"] + lit["height"]
+    page.mouse.click(x, y)
+    page.wait_for_selector(".driver-popover", state="detached")
+    page.wait_for_timeout(500)
+    assert page.locator("dialog[open]").count() == 0  # no project's window opened
+    page.goto("http://site.test/?tour=1")
+    popover.wait_for()
+    page.mouse.click(1300, 860)  # the shade
+    page.wait_for_selector(".driver-popover", state="detached")
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_the_tour_rings_the_part_it_shows_and_shades_a_dark_page_deeper(site, chromium) -> None:  # noqa: ANN001
+    """In the dark theme the lit part hardly stood out under the shade (30 October 2026): the part
+    of a step has a ring in the main colour, and the shade over a dark page is deeper."""
+    client, _, _, _ = site
+    shades = {}
+    for scheme in ("light", "dark"):
+        page = served(chromium, client, tour_offer=True, color_scheme=scheme,
+                      reduced_motion="reduce", viewport={"width": 1440, "height": 900})  # fmt: skip
+        page.goto("http://site.test/?tour=1")
+        popover = page.locator(".driver-popover.hm-tour")
+        popover.wait_for()
+        popover.locator(".driver-popover-next-btn").click()
+        page.wait_for_function("document.querySelector('.driver-popover-progress-text')"
+                               ".textContent === '2 of 10'")  # fmt: skip
+        ring = page.evaluate("""() => {
+          const idea = getComputedStyle(document.getElementById('idea'));
+          const primary = getComputedStyle(document.body).getPropertyValue('--tblr-primary');
+          const probe = document.createElement('i');
+          probe.style.color = primary;
+          document.body.append(probe);
+          const colour = getComputedStyle(probe).color;
+          probe.remove();
+          return [idea.outlineStyle, idea.outlineWidth, idea.outlineColor === colour];
+        }""")
+        assert ring == ["solid", "2px", True], scheme
+        shade = "getComputedStyle(document.querySelector('.driver-overlay path')).opacity"
+        shades[scheme] = float(page.evaluate(shade))
+        page.context.close()
+    assert shades == {"light": 0.45, "dark": 0.72}

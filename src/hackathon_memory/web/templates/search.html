@@ -156,5 +156,27 @@
 </section>
 </div>
 </div>
+{# The tour of the page (design 12.1, S8): offered once on a first visit, never started by itself.
+   Each step names the part of the page that it lights; the page's script reads them (site.js). #}
+<aside class="hm-tour-offer" id="tour-offer" aria-label="A tour of this page" hidden>
+  <p class="hm-tour-offer-title">New to Jevadu?</p>
+  <p class="hm-small mb-2">A short tour shows each part of this page. You can skip it at any step.</p>
+  <div class="hm-tour-offer-buttons">
+    <button type="button" class="btn btn-primary btn-sm" data-tour-start>Take the tour</button>
+    <button type="button" class="btn btn-sm" data-tour-decline>No thanks</button>
+  </div>
+</aside>
+<template id="tour-steps">
+  <div data-step><h3>Welcome to Jevadu</h3><p>Jevadu shows the past Hedera hackathon projects closest to your idea, and what the public Hedera ledger says each one really did. This tour shows the parts of the page, one at a time.</p></div>
+  <div data-step data-element="#idea" data-side="bottom"><h3>Your idea</h3><p>Describe what your project does and who it is for. One sentence is enough, and the results update as you type.</p></div>
+  <div data-step data-element=".hm-way" data-side="bottom"><h3>Two ways to search</h3><p>Keyword search finds the words of your idea in the pages of the projects. Semantic search finds the projects that mean the same thing in other words.</p></div>
+  <div data-step data-element=".hm-ai-group" data-side="bottom"><h3>Sort and compare with Gemini</h3><p>Gemini puts the closest projects in order and says, for the first ten, what they share with your idea and how they differ. It never scores a project: you judge.</p></div>
+  <div data-step data-element=".hm-filters" data-side="bottom"><h3>Filters</h3><p>Keep one hackathon, a year or a category, or the projects by what the ledger shows of their Hedera use, by their activity, or by their prizes.</p></div>
+  <div data-step data-element="#result-list" data-side="top"><h3>The projects</h3><p>Each card is a past project: what its page said, and what its Hedera IDs did on the ledger. Click one to open its full card over the list.</p></div>
+  <div data-step data-element=".hm-switches" data-side="bottom"><h3>Other views</h3><p>See the same list as charts, or as a graph of groups of similar projects.</p></div>
+  <div data-step data-element=".hm-check" data-side="left"><h3>Check a submission</h3><p>Paste a GitHub repository. Jevadu reads its README and its code, looks up its Hedera IDs on the ledger, and finds the most similar past projects. A team can then register its submission on Hedera.</p></div>
+  <div data-step data-element=".hm-idea-label .info" data-side="right"><h3>The (i) marks</h3><p>Every (i) explains its term in plain words, with numbered sources.</p></div>
+  <div data-step data-element="[data-tour-again]" data-side="top"><h3>Take the tour again</h3><p>This link, at the bottom of every page, starts the tour again whenever you want.</p></div>
+</template>
 {% endblock %}
 {% block viewer %}{% if panel_card %}{% with card = panel_card, back_query = search_query, linked = panel_linked %}{% include "_panel.html" %}{% endwith %}{% elif panel_problem %}{% with problem = panel_problem %}{% include "_problem.html" %}{% endwith %}{% endif %}{% endblock %}
