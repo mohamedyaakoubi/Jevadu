@@ -153,11 +153,14 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-check-days { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .hm-check-days[hidden] { display: none; }
 
-/* the six filters in one row under the search, in columns of the same width: a long value shows
-   its start, and its list opens it whole (24 October 2026: the sixth, the prize, had wrapped to a
-   second row) */
+/* the seven filters in one row under the search: a long value shows its start, and its list
+   opens it whole (24 October 2026: the sixth, the prize, had wrapped to a second row). The year and
+   the activity hold short values, so their columns are narrower, which makes room for the
+   organiser (30 October 2026). */
 .hm-filters {
-  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)) auto; align-items: end;
+  display: grid; align-items: end;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.6fr) minmax(0, 1.15fr)
+    minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 1fr) auto;
   gap: 0.5rem 0.75rem; margin-bottom: 1rem;
   padding: 0.75rem 1rem; background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color);
   border-radius: var(--tblr-border-radius);

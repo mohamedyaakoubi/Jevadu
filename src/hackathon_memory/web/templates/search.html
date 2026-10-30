@@ -53,6 +53,7 @@
     {% if offer %}
     {% set picked = chosen.chosen() %}
     <div class="hm-filters" role="group" aria-label="Filters">
+      {{ parts.filter_select("organiser", "Organiser", "All organisers", offer.organiser, chosen.organiser, "organiser") }}
       {{ parts.filter_select("event", "Event", "All events", offer.event, chosen.event, "event") }}
       {{ parts.filter_select("year", "Year", "All years", offer.year, chosen.year) }}
       {{ parts.filter_select("category", "Category", "All categories", offer.category, chosen.category, "category") }}

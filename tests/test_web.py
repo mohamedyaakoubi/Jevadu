@@ -1140,6 +1140,7 @@ def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
     page = client.get("/")
     assert 'name="event"' in page.text and 'name="life"' in page.text
     assert "ETHGlobal Sample Event (3)" in page.text
+    assert 'name="organiser"' in page.text and ">ETHGlobal (3)</option>" in page.text
     assert f"{PAYMENTS} (1)" in page.text  # the one card of the fixture
     assert "1 of 3 projects have one" in page.text
 
@@ -2418,13 +2419,21 @@ def test_a_mark_lights_the_part_it_leads_to(site, chromium, motion) -> None:  # 
 
 
 @pytest.mark.browser
-def test_the_six_filters_stand_in_one_row(site, chromium) -> None:  # noqa: ANN001
+def test_the_seven_filters_stand_in_one_row(site, chromium) -> None:  # noqa: ANN001
+    """The prize had wrapped to a second row (24 October 2026); the organiser came as a seventh
+    filter, with the year and the activity in narrower columns (30 October 2026). One row also
+    when "Clear filters" takes its place at the end."""
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1280, "height": 900})
-    page.goto("http://site.test/")
-    tops = page.evaluate("[...document.querySelectorAll('.hm-filter')]"
-                         ".map(f => Math.round(f.getBoundingClientRect().top))")  # fmt: skip
-    assert len(tops) == 6 and len(set(tops)) == 1  # the prize had wrapped to a second row
+    for address in ("http://site.test/", "http://site.test/?organiser=ETHGlobal"):
+        page.goto(address)
+        tops = page.evaluate("[...document.querySelectorAll('.hm-filter')]"
+                             ".map(f => Math.round(f.getBoundingClientRect().top))")  # fmt: skip
+        assert len(tops) == 7 and len(set(tops)) == 1, address
+        widths = page.evaluate("[...document.querySelectorAll('.hm-filter select')]"
+                               ".map(s => s.scrollWidth <= s.clientWidth + 1)")  # fmt: skip
+        assert widths[2], "the years fit their column"  # Organiser, Event, then Year
+    assert page.locator(".hm-clear-filters").count() == 1
 
 
 @pytest.mark.browser

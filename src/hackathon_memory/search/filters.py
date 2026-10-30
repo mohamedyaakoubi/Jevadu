@@ -1,9 +1,13 @@
-"""The filters of the search (design 8.2): event, year, category, Hedera proof, life and prize.
+"""The filters of the search (design 8.2): organiser, event, year, category, Hedera proof, life
+and prize.
 
-Each project gets its six facts from the tables: its event, the year of that event, the
-category of its card when the model wrote one, the result of the proof rule, its life by the
-rule of design 7.4, and its prize. A filter keeps the projects whose fact matches it, and the
-search then ranks only those (search/engine.py). With no filter set, every project is searched.
+Each project gets its seven facts from the tables: the organiser of its event, its event, the
+year of that event, the category of its card when the model wrote one, the result of the proof
+rule, its life by the rule of design 7.4, and its prize. The organiser of an event of ETHGlobal's
+showcase is ETHGlobal; of any other event, the organiser that its list of winners names, which the
+parser keeps as the sponsor of each entry's prize (30 October 2026). A filter keeps the projects
+whose fact matches it, and the search then ranks only those (search/engine.py). With no filter set,
+every project is searched.
 The prize is the one fact with two values at once: a project known only from a winners' list
 also won a Hedera prize, so each of the choices keeps the projects that have it. A prize of
 another sponsor and no Hedera prize is a choice of its own (28 October 2026).
@@ -17,7 +21,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, field, fields, replace
 from datetime import UTC, datetime
 
 import psycopg
@@ -27,6 +31,8 @@ from hackathon_memory.read.quotes import KEPT
 from hackathon_memory.search import listing, seen
 
 NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
+# The site of ETHGlobal's showcase, and the organiser of every event read there.
+ETHGLOBAL_SITE, ETHGLOBAL = "ethglobal.com", "ETHGlobal"
 # The kinds of Hedera ID that the charts count.
 KINDS = ("account", "topic", "token", "contract", "schedule")
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
@@ -49,6 +55,7 @@ class Filters:
     proof: str = ""
     life: str = ""
     winner: str = ""
+    organiser: str = ""
 
     def chosen(self) -> dict[str, str]:
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name)}
@@ -74,6 +81,7 @@ class Facts:
     code_read: bool = False  # the code of its repository was read, whole or in part
     code_services: tuple[str, ...] = ()
     code_packages: tuple[str, ...] = ()
+    organiser: str = ""  # who ran its event: ETHGlobal, or the organiser of its winners' list
 
     @property
     def winner(self) -> tuple[str, ...]:
@@ -101,6 +109,7 @@ class Choices:
     winner: list[Choice]
     projects: int
     with_category: int
+    organiser: list[Choice] = field(default_factory=list)
 
     def knows(self, name: str, value: str) -> bool:
         return any(choice.value == value for choice in getattr(self, name))
@@ -133,6 +142,13 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
             (list(seen.CONFIRMED), list(KINDS), model, version),
         ).fetchall()
         signs = listing.signs_of_life(conn, [row[0] for row in rows])
+        organisers = dict(conn.execute(
+            "SELECT e.id, CASE WHEN e.site = %s THEN %s ELSE ("
+            " SELECT pr.sponsor FROM projects p JOIN prizes pr ON pr.project_id = p.id"
+            " WHERE p.event_id = e.id AND p.entry_kind = 'winner_entry'"
+            " ORDER BY p.id, pr.position LIMIT 1) END FROM events e",
+            (ETHGLOBAL_SITE, ETHGLOBAL),
+        ).fetchall())  # fmt: skip
     found = []
     for (project_id, event_id, event_name, year, proof, category, prize, entry, kinds, code_read,
          services, packages) in rows:  # fmt: skip
@@ -142,7 +158,8 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
         kept = category and category.get("state") == KEPT and category.get("value")
         found.append(Facts(project_id, str(event_id), event_name, str(year) if year else "",
                            kept or "", proof or NOT_CHECKED, life.status, prize, entry,
-                           tuple(kinds), code_read, tuple(services), tuple(packages)))  # fmt: skip
+                           tuple(kinds), code_read, tuple(services), tuple(packages),
+                           organisers.get(event_id) or ""))  # fmt: skip
     return found
 
 
@@ -206,4 +223,5 @@ def choices(rows: Sequence[Facts]) -> Choices:
         ],  # fmt: skip
         projects=len(rows),
         with_category=sum(bool(row.category) for row in rows),
+        organiser=[Choice(v, v, n) for v, n in _counted(row.organiser for row in rows)],
     )
