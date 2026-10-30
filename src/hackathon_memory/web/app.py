@@ -314,8 +314,8 @@ NO_SUCH_SIGNER = (
     "The account {account} is not on the Hedera test network. Sign with an account of it."
 )
 NO_ACCOUNT_FOR_ADDRESS = (
-    "This address has no Hedera account on the test network yet. Get test HBAR for it at "
-    "https://portal.hedera.com/faucet, which makes the account, then sign again."
+    "This address has no Hedera account on the test network yet. Paste it into the Hedera faucet "
+    "at https://portal.hedera.com/faucet, which makes the account with no sign-in, then sign again."
 )
 CHECK_FIRST = "Check the repository first: only a repository that GitHub shows can be registered."
 NO_LINE = (
