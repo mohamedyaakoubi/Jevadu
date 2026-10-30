@@ -1817,6 +1817,26 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     assert "Register on Hedera testnet" not in later.text  # it is registered for this event already
 
 
+def test_a_record_that_the_mirror_node_does_not_show_yet_is_called_sent(site) -> None:  # noqa: ANN001
+    """The record went to Hedera, and the mirror node, a few seconds behind, does not show it yet:
+    the box says that it was sent, not that nothing was registered (30 October 2026)."""
+    from hackathon_memory.hedera.mirror import MirrorError
+
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": REPO, "event": event}
+    with_line(client, client.get("/check", params=asked, headers=HX).text)
+
+    def behind(*_: object, **__: object) -> dict:
+        raise MirrorError("The mirror node does not show the message yet.")
+
+    client.mirrors["testnet"].wait_for_message = behind
+    sent = client.post("/register", data={**asked, "starts": "", "ends": ""}, headers=HX)
+    assert sent.status_code == 202 and len(client.writes.written) == 1
+    assert ">Sent to Hedera</h3>" in sent.text and "Not registered" not in sent.text
+    assert "does not show it yet" in sent.text
+
+
 def test_a_registration_needs_a_checked_repository_and_a_real_account(site) -> None:  # noqa: ANN001
     client, _, _, database = site
     event = checkable(database)

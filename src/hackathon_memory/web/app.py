@@ -1420,7 +1420,7 @@ def create_app(
             LOG.warning("the register refused a record: %s", error)
             return refused(503, REGISTER_FAILED.format(why=why))
         except MirrorError:
-            return render(request, name, 202, problem=NOT_YET_VISIBLE)
+            return render(request, name, 202, problem=NOT_YET_VISIBLE, sent=True)
         return render(request, name, done=done, already=False, **values)
 
     @app.get("/register/account")
