@@ -59,15 +59,17 @@ async function withEvmWallet(box) {
 }
 
 // The window of a check is a modal dialog, and the page behind a modal dialog cannot be reached.
-// WalletConnect adds its list of wallets at the end of the page (the element wcm-modal, made by
-// the constructor of @walletconnect/modal 2.7.0, dist/index.js), so the list opened behind the
-// window (30 October 2026). It goes into the open window as soon as it is added.
-function walletsInWindow() {
-  const list = document.querySelector("wcm-modal");
-  const open = document.querySelector("dialog[open]");
-  if (list && open && list.parentElement !== open) open.appendChild(list);
-}
-new MutationObserver(walletsInWindow).observe(document.body, { childList: true });
+// WalletConnect adds its list of wallets at the end of the page, once (the element wcm-modal, by
+// document.body.insertAdjacentElement in the constructor of @walletconnect/modal 2.7.0), so the
+// list opened behind the window (30 October 2026). The list must be born inside the open window:
+// it listens for "open" from its constructor and stops listening when it leaves the page
+// (disconnectedCallback in @walletconnect/modal-ui 2.7.0), so a list moved after its birth never
+// opens again, which a first fix did. That one call of the library is sent into the window.
+const addToBody = document.body.insertAdjacentElement.bind(document.body);
+document.body.insertAdjacentElement = (where, element) => {
+  const open = element && element.tagName === "WCM-MODAL" && document.querySelector("dialog[open]");
+  return open ? open.insertAdjacentElement(where, element) : addToBody(where, element);
+};
 
 let connector = null; // one WalletConnect connection for the page
 
@@ -89,10 +91,7 @@ async function withHederaWallet(box) {
     await made.init({ logger: "error" });
     connector = made;
   }
-  if (connector.signers.length === 0) {
-    walletsInWindow(); // the list may have been made before this window opened
-    await connector.openModal();
-  }
+  if (connector.signers.length === 0) await connector.openModal();
   const signer = connector.signers[connector.signers.length - 1];
   if (!signer) throw new Error("No account was connected. Approve the connection in your wallet.");
   const account = signer.getAccountId().toString();

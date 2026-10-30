@@ -2887,18 +2887,31 @@ def test_the_box_offers_hedera_wallets_once_walletconnect_has_a_project_id(site)
 
 @pytest.mark.browser
 def test_the_list_of_wallets_opens_inside_the_window(site, chromium) -> None:  # noqa: ANN001
-    """WalletConnect adds its list of wallets (wcm-modal) at the end of the page. Behind the modal
-    window of a check it could not be reached (30 October 2026): it goes into the open window."""
+    """WalletConnect adds its list of wallets (wcm-modal) at the end of the page, once, and the list
+    listens for "open" from its birth until it leaves the page (@walletconnect/modal-ui 2.7.0).
+    Behind the modal window of a check it could not be reached; a first fix moved it into the
+    window, which cut its listening, so it never opened (30 October 2026). It is born there."""
     client, _, ids, _ = site
     page = served(chromium, client, viewport={"width": 1440, "height": 900})
     page.goto(f"http://site.test/?open={ids['Pebble Pay']}")
     page.wait_for_selector("#viewer[open] .project")
     page.evaluate("""() => {
-      const list = document.createElement('wcm-modal');
-      list.innerHTML = '<div id="wallets" style="position: fixed; inset: 0; z-index: 99">x</div>';
-      document.body.insertAdjacentElement('beforeend', list);
+      const listening = new Set();  // the library's ModalCtrl.subscribe, played
+      window.openWallets = () => listening.forEach((hear) => hear());
+      customElements.define('wcm-modal', class extends HTMLElement {
+        constructor() {
+          super();
+          const hear = () => { this.innerHTML =
+            '<div id="wallets" style="position: fixed; inset: 0; z-index: 99">x</div>'; };
+          listening.add(hear);
+          this.stop = () => listening.delete(hear);
+        }
+        disconnectedCallback() { this.stop(); }
+      });
+      document.body.insertAdjacentElement('beforeend', document.createElement('wcm-modal'));
     }""")
-    page.wait_for_function("document.querySelector('wcm-modal').parentElement.id === 'viewer'")
+    page.evaluate("window.openWallets()")
+    page.wait_for_selector("#viewer > wcm-modal #wallets", timeout=5000)
     on_top = page.evaluate("document.elementFromPoint(innerWidth / 2, innerHeight / 2).id")
     assert on_top == "wallets"
     page.locator("#wallets").click(timeout=3000)  # a modal window leaves the page behind inert
