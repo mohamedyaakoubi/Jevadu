@@ -1333,11 +1333,14 @@
     // Taken is seen, however it ends: Driver.js calls onDestroyed only once a step is in place,
     // not when the tour is skipped while its first step still moves in (driver.js 1.10.1, y()).
     tourChoice("seen");
+    // A dark page dims less under the same shade, so the shade is deeper there (30 October 2026:
+    // in the dark theme the lit part hardly stood out); the ring of style.css marks it in both.
+    var dark = document.documentElement.getAttribute("data-bs-theme") === "dark";
     withDriver(function () {
       var tour = window.driver.js.driver({
         steps: steps, showProgress: true, progressText: "{{current}} of {{total}}",
         nextBtnText: "Next", prevBtnText: "Back", doneBtnText: "Done", popoverClass: "hm-tour",
-        overlayOpacity: 0.45, stagePadding: 6, stageRadius: 6,
+        overlayOpacity: dark ? 0.72 : 0.45, stagePadding: 6, stageRadius: 6,
         animate: !LESS_MOTION.matches, smoothScroll: !LESS_MOTION.matches,
         onPopoverRender: function (popover) {
           var skip = document.createElement("button");

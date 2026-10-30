@@ -641,6 +641,12 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 }
 .hm-tour-offer-title { margin: 0 0 0.25rem; font-weight: 600; }
 .hm-tour-offer-buttons { display: flex; gap: 0.5rem; }
+/* the part that a step of the tour lights, with a ring in the main colour inside the light
+   (6px around it), not on the first step, which lights no part (30 October 2026: in the dark
+   theme the lit part hardly stood out) */
+.driver-active .driver-active-element:not(#driver-dummy-element) {
+  outline: 2px solid var(--tblr-primary); outline-offset: 3px;
+}
 .driver-popover.hm-tour {
   --driver-popover-font-family: var(--tblr-font-sans-serif);
   max-width: 340px; color: var(--tblr-body-color); background: var(--tblr-bg-surface);

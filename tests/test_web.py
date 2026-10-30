@@ -3339,3 +3339,35 @@ def test_no_thanks_is_kept_and_the_link_at_the_bottom_starts_the_tour(site, chro
     page.wait_for_selector(".driver-popover", state="detached")
     assert page.evaluate("localStorage.getItem('hm-tour')") == "seen"
     page.context.close()
+
+
+@pytest.mark.browser
+def test_the_tour_rings_the_part_it_shows_and_shades_a_dark_page_deeper(site, chromium) -> None:  # noqa: ANN001
+    """In the dark theme the lit part hardly stood out under the shade (30 October 2026): the part
+    of a step has a ring in the main colour, and the shade over a dark page is deeper."""
+    client, _, _, _ = site
+    shades = {}
+    for scheme in ("light", "dark"):
+        page = served(chromium, client, tour_offer=True, color_scheme=scheme,
+                      reduced_motion="reduce", viewport={"width": 1440, "height": 900})  # fmt: skip
+        page.goto("http://site.test/?tour=1")
+        popover = page.locator(".driver-popover.hm-tour")
+        popover.wait_for()
+        popover.locator(".driver-popover-next-btn").click()
+        page.wait_for_function("document.querySelector('.driver-popover-progress-text')"
+                               ".textContent === '2 of 10'")  # fmt: skip
+        ring = page.evaluate("""() => {
+          const idea = getComputedStyle(document.getElementById('idea'));
+          const primary = getComputedStyle(document.body).getPropertyValue('--tblr-primary');
+          const probe = document.createElement('i');
+          probe.style.color = primary;
+          document.body.append(probe);
+          const colour = getComputedStyle(probe).color;
+          probe.remove();
+          return [idea.outlineStyle, idea.outlineWidth, idea.outlineColor === colour];
+        }""")
+        assert ring == ["solid", "2px", True], scheme
+        shade = "getComputedStyle(document.querySelector('.driver-overlay path')).opacity"
+        shades[scheme] = float(page.evaluate(shade))
+        page.context.close()
+    assert shades == {"light": 0.45, "dark": 0.72}
