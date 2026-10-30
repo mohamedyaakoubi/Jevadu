@@ -2069,10 +2069,11 @@ def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None
 
 
 @pytest.mark.browser
-def test_right_clicks_keep_dots_lit_until_an_empty_place_lets_them_go(site, chromium) -> None:  # noqa: ANN001
+def test_right_clicks_keep_dots_lit_and_each_empty_click_lets_the_latest_go(site, chromium) -> None:  # noqa: ANN001
     """A right click keeps a dot lit with its closest project and their line, for as many dots as
-    one likes, in the order of the clicks; a right click on it again lets it go, and a click on
-    an empty place lets them all go (30 October 2026)."""
+    one likes, in the order of the clicks; a right click on it again lets it go, and each click on
+    an empty place lets go of the latest dot kept, by a click or by a right click (30 October
+    2026: a click on an empty place let them all go at once)."""
     client, _, ids, database = site
     with psycopg.connect(database) as conn:
         (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
@@ -2093,10 +2094,32 @@ def test_right_clicks_keep_dots_lit_until_an_empty_place_lets_them_go(site, chro
     assert page.locator("#viewer[open]").count() == 0  # a right click opens no card
     pebble.click(button="right")  # again: it lets go
     assert lines.count() == 1 and "is-pinned " not in (pebble.get_attribute("class") or "") + " "
-    page.mouse.move(5, 5)
+    graph = page.locator("[data-graph]")
     box = page.locator(".hm-graph-svg").bounding_box()
-    page.mouse.click(box["x"] + 3, box["y"] + 3)
+
+    def empty_click() -> None:
+        page.mouse.move(5, 5)
+        page.mouse.click(box["x"] + 3, box["y"] + 3)
+
+    cedar = page.locator(f'.hm-dot[data-graph-id="{ids["Cedar Post"]}"]')
+    pebble.click(button="right")
+    cedar.click(button="right")
+    order = [ids[name] for name in ("Fern Vote", "Pebble Pay", "Cedar Post")]
+    assert graph.get_attribute("data-pinned") == " ".join(map(str, order))
+    empty_click()  # the latest only
+    assert graph.get_attribute("data-pinned") == f"{ids['Fern Vote']} {ids['Pebble Pay']}"
+    assert lines.count() == 2
+    fern.click()  # a click keeps a dot too, and opens its card
+    page.wait_for_selector("#viewer[open]")
+    page.keyboard.press("Escape")
+    page.wait_for_function("!document.getElementById('viewer').open")
+    assert graph.get_attribute("data-kept") == str(ids["Fern Vote"])
+    empty_click()  # the kept dot is the latest
+    assert graph.get_attribute("data-kept") is None and lines.count() == 2
+    empty_click()
+    empty_click()
     assert lines.count() == 0 and page.locator(".is-pinned, .is-pinned-near").count() == 0
+    empty_click()  # nothing is left: nothing happens
     page.context.close()
 
 
