@@ -2445,9 +2445,17 @@ def test_the_seven_filters_stand_in_one_row(site, chromium) -> None:  # noqa: AN
         tops = page.evaluate("[...document.querySelectorAll('.hm-filter')]"
                              ".map(f => Math.round(f.getBoundingClientRect().top))")  # fmt: skip
         assert len(tops) == 7 and len(set(tops)) == 1, address
-        widths = page.evaluate("[...document.querySelectorAll('.hm-filter select')]"
-                               ".map(s => s.scrollWidth <= s.clientWidth + 1)")  # fmt: skip
-        assert widths[2], "the years fit their column"  # Organiser, Event, then Year
+        # the text shown in each select, measured against its room: a select's own cut-off is
+        # not seen by its scrollWidth ("All years" showed as "Al..." with the button there)
+        fits = page.evaluate("""[...document.querySelectorAll('.hm-filter select')].map(s => {
+          const style = getComputedStyle(s);
+          const pen = document.createElement('canvas').getContext('2d');
+          pen.font = style.font;
+          const room = s.clientWidth - parseFloat(style.paddingLeft)
+            - parseFloat(style.paddingRight);
+          return pen.measureText(s.options[s.selectedIndex].text).width <= room;
+        })""")
+        assert fits[2] and fits[5], (address, fits)  # the year and the activity, shown whole
     assert page.locator(".hm-clear-filters").count() == 1
 
 
