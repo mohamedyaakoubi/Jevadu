@@ -163,7 +163,9 @@ def test_a_deployment_finds_node_when_this_shell_does_not(monkeypatch) -> None: 
     command, env = ran[-1]
     node = Path(r"C:\Program Files") / "nodejs"
     assert command[0] == str(node / "npx.cmd") and "the-token" not in command
-    assert env["PATH"].split(os.pathsep)[0] == str(node)
+    # first in the PATH; not by splitting it, since the folder of Windows holds a colon, which is
+    # the separator on Linux, where GitHub runs the tests
+    assert env["PATH"].startswith(str(node) + os.pathsep)
     assert (env["VERCEL_TOKEN"], env["VERCEL_ORG_ID"], env["VERCEL_PROJECT_ID"]) == (
         "the-token", "team_1", "prj_1")  # fmt: skip
     monkeypatch.setattr(vercel.shutil, "which", lambda name: r"C:\tools\npx.cmd")

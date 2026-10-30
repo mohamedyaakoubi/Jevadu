@@ -2393,16 +2393,27 @@ def test_a_long_list_shows_ten_lines_and_buttons_for_more(site, chromium) -> Non
 @pytest.mark.parametrize("motion", ["no-preference", "reduce"])
 def test_a_mark_lights_the_part_it_leads_to(site, chromium, motion) -> None:  # noqa: ANN001
     """A ring shows the part, also when the computer asks for less motion: there the light was
-    an outline, which the rule of no focus frame took away (24 October 2026)."""
+    an outline, which the rule of no focus frame took away (24 October 2026). The ring is read
+    the moment the part is lit, which lasts 2 seconds: a fixed wait read it too early or too late
+    when the computer was busy (30 October 2026)."""
     client, _, ids, _ = site
     pebble = ids["Pebble Pay"]
     page = served(chromium, client, viewport={"width": 1440, "height": 900}, reduced_motion=motion)
     page.goto(f"http://site.test/?open={pebble}")
     page.wait_for_selector("#viewer[open] .project[data-project]")
+    watch = """(id) => {
+      window.hmRing = null;
+      const part = document.getElementById(id);
+      new MutationObserver(() => {
+        if (window.hmRing === null && part.classList.contains('is-pointed')) {
+          window.hmRing = getComputedStyle(part).boxShadow;
+        }
+      }).observe(part, { attributes: true, attributeFilter: ['class'] });
+    }"""
+    page.evaluate(watch, f"ledger-{pebble}")  # the ring, read the moment the part is lit
     page.locator("#viewer .project-marks .hm-mark-link").first.click()
-    page.wait_for_timeout(200)
-    part = f"document.getElementById('ledger-{pebble}')"
-    assert "0px 0px 0px 2px" in page.evaluate(f"getComputedStyle({part}).boxShadow")
+    page.wait_for_function("window.hmRing !== null", timeout=10000)
+    assert "0px 0px 0px 2px" in page.evaluate("window.hmRing")
     page.context.close()
 
 
