@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{# How a request to Jevadu's GitHub App ended, when it did not end on the check (design 9.2):
+   the way back to the check, and what to do. #}
+{% block title %}Add the line with GitHub: Jevadu{% endblock %}
+{% block skip_target %}main{% endblock %}
+{% block skip_words %}Skip to the content{% endblock %}
+{% block main %}
+<div class="page-own">
+  <p class="page-back"><a href="{{ back }}">&lsaquo; Back to the check</a></p>
+  <h1 class="about-title mb-3">Add the line with GitHub</h1>
+  <div class="alert alert-{{ kind }}" role="{{ 'status' if kind == 'success' else 'alert' }}">{{ words }}</div>
+</div>
+{% endblock %}
