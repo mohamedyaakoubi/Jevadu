@@ -314,8 +314,8 @@ NO_SUCH_SIGNER = (
     "The account {account} is not on the Hedera test network. Sign with an account of it."
 )
 NO_ACCOUNT_FOR_ADDRESS = (
-    "This MetaMask address has no Hedera account on the test network yet. Send it some test "
-    "HBAR from the faucet of portal.hedera.com, which makes the account, then sign again."
+    "This EVM address has no Hedera account on the test network yet. Send it some test HBAR "
+    "from the faucet of portal.hedera.com, which makes the account, then sign again."
 )
 CHECK_FIRST = "Check the repository first: only a repository that GitHub shows can be registered."
 NO_LINE = (
@@ -1408,10 +1408,10 @@ def create_app(
 
     @app.get("/register/account")
     def register_account(address: str = "") -> JSONResponse:
-        """The Hedera account of a MetaMask address, which the text that the team signs names
-        (design 9.6). MetaMask knows only the address; the mirror node gives the account."""
+        """The Hedera account of an EVM wallet's address, which the text that the team signs
+        names (design 9.6). The wallet knows only the address; the mirror node gives the account."""
         if not re.fullmatch(r"0x[0-9a-fA-F]{40}", address):
-            return JSONResponse({"problem": "This is not an address of MetaMask."}, 400)
+            return JSONResponse({"problem": "This is not an EVM address."}, 400)
         try:
             key = signing.account_key(mirror_nodes()["testnet"], address.lower())
         except MirrorError:

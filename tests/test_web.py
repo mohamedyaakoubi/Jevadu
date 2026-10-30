@@ -2849,8 +2849,11 @@ def test_a_team_signs_its_registration_and_the_record_holds_the_signature(site) 
     assert client.get("/register/account", params={"address": "0x" + "12" * 20}).status_code == 404
     asked = {"repo": REPO, "event": event}
     check = client.get("/check", params=asked, headers=HX)
-    assert 'data-sign-with="metamask"' in check.text and f'data-commit="{COMMIT}"' in check.text
-    assert 'data-sign-with="hashpack" disabled' in check.text  # no WalletConnect project ID here
+    assert 'data-sign-with="evm">Sign with an EVM wallet<' in check.text
+    assert f'data-commit="{COMMIT}"' in check.text
+    # no WalletConnect project ID here: the Hedera wallets wait for it
+    assert 'data-sign-with="hedera" disabled>Sign with a Hedera wallet<' in check.text
+    assert "HashPack" in check.text and "MetaMask" in check.text  # named as examples of a kind
     with_line(client, check.text)
     form = {**asked, "starts": "", "ends": "", "signer": account, "scheme": "eip191",
             "signed_commit": COMMIT}  # fmt: skip
@@ -2864,7 +2867,8 @@ def test_a_team_signs_its_registration_and_the_record_holds_the_signature(site) 
     assert client.writes.written == []
     good = metamask_signature(key, "ethglobal.com/sample-event")
     done = client.post("/register", data={**form, "signature": good}, headers=HX)
-    assert done.status_code == 200 and "<dt>Signed by</dt>" in done.text and "MetaMask" in done.text
+    assert done.status_code == 200 and "<dt>Signed by</dt>" in done.text
+    assert "with an EVM wallet." in done.text
     (payload,) = client.writes.written
     record = json.loads(payload)
     assert (record["v"], record["account"], record["scheme"]) == (3, account, "eip191")
@@ -2872,13 +2876,13 @@ def test_a_team_signs_its_registration_and_the_record_holds_the_signature(site) 
     assert f'signed by the account <span class="id">{account}</span>' in later.text
 
 
-def test_the_box_offers_hashpack_once_walletconnect_has_a_project_id(site) -> None:  # noqa: ANN001
+def test_the_box_offers_hedera_wallets_once_walletconnect_has_a_project_id(site) -> None:  # noqa: ANN001
     client, _, _, database = site
     event = checkable(database)
     with_id = client.make(walletconnect_project_id="0123456789abcdef0123456789abcdef")
     check = with_id.get("/check", params={"repo": REPO, "event": event}, headers=HX)
     assert 'data-project-id="0123456789abcdef0123456789abcdef"' in check.text
-    assert 'data-sign-with="hashpack">' in check.text
+    assert 'data-sign-with="hedera">Sign with a Hedera wallet<' in check.text
 
 
 @pytest.mark.browser
@@ -2926,8 +2930,8 @@ def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -
     page.fill("#check-repo", "github.com/sample-org/pebble-pay")
     page.select_option("#check-event", event)
     page.locator("#check button[type=submit]").click()
-    page.wait_for_selector("#viewer[open] [data-sign-with=metamask]")
-    page.locator("[data-sign-with=metamask]").click()
+    page.wait_for_selector("#viewer[open] [data-sign-with=evm]")
+    page.locator("[data-sign-with=evm]").click()
     page.wait_for_function("document.querySelector('[name=signer]').value !== ''")
     assert f"Signed by the account {account}." in page.locator(".hm-sign-status").inner_text()
     message = page.evaluate("window.ethereum.asked[1].params[0]")

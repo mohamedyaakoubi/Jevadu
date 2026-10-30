@@ -69,7 +69,7 @@ def test_a_metamask_signature_is_checked_for_an_ecdsa_account_only() -> None:
     signature = raw_signature(ETHEREUM, answer)
     assert len(signature) == 65
     check(ETHEREUM, TEXT, signature, key_of(private))
-    with pytest.raises(SignatureError, match="MetaMask can sign only for an account with an ECDSA"):
+    with pytest.raises(SignatureError, match="An EVM wallet can sign only for an account with an"):
         check(ETHEREUM, TEXT, signature, key_of(PrivateKey.generate_ed25519()))
     # its record keeps the 65 bytes, and reads back (base64 with one "=" at the end)
     payload = registry.signed_record(EVENT, CODE, COMMIT, "0.0.7001", ETHEREUM, signature)

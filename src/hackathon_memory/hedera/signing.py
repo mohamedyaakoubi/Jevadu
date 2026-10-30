@@ -97,7 +97,7 @@ def raw_signature(scheme: str, signature: str) -> bytes:
     65 bytes."""
     if scheme == ETHEREUM:
         if not _HEX_SIGNATURE.match(signature):
-            raise SignatureError("MetaMask gave a signature of an unknown form. Sign again.")
+            raise SignatureError("The EVM wallet gave a signature of an unknown form. Sign again.")
         return bytes.fromhex(signature[2:])
     if scheme != HEDERA:
         raise SignatureError("This way of signing is not known.")
@@ -119,8 +119,9 @@ def check(scheme: str, text: str, signature: bytes, key: AccountKey) -> None:
         raise SignatureError(f"The account {key.account} has a list of keys, or no key yet: only "
                              "an account with one key can sign here.")  # fmt: skip
     if scheme == ETHEREUM and key.key_type != ECDSA:
-        raise SignatureError(f"MetaMask can sign only for an account with an ECDSA key, and "
-                             f"{key.account} has an Ed25519 key: sign with HashPack.")  # fmt: skip
+        raise SignatureError(f"An EVM wallet can sign only for an account with an ECDSA key, and "
+                             f"{key.account} has an Ed25519 key: sign with a Hedera "
+                             "wallet.")  # fmt: skip
     # The SDK warns that 32 bytes may be a private seed (0.2.10); the mirror node gives only
     # public keys, so the warning says nothing here.
     with warnings.catch_warnings():

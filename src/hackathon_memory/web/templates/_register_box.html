@@ -42,10 +42,11 @@
           <legend class="hm-sign-title">Sign it with your own Hedera account (optional)</legend>
           <p class="hm-small mb-2">Your wallet signs the text of the record. The record then holds your account and its signature, and anyone can check them against your account's key on the ledger. Your account pays nothing: the site still writes the record.</p>
           <div class="hm-sign-buttons">
-            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="metamask">Sign with MetaMask</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="hashpack"{% if not WALLETCONNECT_PROJECT_ID %} disabled{% endif %}>Sign with HashPack</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="hedera"{% if not WALLETCONNECT_PROJECT_ID %} disabled{% endif %}>Sign with a Hedera wallet</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="evm">Sign with an EVM wallet</button>
           </div>
-          <p class="hm-small hm-sign-status mb-0" aria-live="polite">{% if not WALLETCONNECT_PROJECT_ID %}HashPack signs through WalletConnect, which needs a project ID that this site does not have yet.{% endif %}</p>
+          <p class="hm-small mb-0">A Hedera wallet, such as HashPack, connects through WalletConnect, which lists the wallets it supports. An EVM wallet, such as MetaMask, signs in this browser, for an account with an ECDSA key.</p>
+          <p class="hm-small hm-sign-status mb-0" aria-live="polite">{% if not WALLETCONNECT_PROJECT_ID %}Hedera wallets sign through WalletConnect, which needs a project ID that this site does not have yet.{% endif %}</p>
           <input type="hidden" name="signer"><input type="hidden" name="scheme"><input type="hidden" name="signature"><input type="hidden" name="signed_commit">
         </fieldset>
         <button class="btn btn-primary mt-3" type="submit">Register on Hedera testnet</button>
