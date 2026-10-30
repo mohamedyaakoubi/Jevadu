@@ -32,9 +32,9 @@
       {% else %}
       <div class="alert alert-info mb-2" role="status"><b>Already there.</b> The README on GitHub has this line already, so nothing was added.</div>
       {% endif %}
-      <p class="hm-small">When you click the button, the README is read again from GitHub to find the line.</p>
+      <p class="hm-small">When you click &ldquo;Register on Hedera testnet&rdquo;, the site reads your README on GitHub once more, to make sure the line is still there.</p>
       {% else %}
-      <p class="hm-small">{% if view.line_found %}The README already contains it.{% else %}Only someone with write access can add it, so it proves that the repository is yours and that you agree to the record.{% endif %} When you click the button, the README is read again from GitHub to find the line.</p>
+      <p class="hm-small">{% if view.line_found %}Your README already has this line, so you can register now.{% else %}Only someone who can change this repository can add the line, so it proves that the repository is yours and that you agree to the record.{% endif %} When you click &ldquo;Register on Hedera testnet&rdquo;, the site reads your README on GitHub {% if view.line_found %}once more, to make sure the line is still there{% else %}again, to find the line{% endif %}.</p>
       {% if GITHUB_APP and not view.line_found %}
       {# Jevadu's GitHub App adds it at the team's request (web/github_app.py, 30 October 2026). #}
       <p class="mb-1"><a class="btn btn-sm btn-outline-primary" href="/github/start?{{ {'repo': result.repository, 'event': asked.event, 'starts': asked.starts, 'ends': asked.ends} | urlencode }}">Add it for me with GitHub</a></p>

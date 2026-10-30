@@ -1863,6 +1863,21 @@ def test_a_closed_register_is_said_and_offers_no_button(site) -> None:  # noqa: 
     assert "Register on Hedera testnet" not in check.text
 
 
+def test_the_box_says_plainly_what_the_line_does_before_and_after_it_is_added(site) -> None:  # noqa: ANN001
+    """The words under the line say what it proves and what the button does with it, in both
+    states (30 October 2026: "The README already contains it. When you click the button, the
+    README is read again" was not clear)."""
+    client, _, _, database = site
+    asked = {"repo": REPO, "event": checkable(database)}
+    before = client.get("/check", params=asked, headers=HX).text
+    assert "Only someone who can change this repository can add the line" in before
+    assert "the site reads your README on GitHub again, to find the line." in before
+    with_line(client, before)
+    after = client.get("/check", params=asked, headers=HX).text
+    assert "Your README already has this line, so you can register now." in after
+    assert "once more, to make sure the line is still there." in after
+
+
 # --------------------------------------------- the line of the register, through GitHub (9.2)
 
 
