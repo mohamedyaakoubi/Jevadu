@@ -3373,6 +3373,37 @@ def test_no_thanks_is_kept_and_the_link_at_the_bottom_starts_the_tour(site, chro
 
 
 @pytest.mark.browser
+def test_a_click_anywhere_but_the_note_ends_the_tour_and_reaches_nothing(site, chromium) -> None:  # noqa: ANN001
+    """While the tour runs, the page does not react: a click on the part that a step lights ends
+    the tour and opens nothing, and a click on the shade ends it too (30 October 2026: a click on
+    the lit part went through to the page, which opened a project's window, and the tour went
+    on)."""
+    client, _, _, _ = site
+    page = served(chromium, client, tour_offer=True, viewport={"width": 1440, "height": 900},
+                  reduced_motion="reduce")  # fmt: skip
+    page.goto("http://site.test/?tour=1")
+    popover = page.locator(".driver-popover.hm-tour")
+    popover.wait_for()
+    for at in range(2, 7):  # step 6 lights the list of projects
+        popover.locator(".driver-popover-next-btn").click()
+        page.wait_for_function("document.querySelector('.driver-popover-progress-text')"
+                               f".textContent === '{at} of 10'")  # fmt: skip
+    link = page.locator("#result-list .result-link").first.bounding_box()
+    x, y = link["x"] + 10, link["y"] + link["height"] / 2
+    lit = page.locator(".driver-active-element").bounding_box()  # the point is in the lit part
+    assert lit["x"] < x < lit["x"] + lit["width"] and lit["y"] < y < lit["y"] + lit["height"]
+    page.mouse.click(x, y)
+    page.wait_for_selector(".driver-popover", state="detached")
+    page.wait_for_timeout(500)
+    assert page.locator("dialog[open]").count() == 0  # no project's window opened
+    page.goto("http://site.test/?tour=1")
+    popover.wait_for()
+    page.mouse.click(1300, 860)  # the shade
+    page.wait_for_selector(".driver-popover", state="detached")
+    page.context.close()
+
+
+@pytest.mark.browser
 def test_the_tour_rings_the_part_it_shows_and_shades_a_dark_page_deeper(site, chromium) -> None:  # noqa: ANN001
     """In the dark theme the lit part hardly stood out under the shade (30 October 2026): the part
     of a step has a ring in the main colour, and the shade over a dark page is deeper."""

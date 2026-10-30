@@ -1358,6 +1358,7 @@
         steps: steps, showProgress: true, progressText: "{{current}} of {{total}}",
         nextBtnText: "Next", prevBtnText: "Back", doneBtnText: "Done", popoverClass: "hm-tour",
         overlayOpacity: dark ? 0.72 : 0.45, stagePadding: 6, stageRadius: 6,
+        disableActiveInteraction: true,
         animate: !LESS_MOTION.matches, smoothScroll: !LESS_MOTION.matches,
         onPopoverRender: function (popover) {
           var skip = document.createElement("button");
@@ -1368,7 +1369,17 @@
           popover.footer.insertBefore(skip, popover.footer.firstChild);
         }
       });
+      // Any click but on the note ends the tour, on its lit part too: while the tour runs, the
+      // page does not react, so no click starts a search, Gemini or a window by mistake (30
+      // October 2026: a click on the lit part went through to the page, and the tour went on).
+      function outside(event) {
+        if (!tour.isActive()) { document.removeEventListener("click", outside, true); return; }
+        if (event.target.closest && event.target.closest(".driver-popover")) return;
+        document.removeEventListener("click", outside, true);
+        tour.destroy();
+      }
       tour.drive();
+      setTimeout(function () { document.addEventListener("click", outside, true); }, 0);
     });
   }
   function offerTour() {
