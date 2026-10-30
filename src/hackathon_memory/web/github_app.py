@@ -77,30 +77,49 @@ def owner_and_name(repository: str) -> tuple[str, str]:
     return parts[-2], parts[-1]
 
 
-def _key(secret: str) -> bytes:
-    return hashlib.sha256(b"jevadu-github-cookie|" + secret.encode("utf-8")).digest()
+def _key(secret: str, purpose: str) -> bytes:
+    """A key of its own for each kind of cookie, made from the app's client secret."""
+    return hashlib.sha256(f"jevadu-{purpose}-cookie|{secret}".encode()).digest()
+
+
+def _seal(record: dict[str, Any], secret: str, purpose: str) -> str:
+    """A small record for a cookie: its JSON in base64, and their HMAC-SHA256 under the key of
+    `purpose`."""
+    body = base64.urlsafe_b64encode(json.dumps(record).encode("utf-8")).decode("ascii")
+    mark = hmac.new(_key(secret, purpose), body.encode("ascii"), hashlib.sha256).hexdigest()
+    return f"{body}.{mark}"
+
+
+def _unseal(cookie: str, secret: str, purpose: str) -> dict[str, Any] | None:
+    """The record of a cookie sealed for `purpose`, or None when it is missing or changed. A mark
+    that is not plain ASCII is refused, since hmac.compare_digest refuses to compare it."""
+    body, _, mark = (cookie or "").rpartition(".")
+    if not body or not secret or not mark.isascii():
+        return None
+    good = hmac.new(_key(secret, purpose), body.encode("ascii", "replace"),
+                    hashlib.sha256).hexdigest()  # fmt: skip
+    if not hmac.compare_digest(good, mark):
+        return None
+    try:
+        record = json.loads(base64.urlsafe_b64decode(body.encode("ascii")))
+    except (binascii.Error, ValueError):
+        return None
+    return record if isinstance(record, dict) else None
 
 
 def sealed(asked: Asked, secret: str) -> str:
     """The cookie of a request: its parts in base64, and their HMAC-SHA256 under the app's key."""
-    body = base64.urlsafe_b64encode(json.dumps(asked.__dict__).encode("utf-8")).decode("ascii")
-    mark = hmac.new(_key(secret), body.encode("ascii"), hashlib.sha256).hexdigest()
-    return f"{body}.{mark}"
+    return _seal(asked.__dict__, secret, "github")
 
 
 def opened(cookie: str, secret: str, now: float) -> Asked | None:
     """The request in a cookie, or None when the cookie is missing, changed or too old."""
-    body, _, mark = (cookie or "").rpartition(".")
-    if not body or not secret:
-        return None
-    good = hmac.new(_key(secret), body.encode("ascii", "replace"), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(good, mark):
-        return None
+    record = _unseal(cookie, secret, "github")
     try:
-        asked = Asked(**json.loads(base64.urlsafe_b64decode(body.encode("ascii"))))
-    except (binascii.Error, ValueError, TypeError):
+        asked = Asked(**record) if record is not None else None
+    except TypeError:
         return None
-    return asked if asked.until > now else None
+    return asked if asked is not None and asked.until > now else None
 
 
 def authorize_url(client_id: str, redirect_uri: str, state: str) -> str:
