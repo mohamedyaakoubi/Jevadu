@@ -130,6 +130,21 @@ def compare_answer(*parts: tuple[int, list[str]]) -> str:
 # ----------------------------------------------------------------- the start page and the list
 
 
+def test_every_page_names_its_maker_with_his_profiles(site) -> None:  # noqa: ANN001
+    """The footer of every page: the maker's name leads to his portfolio, then his profiles, each
+    in a new tab (30 October 2026, from his portfolio's contact page and its page data)."""
+    client, _, _, _ = site
+    profiles = ("https://www.linkedin.com/in/yaakoubi-mohamed/", "https://github.com/mohamedyaakoubi",
+                "https://x.com/Mohamed0Yakoubi", "https://medium.com/@amirrak8",
+                "https://www.instagram.com/mohamed__yaakoubi/")  # fmt: skip
+    for address in ("/", "/about/how", "/check?repo=github.com/sample-org/pebble-pay"):
+        footer = client.get(address).text.split('<footer class="hm-footer">', 1)[1]
+        assert ('<a href="https://www.mohamedyaakoubi.com" target="_blank" rel="noopener">'
+                "Mohamed Yaakoubi</a>") in footer  # fmt: skip
+        for profile in profiles:
+            assert f'<a href="{profile}" target="_blank" rel="noopener">' in footer
+
+
 def test_the_start_page_lists_the_projects_and_calls_no_model(site) -> None:  # noqa: ANN001
     client, fake, ids, _ = site
     before = len(fake.requests)  # the embeddings of the three projects were made already

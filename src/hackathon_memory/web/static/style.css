@@ -673,7 +673,10 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 .hm-footer { background: var(--hm-footer); color: var(--hm-on-footer); margin-top: 2.5rem; padding: 2.5rem 0 1.5rem; }
 .hm-footer a { color: var(--hm-on-footer); }
 .hm-footer .ref a { color: var(--hm-footer-2); }
-.hm-footer-cols { display: grid; gap: 2rem; grid-template-columns: 1.4fr 1fr 1.4fr; }
+.hm-footer-cols { display: grid; gap: 2rem; grid-template-columns: 1.4fr 1fr 1.4fr 1fr; }
+/* the maker (30 October 2026): his name leads to his portfolio, his profiles share one line */
+.hm-footer-maker { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 600; }
+.hm-footer ul.hm-footer-socials { display: flex; flex-wrap: wrap; gap: 0.375rem 0.875rem; }
 .hm-footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; font-size: 0.875rem; }
 .hm-footer-name { display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 700; margin: 0 0 0.5rem; }
 .hm-footer-brand p { margin: 0 0 0.5rem; }
