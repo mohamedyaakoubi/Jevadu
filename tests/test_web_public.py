@@ -533,3 +533,72 @@ def test_a_browser_check_of_vercel_asks_the_whole_page_again_once(site, chromium
     page.wait_for_selector("#viewer-body .alert-danger")
     assert page.evaluate("window.hmBefore") is True and checkpoint not in page.content()
     page.context.close()
+
+
+def owners_copy(client, stand_in, **changes):  # noqa: ANN001, ANN003, ANN201
+    """The public copy with Jevadu's GitHub App, which talks with `stand_in`, and the GitHub
+    account of the copy's owner."""
+    talk = httpx.Client(transport=httpx.MockTransport(stand_in))
+    return client.make(app_options={"public": True, "github_app_client": talk},
+                       public_salt=SecretStr(SALT), github_app_slug="jevadu-register",
+                       github_app_client_id="Iv1.standin",
+                       github_app_client_secret=SecretStr("standin-secret"),
+                       public_owner_github="MohamedYaakoubi", **changes)  # fmt: skip
+
+
+def test_the_copys_owner_is_not_counted_for_checks_but_for_gemini(site) -> None:  # noqa: ANN001, F811
+    from dataclasses import replace
+
+    _, _, _, database = site
+    limits = public.Limits(lambda: database, ai_per_visitor=1)
+    owner = replace(public.visitor_of({"user-agent": "Firefox"}, "203.0.113.5", SALT), owner=True)
+    for _ in range(public.ALLOWANCE[public.CHECK] + 3):
+        assert limits.take(public.CHECK, owner)
+    assert limits.take(public.REGISTER, owner) and limits.take(public.REFRESH, owner)
+    assert limits.left(public.CHECK, owner) == public.ALLOWANCE[public.CHECK]
+    with psycopg.connect(database) as conn:
+        (counted,) = conn.execute("SELECT count(*) FROM visitor_uses").fetchone()
+    assert counted == 0  # nothing that the copy's owner does is counted
+    assert limits.take(public.AI, owner) and not limits.take(public.AI, owner)  # Gemini's holds
+
+
+def test_the_copys_owner_signs_in_with_github_and_checks_with_no_count(site, monkeypatch) -> None:  # noqa: ANN001, F811
+    """On /owner the copy's owner signs in with GitHub; the account named in the settings gets a
+    pass for its browser, and its checks are then not counted, until it signs out. Any other
+    account gets nothing (30 October 2026)."""
+    from test_github_app import StandInGitHub
+
+    client, _, _, database = site
+    monkeypatch.setitem(public.ALLOWANCE, public.CHECK, 1)
+    copy = owners_copy(client, StandInGitHub(login="mohamedyaakoubi"))
+    asked = {"repo": REPO, "event": checkable(database)}
+    one = {"CF-Connecting-IP": "203.0.113.5", **HX}
+    assert copy.get("/check", params=asked, headers=one).status_code == 200
+    assert copy.get("/check", params=asked, headers=one).status_code == 429  # the allowance is used
+    assert "Sign in with GitHub" in copy.get("/owner").text
+    start = copy.get("/owner/start", follow_redirects=False)
+    assert start.status_code == 303 and start.headers["location"].startswith(
+        "https://github.com/login/oauth/authorize?")  # fmt: skip
+    state = parse_qs(start.headers["location"].split("?", 1)[1])["state"][0]
+    back = copy.get("/github/callback", params={"code": "the-code", "state": state},
+                    follow_redirects=False)  # fmt: skip
+    assert back.status_code == 303 and back.headers["location"] == "/owner"
+    cookie = back.headers["set-cookie"].lower()
+    assert "hm-owner=" in cookie and "httponly" in cookie and "path=/" in cookie
+    assert "ghu_standin" not in cookie
+    page = copy.get("/owner").text
+    signed = "signed in as the copy's owner, with the GitHub account <b>mohamedyaakoubi</b>"
+    assert signed in page  # the page's own words; a message from the code is escaped (&#39;)
+    for _ in range(3):  # not counted
+        assert copy.get("/check", params=asked, headers=one).status_code == 200
+    assert copy.get("/owner/sign-out", follow_redirects=False).status_code == 303
+    assert copy.get("/check", params=asked, headers=one).status_code == 429  # counted again
+    stranger = owners_copy(client, StandInGitHub(login="someone-else"))
+    state = parse_qs(stranger.get("/owner/start", follow_redirects=False)
+                     .headers["location"].split("?", 1)[1])["state"][0]  # fmt: skip
+    refused = stranger.get("/github/callback", params={"code": "the-code", "state": state},
+                           follow_redirects=False)  # fmt: skip
+    assert refused.status_code == 403 and "is not the copy&#39;s owner" in refused.text
+    assert "hm-owner=" not in refused.headers.get("set-cookie", "")
+    plain = public_site(client)  # a copy without the settings offers no sign-in
+    assert "has no sign-in for its owner" in plain.get("/owner").text

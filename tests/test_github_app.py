@@ -21,8 +21,10 @@ class StandInGitHub:
     the README of sample-org/pebble-pay, which a PUT replaces."""
 
     def __init__(self, readme: str | None = "# Pebble Pay\n", *, installed: bool = True,
-                 push: bool = True, conflicts: int = 0) -> None:  # fmt: skip
+                 push: bool = True, conflicts: int = 0,
+                 login: str = "mohamedyaakoubi") -> None:  # fmt: skip
         self.readme = readme
+        self.login = login  # the account that the token belongs to (GET /user)
         self.installed = installed
         self.push = push
         self.conflicts = conflicts  # how many writes GitHub refuses with 409 first
@@ -40,6 +42,8 @@ class StandInGitHub:
                                              "scope": ""})  # fmt: skip
         if request.headers.get("Authorization") != f"Bearer {TOKEN}":
             return httpx.Response(401, json={"message": "Bad credentials"})
+        if path == "/user":
+            return httpx.Response(200, json={"login": self.login, "id": 1})
         if path == "/user/installations":
             return httpx.Response(200, json={"total_count": 1, "installations": [{"id": 7}]})
         if path == "/user/installations/7/repositories":
@@ -178,3 +182,22 @@ def test_the_links_to_github_carry_what_github_asks_for() -> None:
         "https://github.com/apps/jevadu-register/installations/new")  # fmt: skip
     assert github_app.owner_and_name("https://github.com/sample-org/pebble-pay") == (
         "sample-org", "pebble-pay")  # fmt: skip
+
+
+def test_a_pass_of_the_copys_owner_holds_in_time_and_for_its_own_kind_only() -> None:
+    owner = github_app.owner_pass("mohamedyaakoubi", "standin-secret", 100.0)
+    assert github_app.owner_of(owner, "standin-secret", 99.0) == "mohamedyaakoubi"
+    assert github_app.owner_of(owner, "standin-secret", 101.0) is None  # too old
+    assert github_app.owner_of(owner, "another-secret", 99.0) is None
+    asked = github_app.Asked("https://github.com/sample-org/pebble-pay", "3", "", "", "s", 100.0)
+    request = github_app.sealed(asked, "standin-secret")
+    assert github_app.owner_of(request, "standin-secret", 99.0) is None  # another kind of cookie
+    assert github_app.opened(owner, "standin-secret", 99.0) is None
+    assert github_app.owner_of("é" + owner, "standin-secret", 99.0) is None
+
+
+def test_the_account_of_a_token_comes_from_github() -> None:
+    with http_of(StandInGitHub(login="someone-else")) as http:
+        assert github_app.login_of(http, TOKEN) == "someone-else"
+        with pytest.raises(github_app.GitHubAppError, match="which account"):
+            github_app.login_of(http, "ghu_WRONG")

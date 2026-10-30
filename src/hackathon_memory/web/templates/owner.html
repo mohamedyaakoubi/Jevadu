@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{# The sign-in of the public copy's owner with GitHub (design 12.5, 30 October 2026): its
+   browser then checks, reads again and registers with no count. Unlisted. #}
+{% block title %}Owner sign-in: Jevadu{% endblock %}
+{% block skip_target %}main{% endblock %}
+{% block skip_words %}Skip to the content{% endblock %}
+{% block main %}
+<div class="page-own">
+  <p class="page-back"><a href="/">&lsaquo; Back to the search</a></p>
+  <h1 class="about-title mb-3">Owner sign-in</h1>
+  {% if problem %}<div class="alert alert-warning" role="alert">{{ problem }}</div>{% endif %}
+  {% if login %}
+  <div class="alert alert-success" role="status">This browser is signed in as the copy's owner, with the GitHub account <b>{{ login }}</b>, for {{ OWNER_DAYS }} days from the sign-in. Your checks, readings again and registrations are not counted here. Gemini's allowance and the copy's budget still hold.</div>
+  <p><a class="btn btn-sm" href="/owner/sign-out">Sign out</a></p>
+  {% elif ready %}
+  <p>The copy's owner signs in with GitHub here, so that checks, readings again and registrations are not counted for this browser. Only the GitHub account named in the copy's settings becomes its owner; any other account changes nothing.</p>
+  <p><a class="btn btn-primary" href="/owner/start">Sign in with GitHub</a></p>
+  {% else %}
+  <p class="text-secondary">This copy has no sign-in for its owner.</p>
+  {% endif %}
+</div>
+{% endblock %}

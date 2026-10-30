@@ -33,6 +33,8 @@ API = "https://api.github.com"
 AUTHORIZE = "https://github.com/login/oauth/authorize"
 TOKEN_URL = "https://github.com/login/oauth/access_token"  # noqa: S105, a web address
 COOKIE = "hm-github"  # what the person asked for, while GitHub signs them in
+OWNER_COOKIE = "hm-owner"  # the pass of the copy's owner, signed in with GitHub (web/public.py)
+OWNER_DAYS = 90  # how long that pass holds in its browser
 WAIT_SECONDS = 600  # the time a person has to sign in with GitHub
 USER_AGENT = "Jevadu-register"
 COMMIT_MESSAGE = "Add the line of the Jevadu register"
@@ -60,6 +62,7 @@ class Asked:
     ends: str
     state: str  # the random text that GitHub gives back
     until: float  # the time after which the request is not trusted
+    purpose: str = "line"  # "line" for the README; "owner" for the sign-in of the copy's owner
 
 
 @dataclass(frozen=True)
@@ -120,6 +123,32 @@ def opened(cookie: str, secret: str, now: float) -> Asked | None:
     except TypeError:
         return None
     return asked if asked is not None and asked.until > now else None
+
+
+def owner_pass(login: str, secret: str, until: float) -> str:
+    """The pass of the copy's owner for one browser: the GitHub account that signed in, until a
+    time, sealed under a key of its own."""
+    return _seal({"login": login, "until": until}, secret, "owner")
+
+
+def owner_of(cookie: str, secret: str, now: float) -> str | None:
+    """The GitHub account of an owner's pass, or None when it is missing, changed or too old."""
+    record = _unseal(cookie, secret, "owner")
+    if record is None:
+        return None
+    login, until = record.get("login"), record.get("until")
+    if not isinstance(login, str) or not isinstance(until, (int, float)) or until <= now:
+        return None
+    return login
+
+
+def login_of(http: httpx.Client, token: str) -> str:
+    """The GitHub account that a user access token belongs to (GET /user)."""
+    answer = http.get(f"{API}/user", headers=_headers(token))
+    login = answer.json().get("login") if answer.status_code == 200 else None
+    if not isinstance(login, str) or not login:
+        raise GitHubAppError("GitHub did not say which account signed in. Try again in a minute.")
+    return login
 
 
 def authorize_url(client_id: str, redirect_uri: str, state: str) -> str:

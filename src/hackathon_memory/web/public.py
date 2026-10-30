@@ -58,6 +58,10 @@ SHARED = 25
 # What a visitor may do only once found to be a person, when the copy asks (Limits.needs_pass),
 # and for how long a pass holds.
 FOR_PEOPLE = (AI, CHECK, REFRESH, REGISTER)
+# What the copy's owner, signed in with GitHub on /owner (web/github_app.py), does with no count
+# (30 October 2026): checks, readings again and registrations. Gemini keeps its allowance, and the
+# copy's budget holds for everyone.
+OWNERS_OWN = (CHECK, REFRESH, REGISTER)
 PASS_HOURS = 24
 VISITOR, ADDRESS = "visitor", "address"  # whom a count is kept for
 # The calls to a model that the public copy makes, and what each one counts against.
@@ -86,6 +90,7 @@ class Visitor:
 
     key: str  # of the address and the browser's name
     address: str  # of the address alone, for the share of an address
+    owner: bool = False  # the copy's owner, signed in with GitHub in this browser (OWNERS_OWN)
 
 
 def plain_http(headers: Mapping[str, str]) -> bool:
@@ -151,7 +156,9 @@ class Limits:
     def take(self, kind: str, who: Visitor | None) -> bool:
         """Count one use of `kind` by `who`, one time and for good, and say whether it was still
         allowed. A use past the visitor's allowance, or past the share of the address, is not
-        counted."""
+        counted. The copy's owner is not counted for OWNERS_OWN."""
+        if who is not None and who.owner and kind in OWNERS_OWN:
+            return True
         if who is None or self.allowance[kind] <= 0:
             return False
         try:
@@ -245,6 +252,8 @@ class Limits:
         their address still holds. 0 when the database cannot say."""
         if who is None:
             return 0
+        if who.owner and kind in OWNERS_OWN:
+            return self.allowance[kind]
         try:
             with psycopg.connect(self._conninfo(), connect_timeout=5) as conn:
                 used = dict(conn.execute(

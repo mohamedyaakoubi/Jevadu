@@ -85,6 +85,10 @@ class Settings(BaseSettings):
     # How many times one visitor of the public copy may ask Gemini, one time only (design
     # 12.5): 30 dollars pay about 300 visitors who use all 12.
     public_ai_per_visitor: int = Field(12, ge=0, json_schema_extra=_PUBLIC)
+    # The GitHub account of the public copy's owner: once signed in with GitHub on /owner, through
+    # Jevadu's GitHub App, its browser checks, reads again and registers with no count (web/
+    # public.py, OWNERS_OWN). Public, like the name of every GitHub account. Empty: nobody.
+    public_owner_github: str = Field("", json_schema_extra=_PUBLIC)
     # Cloudflare's Turnstile on the public copy (web/turnstile.py): the site key, which every
     # page that shows the widget carries, and the secret that spends its tokens. With both set,
     # a visitor confirms being a person before asking Gemini, checking, reading again or

@@ -344,6 +344,10 @@ GITHUB_NO_PUSH = (
     "Ask someone who can write to it."
 )
 GITHUB_DOWN = "GitHub did not answer, so nothing was added. Try again in a minute."
+# The sign-in of the public copy's owner (web/public.py, OWNERS_OWN).
+OWNER_NONE = "This copy has no sign-in for its owner."
+OWNER_NOT_YOU = "This GitHub account is not the copy's owner, so nothing changed."
+OWNER_SILENT = "GitHub did not answer, so you are not signed in. Try again in a minute."
 NOT_LISTED = (
     "Registering needs a hackathon from the list, so that every team of one hackathon names it "
     "the same way. Pick it in the list. Custom dates can be checked, but not registered."
@@ -545,9 +549,11 @@ def create_app(
             return RedirectResponse(str(request.url.replace(scheme="https")), 301)
         if limits is not None:
             peer = request.client.host if request.client else None
-            token = public_copy.visitor.set(
-                public_copy.visitor_of(request.headers, peer, salt, settings.public_address_header)
-            )
+            address_header = settings.public_address_header
+            who = public_copy.visitor_of(request.headers, peer, salt, address_header)
+            if owner_here(request):  # its checks, readings again and registrations: no count
+                who = replace(who, owner=True)
+            token = public_copy.visitor.set(who)
         oidc = request.headers.get("x-vercel-oidc-token")
         signed = vercel_token.set(oidc) if oidc else None
         try:
@@ -1372,6 +1378,16 @@ def create_app(
             return f"https://{host}/github/callback"
         return f"{request.url.scheme}://{request.url.netloc}/github/callback"
 
+    def owner_here(request: Request) -> str | None:
+        """The GitHub account of the copy's owner, when this browser holds a pass for it."""
+        owner = settings.public_owner_github.strip()
+        if not (owner and github_app_ready):
+            return None
+        secret = settings.github_app_client_secret.get_secret_value()
+        cookie = request.cookies.get(github_app.OWNER_COOKIE, "")
+        login = github_app.owner_of(cookie, secret, time.time())
+        return login if login and login.lower() == owner.lower() else None
+
     def github_request(request: Request) -> github_app.Asked | None:
         secret = settings.github_app_client_secret.get_secret_value()
         return github_app.opened(request.cookies.get(github_app.COOKIE, ""), secret, time.time())
@@ -1427,6 +1443,8 @@ def create_app(
         asked = github_request(request) if github_app_ready else None
         if asked is None or not code or not hmac.compare_digest(state, asked.state):
             return github_page(request, GITHUB_LOST, 400)
+        if asked.purpose == "owner":
+            return owner_signed_in(request, code)
         try:
             days, wrong = event_days(database(), asked.event, asked.starts, asked.ends)
         except (SettingsError, psycopg.OperationalError):
@@ -1459,6 +1477,56 @@ def create_app(
         if commit:
             back["commit"] = commit
         response = RedirectResponse("/check?" + urlencode(back), 303)
+        response.delete_cookie(github_app.COOKIE, path="/github")
+        return response
+
+    # The copy's owner signs in with GitHub on an unlisted page, and its browser then checks,
+    # reads again and registers with no count (web/public.py, OWNERS_OWN, 30 October 2026).
+    def owner_ready() -> bool:
+        return bool(settings.public_owner_github.strip() and github_app_ready)
+
+    @app.get("/owner", response_class=HTMLResponse)
+    def owner_page(request: Request) -> HTMLResponse:
+        """Where the copy's owner signs in with GitHub, or sees that this browser is signed in."""
+        return render(request, "owner.html", login=owner_here(request), ready=owner_ready())
+
+    @app.get("/owner/start", response_model=None)
+    def owner_start(request: Request) -> Response:
+        if not owner_ready():
+            return render(request, "owner.html", 503, login=None, ready=False, problem=OWNER_NONE)
+        until = time.time() + github_app.WAIT_SECONDS
+        asked = github_app.Asked("", "", "", "", secrets.token_urlsafe(24), until, "owner")
+        return to_github(request, asked)
+
+    @app.get("/owner/sign-out", response_model=None)
+    def owner_sign_out() -> Response:
+        response = RedirectResponse("/owner", 303)
+        response.delete_cookie(github_app.OWNER_COOKIE, path="/")
+        return response
+
+    def owner_signed_in(request: Request, code: str) -> Response:
+        """The way back of the sign-in of the copy's owner: a pass for this browser, for
+        OWNER_DAYS, when the account that signed in is the one of the settings; the token serves
+        this request only."""
+        http = github_http()
+        secret = settings.github_app_client_secret.get_secret_value()
+        try:
+            token = github_app.user_token(http, settings.github_app_client_id.strip(), secret,
+                                          code, github_callback_url(request))  # fmt: skip
+            login = github_app.login_of(http, token)
+        except github_app.GitHubAppError as error:
+            return render(request, "owner.html", 502, login=None, ready=True, problem=str(error))
+        except httpx.HTTPError:
+            return render(request, "owner.html", 503, login=None, ready=True, problem=OWNER_SILENT)
+        if login.lower() != settings.public_owner_github.strip().lower():
+            return render(request, "owner.html", 403, login=None, ready=True, problem=OWNER_NOT_YOU)
+        days = github_app.OWNER_DAYS * 86400
+        response = RedirectResponse("/owner", 303)
+        secure = request.url.scheme == "https" or request.url.hostname == settings.public_host
+        response.set_cookie(github_app.OWNER_COOKIE,
+                            github_app.owner_pass(login, secret, time.time() + days),
+                            max_age=days, path="/", httponly=True, secure=secure,
+                            samesite="lax")  # fmt: skip
         response.delete_cookie(github_app.COOKIE, path="/github")
         return response
 
@@ -1805,6 +1873,7 @@ def create_app(
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
         "WALLETCONNECT_PROJECT_ID": settings.walletconnect_project_id.strip(),
         "GITHUB_APP": github_app_ready,
+        "OWNER_DAYS": github_app.OWNER_DAYS,
         "REFRESH_IN_BACKGROUND": settings.refresh_in_background,
         "PUBLIC_COPY": public,
         "reason_of": data.reason_of,
