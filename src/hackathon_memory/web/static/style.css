@@ -515,6 +515,22 @@ body:has(dialog[open]) { overflow: hidden; }
 }
 .hm-sign-status[data-state="problem"] { border-color: var(--tblr-danger); }
 .hm-sign-status[data-state="done"] { border-color: var(--tblr-success); }
+/* the connected wallet, also after a refresh (30 October 2026) */
+.hm-wallet {
+  margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid var(--tblr-border-color);
+  border-radius: 6px; background: var(--tblr-bg-surface-secondary);
+}
+.hm-wallet-line { margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+.hm-wallet-who .id { white-space: nowrap; }
+.hm-wallet-dot {
+  display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.375rem; border-radius: 50%;
+  background: var(--tblr-success); vertical-align: 0.1em;
+}
+.hm-wallet .hm-sign-buttons { margin-bottom: 0; }
+.hm-wallet-new { margin-bottom: 0.5rem; font-size: 0.875rem; }
+.hm-wallet-steps { margin: 0; padding-left: 1.2rem; }
+.hm-wallet-steps li + li { margin-top: 0.25rem; }
+.hm-wallet-address { overflow-wrap: anywhere; user-select: all; }
 /* a public service that the project names, not its own (29 October 2026) */
 .hm-story-public { margin: 0 0 0.5rem; padding-left: 0.5rem; border-left: 3px solid var(--tblr-info); }
 /* a word of the page is a button that looks like a link; its marks in the page's texts show only

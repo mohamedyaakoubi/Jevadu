@@ -5,6 +5,7 @@
 <section class="card project-section check-register-section" id="register-box" aria-labelledby="register-title">
   <div class="card-body">
     <h3 id="register-title" tabindex="-1">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
+    <div id="register-problem" tabindex="-1">{# what stops the record: _register_problem.html #}</div>
     {% if not view.open %}
     <p class="text-secondary">The public register is not open yet: its topic on Hedera testnet has not been created.</p>
     {% elif view.problem %}
@@ -28,7 +29,7 @@
       <ul class="hm-written">
         <li>the hackathon: <span class="id">{{ view.event }}</span></li>
         <li>a hash of the repository link: <span class="id">{{ view.code[:16] }}&hellip;</span></li>
-        <li>the latest commit at the moment you click (now <span class="id">{{ result.version.sha[:12] }}&hellip;</span>)</li>
+        <li>the latest commit at the moment you click (now <span class="id hm-commit-now">{{ result.version.sha[:12] }}&hellip;</span>)</li>
         <li>your Hedera account and its signature, if you sign below</li>
       </ul>
       <p class="hm-small">Nothing else: no link, no name, no text. Hedera adds a sequence number and a timestamp. A record can never be changed or deleted.</p>
@@ -41,11 +42,29 @@
         <fieldset class="hm-sign" data-sign data-event="{{ view.event }}" data-code="{{ view.code }}" data-commit="{{ result.version.sha }}" data-project-id="{{ WALLETCONNECT_PROJECT_ID }}">
           <legend class="hm-sign-title">Sign it with your own Hedera account (optional)</legend>
           <p class="hm-small mb-2">Your wallet signs the text of the record. The record then holds your account and its signature, and anyone can check them against your account's key on the ledger. Your account pays nothing: the site still writes the record.</p>
-          <div class="hm-sign-buttons">
-            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="hedera"{% if not WALLETCONNECT_PROJECT_ID %} disabled{% endif %}>Sign with a Hedera wallet</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="evm">Sign with an EVM wallet</button>
+          {# The connected wallet, also after a refresh, and another wallet (static/sign.js, 30 October 2026). #}
+          <div class="hm-wallet" hidden>
+            <p class="hm-wallet-line"><span class="hm-wallet-dot" aria-hidden="true"></span><b>Connected:</b> <span class="hm-wallet-who"></span></p>
+            <div class="hm-wallet-new" hidden>
+              <p class="mb-1">To sign, this address needs an account on the Hedera test network. Make it for free: the same address works on Hedera, so your wallet needs no test wallet and no new network.</p>
+              <ol class="hm-wallet-steps">
+                <li>Copy the address: <code class="hm-wallet-address"></code> <button type="button" class="btn btn-sm" data-wallet-copy>Copy</button></li>
+                <li>Open the <a href="https://portal.hedera.com/faucet" target="_blank" rel="noopener">Hedera faucet<span class="visually-hidden"> (opens in a new tab)</span></a>, paste the address and click &ldquo;Receive 100 testnet HBAR&rdquo;. The faucet makes the account, with no sign-in. Test HBAR sent to the address from a Hedera wallet, such as HashPack, makes it too.</li>
+                <li>Come back and click &ldquo;Sign with this account&rdquo;.</li>
+              </ol>
+            </div>
+            <div class="hm-sign-buttons">
+              <button type="button" class="btn btn-outline-primary btn-sm" data-sign-now>Sign with this account</button>
+              <button type="button" class="btn btn-sm" data-wallet-other>Use another wallet</button>
+            </div>
           </div>
-          <p class="hm-small mb-0">A Hedera wallet, such as HashPack, connects through WalletConnect, which lists the wallets it supports. An EVM wallet, such as MetaMask, signs in this browser, for an account with an ECDSA key.</p>
+          <div class="hm-sign-choice">
+            <div class="hm-sign-buttons">
+              <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="hedera"{% if not WALLETCONNECT_PROJECT_ID %} disabled{% endif %}>Sign with a Hedera wallet</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" data-sign-with="evm">Sign with an EVM wallet</button>
+            </div>
+            <p class="hm-small mb-0">A Hedera wallet, such as HashPack, connects through WalletConnect, which lists the wallets it supports. An EVM wallet, such as MetaMask, signs in this browser, for an account with an ECDSA key.</p>
+          </div>
           <p class="hm-small hm-sign-status mb-0" aria-live="polite">{% if not WALLETCONNECT_PROJECT_ID %}Hedera wallets sign through WalletConnect, which needs a project ID that this site does not have yet.{% endif %}</p>
           <input type="hidden" name="signer"><input type="hidden" name="scheme"><input type="hidden" name="signature"><input type="hidden" name="signed_commit">
         </fieldset>

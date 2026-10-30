@@ -2,9 +2,9 @@
    returns it, or what went wrong, in plain words. It takes the place of the register's box. #}
 <section class="card project-section check-register-section" id="register-box" aria-labelledby="register-title">
   <div class="card-body">
-    <h3 id="register-title" tabindex="-1">{% if problem %}Not registered{% elif already %}Already registered{% elif rehearsal_topic %}Registered on the practice topic{% else %}Registered on Hedera{% endif %}</h3>
+    <h3 id="register-title" tabindex="-1">{% if sent %}Sent to Hedera{% elif problem %}Not registered{% elif already %}Already registered{% elif rehearsal_topic %}Registered on the practice topic{% else %}Registered on Hedera{% endif %}</h3>
     {% if problem %}
-    <div class="alert alert-warning mb-0" role="alert">{{ problem }}</div>
+    <div class="alert alert-{{ "info" if sent else "warning" }} mb-0" role="alert">{{ problem }}</div>
     {% else %}
     <p>{% if already %}This repository was already registered for this hackathon, so nothing new was written. Here is the first record.{% else %}The record is on the ledger, read back from the mirror node.{% endif %}</p>
     <dl class="hm-receipt">

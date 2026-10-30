@@ -1699,7 +1699,8 @@ def test_a_project_of_a_check_opens_over_it_and_the_check_comes_back(site, chrom
 
 @pytest.mark.browser
 def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # noqa: ANN001
-    """An answer of 400 takes the place of the steps of the check, and of the register's form."""
+    """An answer of 400 takes the place of the steps of the check, and shows above the register's
+    form, which stays as it was, to be sent again (30 October 2026)."""
     client, _, _, database = site
     event = checkable(database)
     page = served(chromium, client, viewport={"width": 1440, "height": 900})
@@ -1713,7 +1714,11 @@ def test_a_wrong_link_says_what_to_do_in_the_window(site, chromium) -> None:  # 
     page.locator("#check button[type=submit]").click()
     page.wait_for_selector("#viewer[open] .check-result")
     page.locator("#register-form button[type=submit]").click()  # no line in the README yet
-    page.wait_for_selector("#register-box:has-text('does not contain the line')")
+    page.wait_for_selector("#register-problem:has-text('does not contain the line')")
+    assert page.locator("#register-form").count() == 1  # the box stays
+    problem, form = (page.locator(name).bounding_box()["y"]
+                     for name in ("#register-problem", "#register-form"))  # fmt: skip
+    assert problem < form  # at the top of the box
     page.context.close()
 
 
@@ -1786,6 +1791,11 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     asked_before = len(client.github_site.seen)
     missing = client.post("/register", data=form, headers=HX)
     assert missing.status_code == 400 and "does not contain the line" in missing.text
+    # above the box of the register, which stays as it was, with the newest commit read again
+    assert missing.headers["HX-Retarget"] == "#register-problem"
+    assert missing.text.strip().startswith('<div class="alert alert-warning mb-3" role="alert"')
+    assert 'id="register-box"' not in missing.text
+    assert f'data-latest-commit="{COMMIT}"' in missing.text
     assert len(client.github_site.seen) == asked_before + 2  # the README and the version, again
     assert client.writes.written == []  # nothing is written without the team's line
     with_line(client, check.text)
@@ -1805,6 +1815,26 @@ def test_a_checked_submission_is_registered_once_and_read_back(site) -> None:  #
     later = client.get("/check", params=asked, headers=HX)
     assert "Already registered." in later.text and "sequence number 1" in later.text
     assert "Register on Hedera testnet" not in later.text  # it is registered for this event already
+
+
+def test_a_record_that_the_mirror_node_does_not_show_yet_is_called_sent(site) -> None:  # noqa: ANN001
+    """The record went to Hedera, and the mirror node, a few seconds behind, does not show it yet:
+    the box says that it was sent, not that nothing was registered (30 October 2026)."""
+    from hackathon_memory.hedera.mirror import MirrorError
+
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": REPO, "event": event}
+    with_line(client, client.get("/check", params=asked, headers=HX).text)
+
+    def behind(*_: object, **__: object) -> dict:
+        raise MirrorError("The mirror node does not show the message yet.")
+
+    client.mirrors["testnet"].wait_for_message = behind
+    sent = client.post("/register", data={**asked, "starts": "", "ends": ""}, headers=HX)
+    assert sent.status_code == 202 and len(client.writes.written) == 1
+    assert ">Sent to Hedera</h3>" in sent.text and "Not registered" not in sent.text
+    assert "does not show it yet" in sent.text
 
 
 def test_a_registration_needs_a_checked_repository_and_a_real_account(site) -> None:  # noqa: ANN001
@@ -2394,9 +2424,12 @@ def served(chromium, client, before_compare=lambda: None, tour_offer=False, **co
             got = client.post(address, content=route.request.post_data_buffer, headers=headers)
         else:
             got = client.get(address, headers=headers)
+        # the headers that htmx reads, such as HX-Retarget, go with the answer as from a server
+        back = {k: v for k, v in got.headers.items() if k.lower().startswith("hx-")}
         kind = got.headers.get("content-type")  # an answer of 204 has none
-        route.fulfill(status=got.status_code, body=got.content,
-                      headers={"content-type": kind} if kind else {})  # fmt: skip
+        if kind:
+            back["content-type"] = kind
+        route.fulfill(status=got.status_code, body=got.content, headers=back)
 
     page.route(lambda url: url.startswith("http://site.test/"), answer)
     return page
@@ -2981,10 +3014,44 @@ def test_the_list_of_wallets_opens_inside_the_window(site, chromium) -> None:  #
     page.context.close()
 
 
+def check_in_window(page, event: str) -> None:  # noqa: ANN001
+    """The check of Pebble Pay for `event`, from the search page, up to the register's box."""
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] [data-sign]")
+
+
+def fake_metamask(address: str, signatures: dict[str, str], permissions: bool = True) -> str:
+    """A stand-in MetaMask (EIP-1193) for the page: it gives its address, and signs a text with
+    the signature made for the commit that the text names. As MetaMask does, it opens its list of
+    accounts (wallet_requestPermissions) and lets a site go (wallet_revokePermissions), unless
+    `permissions` is False. Each call is kept in window.ethereum.asked; a method that it does not
+    know is refused as one that does not exist."""
+    known = ["wallet_requestPermissions", "wallet_revokePermissions"] if permissions else []
+    return f"""window.ethereum = {{ isMetaMask: true, asked: [], async request(call) {{
+      this.asked.push(call);
+      const asks = call.method === "eth_requestAccounts" || call.method === "eth_accounts";
+      if (asks) return ["{address}"];
+      if ({json.dumps(known)}.includes(call.method)) return null;
+      if (call.method === "personal_sign") {{
+        const text = new TextDecoder().decode(new Uint8Array(
+          call.params[0].slice(2).match(/../g).map((pair) => parseInt(pair, 16))));
+        const signatures = {json.dumps(signatures)};
+        for (const [commit, signature] of Object.entries(signatures)) {{
+          if (text.includes(commit)) return signature;
+        }}
+      }}
+      throw Object.assign(new Error("not known to this stand-in"), {{ code: -32601 }});
+    }} }};"""
+
+
 @pytest.mark.browser
 def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -> None:  # noqa: ANN001
-    """The page's script with a stand-in MetaMask: it asks for the account of the address, has the
-    exact text signed, fills the form, and the receipt says who signed (static/sign.js)."""
+    """The page's script with a stand-in MetaMask: it opens the wallet's list of accounts, asks
+    for the account of the address, has the exact text signed, names the connected wallet, fills
+    the form, and the receipt says who signed (static/sign.js)."""
     import hashlib
 
     from hackathon_memory.hedera.registry import readme_line
@@ -2992,26 +3059,23 @@ def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -
     client, _, _, database = site
     event = checkable(database)
     key, account, address = signing_account(client)
-    signature = metamask_signature(key, "ethglobal.com/sample-event")
     line = readme_line("ethglobal.com/sample-event", hashlib.sha256(REPO.encode()).hexdigest())
     with_line(client, line)
+    signatures = {COMMIT: metamask_signature(key, "ethglobal.com/sample-event")}
     page = served(chromium, client, reduced_motion="reduce")
-    page.add_init_script(
-        "window.ethereum = { asked: [], async request(call) { this.asked.push(call);"
-        f' if (call.method === "eth_requestAccounts") return ["{address}"];'
-        f' if (call.method === "personal_sign") return "{signature}";'
-        ' throw new Error("not asked in this test"); } };'
-    )
-    page.goto("http://site.test/")
-    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
-    page.select_option("#check-event", event)
-    page.locator("#check button[type=submit]").click()
-    page.wait_for_selector("#viewer[open] [data-sign-with=evm]")
+    page.add_init_script(fake_metamask(address, signatures))
+    check_in_window(page, event)
     page.locator("[data-sign-with=evm]").click()
     page.wait_for_function("document.querySelector('[name=signer]').value !== ''")
     assert f"Signed by the account {account}." in page.locator(".hm-sign-status").inner_text()
     assert page.locator(".hm-sign-status").get_attribute("data-state") == "done"
-    message = page.evaluate("window.ethereum.asked[1].params[0]")
+    shown = f"MetaMask, address {address[:6]}…{address[-4:]}, Hedera account {account}"
+    assert page.locator(".hm-wallet-who").inner_text() == shown
+    assert page.locator(".hm-sign-choice").is_hidden()
+    asked = page.evaluate("window.ethereum.asked")
+    methods = [call["method"] for call in asked]
+    assert methods == ["wallet_requestPermissions", "eth_accounts", "personal_sign"]
+    message = asked[2]["params"][0]
     assert bytes.fromhex(message[2:]).decode().endswith(f"Commit: {COMMIT}\nAccount: {account}")
     page.locator("#register-form button[type=submit]").click()
     page.wait_for_selector("#register-box dt:has-text('Signed by')")
@@ -3020,28 +3084,200 @@ def test_metamask_signs_in_the_page_and_the_register_writes_it(site, chromium) -
 
 
 @pytest.mark.browser
-def test_an_address_with_no_account_is_said_plainly_with_the_faucet(site, chromium) -> None:  # noqa: ANN001
-    """An EVM wallet connects, and its address has no Hedera account: the line under the buttons
-    says so in a box that shows, with the faucet as a link (30 October 2026: it went unseen)."""
+def test_a_wallet_without_a_list_of_accounts_still_connects(site, chromium) -> None:  # noqa: ANN001
+    """An EVM wallet that does not know wallet_requestPermissions connects as before."""
     client, _, _, database = site
     event = checkable(database)
+    key, account, address = signing_account(client)
+    signatures = {COMMIT: metamask_signature(key, "ethglobal.com/sample-event")}
     page = served(chromium, client, reduced_motion="reduce")
-    page.add_init_script(
-        "window.ethereum = { async request(call) {"
-        f' if (call.method === "eth_requestAccounts") return ["0x{"12" * 20}"];'
-        ' throw new Error("not asked in this test"); } };'
-    )
-    page.goto("http://site.test/")
-    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
-    page.select_option("#check-event", event)
-    page.locator("#check button[type=submit]").click()
-    page.wait_for_selector("#viewer[open] [data-sign-with=evm]")
+    page.add_init_script(fake_metamask(address, signatures, permissions=False))
+    check_in_window(page, event)
     page.locator("[data-sign-with=evm]").click()
-    page.wait_for_selector(".hm-sign-status[data-state=problem]")
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    methods = page.evaluate("window.ethereum.asked.map((call) => call.method)")
+    assert methods == ["wallet_requestPermissions", "eth_requestAccounts", "personal_sign"]
+    assert page.locator("[name=signer]").input_value() == account
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_wallet_stays_connected_after_a_refresh_and_another_can_be_chosen(site, chromium) -> None:  # noqa: ANN001
+    """After a refresh the box names the wallet that is still connected, asks nothing of the
+    person to find it, and signs in one click; "Use another wallet" lets it go, in the wallet too,
+    and offers the two kinds again (30 October 2026: a refresh showed the buttons as if no wallet
+    were connected, and nothing let another wallet be chosen)."""
+    client, _, _, database = site
+    event = checkable(database)
+    key, account, address = signing_account(client)
+    signatures = {COMMIT: metamask_signature(key, "ethglobal.com/sample-event")}
+    page = served(chromium, client, reduced_motion="reduce")
+    page.add_init_script(fake_metamask(address, signatures))
+    check_in_window(page, event)
+    page.locator("[data-sign-with=evm]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    check_in_window(page, event)  # the page again, as after a refresh
+    page.wait_for_selector(f".hm-wallet:not([hidden]) .hm-wallet-who:has-text('{account}')")
+    assert page.locator(".hm-sign-choice").is_hidden()
+    assert page.evaluate("window.ethereum.asked.map((call) => call.method)") == ["eth_accounts"]
+    page.locator("[data-sign-now]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    assert page.locator("[name=signer]").input_value() == account
+    page.locator("[data-wallet-other]").click()
+    page.wait_for_selector(".hm-sign-choice:not([hidden]) [data-sign-with=evm]")
+    assert page.locator(".hm-wallet").is_hidden()
+    assert page.locator("[name=signature]").input_value() == ""  # it named the account let go
+    assert "Disconnected." in page.locator(".hm-sign-status").inner_text()
+    methods = page.evaluate("window.ethereum.asked.map((call) => call.method)")
+    assert methods[-1] == "wallet_revokePermissions"
+    assert page.evaluate("window.localStorage.getItem('hm-wallet')") is None
+    check_in_window(page, event)  # after a refresh, nothing is looked for any more
+    assert page.locator(".hm-sign-choice").is_visible()
+    assert page.evaluate("window.ethereum.asked.length") == 0
+    page.context.close()
+
+
+# A stand-in for Hedera's WalletConnect library (@hashgraph/hedera-wallet-connect 2.1.3), with the
+# parts that static/sign.js uses: a connection that the wallet keeps comes back with init, as
+# DAppConnector.init makes a signer of each session that it finds.
+STAND_IN_WALLETCONNECT = """
+export const HederaJsonRpcMethod = { SignMessage: "hedera_signMessage" };
+export const HederaSessionEvent = {
+  ChainChanged: "chainChanged", AccountsChanged: "accountsChanged",
+};
+export const HederaChainId = { Testnet: "hedera:testnet" };
+const signer = (account) => ({
+  topic: "topic-1", getAccountId: () => ({ toString: () => account }),
+});
+export class DAppConnector {
+  constructor() { this.signers = []; this.asked = []; window.standIn = this; }
+  async init() {
+    this.asked.push("init");
+    const named = { peer: { metadata: { name: "HashPack" } } };
+    this.walletConnectClient = { session: { get: () => named } };
+    const kept = window.localStorage.getItem("stand-in-session");
+    if (kept) this.signers = [signer(kept)];
+  }
+  async openModal() {
+    this.asked.push("openModal");
+    window.localStorage.setItem("stand-in-session", "0.0.11235177");
+    this.signers = [signer("0.0.11235177")];
+  }
+  async signMessage(call) {
+    this.asked.push(call.signerAccountId);
+    return { signatureMap: "c2ln" };
+  }
+  async disconnectAll() {
+    this.asked.push("disconnectAll");
+    window.localStorage.removeItem("stand-in-session");
+    this.signers = [];
+  }
+}
+"""
+
+
+@pytest.mark.browser
+def test_a_hedera_wallet_comes_back_after_a_refresh_and_can_be_let_go(site, chromium) -> None:  # noqa: ANN001
+    """With a stand-in for Hedera's WalletConnect library that keeps its connection as HashPack
+    does: after a refresh the box names the wallet and its account with no list of wallets, signs
+    with it, and "Use another wallet" ends the connection (30 October 2026)."""
+    client, _, _, database = site
+    event = checkable(database)
+    with_id = client.make(walletconnect_project_id="0123456789abcdef0123456789abcdef")
+    page = served(chromium, with_id, reduced_motion="reduce")
+    library = {
+        "https://esm.sh/@hashgraph/hedera-wallet-connect@2.1.3": STAND_IN_WALLETCONNECT,
+        "https://esm.sh/@hiero-ledger/sdk@2.79.0": "export const LedgerId = {TESTNET: 'testnet'};",
+    }
+    page.route(lambda url: url in library, lambda route: route.fulfill(
+        body=library[route.request.url], content_type="text/javascript",
+        headers={"Access-Control-Allow-Origin": "*"}))  # fmt: skip
+    check_in_window(page, event)
+    page.locator("[data-sign-with=hedera]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    assert page.locator(".hm-wallet-who").inner_text() == "HashPack, account 0.0.11235177"
+    signed = "hedera:testnet:0.0.11235177"
+    assert page.evaluate("window.standIn.asked") == ["init", "openModal", signed]
+    check_in_window(page, event)  # the page again, as after a refresh
+    page.wait_for_selector(".hm-wallet:not([hidden]) .hm-wallet-who:has-text('0.0.11235177')")
+    page.locator("[data-sign-now]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    assert page.evaluate("window.standIn.asked") == ["init", signed]  # no list of wallets
+    page.locator("[data-wallet-other]").click()
+    page.wait_for_selector(".hm-sign-choice:not([hidden]) [data-sign-with=hedera]")
+    assert page.evaluate("window.standIn.asked")[-1] == "disconnectAll"
+    assert page.evaluate("window.localStorage.getItem('hm-wallet')") is None
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_newer_commit_lets_the_old_signature_go_and_the_next_one_names_it(site, chromium) -> None:  # noqa: ANN001
+    """The team signs, then adds its line to the README, which makes a commit. The register
+    refuses the signature of the older commit above its box, which stays; the box lets that
+    signature go, and the next one names the newer commit (30 October 2026: with the box kept,
+    every new signature would have named the old commit)."""
+    from checkfakes import commits_answer
+    from fakes import Reply
+    from hackathon_memory.collect.github_commits import commits_address
+
+    client, _, _, database = site
+    event = checkable(database)
+    key, account, address = signing_account(client)
+    newer = "ab" * 20
+    signatures = {made: metamask_signature(key, "ethglobal.com/sample-event", made)
+                  for made in (COMMIT, newer)}  # fmt: skip
+    page = served(chromium, client, reduced_motion="reduce")
+    page.add_init_script(fake_metamask(address, signatures))
+    check_in_window(page, event)
+    page.locator("[data-sign-with=evm]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    with_line(client, page.content())  # the line makes a commit
+    client.github_site.pages[commits_address(REPO)] = Reply(200, commits_answer(newer))
+    page.locator("#register-form button[type=submit]").click()
+    page.wait_for_selector("#register-problem:has-text('A new commit reached the repository')")
+    page.wait_for_function(f"document.querySelector('[data-sign]').dataset.commit === '{newer}'")
+    assert page.locator("[name=signature]").input_value() == ""
+    assert page.locator(".hm-commit-now").inner_text() == f"{newer[:12]}…"
+    assert page.locator(".hm-sign-status").get_attribute("data-state") == "problem"
+    page.locator("[data-sign-now]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    assert page.locator("#register-problem").inner_text() == ""  # the new signature answers it
+    page.locator("#register-form button[type=submit]").click()
+    page.wait_for_selector("#register-box dt:has-text('Signed by')")
+    record = json.loads(client.writes.written[0])
+    assert (record["commit"], record["account"]) == (newer, account)
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_an_address_with_no_account_is_shown_how_to_make_one(site, chromium) -> None:  # noqa: ANN001
+    """An EVM wallet connects, and its address has no Hedera account yet: the box says so where it
+    names the wallet, with the address to copy and the faucet that makes the account, and once the
+    faucet made it, the same button finds it and signs (30 October 2026: "did you remove
+    metamask", and no word on how to make the account)."""
+    client, _, _, database = site
+    event = checkable(database)
+    key, account, address = signing_account(client)
+    accounts = client.mirrors["testnet"].things["account"]
+    made = {name: accounts.pop(name) for name in (account, address)}  # not made yet
+    signatures = {COMMIT: metamask_signature(key, "ethglobal.com/sample-event")}
+    page = served(chromium, client, reduced_motion="reduce")
+    page.add_init_script(fake_metamask(address, signatures))
+    check_in_window(page, event)
+    page.locator("[data-sign-with=evm]").click()
+    page.wait_for_selector(".hm-wallet-new:not([hidden])")
+    assert page.locator(".hm-wallet-who").inner_text().endswith(", no Hedera account yet")
+    assert page.locator(".hm-wallet-address").inner_text() == address
+    faucet = page.locator(".hm-wallet-new a")
+    assert faucet.get_attribute("href") == "https://portal.hedera.com/faucet"
     status = page.locator(".hm-sign-status")
+    assert status.get_attribute("data-state") == "problem"
     assert "has no Hedera account on the test network yet" in status.inner_text()
-    assert status.locator("a").get_attribute("href") == "https://portal.hedera.com/faucet"
-    assert page.locator("[data-sign-with=evm]").is_enabled()  # it can be tried again
+    accounts.update(made)  # the faucet makes the account
+    page.locator("[data-sign-now]").click()
+    page.wait_for_selector(".hm-sign-status[data-state=done]")
+    assert page.locator(".hm-wallet-new").is_hidden()
+    assert page.locator("[name=signer]").input_value() == account
     page.context.close()
 
 
