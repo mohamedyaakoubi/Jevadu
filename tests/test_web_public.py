@@ -1,20 +1,24 @@
 """The public copy of the website (web/public.py, design 12.5): no page indexed, the AI and the
-register off until turned on, a budget of its own, and an allowance for each visitor, one time
-only. Everything is invented."""
+register off until turned on, a budget of its own, an allowance for each visitor, one time only,
+and Cloudflare's Turnstile before Gemini, GitHub or Hedera. Everything is invented."""
 
 from __future__ import annotations
 
 import json
 import re
+from urllib.parse import parse_qs
 
+import httpx
 import psycopg
 import pytest
 from pydantic import SecretStr
 from test_web import (  # noqa: F401  (the fixtures of the website's tests)
     REPO,
+    SEARCH,
     checkable,
     chromium,
     compare_answer,
+    model_calls,
     order_of,
     served,
     site,
@@ -23,7 +27,7 @@ from test_web import (  # noqa: F401  (the fixtures of the website's tests)
 from hackathon_memory.finops import meter
 from hackathon_memory.finops.meter import Tags
 from hackathon_memory.settings import Settings
-from hackathon_memory.web import public, switch
+from hackathon_memory.web import public, switch, turnstile
 from searchfakes import google
 
 SALT = "s" * 40
@@ -32,6 +36,42 @@ HX = {"HX-Request": "true"}
 
 def public_site(client, **changes):  # noqa: ANN001, ANN003, ANN201
     return client.make(app_options={"public": True}, public_salt=SecretStr(SALT), **changes)
+
+
+# Cloudflare's own keys for tests (developers.cloudflare.com/turnstile/troubleshooting/testing/,
+# read on 30 October 2026): a site key that always passes, a secret that always validates.
+SITE_KEY = "1x00000000000000000000AA"
+SECRET = "1x0000000000000000000000000000000AA"
+TOKEN = "XXXX.DUMMY.TOKEN.XXXX"
+CONFIRM = "asks Cloudflare whether you are a person"
+
+
+class Cloudflare:
+    """A stand-in for Cloudflare's siteverify: the forms it was sent, and its answer (a JSON
+    object, a status, or an error of the network)."""
+
+    def __init__(self) -> None:
+        self.asked: list[dict[str, list[str]]] = []
+        self.answer: dict | int | Exception = {
+            "success": True, "action": "visitor", "hostname": "jevadu.mohamedyaakoubi.com"
+        }  # fmt: skip
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == turnstile.SITEVERIFY and request.method == "POST"
+        self.asked.append(parse_qs(request.content.decode()))
+        if isinstance(self.answer, Exception):
+            raise self.answer
+        if isinstance(self.answer, int):
+            return httpx.Response(self.answer)
+        return httpx.Response(200, json=self.answer)
+
+
+def guarded_site(client, cloudflare: Cloudflare, **changes):  # noqa: ANN001, ANN003, ANN201
+    """The public copy with the keys of Turnstile, which asks `cloudflare`."""
+    asker = httpx.Client(transport=httpx.MockTransport(cloudflare))
+    return client.make(app_options={"public": True, "turnstile_client": asker},
+                       public_salt=SecretStr(SALT), turnstile_site_key=SITE_KEY,
+                       turnstile_secret_key=SecretStr(SECRET), **changes)  # fmt: skip
 
 
 def asks(database: str) -> int:
@@ -260,3 +300,205 @@ def test_the_switch_writes_into_the_public_copys_own_database(site, monkeypatch,
     assert switch.main(["register", "on"]) == 0
     assert "the public copy's database: on its host" in capsys.readouterr().out
     assert public.totals(database)[0][public.REGISTER] is True
+
+
+# ----------------------------------------------------- Cloudflare's Turnstile (web/turnstile.py)
+
+
+def test_a_visitor_is_found_to_be_a_person_before_gemini_github_or_hedera(site) -> None:  # noqa: ANN001, F811
+    client, fake, ids, database = site
+    public.turn(database, public.AI, True)
+    public.turn(database, public.REGISTER, True)
+    cloudflare = Cloudflare()
+    open_copy = guarded_site(client, cloudflare)
+    idea = {"idea": "pay a street vendor with coins", "ai": "1"}
+    before = len(fake.requests)
+    page = open_copy.get("/", params=idea)
+    assert 'id="person-check"' in page.text and f'data-sitekey="{SITE_KEY}"' in page.text
+    assert CONFIRM in page.text and order_of(page.text)  # by meaning, in the search order
+    assert "keyword results" not in page.text and model_calls(fake, before) == 0
+    pebble = str(ids["Pebble Pay"])
+    waiting = [
+        open_copy.get("/compare", params={"idea": idea["idea"], "ids": pebble, "one": "1"},
+                      headers=HX),
+        open_copy.get("/check", params={"repo": REPO, "event": checkable(database)}, headers=HX),
+        open_copy.post(f"/project/{pebble}/read-again", headers=HX),
+        open_copy.post("/register", data={"repo": REPO, "event": checkable(database),
+                                          "starts": "", "ends": ""}, headers=HX),
+    ]  # fmt: skip
+    for answer in waiting:
+        assert answer.status_code == 403 and CONFIRM in answer.text
+    assert model_calls(fake, before) == 0 and asks(database) == 0 and client.writes.written == []
+    assert open_copy.post("/person-check", data={"token": TOKEN}).status_code == 204
+    assert cloudflare.asked == [{"secret": [SECRET], "response": [TOKEN]}]  # never the address
+    fake.answer_queue = [json.dumps({"closest": [2]})]
+    page = open_copy.get("/", params=idea)
+    assert 'id="person-check"' not in page.text and "Sorted by Gemini" in page.text
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    one = open_copy.get("/compare", params={"idea": idea["idea"], "ids": pebble, "one": "1"})
+    assert one.status_code == 200 and "Same 1." in one.text
+
+
+def test_cloudflare_saying_no_or_nothing_gives_no_pass(site) -> None:  # noqa: ANN001, F811
+    client, _, ids, database = site
+    public.turn(database, public.AI, True)
+    cloudflare = Cloudflare()
+    open_copy = guarded_site(client, cloudflare)
+
+    def kept(token: str = TOKEN) -> int:
+        return open_copy.post("/person-check", data={"token": token}).status_code
+
+    cloudflare.answer = {"success": False, "error-codes": ["timeout-or-duplicate"]}
+    assert kept() == 403
+    cloudflare.answer = {"success": True, "action": "login"}  # a token for another action
+    assert kept() == 403
+    cloudflare.answer = 500
+    assert kept() == 503
+    cloudflare.answer = httpx.ConnectError("no route to Cloudflare")
+    assert kept() == 503
+    asked = len(cloudflare.asked)
+    assert kept("") == 403 and kept("x" * (turnstile.LONGEST_TOKEN + 1)) == 403
+    assert len(cloudflare.asked) == asked  # no token worth asking about
+    assert 'id="person-check"' in open_copy.get("/").text  # still no pass
+    one = open_copy.get("/compare", params={"idea": "an idea", "ids": str(ids["Pebble Pay"]),
+                                            "one": "1"})  # fmt: skip
+    assert one.status_code == 403
+
+
+def test_a_pass_holds_for_a_day_and_guards_the_counts_too(site) -> None:  # noqa: ANN001, F811
+    """Each place asks for the pass before it counts; the count asks again, so a place that
+    forgets cannot spend an allowance for a program."""
+    _, _, _, database = site
+    limits = public.Limits(lambda: database, ai_per_visitor=5, needs_pass=True)
+    who = public.visitor_of({"user-agent": "Firefox"}, "203.0.113.5", SALT)
+    assert not limits.passed(who) and not limits.passed(None)
+    assert not limits.take(public.CHECK, who)
+    assert not limits.press(who, public.press_key("an idea", "order"))
+    assert limits.take(public.EMBED, who)  # the search by meaning needs no pass
+    limits.keep_pass(who)
+    assert limits.passed(who) and limits.take(public.CHECK, who)
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE visitor_passes SET passed_at = now() - make_interval(hours => %s)",
+                     (public.PASS_HOURS + 1,))  # fmt: skip
+    assert not limits.passed(who) and not limits.take(public.CHECK, who)
+    limits.keep_pass(who)  # a new confirmation moves the time
+    assert limits.passed(who)
+    assert public.Limits(lambda: database, ai_per_visitor=5).passed(None)  # no pass asked
+
+
+def test_the_laptop_and_a_copy_without_both_keys_never_ask(site) -> None:  # noqa: ANN001, F811
+    client, _, _, _ = site
+    assert client.post("/person-check", data={"token": TOKEN}).status_code == 404
+    assert 'id="person-check"' not in client.get("/").text
+    for open_copy in (public_site(client), public_site(client, turnstile_site_key=SITE_KEY)):
+        assert open_copy.post("/person-check", data={"token": TOKEN}).status_code == 404
+        assert 'id="person-check"' not in open_copy.get("/").text
+
+
+TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js"
+# Cloudflare's script, played: the widget gives a token at once, and a new one on each reset.
+GIVES_TOKENS = """
+window.turnstile = {
+  render: function (box, options) {
+    window.tsOptions = options;
+    setTimeout(function () { options.callback("XXXX.DUMMY.TOKEN.XXXX"); }, 0);
+    return "widget-1";
+  },
+  reset: function () {
+    window.tsResets = (window.tsResets || 0) + 1;
+    setTimeout(function () { window.tsOptions.callback("XXXX.DUMMY.TOKEN.XXXX"); }, 0);
+  },
+  remove: function () { window.tsRemoved = true; }
+};
+window.jevaduPerson();
+"""
+# ... and the widget asks for a click, a moment after the page opened.
+ASKS_A_CLICK = """
+window.turnstile = {
+  render: function (box, options) {
+    setTimeout(function () {
+      window.tsWindowWasOpen = document.getElementById("viewer").open;
+      options["before-interactive-callback"]();
+    }, 300);
+    return "widget-1";
+  },
+  reset: function () {}, remove: function () {}
+};
+window.jevaduPerson();
+"""
+
+
+def played(page, script: str | None) -> None:  # noqa: ANN001
+    """Cloudflare's script on the page is `script`; None: it cannot load."""
+
+    def answer(route) -> None:  # noqa: ANN001
+        if script is None:
+            route.abort()
+        else:
+            route.fulfill(status=200, body=script, headers={"content-type": "text/javascript"})
+
+    page.route(lambda url: url.startswith(TURNSTILE_SCRIPT), answer)
+
+
+@pytest.mark.browser
+def test_the_widget_token_gives_the_pass_and_the_box_goes(site, chromium) -> None:  # noqa: ANN001, F811
+    client, _, _, _ = site
+    cloudflare = Cloudflare()
+    page = served(chromium, guarded_site(client, cloudflare),
+                  viewport={"width": 1440, "height": 900})  # fmt: skip
+    played(page, GIVES_TOKENS)
+    page.goto("http://site.test/")
+    page.wait_for_selector("#person-check", state="detached")
+    options = page.evaluate(
+        "[window.tsOptions.action, window.tsOptions.appearance, window.tsRemoved]"
+    )
+    assert options == ["visitor", "interaction-only", True]
+    assert cloudflare.asked == [{"secret": [SECRET], "response": [TOKEN]}]
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_refused_token_is_never_sent_again(site, chromium) -> None:  # noqa: ANN001, F811
+    client, _, _, _ = site
+    cloudflare = Cloudflare()
+    cloudflare.answer = {"success": False, "error-codes": ["invalid-input-response"]}
+    page = served(chromium, guarded_site(client, cloudflare),
+                  viewport={"width": 1440, "height": 900})  # fmt: skip
+    played(page, GIVES_TOKENS)
+    page.goto("http://site.test/")
+    page.wait_for_selector("#person-check.shown")
+    assert "Cloudflare could not confirm" in page.locator("#person-check").inner_text()
+    assert page.evaluate("window.tsResets") == 2 and len(cloudflare.asked) == 3  # a token each
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_click_asked_by_cloudflare_closes_the_window_over_the_box(site, chromium) -> None:  # noqa: ANN001, F811
+    """The windows are modal: the box of Turnstile behind one could not be clicked."""
+    client, _, ids, _ = site
+    page = served(chromium, guarded_site(client, Cloudflare()),
+                  viewport={"width": 1440, "height": 900})  # fmt: skip
+    played(page, ASKS_A_CLICK)
+    page.goto(f"http://site.test/?open={ids['Pebble Pay']}")
+    page.wait_for_selector("#person-check.shown")
+    assert page.evaluate("window.tsWindowWasOpen") is True
+    assert page.evaluate("document.getElementById('viewer').open") is False
+    assert "Tick the box below once." in page.locator("#person-check").inner_text()
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_without_cloudflare_the_page_says_so_and_the_search_works(site, chromium) -> None:  # noqa: ANN001, F811
+    client, _, ids, database = site
+    public.turn(database, public.AI, True)
+    page = served(chromium, guarded_site(client, Cloudflare()),
+                  viewport={"width": 1440, "height": 900})  # fmt: skip
+    played(page, None)
+    page.goto(SEARCH)
+    page.wait_for_selector("#person-check.shown")
+    assert "could not load" in page.locator("#person-check").inner_text()
+    pebble = ids["Pebble Pay"]
+    page.locator(f"#result-{pebble} .result-link").click()
+    page.locator(f"#one-compare-{pebble} button").click()
+    page.wait_for_selector(f"#one-compare-{pebble}:has-text('{CONFIRM}')")  # an answer of 403
+    page.context.close()

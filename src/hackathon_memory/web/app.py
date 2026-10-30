@@ -28,10 +28,17 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode
 
+import httpx
 import psycopg
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markupsafe import escape
@@ -89,6 +96,7 @@ from hackathon_memory.web import (
     insights,
     references,
     strips,
+    turnstile,
 )
 from hackathon_memory.web import public as public_copy
 from hackathon_memory.web import refresher as refreshing
@@ -285,6 +293,12 @@ PUBLIC_USED = (
     "This public copy of Jevadu gives each visitor {count} {what}, one time only, and you have "
     "used {them}{so}. The full version, shown in the video, has no such limit."
 )
+# The public copy with Cloudflare's Turnstile (web/turnstile.py, 30 October 2026).
+PERSON_FIRST = (
+    "Before it uses Gemini, GitHub or Hedera for you, this public copy of Jevadu asks Cloudflare "
+    "whether you are a person. This usually takes a second, with nothing to click; if a box "
+    "appears at the bottom right of the page, tick it. Then try again."
+)
 PUBLIC_WHAT = {
     public_copy.AI: ("ask of Gemini", "asks of Gemini"),
     public_copy.EMBED: ("search by meaning", "searches by meaning"),
@@ -459,6 +473,7 @@ def create_app(
     mirrors: Mapping[str, Any] | None = None,
     register_writer: Any = None,
     stand_in_client: Any = None,
+    turnstile_client: httpx.Client | None = None,
     refresh_inline: bool = False,
     rehearsal: bool = False,
     public: bool = False,
@@ -470,11 +485,14 @@ def create_app(
     are made when first needed, with the promises of collect/github.py. `register_writer` writes
     one record to the register (hedera/registry.py); by default it is made when first needed.
     `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
-    is made, counted by the meter, when it is first needed. `refresh_inline` reads a card again
-    on the thread of its request, for the tests (web/refresher.py). With `rehearsal`, the topic of
-    `settings` is the one for rehearsals, and every page says so (design 9.3). With `public`, it is
+    is made, counted by the meter, when it is first needed. `turnstile_client` asks Cloudflare
+    whether a visitor of the public copy is a person (web/turnstile.py); by default it is made
+    when first needed. `refresh_inline` reads a card again on the thread of its request, for the
+    tests (web/refresher.py). With `rehearsal`, the topic of `settings` is the one for
+    rehearsals, and every page says so (design 9.3). With `public`, it is
     the public copy, with the switches and the counts of web/public.py, and the calls it makes are
-    counted against its own budget (design 12.5). With `serverless`, it runs as functions on a host
+    counted against its own budget (design 12.5); with the keys of Turnstile in `settings`, a
+    visitor confirms being a person first. With `serverless`, it runs as functions on a host
     such as Vercel, where a request may land on any copy and nothing runs between requests: a
     check and a reading again are done within their request, and no round runs in the
     background (web/vercel_app.py)."""
@@ -486,7 +504,10 @@ def create_app(
     # 6 is zlib's own default: almost as small as 9, and faster.
     app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
     app.mount("/static", Revalidated(directory=HERE / "static"), name="static")
-    limits = (public_copy.Limits(lambda: database(), settings.public_ai_per_visitor)
+    asks_person = bool(settings.turnstile_site_key
+                       and settings.turnstile_secret_key.get_secret_value())  # fmt: skip
+    limits = (public_copy.Limits(lambda: database(), settings.public_ai_per_visitor,
+                                 needs_pass=asks_person)
               if public else None)  # fmt: skip
     gate = limits.admit if limits is not None else None  # the meter asks it before each call
     salt = settings.public_salt.get_secret_value()
@@ -547,6 +568,36 @@ def create_app(
     def robots() -> str:
         return public_copy.ROBOTS
 
+    @app.post("/person-check")
+    async def person_check(request: Request) -> Response:
+        """On the public copy with Turnstile: the token that its widget gave the page, spent here
+        at once (web/turnstile.py). 204 when the visitor is a person, kept for PASS_HOURS; 403
+        when Cloudflare says no, and the page asks the widget for a new token; 503 when
+        Cloudflare or the database cannot answer."""
+        if not asks_person or limits is None:
+            raise StarletteHTTPException(404)
+        body = (await request.body()).decode("utf-8", "replace")
+        token = (parse_qs(body).get("token") or [""])[0]
+        return await run_in_threadpool(person_kept, public_copy.visitor.get(), token)
+
+    def person_kept(who: public_copy.Visitor | None, token: str) -> Response:
+        if who is None or limits is None:
+            return Response(status_code=403)
+        if clients["turnstile"] is None:
+            clients["turnstile"] = httpx.Client()
+        secret = settings.turnstile_secret_key.get_secret_value()
+        try:
+            if not turnstile.is_person(clients["turnstile"], secret, token):
+                return Response(status_code=403)
+            limits.keep_pass(who)
+        except turnstile.Unreachable as error:
+            LOG.warning("Cloudflare's Turnstile did not answer: %s", error)
+            return Response(status_code=503)
+        except psycopg.Error as error:
+            LOG.warning("the pass of a visitor was not kept: %s", type(error).__name__)
+            return Response(status_code=503)
+        return Response(status_code=204)
+
     def allowed(kind: str) -> bool:
         """On the public copy, whether the visitor of this request may do `kind` once more, out
         of an allowance that is never renewed; always on the laptop's own site."""
@@ -562,6 +613,12 @@ def create_app(
         """The words for a visitor whose allowance of `kind` on the public copy is used."""
         return used_up(limits.allowance[kind] if limits is not None else 0, kind, so)
 
+    def person() -> bool:
+        """Whether the visitor of this request may have Gemini, GitHub or Hedera used for them:
+        on the public copy with Turnstile, once Cloudflare found them to be a person
+        (web/turnstile.py); always on the laptop's own site."""
+        return limits is None or limits.passed(public_copy.visitor.get())
+
     def gemini_closed(idea: str) -> bool:
         """On the public copy, whether the visitor may no longer ask Gemini's order for `idea`: an
         ask counted before stays open, since its answers cost nothing more."""
@@ -576,7 +633,8 @@ def create_app(
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
                                "github": github_client, "mirrors": mirrors,
-                               "writer": register_writer, "stand_in": stand_in_client}  # fmt: skip
+                               "writer": register_writer, "stand_in": stand_in_client,
+                               "turnstile": turnstile_client}  # fmt: skip
     if gate is not None:  # on the public copy, every model passes the visitor's gate
         for name in ("google", "llm", "rerank", "stand_in"):
             if clients[name] is not None:
@@ -675,6 +733,9 @@ def create_app(
         return kept_comparisons(conninfo, idea, [project_id]).get(project_id)
 
     def render(request: Request, name: str, status: int = 200, **values: Any) -> HTMLResponse:
+        if asks_person and limits is not None and not name.startswith("_"):  # a whole page
+            # the box of Cloudflare's Turnstile, until the visitor is found to be a person
+            values.setdefault("person_check", None if person() else settings.turnstile_site_key)
         return templates.TemplateResponse(request, name, values, status_code=status)
 
     def facts_of(conninfo: str, ids: list[int] | None) -> list[filtering.Facts]:
@@ -910,6 +971,9 @@ def create_app(
             if limits.left(public_copy.EMBED, public_copy.visitor.get()) == 0:
                 mode, with_ai = WORDS, False
                 public_note = used(public_copy.EMBED, "these are keyword results")
+            elif with_ai and not person():  # the search by meaning needs no pass; Gemini does
+                with_ai = False
+                public_note = PERSON_FIRST
             elif with_ai and gemini_closed(idea):
                 with_ai = False
                 public_note = used(public_copy.AI, "these results are in the search order")
@@ -1209,6 +1273,8 @@ def create_app(
             return render(request, name, 503, problem=DATABASE_DOWN)
         if wrong:
             return render(request, name, 400, problem=wrong)
+        if not person():
+            return render(request, name, 403, problem=PERSON_FIRST)
         if not allowed(public_copy.CHECK):
             return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
@@ -1252,6 +1318,8 @@ def create_app(
         name = "_register.html" if request.headers.get("HX-Request") == "true" else "register.html"
         if limits is not None and not limits.on(public_copy.REGISTER):
             return render(request, name, 503, problem=PUBLIC_REGISTER_OFF)
+        if not person():
+            return render(request, name, 403, problem=PERSON_FIRST)
         if not allowed(public_copy.REGISTER):
             return render(request, name, 429, problem=used(public_copy.REGISTER))
         repository = submission.repository_link(form.get("repo", "")[:300])
@@ -1405,6 +1473,8 @@ def create_app(
     @app.post("/project/{project_id}/read-again", response_class=HTMLResponse)
     def read_again_now(request: Request, project_id: int) -> HTMLResponse:
         """S2: read GitHub and the mirror node again for one project, before the next round."""
+        if not person():
+            return HTMLResponse(f'<p class="hm-small">{escape(PERSON_FIRST)}</p>', 403)
         if not allowed(public_copy.REFRESH):
             words = used(public_copy.REFRESH)
             return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 429)
@@ -1440,6 +1510,9 @@ def create_app(
         if not idea or not project_ids:
             return render(request, "_compare.html", 400, found={}, failed=True, asked_ids=[],
                           **place)  # fmt: skip
+        if not person():
+            return render(request, "_compare.html", 403, found={}, failed=True,
+                          asked_ids=project_ids, refused=PERSON_FIRST, **place)  # fmt: skip
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
                     BudgetExceeded, *FAILED_CALLS, *rerank.NOT_ORDERED)  # fmt: skip
         # On the public copy, the comparison of the first ten counts with Gemini's order; a

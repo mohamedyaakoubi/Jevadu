@@ -24,6 +24,11 @@ Cloudflare tunnel (web/tunnel.py). The limits are those of a public site with no
   itself. One address holds the allowances of at most SHARED visitors, so another browser name is
   no way around the count. A visitor who changes both network and browser gets a new allowance:
   no site without accounts can stop that, and the budget of its own keeps the money safe.
+* A person, as Cloudflare's Turnstile says (web/turnstile.py, 30 October 2026), when the copy has
+  its keys: before asking Gemini, checking, reading again or registering, a visitor must have
+  been found to be a person in the last PASS_HOURS. A program that changes its address or its
+  browser's name for a new allowance must solve the challenge again each time. The search by
+  meaning asks for no pass, so the tool's main use never waits for one.
 """
 
 from __future__ import annotations
@@ -50,6 +55,10 @@ ALLOWANCE = {EMBED: 200, CHECK: 10, REFRESH: 10, REGISTER: 3}
 # One address holds the allowances of at most this many visitors: a campus behind one address, or
 # one person who changes the name of the browser.
 SHARED = 25
+# What a visitor may do only once found to be a person, when the copy asks (Limits.needs_pass),
+# and for how long a pass holds.
+FOR_PEOPLE = (AI, CHECK, REFRESH, REGISTER)
+PASS_HOURS = 24
 VISITOR, ADDRESS = "visitor", "address"  # whom a count is kept for
 # The calls to a model that the public copy makes, and what each one counts against.
 KINDS = {"embed_query": EMBED, "rerank": AI, "compare": AI}
@@ -119,12 +128,15 @@ def press_key(idea: str, button: str) -> str:
 
 
 class Limits:
-    """The switches and the allowances of the public copy, in PostgreSQL. A short connection
-    each; when the database cannot answer, nothing is allowed."""
+    """The switches, the allowances and the passes of the public copy, in PostgreSQL. A short
+    connection each; when the database cannot answer, nothing is allowed. With `needs_pass`,
+    what FOR_PEOPLE names waits for the visitor's pass."""
 
-    def __init__(self, conninfo: Callable[[], str], ai_per_visitor: int) -> None:
+    def __init__(self, conninfo: Callable[[], str], ai_per_visitor: int,
+                 needs_pass: bool = False) -> None:  # fmt: skip
         self._conninfo = conninfo
         self.allowance = {AI: ai_per_visitor, **ALLOWANCE}
+        self.needs_pass = needs_pass
 
     def on(self, name: str) -> bool:
         """Whether a part is turned on; off when the database cannot say."""
@@ -149,6 +161,8 @@ class Limits:
             return False
 
     def _take(self, conn: psycopg.Connection, kind: str, who: Visitor) -> bool:
+        if kind in FOR_PEOPLE and not self._passed(conn, who):
+            return False  # each place asks for the pass first; this holds when one forgets
         most = self.allowance[kind]
         for scope, client, limit in ((VISITOR, who.key, most),
                                      (ADDRESS, who.address, most * SHARED)):  # fmt: skip
@@ -163,6 +177,39 @@ class Limits:
                 conn.rollback()  # neither count moves, nor a press counted with them
                 return False
         return True
+
+    def passed(self, who: Visitor | None) -> bool:
+        """Whether the visitor may do what FOR_PEOPLE names: always when the copy asks for no
+        pass; else when Turnstile found them to be a person in the last PASS_HOURS. Not when
+        the database cannot say."""
+        if not self.needs_pass:
+            return True
+        if who is None:
+            return False
+        try:
+            with psycopg.connect(self._conninfo(), connect_timeout=5) as conn:
+                return self._passed(conn, who)
+        except psycopg.Error:
+            return False
+
+    def _passed(self, conn: psycopg.Connection, who: Visitor) -> bool:
+        if not self.needs_pass:
+            return True
+        row = conn.execute(
+            "SELECT 1 FROM visitor_passes WHERE client = %s "
+            "AND passed_at > now() - make_interval(hours => %s)",
+            (who.key, PASS_HOURS),
+        ).fetchone()
+        return row is not None
+
+    def keep_pass(self, who: Visitor) -> None:
+        """Keep that Turnstile found the visitor to be a person, from now."""
+        with psycopg.connect(self._conninfo(), connect_timeout=5) as conn:
+            conn.execute(
+                "INSERT INTO visitor_passes (client) VALUES (%s) "
+                "ON CONFLICT (client) DO UPDATE SET passed_at = now()",
+                (who.key,),
+            )
 
     def press(self, who: Visitor | None, key: str) -> bool:
         """Count a press of a button of Gemini (press_key) once, and say whether it is allowed. A

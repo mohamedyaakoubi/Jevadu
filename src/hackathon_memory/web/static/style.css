@@ -602,6 +602,19 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
    warning, so that a rehearsal is never taken for the register. */
 .hm-rehearsal { margin: 0; padding: 0.5rem 1rem; text-align: center; background: var(--tblr-warning-lt, #fff3cd); color: var(--tblr-body-color); border-bottom: 2px solid var(--tblr-warning); }
 
+/* Cloudflare's Turnstile on the public copy (web/turnstile.py): a corner of the page that stays
+   empty, its widget unseen, unless Cloudflare asks for a click or its check cannot run. The
+   widget is never in a hidden box: Turnstile itself decides when it shows. */
+.hm-person { position: fixed; right: 1rem; bottom: 1rem; z-index: 1050; max-width: min(22rem, calc(100vw - 2rem)); }
+.hm-person.shown {
+  padding: 0.75rem 2.25rem 0.75rem 0.75rem; background: var(--tblr-bg-surface); color: var(--tblr-body-color);
+  border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); box-shadow: var(--tblr-shadow-dropdown);
+}
+.hm-person-words { margin: 0; font-size: 0.8125rem; line-height: 1.45; }
+.hm-person:not(.shown) .hm-person-words { display: none; }
+.hm-person.shown .hm-person-words { margin-bottom: 0.5rem; }
+.hm-person-close { position: absolute; top: 0.25rem; right: 0.25rem; }
+
 /* A card read again (design 7.3, S2): the line under its links, with a small turning ring while
    the reading runs; a full ring that stands still when the computer asks for less motion. */
 .hm-reading { display: inline-block; width: 0.875rem; height: 0.875rem; margin-right: 0.25rem; vertical-align: -0.125rem; border-radius: 50%; border: 2px solid var(--tblr-primary); border-right-color: transparent; animation: hm-turn 0.9s linear infinite; }

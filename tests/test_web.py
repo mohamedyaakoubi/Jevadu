@@ -2305,13 +2305,14 @@ def served(chromium, client, before_compare=lambda: None, **context):  # noqa: A
             before_compare()
         headers = {k: v for k, v in route.request.headers.items() if k.lower().startswith("hx-")}
         address = parts.path + (f"?{parts.query}" if parts.query else "")
-        if route.request.method == "POST":  # the register's form
+        if route.request.method == "POST":  # a form: the register's, or a token of Turnstile
             headers["content-type"] = route.request.headers.get("content-type", "")
             got = client.post(address, content=route.request.post_data_buffer, headers=headers)
         else:
             got = client.get(address, headers=headers)
+        kind = got.headers.get("content-type")  # an answer of 204 has none
         route.fulfill(status=got.status_code, body=got.content,
-                      headers={"content-type": got.headers["content-type"]})  # fmt: skip
+                      headers={"content-type": kind} if kind else {})  # fmt: skip
 
     page.route(lambda url: url.startswith("http://site.test/"), answer)
     return page

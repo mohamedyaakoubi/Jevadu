@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     # How many times one visitor of the public copy may ask Gemini, one time only (design
     # 12.5): 30 dollars pay about 300 visitors who use all 12.
     public_ai_per_visitor: int = Field(12, ge=0, json_schema_extra=_PUBLIC)
+    # Cloudflare's Turnstile on the public copy (web/turnstile.py): the site key, which every
+    # page that shows the widget carries, and the secret that spends its tokens. With both set,
+    # a visitor confirms being a person before asking Gemini, checking, reading again or
+    # registering.
+    turnstile_site_key: str = Field("", json_schema_extra=_PUBLIC)
+    turnstile_secret_key: SecretStr = SecretStr("")
     cloudflare_api_token: SecretStr = SecretStr("")
     cloudflare_account_id: str = Field("", json_schema_extra=_PUBLIC)
     cloudflare_tunnel_token: SecretStr = SecretStr("")

@@ -103,6 +103,15 @@
   </div>
 </div>
 {% include "_tips.html" %}
+{% if person_check %}
+{# Cloudflare's Turnstile on the public copy (web/turnstile.py): the page's script runs it here.
+   Nothing shows unless Cloudflare asks for a click, or its check cannot run. #}
+<aside class="hm-person" id="person-check" data-sitekey="{{ person_check }}" aria-live="polite">
+  <p class="hm-person-words"></p>
+  <div class="hm-person-widget"></div>
+  <button type="button" class="btn btn-sm btn-icon hm-person-close" aria-label="Close this note" hidden>&times;</button>
+</aside>
+{% endif %}
 <dialog class="viewer" id="viewer" aria-labelledby="viewer-title">
   <div class="viewer-bar">
     <div class="viewer-steps">

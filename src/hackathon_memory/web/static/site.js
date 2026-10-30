@@ -1030,8 +1030,9 @@
   });
   // An answer of 400, 404 or 503 says in plain words what happened, and so does an answer of 500
   // in the window of a project or a check: it takes the place of the waiting state. A 503 of the
-  // comparison carries the words of the failure for each result. An answer of 429 comes from the
-  // public copy only, when a visitor's allowance is used, and says so wherever it was asked.
+  // comparison carries the words of the failure for each result. Answers of 429 and 403 come from
+  // the public copy only, when a visitor's allowance is used, or before Cloudflare found them to
+  // be a person, and say so wherever it was asked.
   document.addEventListener("htmx:beforeSwap", function (event) {
     // htmx 2 names the target of the swap as `elt` here; the element that asked is in the
     // request's config (htmx 2.0.11, seen in the browser on 18 October 2026).
@@ -1046,7 +1047,7 @@
     var inPlace = inWindow || (target && target.id === "workspace");
     if ((shown && (status === 503 || status === 400)) ||
         (inPlace && (status === 400 || status === 404 || status === 503)) ||
-        (inWindow && status === 500) || status === 429) {
+        (inWindow && status === 500) || status === 429 || status === 403) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;
     }
@@ -1155,7 +1156,83 @@
     }
   });
 
+  // ------------------------------------------------- Cloudflare's Turnstile on the public copy
+  // Before the public copy uses Gemini, GitHub or Hedera for a visitor, Cloudflare's Turnstile
+  // says whether they are a person (web/turnstile.py). Its widget shows itself only when it needs
+  // a click; its token goes to the server at once, which spends it and keeps the pass for a day.
+  // A token is spent once: after a refusal the widget makes a new one, PERSON_TRIES in all.
+  var PERSON_ASKS = "Before it uses Gemini, GitHub or Hedera for you, this public copy asks " +
+    "Cloudflare whether you are a person. Tick the box below once.";
+  var PERSON_FAILED = "Cloudflare could not confirm that you are a person, so this public copy " +
+    "does not use Gemini, GitHub or Hedera for you. The search works without it. Reload the " +
+    "page to try again.";
+  var PERSON_BLOCKED = "Cloudflare's check could not load; an extension of the browser may " +
+    "block it. Until it runs, this public copy does not use Gemini, GitHub or Hedera for you. " +
+    "The search works without it.";
+  var PERSON_UNSUPPORTED = "This browser cannot run Cloudflare's check, so this public copy " +
+    "does not use Gemini, GitHub or Hedera for you. The search works without it.";
+  var PERSON_TRIES = 3;
+  var PERSON_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js" +
+    "?render=explicit&onload=jevaduPerson";
+
+  function checkPerson() {
+    var box = $("person-check");
+    if (!box) return;
+    var widget = null;
+    var tries = 0;
+    function say(words, closable) {
+      box.querySelector(".hm-person-words").textContent = words;
+      box.querySelector(".hm-person-close").hidden = !closable;
+      box.hidden = false;
+      box.classList.add("shown");
+    }
+    function sent(token) {
+      tries += 1;
+      fetch("/person-check", { method: "POST", body: new URLSearchParams({ token: token }) })
+        .then(function (answer) {
+          if (answer.status !== 204) throw new Error("refused: " + answer.status);
+          window.turnstile.remove(widget);
+          box.remove();
+        })
+        .catch(function () {
+          if (tries >= PERSON_TRIES) { say(PERSON_FAILED, true); return; }
+          window.turnstile.reset(widget); // a spent token is never sent again: a new one comes
+        });
+    }
+    window.jevaduPerson = function () {
+      try {
+        widget = window.turnstile.render(box.querySelector(".hm-person-widget"), {
+          sitekey: box.getAttribute("data-sitekey"),
+          action: "visitor",
+          appearance: "interaction-only",
+          theme: document.documentElement.getAttribute("data-bs-theme") === "dark" ? "dark" : "light",
+          callback: sent,
+          "before-interactive-callback": function () {
+            // The windows are modal: the box behind an open one could not be clicked.
+            closeViewer();
+            var sheet = $("sheet");
+            if (sheet && sheet.open) sheet.close();
+            say(PERSON_ASKS, false);
+          },
+          "error-callback": function () { say(PERSON_FAILED, true); },
+          "unsupported-callback": function () { say(PERSON_UNSUPPORTED, true); }
+        });
+      } catch (error) {
+        say(PERSON_FAILED, true);
+      }
+    };
+    box.querySelector(".hm-person-close").addEventListener("click", function () {
+      box.hidden = true;
+    });
+    var script = document.createElement("script");
+    script.src = PERSON_SCRIPT;
+    script.async = true;
+    script.onerror = function () { say(PERSON_BLOCKED, true); };
+    document.head.appendChild(script);
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
+    checkPerson();
     applyTheme(chosenTheme());
     var themes = document.querySelector("[data-theme-switch]");
     if (themes) themes.hidden = false; // it needs this script, so it is hidden without it
