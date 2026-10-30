@@ -5,6 +5,8 @@ and the running tool cannot be emptied by one busy day:
 
 * "test" has one cap for all its calls.
 * "prod" has a cap for all its calls and a cap for one day (the day is counted in UTC).
+* "public", the public copy of the website (design 12.5), has the same two caps, of its own: a
+  busy day of strangers cannot spend more than a day's share, nor the money of the tool.
 
 The guard looks at the worst case of the next call: its prompt at the input price, and the most
 output the call may produce at the output price. So the money that is really spent stays under the
@@ -67,6 +69,13 @@ def from_settings(settings: Settings, environment: str | None = None) -> Budget:
             "prod",
             total_usd=settings.llm_budget_prod_usd,
             per_day_usd=settings.llm_budget_prod_per_day_usd,
+            warn_percent=settings.llm_budget_warn_percent,
+        )
+    if name == "public":
+        return Budget(
+            "public",
+            total_usd=settings.llm_budget_public_usd,
+            per_day_usd=settings.llm_budget_public_per_day_usd,
             warn_percent=settings.llm_budget_warn_percent,
         )
     return Budget(

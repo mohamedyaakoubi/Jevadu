@@ -107,10 +107,13 @@ def test_the_budgets_come_from_the_settings() -> None:
         llm_budget_test_usd=3.0,
         llm_budget_prod_usd=40.0,
         llm_budget_prod_per_day_usd=4.0,
+        llm_budget_public_usd=20.0,
+        llm_budget_public_per_day_usd=2.0,
         llm_budget_warn_percent=70,
     )
     assert budgets.from_settings(settings) == Budget("test", 3.0, None, 70)  # test is the default
     assert budgets.from_settings(settings, "prod") == Budget("prod", 40.0, 4.0, 70)
+    assert budgets.from_settings(settings, "public") == Budget("public", 20.0, 2.0, 70)
     in_prod = Settings(_env_file=None, llm_environment="PROD")
     assert budgets.from_settings(in_prod).environment == "prod"
 
@@ -121,6 +124,16 @@ def test_the_default_budgets_are_small() -> None:
     assert budgets.from_settings(settings).total_usd == 15.0
     prod = budgets.from_settings(settings, "prod")
     assert (prod.total_usd, prod.per_day_usd) == (30.0, 5.0)
+    public = budgets.from_settings(settings, "public")  # the public copy's own (design 12.5)
+    assert (public.total_usd, public.per_day_usd) == (30.0, 5.0)
+
+
+def test_the_public_copy_never_spends_the_budget_of_the_tool() -> None:
+    store = MemoryStore()
+    spend(store, 29.9, environment="public")
+    public = budgets.status(Budget("public", 30.0, 5.0), store, NOW, next_call_usd=0.5)
+    assert public.state == "stop"
+    assert budgets.status(Budget("prod", 30.0, 5.0), store, NOW, next_call_usd=0.5).state == "ok"
 
 
 @pytest.mark.parametrize(

@@ -21,7 +21,7 @@
 <button type="button" class="info" popovertarget="tip-{{ key }}" data-tip="tip-{{ key }}" aria-label="What {{ label }} means"><span aria-hidden="true">i</span></button>
 {%- endmacro %}
 
-{% macro result(card, summary, line, snippet, rank, query, compared) -%}
+{% macro result(card, summary, line, snippet, rank, query, compared, kept=none) -%}
 {% set pid = card.hit.project_id %}
 {% set link = "/?" ~ (query ~ "&" if query else "") ~ "open=" ~ pid %}
 <li class="result" id="result-{{ pid }}" data-project="{{ pid }}">
@@ -39,7 +39,9 @@
       <a class="hm-mark-link" href="{{ link }}" data-open-viewer="{{ pid }}" data-scroll-to="{{ 'ledger' if part == 'proof' else 'life' }}-{{ pid }}" hx-get="/project/{{ pid }}/panel{% if query %}?{{ query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ mark }}<span class="visually-hidden">: how it was judged</span></a>
       {%- endfor %}
     </div>
-    {% if compared %}
+    {% if kept %}
+    <div class="hm-compare compare" id="compare-{{ pid }}" data-project="{{ pid }}">{% with one = kept %}{% include "_compare_one.html" %}{% endwith %}</div>
+    {% elif compared %}
     <div class="hm-compare compare waiting" id="compare-{{ pid }}" aria-busy="true">
       <span class="visually-hidden">Gemini is comparing this project with your idea.</span>
       <span class="placeholder col-11"></span><span class="placeholder col-8"></span><span class="placeholder col-10"></span>
@@ -155,7 +157,7 @@
       {% for line in story.lines %}
         <tr>
           <th scope="row">{{ SERVICE_NAMES[line.service] }}</th>
-          <td>{% if not line.compared %}<span class="text-secondary">not compared</span>{% elif line.words %}{{ said_words(line, listed=true, source=source) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
+          <td>{% if not line.compared %}<span class="text-secondary">not checked</span>{{ info("hbar", "“not checked”") }}{% elif line.words %}{{ said_words(line, listed=true, source=source) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
           {% if story.code_read %}<td>{% if line.in_code %}yes{% elif line.set_up %}EVM setup{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
           <td class="text-end">{{ "{:,}".format(line.count) }}{% if line.from_contracts %}<span class="hm-from-contracts">+ {{ "{:,}".format(line.from_contracts) }} from its contracts</span>{% endif %}</td>
         </tr>

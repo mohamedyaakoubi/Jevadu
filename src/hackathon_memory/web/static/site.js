@@ -525,10 +525,65 @@
     if (kept) kept.setAttribute("visibility", "hidden");
     if (!dot) { graph.removeAttribute("data-kept"); return; }
     graph.setAttribute("data-kept", dot.getAttribute("data-graph-id"));
+    graph.hmKeptAt = clickOrder(graph);
     dot.classList.add("is-kept");
     strongLines(graph, dot).forEach(function (line) { line.classList.add("is-kept"); });
     var other = joinNearest(graph, dot, kept);
     if (other) other.classList.add("is-kept-near");
+  }
+  // A right click keeps a dot lit with its closest project and their line, for as many dots as
+  // one likes, kept in the order of the clicks; a right click on it again lets it go (30 October
+  // 2026). Each click on an empty place lets go of the latest pair, kept by a click or by a right
+  // click, one at each click (30 October 2026, evening: it let them all go at once).
+  function clickOrder(graph) {
+    graph.hmClicks = (graph.hmClicks || 0) + 1;
+    return graph.hmClicks;
+  }
+  function pinnedOf(graph) {
+    return (graph.getAttribute("data-pinned") || "").split(" ").filter(Boolean);
+  }
+  function drawPins(graph) {
+    graph.querySelectorAll(".is-pinned, .is-pinned-near").forEach(function (one) {
+      one.classList.remove("is-pinned", "is-pinned-near");
+    });
+    var lines = graph.querySelector(".hm-graph-pins");
+    if (lines) lines.replaceChildren();
+    pinnedOf(graph).forEach(function (id) {
+      var dot = dotOf(graph, id);
+      if (!dot) return;
+      dot.classList.add("is-pinned");
+      strongLines(graph, dot).forEach(function (line) { line.classList.add("is-pinned"); });
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      if (lines) lines.appendChild(line);
+      var other = joinNearest(graph, dot, line);
+      if (other) other.classList.add("is-pinned-near");
+    });
+  }
+  function pin(graph, ids) {
+    if (ids.length) graph.setAttribute("data-pinned", ids.join(" "));
+    else graph.removeAttribute("data-pinned");
+    drawPins(graph);
+  }
+  document.addEventListener("contextmenu", function (event) {
+    var dot = graphDot(event.target);
+    if (!dot) return;
+    event.preventDefault(); // the menu of the browser has nothing to do on a dot
+    var graph = graphOf(dot), id = dot.getAttribute("data-graph-id"), ids = pinnedOf(graph);
+    if (ids.indexOf(id) >= 0) {
+      pin(graph, ids.filter(function (one) { return one !== id; }));
+      return;
+    }
+    graph.hmPinnedAt = graph.hmPinnedAt || {};
+    graph.hmPinnedAt[id] = clickOrder(graph);
+    pin(graph, ids.concat([id]));
+  });
+  function letGoOfTheLatest(graph) {
+    var ids = pinnedOf(graph), last = ids[ids.length - 1];
+    var pinnedAt = last ? (graph.hmPinnedAt || {})[last] || 0 : -1;
+    var keptAt = graph.getAttribute("data-kept") ? graph.hmKeptAt || 0 : -1;
+    if (keptAt < 0 && pinnedAt < 0) return;
+    if (keptAt >= pinnedAt) keepDot(graph, null);
+    else pin(graph, ids.slice(0, -1));
   }
   function showGraphTip(graph, dot) {
     var tip = graph.querySelector(".hm-graph-tip");
@@ -616,11 +671,11 @@
     var dot = link && document.querySelector('.hm-dot[data-graph-id="' + link.getAttribute("data-graph-link") + '"]');
     if (dot && event.isTrusted) keepDot(graphOf(dot), dot);
   });
-  document.addEventListener("click", function (event) { // an empty place lets go of the kept dot
+  document.addEventListener("click", function (event) { // an empty place lets go of the latest
     var svg = event.target.closest && event.target.closest(".hm-graph-svg");
     if (!svg) return;
     if (svg.hmDragged) { svg.hmDragged = false; return; } // the click that ends a drag
-    if (!graphDot(event.target) && !graphName(event.target)) keepDot(graphOf(svg), null);
+    if (!graphDot(event.target) && !graphName(event.target)) letGoOfTheLatest(graphOf(svg));
   });
 
   // Ctrl and the wheel, or the pinch of a touchpad, which the browser sends the same way, zoom the
@@ -920,6 +975,29 @@
       }, 12000);
     }
   });
+  // A comparison asked in a project's window shows on the project's card in the list too, at
+  // once (30 October 2026: the card kept no trace of it until the list was asked again).
+  function comparedOnCards() {
+    document.querySelectorAll(".compare-place[id^='one-compare-']").forEach(function (place) {
+      var text = place.querySelector(".hm-compare-text");
+      var pid = place.id.slice("one-compare-".length);
+      var card = document.querySelector("#result-" + pid + " .hm-card");
+      if (!text || !card) return;
+      var slot = $("compare-" + pid);
+      if (!slot) {
+        slot = document.createElement("div");
+        slot.id = "compare-" + pid;
+        slot.className = "hm-compare compare";
+        card.appendChild(slot);
+      }
+      slot.classList.remove("waiting");
+      slot.removeAttribute("aria-busy");
+      slot.innerHTML = text.outerHTML;
+    });
+  }
+  // After the settle, not the swap: htmx keeps the old attributes of an element with the same id
+  // until it settles, so at the swap the place still has the class of the button's box.
+  document.addEventListener("htmx:afterSettle", comparedOnCards);
   document.addEventListener("htmx:afterSwap", function (event) {
     var target = event.detail.target;
     if (target && target.id === "viewer-body") {
@@ -1007,8 +1085,28 @@
   });
   // An answer of 400, 404 or 503 says in plain words what happened, and so does an answer of 500
   // in the window of a project or a check: it takes the place of the waiting state. A 503 of the
-  // comparison carries the words of the failure for each result.
+  // comparison carries the words of the failure for each result. Answers of 429 and 403 come from
+  // the public copy only, when a visitor's allowance is used, or before Cloudflare found them to
+  // be a person, and say so wherever it was asked.
+  // Vercel's firewall may answer a request of the page with its own check that the visitor uses a
+  // browser: an answer of 429 with the header X-Vercel-Mitigated: challenge (seen on 30 October
+  // 2026). That page cannot work inside a part of this one, so the whole page is asked again,
+  // where the browser passes the check by itself; once a minute at most, so it never loops.
+  function checkpoint() {
+    var session = store("sessionStorage");
+    try {
+      var last = Number(session && session.getItem("hm-checkpoint")) || 0;
+      if (Date.now() - last < 60000) return;
+      if (session) session.setItem("hm-checkpoint", String(Date.now()));
+    } catch (error) { /* nothing is kept: the page is asked again all the same */ }
+    window.location.reload();
+  }
   document.addEventListener("htmx:beforeSwap", function (event) {
+    if (event.detail.xhr.getResponseHeader("x-vercel-mitigated") === "challenge") {
+      event.detail.shouldSwap = false;
+      checkpoint();
+      return;
+    }
     // htmx 2 names the target of the swap as `elt` here; the element that asked is in the
     // request's config (htmx 2.0.11, seen in the browser on 18 October 2026).
     var config = event.detail.requestConfig;
@@ -1022,7 +1120,7 @@
     var inPlace = inWindow || (target && target.id === "workspace");
     if ((shown && (status === 503 || status === 400)) ||
         (inPlace && (status === 400 || status === 404 || status === 503)) ||
-        (inWindow && status === 500)) {
+        (inWindow && status === 500) || status === 429 || status === 403) {
       event.detail.shouldSwap = true;
       event.detail.isError = false;
     }
@@ -1131,7 +1229,83 @@
     }
   });
 
+  // ------------------------------------------------- Cloudflare's Turnstile on the public copy
+  // Before the public copy uses Gemini, GitHub or Hedera for a visitor, Cloudflare's Turnstile
+  // says whether they are a person (web/turnstile.py). Its widget shows itself only when it needs
+  // a click; its token goes to the server at once, which spends it and keeps the pass for a day.
+  // A token is spent once: after a refusal the widget makes a new one, PERSON_TRIES in all.
+  var PERSON_ASKS = "Before it uses Gemini, GitHub or Hedera for you, this public copy asks " +
+    "Cloudflare whether you are a person. Tick the box below once.";
+  var PERSON_FAILED = "Cloudflare could not confirm that you are a person, so this public copy " +
+    "does not use Gemini, GitHub or Hedera for you. The search works without it. Reload the " +
+    "page to try again.";
+  var PERSON_BLOCKED = "Cloudflare's check could not load; an extension of the browser may " +
+    "block it. Until it runs, this public copy does not use Gemini, GitHub or Hedera for you. " +
+    "The search works without it.";
+  var PERSON_UNSUPPORTED = "This browser cannot run Cloudflare's check, so this public copy " +
+    "does not use Gemini, GitHub or Hedera for you. The search works without it.";
+  var PERSON_TRIES = 3;
+  var PERSON_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js" +
+    "?render=explicit&onload=jevaduPerson";
+
+  function checkPerson() {
+    var box = $("person-check");
+    if (!box) return;
+    var widget = null;
+    var tries = 0;
+    function say(words, closable) {
+      box.querySelector(".hm-person-words").textContent = words;
+      box.querySelector(".hm-person-close").hidden = !closable;
+      box.hidden = false;
+      box.classList.add("shown");
+    }
+    function sent(token) {
+      tries += 1;
+      fetch("/person-check", { method: "POST", body: new URLSearchParams({ token: token }) })
+        .then(function (answer) {
+          if (answer.status !== 204) throw new Error("refused: " + answer.status);
+          window.turnstile.remove(widget);
+          box.remove();
+        })
+        .catch(function () {
+          if (tries >= PERSON_TRIES) { say(PERSON_FAILED, true); return; }
+          window.turnstile.reset(widget); // a spent token is never sent again: a new one comes
+        });
+    }
+    window.jevaduPerson = function () {
+      try {
+        widget = window.turnstile.render(box.querySelector(".hm-person-widget"), {
+          sitekey: box.getAttribute("data-sitekey"),
+          action: "visitor",
+          appearance: "interaction-only",
+          theme: document.documentElement.getAttribute("data-bs-theme") === "dark" ? "dark" : "light",
+          callback: sent,
+          "before-interactive-callback": function () {
+            // The windows are modal: the box behind an open one could not be clicked.
+            closeViewer();
+            var sheet = $("sheet");
+            if (sheet && sheet.open) sheet.close();
+            say(PERSON_ASKS, false);
+          },
+          "error-callback": function () { say(PERSON_FAILED, true); },
+          "unsupported-callback": function () { say(PERSON_UNSUPPORTED, true); }
+        });
+      } catch (error) {
+        say(PERSON_FAILED, true);
+      }
+    };
+    box.querySelector(".hm-person-close").addEventListener("click", function () {
+      box.hidden = true;
+    });
+    var script = document.createElement("script");
+    script.src = PERSON_SCRIPT;
+    script.async = true;
+    script.onerror = function () { say(PERSON_BLOCKED, true); };
+    document.head.appendChild(script);
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
+    checkPerson();
     applyTheme(chosenTheme());
     var themes = document.querySelector("[data-theme-switch]");
     if (themes) themes.hidden = false; // it needs this script, so it is hidden without it

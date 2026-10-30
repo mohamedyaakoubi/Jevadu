@@ -5,21 +5,26 @@ google-genai 2.29.0 the client takes `enterprise=True`, and `vertexai=True` is t
 The settings are passed in on purpose: pydantic-settings does not put the values of .env into the
 environment, so the library's own reading of GOOGLE_CLOUD_PROJECT would not see them.
 
-Signing in: if GOOGLE_APPLICATION_CREDENTIALS names a key file, it is used. If not, the library
-uses Application Default Credentials, which `gcloud auth application-default login` sets up.
+Signing in, first found: on the public copy's host, Workload Identity Federation with the token
+that Vercel gives each request, and no key (GOOGLE_FEDERATION_AUDIENCE and _ACCOUNT); the key
+file named by GOOGLE_APPLICATION_CREDENTIALS; else Application Default Credentials, which
+`gcloud auth login --update-adc` sets up (python -m hackathon_memory.llm.account switch).
 """
 
 from __future__ import annotations
 
+import contextvars
 import json
+import os
 import time
 from collections.abc import Callable
 from typing import TypeVar
 
 import httpx
 from google import genai
+from google.auth import identity_pool
 from google.auth.credentials import Credentials
-from google.auth.exceptions import GoogleAuthError
+from google.auth.exceptions import GoogleAuthError, RefreshError
 from google.genai import types
 from google.oauth2 import credentials as user_credentials
 from google.oauth2 import service_account
@@ -84,6 +89,60 @@ def load_key_file(path: str) -> Credentials:
     )
 
 
+# The token that Vercel gives each request of a function, in the header x-vercel-oidc-token
+# (vercel.com/docs/oidc, read 29 October 2026): the website keeps it here for the request.
+vercel_token: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "vercel_token", default=None
+)
+STS_URL = "https://sts.googleapis.com/v1/token"
+JWT = "urn:ietf:params:oauth:token-type:jwt"
+
+
+class VercelToken(identity_pool.SubjectTokenSupplier):
+    """The token of the request being answered, else VERCEL_OIDC_TOKEN (a build, or `vercel env
+    pull` on a laptop). google-auth 2.61.0 asks for it only when it needs a new access token."""
+
+    def get_subject_token(self, context: object, request: object) -> str:
+        token = vercel_token.get() or os.environ.get("VERCEL_OIDC_TOKEN", "")
+        if not token:
+            raise RefreshError("No token of Vercel was given with this request.")
+        return token
+
+
+def project_of(settings: Settings) -> str:
+    """The Google Cloud project that the models are asked and billed in."""
+    return settings.google_cloud_project.get_secret_value().strip()
+
+
+def federated(audience: str, account: str) -> Credentials:
+    """A sign-in with no key: Google's Security Token Service takes the token of Vercel for the
+    pool's provider (`audience`) and lets it act as the service account `account`, which may only
+    call Vertex AI (vercel.com/docs/oidc/gcp, read 29 October 2026)."""
+    return identity_pool.Credentials(
+        audience=audience,
+        subject_token_type=JWT,
+        token_url=STS_URL,
+        subject_token_supplier=VercelToken(),
+        service_account_impersonation_url=(
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/"
+            f"{account}:generateAccessToken"
+        ),
+        scopes=SCOPES,
+    )
+
+
+def credentials_of(settings: Settings) -> Credentials | None:
+    """The sign-in of the settings: on the host, the federation of GOOGLE_FEDERATION_AUDIENCE and
+    GOOGLE_FEDERATION_ACCOUNT; else the key file named by GOOGLE_APPLICATION_CREDENTIALS; else
+    None, and then the library uses Application Default Credentials."""
+    audience = settings.google_federation_audience.strip()
+    account = settings.google_federation_account.strip()
+    if audience and account:
+        return federated(audience, account)
+    key_file = settings.google_application_credentials.get_secret_value().strip()
+    return load_key_file(key_file) if key_file else None
+
+
 def default_http_options(
     *,
     attempts: int = 4,
@@ -117,16 +176,15 @@ def make_client(
     credentials: Credentials | None = None,
     http_options: types.HttpOptions | None = None,
 ) -> genai.Client:
-    project = settings.google_cloud_project.get_secret_value().strip()
+    project = project_of(settings)
     location = settings.google_cloud_location.strip()
     if not project or not location:
         raise GoogleSetupError(
             "GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION must both be set in .env "
             "(design 15, step 3)."
         )
-    key_file = settings.google_application_credentials.get_secret_value().strip()
-    if credentials is None and key_file:
-        credentials = load_key_file(key_file)
+    if credentials is None:
+        credentials = credentials_of(settings)
     try:
         return genai.Client(
             enterprise=True,

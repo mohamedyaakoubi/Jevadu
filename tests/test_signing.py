@@ -9,6 +9,7 @@ import base64
 import pytest
 from hiero_sdk_python.crypto.private_key import PrivateKey
 from hiero_sdk_python.hapi.services.basic_types_pb2 import SignatureMap, SignaturePair
+from hiero_sdk_python.utils.crypto_utils import keccak256
 
 from hackathon_memory.hedera import registry
 from hackathon_memory.hedera.register import RegisterError
@@ -24,6 +25,7 @@ from hackathon_memory.hedera.signing import (
     hedera_message,
     raw_signature,
     signed_text,
+    signer_address,
 )
 
 EVENT, CODE, COMMIT = "ethglobal.com/ethonline2026", "ab" * 32, "cd" * 20
@@ -69,7 +71,7 @@ def test_a_metamask_signature_is_checked_for_an_ecdsa_account_only() -> None:
     signature = raw_signature(ETHEREUM, answer)
     assert len(signature) == 65
     check(ETHEREUM, TEXT, signature, key_of(private))
-    with pytest.raises(SignatureError, match="MetaMask can sign only for an account with an ECDSA"):
+    with pytest.raises(SignatureError, match="An EVM wallet can sign only for an account with an"):
         check(ETHEREUM, TEXT, signature, key_of(PrivateKey.generate_ed25519()))
     # its record keeps the 65 bytes, and reads back (base64 with one "=" at the end)
     payload = registry.signed_record(EVENT, CODE, COMMIT, "0.0.7001", ETHEREUM, signature)
@@ -113,3 +115,51 @@ def test_a_signed_record_is_version_3_and_can_be_checked_again_from_the_ledger()
     assert unsigned is not None and unsigned.signer is None
     with pytest.raises(RegisterError, match="not signed"):
         unsigned.check_signature(key_of(private))
+
+
+def address_of(private: PrivateKey) -> str:
+    return "0x" + keccak256(private.public_key().to_bytes_ecdsa(compressed=False)[1:])[-20:].hex()
+
+
+def test_the_signer_of_an_evm_signature_is_found_as_ecrecover_finds_it() -> None:
+    """The example of web3.js's documentation for accounts.sign("Some data"), whose key gives the
+    documented address and whose hash is the documented one; then a key of the SDK, for which
+    exactly one of the two values of v gives its address."""
+    known = PrivateKey.from_bytes_ecdsa(
+        bytes.fromhex("4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318")
+    )
+    assert address_of(known) == "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23"
+    assert keccak256(ethereum_message("Some data")).hex() == (
+        "1da44b586eb0729ff70a73c326926f6ed5a25f5b056e7f47fbc6e58d86871655")  # fmt: skip
+    documented = bytes.fromhex(
+        "b91467e570a6466aa9e9876cbcd013baba02900b8979d43fe208a4a4f339f5fd"
+        "6007e74cd82e037b800186422fc2da167c747ef045e5d18a5f5d4300f8e1a0291c"
+    )
+    assert signer_address(ethereum_message("Some data"), documented) == address_of(known)
+    private = PrivateKey.generate_ecdsa()
+    raw = private.sign(ethereum_message(TEXT))
+    found = [signer_address(ethereum_message(TEXT), raw + bytes([v])) for v in (27, 28)]
+    assert found.count(address_of(private)) == 1
+    assert signer_address(ethereum_message(TEXT), raw) is None  # no v
+    assert signer_address(ethereum_message(TEXT), raw + bytes([29])) is None
+    assert signer_address(ethereum_message(TEXT), bytes(64) + bytes([27])) is None  # r = s = 0
+
+
+def test_an_account_known_by_its_address_only_is_checked_by_the_signer() -> None:
+    """Test HBAR sent to a 0x address makes an account that the ledger knows by that address,
+    with no key until it pays for a first transaction (30 October 2026: MetaMask could not sign
+    for it). An EVM wallet's signature is then checked by the address that made it."""
+    private = PrivateKey.generate_ecdsa()
+    raw = private.sign(ethereum_message(TEXT))
+    signature = next(raw + bytes([v]) for v in (27, 28)
+                     if signer_address(ethereum_message(TEXT), raw + bytes([v]))
+                     == address_of(private))  # fmt: skip
+    hollow = AccountKey("0.0.7001", "", "", address_of(private))
+    check(ETHEREUM, TEXT, signature, hollow)  # no error
+    with pytest.raises(SignatureError, match="not that of the address of 0.0.7001"):
+        check(ETHEREUM, signed_text(EVENT, CODE, "ef" * 20, "0.0.7001"), signature, hollow)
+    other = PrivateKey.generate_ecdsa().sign(ethereum_message(TEXT))
+    with pytest.raises(SignatureError, match="not that of the address of 0.0.7001"):
+        check(ETHEREUM, TEXT, other + bytes([27]), hollow)
+    with pytest.raises(SignatureError, match="no key yet"):  # a Hedera wallet needs the key
+        check(HEDERA, TEXT, raw, hollow)

@@ -28,12 +28,20 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode
 
+import httpx
 import psycopg
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import escape
 from psycopg.conninfo import make_conninfo
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -69,6 +77,7 @@ from hackathon_memory.hedera.mirror import (
 )
 from hackathon_memory.hedera.register import RegisterError
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
+from hackathon_memory.llm.client import credentials_of, vercel_token
 from hackathon_memory.pipeline import refresh as refresh_step
 from hackathon_memory.pipeline.embed import FAILED_CALLS
 from hackathon_memory.search import closeness, engine, listing, rerank, seen, stand_in
@@ -87,7 +96,9 @@ from hackathon_memory.web import (
     insights,
     references,
     strips,
+    turnstile,
 )
+from hackathon_memory.web import public as public_copy
 from hackathon_memory.web import refresher as refreshing
 
 HERE = Path(__file__).parent
@@ -235,6 +246,8 @@ GOOGLE_AWAY_CHECK = (
     "The most similar past projects cannot be shown just now: Google's embedding service did "
     "not respond. Try again later."
 )
+MEANING_SPENT = "The budget for AI calls is spent, so these are keyword results."
+CHECK_SPENT = "The most similar past projects cannot be shown: the budget for AI calls is spent."
 NO_PAGE_EMBEDDINGS = "The projects have no embeddings yet, so these are keyword results."
 UNKNOWN_SHEET = "Page not found. Close this window."
 NO_SUCH_PAGE = "This page does not exist. The search is on the start page."
@@ -267,6 +280,32 @@ NO_README_TO_SEARCH = (
 NOT_AN_ACCOUNT = "A Hedera account ID looks like 0.0.12345. Leave it empty to register without one."
 # The signature of a team's own wallet (design 9.6, 29 October 2026).
 NOT_SIGNED_RIGHT = "The signature came back incomplete from the wallet. Sign again."
+# The public copy (web/public.py, design 12.5, 29 October 2026).
+PUBLIC_AI_OFF = (
+    "On this public copy of Jevadu, the AI is turned off, so these are keyword results. The search "
+    "by meaning and the AI's order work on the full version, shown in the video."
+)
+PUBLIC_REGISTER_OFF = (
+    "On this public copy of Jevadu, registering on Hedera is paused for now. Everything else of "
+    "the check works."
+)
+PUBLIC_USED = (
+    "This public copy of Jevadu gives each visitor {count} {what}, one time only, and you have "
+    "used {them}{so}. The full version, shown in the video, has no such limit."
+)
+# The public copy with Cloudflare's Turnstile (web/turnstile.py, 30 October 2026).
+PERSON_FIRST = (
+    "Before it uses Gemini, GitHub or Hedera for you, this public copy of Jevadu asks Cloudflare "
+    "whether you are a person. This usually takes a second, with nothing to click; if a box "
+    "appears at the bottom right of the page, tick it. Then try again."
+)
+PUBLIC_WHAT = {
+    public_copy.AI: ("ask of Gemini", "asks of Gemini"),
+    public_copy.EMBED: ("search by meaning", "searches by meaning"),
+    public_copy.CHECK: ("check", "checks"),
+    public_copy.REFRESH: ("reading again", "readings again"),
+    public_copy.REGISTER: ("registration", "registrations"),
+}
 SIGNED_OLD_COMMIT = (
     "A new commit reached the repository after you signed: the record must name the latest one. "
     "Sign again, then register."
@@ -275,8 +314,8 @@ NO_SUCH_SIGNER = (
     "The account {account} is not on the Hedera test network. Sign with an account of it."
 )
 NO_ACCOUNT_FOR_ADDRESS = (
-    "This MetaMask address has no Hedera account on the test network yet. Send it some test "
-    "HBAR from the faucet of portal.hedera.com, which makes the account, then sign again."
+    "This address has no Hedera account on the test network yet. Paste it into the Hedera faucet "
+    "at https://portal.hedera.com/faucet, which makes the account with no sign-in, then sign again."
 )
 CHECK_FIRST = "Check the repository first: only a repository that GitHub shows can be registered."
 NO_LINE = (
@@ -413,6 +452,18 @@ def page_numbers(page: int, pages: int) -> list[int | None]:
     return numbers
 
 
+def used_up(count: int, kind: str, so: str = "") -> str:
+    """The words for a visitor of the public copy whose allowance of `kind` is used, with what
+    follows from it (design 12.5)."""
+    one, many = PUBLIC_WHAT[kind]
+    return PUBLIC_USED.format(
+        count=count,
+        what=one if count == 1 else many,
+        them="it" if count == 1 else "them",
+        so=f", so {so}" if so else "",
+    )
+
+
 def create_app(
     settings: Settings | None = None,
     google: Any = None,
@@ -422,8 +473,11 @@ def create_app(
     mirrors: Mapping[str, Any] | None = None,
     register_writer: Any = None,
     stand_in_client: Any = None,
+    turnstile_client: httpx.Client | None = None,
     refresh_inline: bool = False,
     rehearsal: bool = False,
+    public: bool = False,
+    serverless: bool = False,
 ) -> FastAPI:
     """The website. `google` is the client for the embeddings and `llm` the one for the search
     model; by default each is made, counted by the meter, when it is first needed. The check of
@@ -431,22 +485,160 @@ def create_app(
     are made when first needed, with the promises of collect/github.py. `register_writer` writes
     one record to the register (hedera/registry.py); by default it is made when first needed.
     `stand_in_client` asks the stand-in of the search model (search/stand_in.py); by default it
-    is made, counted by the meter, when it is first needed. `refresh_inline` reads a card again
-    on the thread of its request, for the tests (web/refresher.py). With `rehearsal`, the topic of
-    `settings` is the one for rehearsals, and every page says so (design 9.3)."""
+    is made, counted by the meter, when it is first needed. `turnstile_client` asks Cloudflare
+    whether a visitor of the public copy is a person (web/turnstile.py); by default it is made
+    when first needed. `refresh_inline` reads a card again on the thread of its request, for the
+    tests (web/refresher.py). With `rehearsal`, the topic of `settings` is the one for
+    rehearsals, and every page says so (design 9.3). With `public`, it is
+    the public copy, with the switches and the counts of web/public.py, and the calls it makes are
+    counted against its own budget (design 12.5); with the keys of Turnstile in `settings`, a
+    visitor confirms being a person first. With `serverless`, it runs as functions on a host
+    such as Vercel, where a request may land on any copy and nothing runs between requests: a
+    check and a reading again are done within their request, and no round runs in the
+    background (web/vercel_app.py)."""
     settings = settings or Settings()
+    if public:
+        settings = settings.model_copy(update={"llm_environment": "public"})
     app = FastAPI(title="Jevadu", docs_url=None, redoc_url=None, openapi_url=None)
     # The graph of the whole collection is a page of about 0.8 MB, a tenth of it compressed. Level
     # 6 is zlib's own default: almost as small as 9, and faster.
     app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
     app.mount("/static", Revalidated(directory=HERE / "static"), name="static")
+    asks_person = bool(settings.turnstile_site_key
+                       and settings.turnstile_secret_key.get_secret_value())  # fmt: skip
+    limits = (public_copy.Limits(lambda: database(), settings.public_ai_per_visitor,
+                                 needs_pass=asks_person)
+              if public else None)  # fmt: skip
+    gate = limits.admit if limits is not None else None  # the meter asks it before each call
+    salt = settings.public_salt.get_secret_value()
+
+    @app.middleware("http")
+    async def unlisted(request: Request, call_next: Callable) -> Any:
+        """No page is indexed (design 12.5); on the public copy, each request knows its visitor;
+        on Vercel, the token that signs in to Google with no key goes with it (llm/client.py)."""
+        token = None
+        if limits is not None and public_copy.plain_http(request.headers):
+            return RedirectResponse(str(request.url.replace(scheme="https")), 301)
+        if limits is not None:
+            peer = request.client.host if request.client else None
+            token = public_copy.visitor.set(
+                public_copy.visitor_of(request.headers, peer, salt, settings.public_address_header)
+            )
+        oidc = request.headers.get("x-vercel-oidc-token")
+        signed = vercel_token.set(oidc) if oidc else None
+        try:
+            response = await call_next(request)
+        finally:
+            if token is not None:
+                public_copy.visitor.reset(token)
+            if signed is not None:
+                vercel_token.reset(signed)
+        extra = public_copy.PUBLIC_HEADERS if limits is not None else {}
+        for name, value in {**public_copy.HEADERS, **extra}.items():
+            response.headers[name] = value
+        return response
+
+    @app.get("/health")
+    def health() -> JSONResponse:
+        """For whoever runs the site: whether it reaches its database and, when it signs in to
+        Google with no key (llm/client.py), whether Google takes the sign-in. Nothing is paid: a
+        sign-in is free, and no model is asked."""
+        report: dict[str, bool | None] = {"database": False, "google": None}
+        try:
+            with psycopg.connect(database()) as conn:
+                conn.execute("SELECT 1")
+            report["database"] = True
+        except (SettingsError, psycopg.Error):
+            pass
+        if settings.google_federation_audience and settings.google_federation_account:
+            from google.auth.exceptions import GoogleAuthError
+            from google.auth.transport.requests import Request as GoogleRequest
+
+            signed = cache.get("signed") or credentials_of(settings)
+            cache["signed"] = signed  # a pass lasts an hour: not asked again before
+            try:
+                if not signed.valid:
+                    signed.refresh(GoogleRequest())
+                report["google"] = True
+            except GoogleAuthError:
+                report["google"] = False
+        return JSONResponse(report, status_code=200 if report["database"] else 503)
+
+    @app.get("/robots.txt", response_class=PlainTextResponse)
+    def robots() -> str:
+        return public_copy.ROBOTS
+
+    @app.post("/person-check")
+    async def person_check(request: Request) -> Response:
+        """On the public copy with Turnstile: the token that its widget gave the page, spent here
+        at once (web/turnstile.py). 204 when the visitor is a person, kept for PASS_HOURS; 403
+        when Cloudflare says no, and the page asks the widget for a new token; 503 when
+        Cloudflare or the database cannot answer."""
+        if not asks_person or limits is None:
+            raise StarletteHTTPException(404)
+        body = (await request.body()).decode("utf-8", "replace")
+        token = (parse_qs(body).get("token") or [""])[0]
+        return await run_in_threadpool(person_kept, public_copy.visitor.get(), token)
+
+    def person_kept(who: public_copy.Visitor | None, token: str) -> Response:
+        if who is None or limits is None:
+            return Response(status_code=403)
+        if clients["turnstile"] is None:
+            clients["turnstile"] = httpx.Client()
+        secret = settings.turnstile_secret_key.get_secret_value()
+        try:
+            if not turnstile.is_person(clients["turnstile"], secret, token):
+                return Response(status_code=403)
+            limits.keep_pass(who)
+        except turnstile.Unreachable as error:
+            LOG.warning("Cloudflare's Turnstile did not answer: %s", error)
+            return Response(status_code=503)
+        except psycopg.Error as error:
+            LOG.warning("the pass of a visitor was not kept: %s", type(error).__name__)
+            return Response(status_code=503)
+        return Response(status_code=204)
+
+    def allowed(kind: str) -> bool:
+        """On the public copy, whether the visitor of this request may do `kind` once more, out
+        of an allowance that is never renewed; always on the laptop's own site."""
+        return limits is None or limits.take(kind, public_copy.visitor.get())
+
+    def ai_closed() -> bool:
+        """On the public copy, a call to a model is refused while the AI is off; every caller
+        then falls back as for a spent budget. What each visitor may still ask is counted by the
+        meter, just before each call (public_copy.Limits.admit)."""
+        return limits is not None and not limits.on(public_copy.AI)
+
+    def used(kind: str, so: str = "") -> str:
+        """The words for a visitor whose allowance of `kind` on the public copy is used."""
+        return used_up(limits.allowance[kind] if limits is not None else 0, kind, so)
+
+    def person() -> bool:
+        """Whether the visitor of this request may have Gemini, GitHub or Hedera used for them:
+        on the public copy with Turnstile, once Cloudflare found them to be a person
+        (web/turnstile.py); always on the laptop's own site."""
+        return limits is None or limits.passed(public_copy.visitor.get())
+
+    def gemini_closed(idea: str) -> bool:
+        """On the public copy, whether the visitor may no longer ask Gemini's order for `idea`: an
+        ask counted before stays open, since its answers cost nothing more."""
+        if limits is None:
+            return False
+        who, key = public_copy.visitor.get(), public_copy.press_key(idea, "order")
+        return not limits.pressed(who, key) and limits.left(public_copy.AI, who) == 0
+
     templates = Jinja2Templates(directory=HERE / "templates")
     jobs = checks.CheckJobs()  # the checks that run while their page waits
     app.state.check_jobs = jobs
     rerank_given = llm.tagged(purpose="rerank") if llm is not None else None
     clients: dict[str, Any] = {"google": google, "llm": llm, "rerank": rerank_given,
                                "github": github_client, "mirrors": mirrors,
-                               "writer": register_writer, "stand_in": stand_in_client}  # fmt: skip
+                               "writer": register_writer, "stand_in": stand_in_client,
+                               "turnstile": turnstile_client}  # fmt: skip
+    if gate is not None:  # on the public copy, every model passes the visitor's gate
+        for name in ("google", "llm", "rerank", "stand_in"):
+            if clients[name] is not None:
+                clients[name] = clients[name].gated(gate)
     breaker = stand_in.Breaker()  # Gemini's failures in a row (design 8.2)
     answers = Answers(github.raw_dir(settings))  # GitHub's newest answers (design 7.3)
     app.state.breaker = breaker
@@ -456,20 +648,31 @@ def create_app(
     def database() -> str:
         return make_conninfo(settings.database_conninfo(), connect_timeout=CONNECT_SECONDS)
 
-    def client(name: str, purpose: str) -> Any:
+    def client(name: str, purpose: str, press: str | None = None) -> Any:
+        """The client `name`, counted under `purpose`. On the public copy, it carries the ask of
+        Gemini that it answers (public_copy.press_key), which the visitor's gate counts once."""
+        if ai_closed():
+            raise BudgetExceeded("The AI is turned off on this public copy.")
         if clients[name] is None:
             from hackathon_memory.finops.meter import metered_client
 
-            clients[name] = metered_client(settings, purpose)
-        return clients[name]
+            clients[name] = metered_client(settings, purpose, gate=gate)
+        if limits is None:
+            return clients[name]
+        return clients[name].tagged(purpose=purpose, item_ref=press)
 
-    def standing_in(purpose: str) -> Any:
-        """The client of the stand-in of the search model, counted under `purpose`."""
+    def standing_in(purpose: str, press: str | None = None) -> Any:
+        """The client of the stand-in of the search model, counted under `purpose`, with the ask
+        of Gemini that it answers in its place."""
+        if ai_closed():
+            raise BudgetExceeded("The AI is turned off on this public copy.")
         if clients["stand_in"] is None:
             from hackathon_memory.llm.open_models import open_models
 
-            clients["stand_in"] = open_models(settings, purpose)
-        return clients["stand_in"].tagged(purpose=purpose)
+            clients["stand_in"] = open_models(settings, purpose, gate=gate)
+        if limits is None:
+            return clients["stand_in"].tagged(purpose=purpose)
+        return clients["stand_in"].tagged(purpose=purpose, item_ref=press)
 
     def told(words: str) -> str:
         """A message about Gemini and its stand-in, with the numbers of the switch."""
@@ -509,20 +712,30 @@ def create_app(
         named = data.members(conninfo, [[pid] for pid, _ in found])
         return [(by, group[0]) for (_, by), group in zip(found, named, strict=True) if group]
 
-    def kept_comparison(conninfo: str, idea: str, project_id: int) -> Any:
-        """The comparison of the last day for this idea and project, or None: never asked here."""
-        items = comparing.items_for(conninfo, [project_id], model=settings.gemini_rewrite_model,
+    def kept_comparisons(conninfo: str, idea: str, ids: list[int]) -> dict[int, Any]:
+        """The comparisons of the last day for this idea, by project, for those of `ids` that
+        have one: never asked here."""
+        if not idea or not ids:
+            return {}
+        items = comparing.items_for(conninfo, ids, model=settings.gemini_rewrite_model,
                                     version=INSTRUCTIONS_VERSION)  # fmt: skip
-        if not idea or not items:
-            return None
-        kept = AnswerStore(conninfo).comparisons(
-            idea_fingerprint(idea), {project_id: comparing.input_fingerprint(items[0])},
+        if not items:
+            return {}
+        return AnswerStore(conninfo).comparisons(
+            idea_fingerprint(idea),
+            {item.project_id: comparing.input_fingerprint(item) for item in items},
             settings.gemini_search_model, settings.gemini_search_thinking_level,
             comparing.INSTRUCTIONS_VERSION,
         )  # fmt: skip
-        return kept.get(project_id)
+
+    def kept_comparison(conninfo: str, idea: str, project_id: int) -> Any:
+        """The comparison of the last day for this idea and project, or None: never asked here."""
+        return kept_comparisons(conninfo, idea, [project_id]).get(project_id)
 
     def render(request: Request, name: str, status: int = 200, **values: Any) -> HTMLResponse:
+        if asks_person and limits is not None and not name.startswith("_"):  # a whole page
+            # the box of Cloudflare's Turnstile, until the visitor is found to be a person
+            values.setdefault("person_check", None if person() else settings.turnstile_site_key)
         return templates.TemplateResponse(request, name, values, status_code=status)
 
     def facts_of(conninfo: str, ids: list[int] | None) -> list[filtering.Facts]:
@@ -664,9 +877,16 @@ def create_app(
                 return ranking, None, None
             pool, rest = ranking[: rerank.POOL], ranking[rerank.POOL :]
             scope = scope_of(chosen.chosen(), FILTERS)
+            ask = public_copy.press_key(idea, "order")  # counted once on the public copy
+
+            def spent() -> str:
+                if gemini_closed(idea):
+                    return used(public_copy.AI, "these results are in the search order")
+                return AI_SPENT
+
             if not breaker.standing_in():
                 order, how = rerank.order_pool(
-                    conninfo, client("rerank", "rerank"), idea, pool,
+                    conninfo, client("rerank", "rerank", ask), idea, pool,
                     model=settings.gemini_search_model,
                     level=settings.gemini_search_thinking_level, scope=scope,
                     timeout_seconds=RERANK_SECONDS,
@@ -676,25 +896,28 @@ def create_app(
                         breaker.answered()
                     return order + rest, how, "Gemini"
                 if how == rerank.SPENT:
-                    notes.append(AI_SPENT)
+                    notes.append(spent())
                     return ranking, how, None
                 if not breaker.failed():
                     notes.append(told(AI_LATE if how == rerank.LATE else AI_FAILED))
                     return ranking, how, None
             order, how = rerank.order_pool(
-                conninfo, standing_in("rerank"), idea, pool, model=stand_in.MODEL,
+                conninfo, standing_in("rerank", ask), idea, pool, model=stand_in.MODEL,
                 level=STAND_IN_LEVEL, scope=scope, timeout_seconds=STAND_IN_RERANK_SECONDS,
             )  # fmt: skip
             if how in rerank.ORDERED:
                 notes.append(told(STAND_IN_USED))
                 return order + rest, how, stand_in.NAME
-            notes.append(AI_SPENT if how == rerank.SPENT else told(BOTH_FAILED))
+            notes.append(spent() if how == rerank.SPENT else told(BOTH_FAILED))
             return ranking, how, None
         except (*FAILED_CALLS, BudgetExceeded) as error:
             # the kind of error only, for whoever runs the site: an expired sign-in to Google
             # (RefreshError) needs a new one, which the page cannot ask for
             LOG.warning("the search by meaning fell back to the words: %s", type(error).__name__)
-            notes.append(GOOGLE_AWAY)
+            if isinstance(error, public_copy.Refused):
+                notes.append(used(public_copy.EMBED, "these are keyword results"))
+            else:
+                notes.append(MEANING_SPENT if isinstance(error, BudgetExceeded) else GOOGLE_AWAY)
             return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
 
     def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
@@ -736,6 +959,24 @@ def create_app(
             mode = MEANING  # 28 October 2026 asked for its order with no mode
         mode = mode if mode in MODES else DEFAULT_MODE
         with_ai = ai == "1" and mode == MEANING and bool(idea)
+        # The public copy with its AI off searches by keyword, and says so (design 12.5). So does a
+        # visitor whose searches by meaning are used; one whose asks of Gemini are used keeps the
+        # search order.
+        ai_off = (limits is not None and bool(idea) and mode == MEANING
+                  and not limits.on(public_copy.AI))  # fmt: skip
+        public_note = PUBLIC_AI_OFF if ai_off else None
+        if ai_off:
+            mode, with_ai = WORDS, False
+        elif limits is not None and idea and mode == MEANING:
+            if limits.left(public_copy.EMBED, public_copy.visitor.get()) == 0:
+                mode, with_ai = WORDS, False
+                public_note = used(public_copy.EMBED, "these are keyword results")
+            elif with_ai and not person():  # the search by meaning needs no pass; Gemini does
+                with_ai = False
+                public_note = PERSON_FIRST
+            elif with_ai and gemini_closed(idea):
+                with_ai = False
+                public_note = used(public_copy.AI, "these results are in the search order")
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
@@ -751,7 +992,7 @@ def create_app(
             if not idea:  # the start page needs no database; the list waits for it
                 return render(request, "search.html", asked=False, **down)
             return render(request, "search.html", 503, asked=True, **down)
-        notes = []
+        notes = [public_note] if public_note else []
         unknown = [name for name, value in asked.chosen().items() if not every.knows(name, value)]
         if unknown:
             notes.append("No project has the value given for "
@@ -805,6 +1046,8 @@ def create_app(
                 notes.append(IDEA_CUT)
             ordered = how in rerank.ORDERED
             shown["sorted_by"] = sorted_by
+            if limits is not None and not ai_off and mode == MEANING:  # after this search's ask
+                shown["gemini_left"] = limits.left(public_copy.AI, public_copy.visitor.get())
             none_close = bool(only) and not ranking  # the filters match, but none is close
             if view == CHARTS:
                 built, groups, said = charts_of(conninfo, ranking)
@@ -825,6 +1068,9 @@ def create_app(
             page_number = min(page_number, pages)
             first = (page_number - 1) * PAGE_SIZE
             results = results_of(conninfo, ranking[first : first + PAGE_SIZE], idea, mode == WORDS)
+            # a comparison kept for this idea shows on its card, wherever it was asked
+            shown_ids = [card.hit.project_id for card, *_ in results]
+            kept_compared = kept_comparisons(conninfo, idea, shown_ids)
         except (SettingsError, psycopg.OperationalError):
             return render(request, "search.html", 503, asked=True, **down)
         # Gemini compares the ten that it put first, on the first page only.
@@ -834,6 +1080,7 @@ def create_app(
                       pages=pages, page=page_number, first_shown=first + 1,
                       last_shown=first + len(results), nothing_matches=only == [],
                       none_close=none_close, panel_card=panel_card, offer=offer,
+                      kept_compared=kept_compared,
                       **{**shown, "elapsed": elapsed, "with_ai": ordered,
                          "compare_ids": compare_ids})  # fmt: skip
 
@@ -915,9 +1162,10 @@ def create_app(
                                  step=step)  # fmt: skip
 
     age = timedelta(hours=settings.refresh_after_hours)
-    reader = refreshing.Refresher(refresh_work, older_than=age, inline=refresh_inline)
+    reader = refreshing.Refresher(refresh_work, older_than=age,
+                                  inline=refresh_inline or serverless)  # fmt: skip
     app.state.refresher = reader
-    if settings.refresh_in_background:
+    if settings.refresh_in_background and not serverless:
         reader.start_rounds()
 
     def writer_or_why() -> tuple[Any, str | None]:
@@ -940,7 +1188,11 @@ def create_app(
                 EmbeddingStore(conninfo), client("google", "embed_query"), words,
                 model=settings.gemini_embedding_model, limit=CLOSEST + len(check.seen),
             )  # fmt: skip
-        except (BudgetExceeded, *FAILED_CALLS):
+        except public_copy.Refused:
+            return [], used(public_copy.EMBED, "the most similar past projects cannot be shown")
+        except BudgetExceeded:
+            return [], CHECK_SPENT
+        except FAILED_CALLS:
             return [], GOOGLE_AWAY_CHECK
         known = {one.project_id for one in check.seen}
         ids = [pid for pid in ranking if pid not in known][:CLOSEST]
@@ -1021,8 +1273,12 @@ def create_app(
             return render(request, name, 503, problem=DATABASE_DOWN)
         if wrong:
             return render(request, name, 400, problem=wrong)
+        if not person():
+            return render(request, name, 403, problem=PERSON_FIRST)
+        if not allowed(public_copy.CHECK):
+            return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
-        if name == "_check.html" and progress == "1":
+        if name == "_check.html" and progress == "1" and not serverless:
             job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report))
             return render(request, "_check_progress.html", view=jobs.view(job, announce=False),
                           repository=repository, event_name=days.name if days else None,
@@ -1060,9 +1316,30 @@ def create_app(
 
     def registered(request: Request, form: dict[str, str]) -> HTMLResponse:
         name = "_register.html" if request.headers.get("HX-Request") == "true" else "register.html"
+        newest: str | None = None  # the newest commit, once GitHub was asked again
+
+        def refused(status: int, problem: str) -> HTMLResponse:
+            """What stops the record, in plain words. In the page it shows above the register's
+            box, which stays as it was, so the team can put it right and click again (30 October
+            2026: it took the place of the whole box). It names the newest commit when GitHub was
+            asked again: static/sign.js has the next signature name it."""
+            if name == "register.html":  # without JavaScript: a page of its own
+                return render(request, name, status, problem=problem)
+            response = render(request, "_register_problem.html", status, problem=problem,
+                              latest=newest)  # fmt: skip
+            response.headers["HX-Retarget"] = "#register-problem"
+            response.headers["HX-Reswap"] = "innerHTML"
+            return response
+
+        if limits is not None and not limits.on(public_copy.REGISTER):
+            return refused(503, PUBLIC_REGISTER_OFF)
+        if not person():
+            return refused(403, PERSON_FIRST)
+        if not allowed(public_copy.REGISTER):
+            return refused(429, used(public_copy.REGISTER))
         repository = submission.repository_link(form.get("repo", "")[:300])
         if repository is None:
-            return render(request, name, 400, problem=NOT_A_REPOSITORY)
+            return refused(400, NOT_A_REPOSITORY)
         # The team's own signature (design 9.6): its account, how its wallet signed, the
         # signature, and the commit that the signed text named.
         signer_text, scheme = form.get("signer", "").strip(), form.get("scheme", "").strip()
@@ -1070,24 +1347,24 @@ def create_app(
         signs = bool(signer_text or scheme or signature)
         signer = signing.account_of(signer_text) if signs else None
         if signs and signer is None:
-            return render(request, name, 400, problem=NOT_AN_ACCOUNT)
+            return refused(400, NOT_AN_ACCOUNT)
         if signs and (scheme not in signing.SCHEMES or not signature):
-            return render(request, name, 400, problem=NOT_SIGNED_RIGHT)
+            return refused(400, NOT_SIGNED_RIGHT)
         try:
             days, wrong = event_days(database(), form.get("event", ""), form.get("starts", ""),
                                      form.get("ends", ""))  # fmt: skip
         except (SettingsError, psycopg.OperationalError):
-            return render(request, name, 503, problem=DATABASE_DOWN)
+            return refused(503, DATABASE_DOWN)
         if days is None:
-            return render(request, name, 400, problem=wrong or EVENT_FOR_REGISTER)
+            return refused(400, wrong or EVENT_FOR_REGISTER)
         if days.typed:
-            return render(request, name, 400, problem=NOT_LISTED)
+            return refused(400, NOT_LISTED)
         code = saved_facts(answers, repository)
         if code is None or code.status != CODE_FOUND:
-            return render(request, name, 400, problem=CHECK_FIRST)
+            return refused(400, CHECK_FIRST)
         view = register_view(repository, days)
         if not view.open or view.problem:
-            return render(request, name, 503, problem=view.problem or REGISTER_CLOSED)
+            return refused(503, view.problem or REGISTER_CLOSED)
         values = {"view": view, "network": view.network, "topic_id": view.topic_id}
         if view.same_event is not None:  # never written twice: the first record stands
             return render(request, name, done=view.same_event, already=True, **values)
@@ -1096,39 +1373,41 @@ def create_app(
         # replaced (collect/answers.py).
         asker, why = github_or_why()
         if asker is None:
-            return render(request, name, 503, problem=why)
+            return refused(503, why)
         readme, version, problems = submission.read_again(
             asker, answers, repository,
             collector=f"{settings.collector_name.strip()}/{__version__}",
         )  # fmt: skip
+        if version is not None and version.status == VERSION_FOUND:
+            newest = version.sha
         if problems:
-            return render(request, name, 503, problem=problems[0])
+            return refused(503, problems[0])
         readme_text = readme.text if readme and readme.status == README_FOUND else ""
         if not registry.carries_line(readme_text, view.line):
-            return render(request, name, 400, problem=NO_LINE.format(line=view.line))
+            return refused(400, NO_LINE.format(line=view.line))
         if version is None or version.status != VERSION_FOUND or version.sha is None:
-            return render(request, name, 400, problem=NO_VERSION)
+            return refused(400, NO_VERSION)
         payload = registry.record(view.event, view.code, version.sha)
         if signer is not None:  # checked against the key that the ledger shows for the account
             if signed_commit.strip() != version.sha:
-                return render(request, name, 400, problem=SIGNED_OLD_COMMIT)
+                return refused(400, SIGNED_OLD_COMMIT)
             try:
                 key = signing.account_key(mirror_nodes()[view.network], signer)
                 if key is None:
-                    return render(request, name, 400, problem=NO_SUCH_SIGNER.format(account=signer))
+                    return refused(400, NO_SUCH_SIGNER.format(account=signer))
                 raw = signing.raw_signature(scheme, signature)
                 text = signing.signed_text(view.event, view.code, version.sha, signer)
                 signing.check(scheme, text, raw, key)
             except signing.SignatureError as error:
-                return render(request, name, 400, problem=str(error))
+                return refused(400, str(error))
             except MirrorError:
-                return render(request, name, 503, problem=REGISTER_UNREAD)
+                return refused(503, REGISTER_UNREAD)
             payload = registry.signed_record(
                 view.event, view.code, version.sha, signer, scheme, raw
             )
         write, why = writer_or_why()
         if write is None:
-            return render(request, name, 503, problem=why)
+            return refused(503, why)
         try:
             done = registry.register_submission(write, mirror_nodes()[view.network],
                                                 view.topic_id, payload)  # fmt: skip
@@ -1139,17 +1418,17 @@ def create_app(
                 else "the site could not write the record"
             )
             LOG.warning("the register refused a record: %s", error)
-            return render(request, name, 503, problem=REGISTER_FAILED.format(why=why))
+            return refused(503, REGISTER_FAILED.format(why=why))
         except MirrorError:
-            return render(request, name, 202, problem=NOT_YET_VISIBLE)
+            return render(request, name, 202, problem=NOT_YET_VISIBLE, sent=True)
         return render(request, name, done=done, already=False, **values)
 
     @app.get("/register/account")
     def register_account(address: str = "") -> JSONResponse:
-        """The Hedera account of a MetaMask address, which the text that the team signs names
-        (design 9.6). MetaMask knows only the address; the mirror node gives the account."""
+        """The Hedera account of an EVM wallet's address, which the text that the team signs
+        names (design 9.6). The wallet knows only the address; the mirror node gives the account."""
         if not re.fullmatch(r"0x[0-9a-fA-F]{40}", address):
-            return JSONResponse({"problem": "This is not an address of MetaMask."}, 400)
+            return JSONResponse({"problem": "This is not an EVM address."}, 400)
         try:
             key = signing.account_key(mirror_nodes()["testnet"], address.lower())
         except MirrorError:
@@ -1211,6 +1490,11 @@ def create_app(
     @app.post("/project/{project_id}/read-again", response_class=HTMLResponse)
     def read_again_now(request: Request, project_id: int) -> HTMLResponse:
         """S2: read GitHub and the mirror node again for one project, before the next round."""
+        if not person():
+            return HTMLResponse(f'<p class="hm-small">{escape(PERSON_FIRST)}</p>', 403)
+        if not allowed(public_copy.REFRESH):
+            words = used(public_copy.REFRESH)
+            return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 429)
         return read_again_shown(request, project_id, reader.ask(project_id))
 
     @app.get("/project/{project_id}/read-again", response_class=HTMLResponse)
@@ -1243,17 +1527,25 @@ def create_app(
         if not idea or not project_ids:
             return render(request, "_compare.html", 400, found={}, failed=True, asked_ids=[],
                           **place)  # fmt: skip
+        if not person():
+            return render(request, "_compare.html", 403, found={}, failed=True,
+                          asked_ids=project_ids, refused=PERSON_FIRST, **place)  # fmt: skip
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
                     BudgetExceeded, *FAILED_CALLS, *rerank.NOT_ORDERED)  # fmt: skip
+        # On the public copy, the comparison of the first ten counts with Gemini's order; a
+        # project's own window and a check count once each.
+        button = ("check" if place["check_place"] else
+                  f"one:{project_ids[0]}" if place["one_place"] else "order")  # fmt: skip
+        ask = public_copy.press_key(idea, button)
 
         def compared(conninfo: str, items: list, by_stand_in: bool) -> tuple[dict, int]:
             if by_stand_in:
                 return comparing.kept_or_compared(
-                    conninfo, standing_in("compare"), idea, items, model=stand_in.MODEL,
+                    conninfo, standing_in("compare", ask), idea, items, model=stand_in.MODEL,
                     thinking_level=STAND_IN_LEVEL, timeout_seconds=STAND_IN_COMPARE_SECONDS,
                 )  # fmt: skip
             return comparing.kept_or_compared(
-                conninfo, client("llm", "compare"), idea, items,
+                conninfo, client("llm", "compare", ask), idea, items,
                 model=settings.gemini_search_model,
                 thinking_level=settings.gemini_search_thinking_level,
                 timeout_seconds=COMPARE_SECONDS,
@@ -1275,6 +1567,9 @@ def create_app(
                     raise
                 by_stand_in = True
                 found, _ = compared(conninfo, items, by_stand_in)
+        except public_copy.Refused:
+            return render(request, "_compare.html", 429, found={}, failed=True,
+                          asked_ids=project_ids, refused=used(public_copy.AI), **place)  # fmt: skip
         except failures:
             return render(request, "_compare.html", 503, found={}, failed=True,
                           asked_ids=project_ids, **place)  # fmt: skip
@@ -1354,6 +1649,7 @@ def create_app(
         "rehearsal_topic": settings.hedera_topic_id.strip() if rehearsal else "",
         "WALLETCONNECT_PROJECT_ID": settings.walletconnect_project_id.strip(),
         "REFRESH_IN_BACKGROUND": settings.refresh_in_background,
+        "PUBLIC_COPY": public,
         "reason_of": data.reason_of,
         "static_url": static_url,
         "lines_to_show": data.lines_to_show,

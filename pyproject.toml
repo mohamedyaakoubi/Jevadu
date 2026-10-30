@@ -47,6 +47,10 @@ where = ["src"]
 "hackathon_memory.db" = ["migrations/*.sql"]
 "hackathon_memory.web" = ["templates/*.html", "static/*", "static/vendor/*"]
 
+[tool.vercel]
+# The public copy on Vercel (design 12.5): the module that Vercel loads.
+entrypoint = "jevadu:app"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --tb=short"

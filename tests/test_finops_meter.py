@@ -157,6 +157,39 @@ def test_a_meter_refuses_the_budget_of_another_environment() -> None:
         Meter(MemoryStore(), "test", budget=Budget("prod", 1.0))
 
 
+# ------------------------------------------------- a gate for who asks (the public copy)
+
+
+def test_a_gate_sees_each_call_before_it_is_made_and_may_refuse_it() -> None:
+    fake = FakeGoogle(answer())
+    client, store = metered(fake)
+    seen: list[Tags] = []
+
+    def gate(tags: Tags) -> None:
+        seen.append(tags)
+        if len(seen) > 1:
+            raise BudgetExceeded("this visitor's allowance is used")
+
+    behind = client.gated(gate).tagged(purpose="compare", item_ref="an-idea:order")
+    fill_card(behind, PAGE, model=FLASH, thinking_level="LOW")
+    with pytest.raises(BudgetExceeded, match="allowance is used"):
+        fill_card(behind, PAGE, model=FLASH, thinking_level="LOW")
+    assert seen == [Tags("compare", None, "an-idea:order")] * 2
+    assert len(fake.requests) == 1 and len(store.calls()) == 1  # the refused call never left
+    fill_card(client, PAGE, model=FLASH, thinking_level="LOW")  # the client without the gate
+    assert len(fake.requests) == 2 and client.meter.gate is None
+
+
+def test_a_gate_is_asked_only_for_a_call_that_the_budget_lets_through() -> None:
+    """What a gate counts (a visitor's allowance) is never used up by a call that is not made."""
+    fake = FakeGoogle(answer())
+    client, _ = metered(fake, budget=Budget("test", 0.10))
+    seen: list[Tags] = []
+    with pytest.raises(BudgetExceeded, match="was not made"):
+        fill_card(client.gated(seen.append), PAGE, model=PRO, thinking_level="HIGH")
+    assert seen == [] and fake.requests == []
+
+
 # ------------------------------------------------------- nothing goes around the count
 
 

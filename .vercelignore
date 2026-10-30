@@ -1,0 +1,20 @@
+# What Vercel receives for the public copy (design 12.5): its code, the measures that its
+# pages show, the saved pages and answers it reads, and its counts of requests. Nothing else
+# is sent: every line below names what goes, after the first, which leaves out the rest.
+# No line ends with a slash: Vercel's matching re-includes a folder only by its bare name.
+/*
+!/pyproject.toml
+!/README.md
+!/LICENSE
+!/NOTICE
+!/jevadu.py
+!/src
+!/evals
+/evals/*
+!/evals/results
+!/data
+/data/*
+!/data/raw
+!/data/requests
+**/__pycache__
+**/*.pyc

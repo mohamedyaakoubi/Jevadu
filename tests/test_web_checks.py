@@ -4,6 +4,7 @@ moves."""
 
 from __future__ import annotations
 
+import contextvars
 import threading
 
 import pytest
@@ -95,6 +96,23 @@ def test_a_check_that_fails_answers_with_the_status_of_a_failure() -> None:
     job = jobs.start(broken)
     job.done.result(5)
     assert job.answer == (500, {})
+
+
+def test_a_check_runs_with_what_its_request_knew() -> None:
+    """The visitor of the public copy goes with the request (web/public.py): a check that ran in a
+    bare thread of the pool knew no visitor, so its call to a model was refused."""
+    visitor: contextvars.ContextVar[str | None] = contextvars.ContextVar("visitor", default=None)
+    jobs = CheckJobs()
+    token = visitor.set("one visitor")
+    try:
+        job = jobs.start(lambda report: (200, {"visitor": visitor.get()}))
+    finally:
+        visitor.reset(token)
+    job.done.result(5)
+    assert job.answer == (200, {"visitor": "one visitor"})
+    alone = jobs.start(lambda report: (200, {"visitor": visitor.get()}))
+    alone.done.result(5)
+    assert alone.answer == (200, {"visitor": None})  # a check of no request knows nobody
 
 
 def test_a_check_that_nobody_asks_for_is_forgotten() -> None:

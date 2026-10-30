@@ -17,9 +17,12 @@ from hackathon_memory.llm import embeddings
 from hackathon_memory.llm.client import (
     GoogleSetupError,
     again_if_dropped,
+    credentials_of,
     default_http_options,
     load_key_file,
     make_client,
+    project_of,
+    vercel_token,
 )
 from hackathon_memory.settings import Settings
 
@@ -68,32 +71,58 @@ def test_no_sign_in_gives_the_command_to_run(monkeypatch: pytest.MonkeyPatch) ->
         make_client(settings(google_cloud_project="p", google_cloud_location="global"))
 
 
-def test_a_service_account_key_file_is_read(tmp_path: Path) -> None:
+def throwaway_key(project: str = "test-project") -> dict:
+    """A service account key with a private key made for the test, never a real one."""
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
 
-    private = rsa.generate_private_key(public_exponent=65537, key_size=2048)  # a throwaway key
+    private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = private.private_bytes(
         serialization.Encoding.PEM,
         serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption(),
     ).decode()
+    return {
+        "type": "service_account",
+        "project_id": project,
+        "private_key_id": "x",
+        "private_key": pem,
+        "client_email": f"tool@{project}.iam.gserviceaccount.com",
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+
+
+def test_a_service_account_key_file_is_read(tmp_path: Path) -> None:
     path = tmp_path / "service-account.json"
-    path.write_text(
-        json.dumps(
-            {
-                "type": "service_account",
-                "project_id": "test-project",
-                "private_key_id": "x",
-                "private_key": pem,
-                "client_email": "tool@test-project.iam.gserviceaccount.com",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        ),
-        encoding="utf-8",
-    )
+    path.write_text(json.dumps(throwaway_key()), encoding="utf-8")
     loaded = load_key_file(str(path))
     assert loaded.service_account_email == "tool@test-project.iam.gserviceaccount.com"
+
+
+def test_the_host_signs_in_with_the_token_of_its_request_and_no_key() -> None:
+    """On Vercel, Google's Security Token Service takes the token that Vercel gives the request
+    and lets it act as the service account that may only call Vertex AI (vercel.com/docs/oidc/gcp,
+    read 29 October 2026)."""
+    from google.auth import identity_pool
+    from google.auth.exceptions import RefreshError
+
+    audience = ("//iam.googleapis.com/projects/123/locations/global/workloadIdentityPools/vercel/"
+                "providers/vercel")  # fmt: skip
+    account = "jevadu-gemini@p-one.iam.gserviceaccount.com"
+    federation = {"google_federation_audience": audience, "google_federation_account": account}
+    host = settings(google_cloud_project="p-one", google_cloud_location="global", **federation)
+    signed = credentials_of(host)
+    assert isinstance(signed, identity_pool.Credentials) and signed.info["audience"] == audience
+    assert signed.service_account_email == account and project_of(host) == "p-one"
+    supplier = signed._subject_token_supplier
+    with pytest.raises(RefreshError, match="No token of Vercel"):
+        supplier.get_subject_token(None, None)
+    token = vercel_token.set("token-of-this-request")
+    try:
+        assert supplier.get_subject_token(None, None) == "token-of-this-request"
+    finally:
+        vercel_token.reset(token)
+    assert credentials_of(settings(google_federation_audience=audience)) is None  # both, or none
 
 
 def test_a_user_login_file_is_read(tmp_path: Path) -> None:

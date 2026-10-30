@@ -304,6 +304,11 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
    empty place */
 .hm-dot:is(.is-kept, .is-kept-near) .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
 .hm-graph-lines line.is-kept { stroke-opacity: 1; }
+/* the dots that a right click keeps, each with its closest project and their line (30 October
+   2026) */
+.hm-dot:is(.is-pinned, .is-pinned-near) .hm-mark { stroke: var(--tblr-body-color); stroke-width: calc(3.5px / var(--hm-zoom, 1)); }
+.hm-graph-lines line.is-pinned { stroke-opacity: 1; }
+.hm-graph-pins line { stroke-width: calc(1.5px / var(--hm-zoom, 1)); stroke-dasharray: calc(5px / var(--hm-zoom, 1)) calc(3px / var(--hm-zoom, 1)); stroke-opacity: 1; }
 .hm-graph-names text { fill: var(--tblr-body-color); paint-order: stroke; stroke: var(--tblr-bg-surface); stroke-width: calc(5px / var(--hm-zoom, 1)); stroke-linejoin: round; }
 .hm-graph-name { cursor: pointer; }
 /* The theme underlines a link on hover, and under the outline of a word of the picture the line
@@ -326,6 +331,7 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-graph-key li { display: inline-flex; align-items: center; gap: 0.4rem; }
 .hm-graph-swatch { display: inline-block; flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--hm-group); vertical-align: -0.05em; }
 .hm-graph-stroke { display: inline-block; width: 1.5rem; height: 0; border-top: 3px solid var(--tblr-body-color); }
+.hm-graph-stroke.is-dashed { border-top: 2px dashed var(--tblr-body-color); }
 .hm-graph-lists { margin: 1.25rem 0 0; }
 .hm-graph-lists-title { display: flex; align-items: center; font-size: 1rem; font-weight: 700; margin: 0 0 0.5rem; }
 .hm-graph-group { border-top: 1px solid var(--tblr-border-color); padding: 0.5rem 0; }
@@ -502,6 +508,30 @@ body:has(dialog[open]) { overflow: hidden; }
 .hm-sign { margin: 0.75rem 0 0; padding: 0.75rem; border: 1px solid var(--tblr-border-color); border-radius: 6px; }
 .hm-sign-title { float: left; width: 100%; margin: 0 0 0.25rem; font-size: 1rem; font-weight: 600; }
 .hm-sign-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+/* each step of the signing, a problem or the end, in a box that shows (30 October 2026: a problem
+   in small grey words went unseen) */
+.hm-sign-status:not(:empty) {
+  margin-top: 0.5rem !important; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: var(--tblr-body-color);
+  background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color); border-radius: 6px;
+}
+.hm-sign-status[data-state="problem"] { border-color: var(--tblr-danger); }
+.hm-sign-status[data-state="done"] { border-color: var(--tblr-success); }
+/* the connected wallet, also after a refresh (30 October 2026) */
+.hm-wallet {
+  margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid var(--tblr-border-color);
+  border-radius: 6px; background: var(--tblr-bg-surface-secondary);
+}
+.hm-wallet-line { margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+.hm-wallet-who .id { white-space: nowrap; }
+.hm-wallet-dot {
+  display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.375rem; border-radius: 50%;
+  background: var(--tblr-success); vertical-align: 0.1em;
+}
+.hm-wallet .hm-sign-buttons { margin-bottom: 0; }
+.hm-wallet-new { margin-bottom: 0.5rem; font-size: 0.875rem; }
+.hm-wallet-steps { margin: 0; padding-left: 1.2rem; }
+.hm-wallet-steps li + li { margin-top: 0.25rem; }
+.hm-wallet-address { overflow-wrap: anywhere; user-select: all; }
 /* a public service that the project names, not its own (29 October 2026) */
 .hm-story-public { margin: 0 0 0.5rem; padding-left: 0.5rem; border-left: 3px solid var(--tblr-info); }
 /* a word of the page is a button that looks like a link; its marks in the page's texts show only
@@ -602,6 +632,19 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
    warning, so that a rehearsal is never taken for the register. */
 .hm-rehearsal { margin: 0; padding: 0.5rem 1rem; text-align: center; background: var(--tblr-warning-lt, #fff3cd); color: var(--tblr-body-color); border-bottom: 2px solid var(--tblr-warning); }
 
+/* Cloudflare's Turnstile on the public copy (web/turnstile.py): a corner of the page that stays
+   empty, its widget unseen, unless Cloudflare asks for a click or its check cannot run. The
+   widget is never in a hidden box: Turnstile itself decides when it shows. */
+.hm-person { position: fixed; right: 1rem; bottom: 1rem; z-index: 1050; max-width: min(22rem, calc(100vw - 2rem)); }
+.hm-person.shown {
+  padding: 0.75rem 2.25rem 0.75rem 0.75rem; background: var(--tblr-bg-surface); color: var(--tblr-body-color);
+  border: 1px solid var(--tblr-border-color); border-radius: var(--tblr-border-radius); box-shadow: var(--tblr-shadow-dropdown);
+}
+.hm-person-words { margin: 0; font-size: 0.8125rem; line-height: 1.45; }
+.hm-person:not(.shown) .hm-person-words { display: none; }
+.hm-person.shown .hm-person-words { margin-bottom: 0.5rem; }
+.hm-person-close { position: absolute; top: 0.25rem; right: 0.25rem; }
+
 /* A card read again (design 7.3, S2): the line under its links, with a small turning ring while
    the reading runs; a full ring that stands still when the computer asks for less motion. */
 .hm-reading { display: inline-block; width: 0.875rem; height: 0.875rem; margin-right: 0.25rem; vertical-align: -0.125rem; border-radius: 50%; border: 2px solid var(--tblr-primary); border-right-color: transparent; animation: hm-turn 0.9s linear infinite; }
@@ -660,7 +703,10 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 .hm-footer { background: var(--hm-footer); color: var(--hm-on-footer); margin-top: 2.5rem; padding: 2.5rem 0 1.5rem; }
 .hm-footer a { color: var(--hm-on-footer); }
 .hm-footer .ref a { color: var(--hm-footer-2); }
-.hm-footer-cols { display: grid; gap: 2rem; grid-template-columns: 1.4fr 1fr 1.4fr; }
+.hm-footer-cols { display: grid; gap: 2rem; grid-template-columns: 1.4fr 1fr 1.4fr 1fr; }
+/* the maker (30 October 2026): his name leads to his portfolio, his profiles share one line */
+.hm-footer-maker { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 600; }
+.hm-footer ul.hm-footer-socials { display: flex; flex-wrap: wrap; gap: 0.375rem 0.875rem; }
 .hm-footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; font-size: 0.875rem; }
 .hm-footer-name { display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 700; margin: 0 0 0.5rem; }
 .hm-footer-brand p { margin: 0 0 0.5rem; }

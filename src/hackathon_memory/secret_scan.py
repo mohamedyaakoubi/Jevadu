@@ -74,20 +74,25 @@ def _one_line(value: str) -> str:
     return max(text.splitlines(), key=len).strip() if "\n" in text else text
 
 
-def sign_in_file_values(path: str) -> dict[str, str]:
-    """The secret fields of a Google key file, by field name. Empty if the file cannot be read."""
-    try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+def _secret_fields(data: object, label: str) -> dict[str, str]:
+    """The secret fields of a Google key, by `label` and field name."""
     if not isinstance(data, dict):
         return {}
     found: dict[str, str] = {}
     for field in SIGN_IN_SECRET_FIELDS:
         value = data.get(field)
         if isinstance(value, str) and len(_one_line(value)) >= MIN_LENGTH:
-            found[f"{SIGN_IN_FILE_SETTING} file, field {field}"] = _one_line(value)
+            found[f"{label}, field {field}"] = _one_line(value)
     return found
+
+
+def sign_in_file_values(path: str) -> dict[str, str]:
+    """The secret fields of a Google key file, by field name. Empty if the file cannot be read."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return _secret_fields(data, f"{SIGN_IN_FILE_SETTING} file")
 
 
 def secret_values(settings: Settings) -> dict[str, str]:

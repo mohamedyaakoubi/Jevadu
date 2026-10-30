@@ -7,6 +7,7 @@
 {% set one = found.get(pid) if pid is not none else none %}
 <div class="compare-place" id="one-compare-{{ pid }}">
 {% if one %}{% include "_compare_one.html" %}
+{% elif failed and refused %}<p class="text-secondary">{{ refused }}</p>
 {% elif failed %}<p class="text-secondary">The comparison could not be generated just now. Everything else in this window is complete; try again in a moment.</p>
 {% else %}<p class="text-secondary">No comparison for this project.</p>{% endif %}
 </div>
@@ -15,6 +16,7 @@
 {% set one = found.get(project_id) %}
 <div class="hm-compare compare" id="{{ prefix }}{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
 {% if one %}{% include "_compare_one.html" %}
+{% elif failed and refused %}<p class="text-secondary">{{ refused }}</p>
 {% elif failed %}<p class="text-secondary">The comparison {{ "with this README" if check_place else "with your idea" }} could not be generated just now. Everything else on this page is complete.</p>
 {% else %}<p class="text-secondary">No comparison for this project.</p>{% endif %}
 </div>

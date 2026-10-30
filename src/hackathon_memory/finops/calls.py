@@ -21,8 +21,9 @@ from hackathon_memory.finops import prices
 from hackathon_memory.settings import Settings, SettingsError
 
 # "test" is all the work before the tool is shown: the proofs, the tests, the first runs.
-# "prod" is the tool while people use it.
-ENVIRONMENTS = ("test", "prod")
+# "prod" is the tool while people use it. "public" is the public copy of the website (design
+# 12.5), which spends only from a budget of its own.
+ENVIRONMENTS = ("test", "prod", "public")
 _SLUG = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
 
 

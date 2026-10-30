@@ -58,11 +58,47 @@ class Settings(BaseSettings):
 
     # GitHub (step 2)
     github_token: SecretStr = SecretStr("")
+    # The salt of the hash that counts each visitor of the public copy (web/public.py): any long
+    # random text, kept so that the counts of a day hold across a restart.
+    public_salt: SecretStr = SecretStr("")
+    # The Cloudflare tunnel of the public copy (web/tunnel.py): where it is, its port on this
+    # computer, the API token that makes it (Cloudflare Tunnel: Edit, DNS: Edit), the account,
+    # the token of the tunnel itself, and the program cloudflared when it is not found alone.
+    public_host: str = Field("jevadu.mohamedyaakoubi.com", json_schema_extra=_PUBLIC)
+    public_port: int = Field(8020, json_schema_extra=_PUBLIC)
+    # The header in which the host of the public copy writes the visitor's address itself:
+    # Cloudflare's for the tunnel; x-vercel-forwarded-for on Vercel (web/vercel_app.py).
+    public_address_header: str = Field("cf-connecting-ip", json_schema_extra=_PUBLIC)
+    # A token of Vercel, for the public copy's project there (web/vercel.py): the switch of the
+    # Google account moves the copy too when it is set.
+    vercel_token: SecretStr = SecretStr("")
+    # The database of the public copy on its host (Neon), seen from this computer: the switches
+    # of the public copy write there (web/switch.py).
+    public_database_url: SecretStr = SecretStr("")
+    # How many times one visitor of the public copy may ask Gemini, one time only (design
+    # 12.5): 30 dollars pay about 300 visitors who use all 12.
+    public_ai_per_visitor: int = Field(12, ge=0, json_schema_extra=_PUBLIC)
+    # Cloudflare's Turnstile on the public copy (web/turnstile.py): the site key, which every
+    # page that shows the widget carries, and the secret that spends its tokens. With both set,
+    # a visitor confirms being a person before asking Gemini, checking, reading again or
+    # registering.
+    turnstile_site_key: str = Field("", json_schema_extra=_PUBLIC)
+    turnstile_secret_key: SecretStr = SecretStr("")
+    cloudflare_api_token: SecretStr = SecretStr("")
+    cloudflare_account_id: str = Field("", json_schema_extra=_PUBLIC)
+    cloudflare_tunnel_token: SecretStr = SecretStr("")
+    cloudflared_path: str = Field("", json_schema_extra=_PUBLIC)
 
     # Google Cloud: the Gemini models and the embedding model on Vertex AI (step 3)
     google_cloud_project: SecretStr = SecretStr("")
     google_cloud_location: str = Field("", json_schema_extra=_PUBLIC)
     google_application_credentials: SecretStr = SecretStr("")
+    # The public copy on Vercel signs in to Google with no key, by Workload Identity Federation
+    # (llm/client.py): the audience of the pool's provider, and the service account that may only
+    # call Vertex AI. python -m hackathon_memory.llm.account switch sets them on the host; here
+    # they stay empty.
+    google_federation_audience: str = Field("", json_schema_extra=_PUBLIC)
+    google_federation_account: str = Field("", json_schema_extra=_PUBLIC)
 
     # The two Gemini layers. The maintainer decided on 9 October 2026 (design rule 7):
     # the first layer reads and rewrites project pages into cards with Gemini 3.1 Pro, for the
@@ -77,13 +113,18 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = Field("gemini-embedding-2", json_schema_extra=_PUBLIC)
 
     # What the models may cost (finops). "test" is all the work before the tool is shown: the
-    # proofs, the tests, the first runs. "prod" is the tool while people use it. Each has its own
-    # budget in dollars, and a call that could go over it is not made. The defaults are small on
-    # purpose: about 70 project pages cost about 3 dollars with the two layers.
-    llm_environment: Literal["test", "prod"] = Field("test", json_schema_extra=_PUBLIC)
+    # proofs, the tests, the first runs. "prod" is the tool while people use it. "public" is the
+    # public copy of the website (design 12.5), which always counts under it, whatever
+    # LLM_ENVIRONMENT says. Each has its own budget in dollars, and a call that could go over it
+    # is not made. The defaults are small on purpose: about 70 project pages cost about 3
+    # dollars with the two layers. The public copy has 30 dollars in all and 5 a day (29 October
+    # 2026).
+    llm_environment: Literal["test", "prod", "public"] = Field("test", json_schema_extra=_PUBLIC)
     llm_budget_test_usd: float = Field(15.0, ge=0, json_schema_extra=_PUBLIC)
     llm_budget_prod_usd: float = Field(30.0, ge=0, json_schema_extra=_PUBLIC)
     llm_budget_prod_per_day_usd: float = Field(5.0, ge=0, json_schema_extra=_PUBLIC)
+    llm_budget_public_usd: float = Field(30.0, ge=0, json_schema_extra=_PUBLIC)
+    llm_budget_public_per_day_usd: float = Field(5.0, ge=0, json_schema_extra=_PUBLIC)
     llm_budget_warn_percent: int = Field(80, ge=1, le=100, json_schema_extra=_PUBLIC)
 
     # The local PostgreSQL that Docker Compose starts

@@ -2,9 +2,9 @@
    returns it, or what went wrong, in plain words. It takes the place of the register's box. #}
 <section class="card project-section check-register-section" id="register-box" aria-labelledby="register-title">
   <div class="card-body">
-    <h3 id="register-title" tabindex="-1">{% if problem %}Not registered{% elif already %}Already registered{% elif rehearsal_topic %}Registered on the practice topic{% else %}Registered on Hedera{% endif %}</h3>
+    <h3 id="register-title" tabindex="-1">{% if sent %}Sent to Hedera{% elif problem %}Not registered{% elif already %}Already registered{% elif rehearsal_topic %}Registered on the practice topic{% else %}Registered on Hedera{% endif %}</h3>
     {% if problem %}
-    <div class="alert alert-warning mb-0" role="alert">{{ problem }}</div>
+    <div class="alert alert-{{ "info" if sent else "warning" }} mb-0" role="alert">{{ problem }}</div>
     {% else %}
     <p>{% if already %}This repository was already registered for this hackathon, so nothing new was written. Here is the first record.{% else %}The record is on the ledger, read back from the mirror node.{% endif %}</p>
     <dl class="hm-receipt">
@@ -13,7 +13,7 @@
       <dt>Hackathon</dt><dd><span class="id">{{ done.event }}</span></dd>
       <dt>Repository hash</dt><dd><span class="id">{{ done.code[:16] }}&hellip;</span></dd>
       <dt>Commit</dt><dd><span class="id">{{ done.commit[:12] }}&hellip;</span></dd>
-      {% if done.signer %}<dt>Signed by</dt><dd><a href="{{ hashscan(network, "account", done.signer) }}" target="_blank" rel="noopener"><span class="id">{{ done.signer }}</span><span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>, with {{ "MetaMask" if done.scheme == "eip191" else "a Hedera wallet" }}. The site checked the signature against the account's key on the ledger.</dd>
+      {% if done.signer %}<dt>Signed by</dt><dd><a href="{{ hashscan(network, "account", done.signer) }}" target="_blank" rel="noopener"><span class="id">{{ done.signer }}</span><span class="visually-hidden"> on HashScan (opens in a new tab)</span></a>, with {{ "an EVM wallet" if done.scheme == "eip191" else "a Hedera wallet" }}. The site checked the signature against the account's key on the ledger.</dd>
       {% elif done.account %}<dt>Account hash</dt><dd><span class="id">{{ done.account[:16] }}&hellip;</span></dd>{% endif %}
     </dl>
     <p><a class="btn btn-sm" href="{{ done.link(network) }}" target="_blank" rel="noopener">View on HashScan<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a></p>

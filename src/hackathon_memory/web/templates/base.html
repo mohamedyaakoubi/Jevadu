@@ -4,6 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>{% block title %}Jevadu{% endblock %}</title>
 <meta name="description" content="Search past Hedera hackathon projects by idea, check a submission, and see what the public Hedera ledger says about each project.">
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
@@ -94,6 +95,17 @@
               <li>Code data: GitHub.</li>
             </ul>
           </div>
+          <nav aria-label="Its maker">
+            <p class="hm-footer-title">Made by</p>
+            <p class="hm-footer-maker"><a href="https://www.mohamedyaakoubi.com" target="_blank" rel="noopener">Mohamed Yaakoubi</a></p>
+            <ul class="hm-footer-socials">
+              <li><a href="https://www.linkedin.com/in/yaakoubi-mohamed/" target="_blank" rel="noopener">LinkedIn</a></li>
+              <li><a href="https://github.com/mohamedyaakoubi" target="_blank" rel="noopener">GitHub</a></li>
+              <li><a href="https://x.com/Mohamed0Yakoubi" target="_blank" rel="noopener">X</a></li>
+              <li><a href="https://medium.com/@amirrak8" target="_blank" rel="noopener">Medium</a></li>
+              <li><a href="https://www.instagram.com/mohamed__yaakoubi/" target="_blank" rel="noopener">Instagram</a></li>
+            </ul>
+          </nav>
         </div>
         <p class="hm-footer-base">Nothing here scores or ranks a project by quality. The order of a list only reflects similarity to an idea.</p>
         <p class="hm-footer-small">Jevadu is not affiliated with, sponsored, or endorsed by Hedera Hashgraph, LLC.</p>
@@ -102,6 +114,15 @@
   </div>
 </div>
 {% include "_tips.html" %}
+{% if person_check %}
+{# Cloudflare's Turnstile on the public copy (web/turnstile.py): the page's script runs it here.
+   Nothing shows unless Cloudflare asks for a click, or its check cannot run. #}
+<aside class="hm-person" id="person-check" data-sitekey="{{ person_check }}" aria-live="polite">
+  <p class="hm-person-words"></p>
+  <div class="hm-person-widget"></div>
+  <button type="button" class="btn btn-sm btn-icon hm-person-close" aria-label="Close this note" hidden>&times;</button>
+</aside>
+{% endif %}
 <dialog class="viewer" id="viewer" aria-labelledby="viewer-title">
   <div class="viewer-bar">
     <div class="viewer-steps">
