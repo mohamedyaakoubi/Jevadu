@@ -25,7 +25,14 @@
       <p class="mt-2 mb-1"><b>First, prove that the repository is yours.</b> Add this line to its README on the default branch:</p>
       <p class="mb-1"><code class="hm-readme-line">{{ view.line }}</code></p>
       {% if github_line %}
-      <p class="hm-small" role="status">{% if github_line.state == "added" %}Added to the README through GitHub, in a commit of yours{% if github_line.commit %} (<span class="id">{{ github_line.commit[:12] }}</span>){% endif %}.{% else %}The README on GitHub has this line already.{% endif %} When you click the button, the README is read again from GitHub to find the line.</p>
+      {# What the GitHub App just did, as news of its own, not as the box's standing words
+         (30 October 2026: it looked as if it had always been written there). #}
+      {% if github_line.state == "added" %}
+      <div class="alert alert-success mb-2" role="status"><b>Added just now.</b> Jevadu's GitHub App added this line to the README, in a commit of yours{% if github_line.commit %}: <a href="{{ result.repository }}/commit/{{ github_line.commit }}" target="_blank" rel="noopener"><span class="id">{{ github_line.commit[:7] }}</span><span class="visually-hidden"> on GitHub (opens in a new tab)</span></a>{% endif %}.</div>
+      {% else %}
+      <div class="alert alert-info mb-2" role="status"><b>Already there.</b> The README on GitHub has this line already, so nothing was added.</div>
+      {% endif %}
+      <p class="hm-small">When you click the button, the README is read again from GitHub to find the line.</p>
       {% else %}
       <p class="hm-small">{% if view.line_found %}The README already contains it.{% else %}Only someone with write access can add it, so it proves that the repository is yours and that you agree to the record.{% endif %} When you click the button, the README is read again from GitHub to find the line.</p>
       {% if GITHUB_APP and not view.line_found %}

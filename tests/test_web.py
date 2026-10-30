@@ -1936,8 +1936,12 @@ def test_the_github_app_adds_the_line_as_a_commit_of_the_person(site) -> None:  
     line = re.search(r"jevadu: [A-Z2-7]{8}", check).group(0)
     assert stand_in.readme == f"# Pebble Pay\n\n{line}\n" and written["branch"] == "main"
     shown = site_with.get(location).text
-    assert ('Added to the README through GitHub, in a commit of yours (<span class="id">'
-            "c0ffee000000</span>)") in shown  # fmt: skip
+    # news of its own, with the way to the commit, not the box's standing words
+    notice = shown.split('<div class="alert alert-success mb-2" role="status">', 1)[1]
+    notice = notice.split("</div>", 1)[0]
+    assert notice.startswith("<b>Added just now.</b> Jevadu's GitHub App added this line")
+    commit = "c0ffee" + "0" * 34
+    assert f'href="https://github.com/sample-org/pebble-pay/commit/{commit}"' in notice
     assert "Add it for me with GitHub" not in shown
     assert "ghu_STANDIN" not in back.text + shown + str(back.headers) + str(start.headers)
     assert came_back(site_with, query["state"][0]).status_code == 400  # spent: its cookie is gone
@@ -1997,7 +2001,8 @@ def test_a_readme_with_the_line_is_left_as_it_is(site) -> None:  # noqa: ANN001
     assert "line=there" in back.headers["location"] and "commit=" not in back.headers["location"]
     assert stand_in.written == []
     shown = site_with.get(back.headers["location"]).text
-    assert "The README on GitHub has this line already." in shown
+    assert ('<div class="alert alert-info mb-2" role="status"><b>Already there.</b> The README on '
+            "GitHub has this line already, so nothing was added.</div>") in shown  # fmt: skip
 
 
 # ----------------------------------------------------------------- the charts (design 12.1, S5)
