@@ -502,3 +502,34 @@ def test_without_cloudflare_the_page_says_so_and_the_search_works(site, chromium
     page.locator(f"#one-compare-{pebble} button").click()
     page.wait_for_selector(f"#one-compare-{pebble}:has-text('{CONFIRM}')")  # an answer of 403
     page.context.close()
+
+
+@pytest.mark.browser
+def test_a_browser_check_of_vercel_asks_the_whole_page_again_once(site, chromium) -> None:  # noqa: ANN001, F811
+    """Vercel's firewall may answer a request of the page with its own check that the visitor
+    uses a browser: an answer of 429 with X-Vercel-Mitigated: challenge (seen on 30 October 2026).
+    It is never shown inside a part of the page: the page is asked again, once a minute at most."""
+    client, _, ids, _ = site
+    page = served(chromium, public_site(client), viewport={"width": 1440, "height": 900})
+    checkpoint = "Vercel Security Checkpoint"
+
+    def challenged(route) -> None:  # noqa: ANN001
+        headers = {"content-type": "text/html", "x-vercel-mitigated": "challenge"}
+        route.fulfill(status=429, body=f"<html><body>{checkpoint}</body></html>", headers=headers)
+
+    page.route(lambda url: "/panel" in url, challenged)
+    pebble = ids["Pebble Pay"]
+    page.goto(SEARCH)
+    page.evaluate("window.hmBefore = true")
+    page.locator(f"#result-{pebble} .result-link").click()
+    page.wait_for_function("window.hmBefore === undefined")  # the page was asked again
+    # its address names the project, so the page comes back with its window open
+    page.wait_for_selector("#viewer[open] .project")
+    assert checkpoint not in page.content()
+    page.keyboard.press("Escape")
+    page.wait_for_selector("#viewer", state="hidden")
+    page.evaluate("window.hmBefore = true")
+    page.locator(f"#result-{pebble} .result-link").click()  # again within the minute: no loop
+    page.wait_for_selector("#viewer-body .alert-danger")
+    assert page.evaluate("window.hmBefore") is True and checkpoint not in page.content()
+    page.context.close()

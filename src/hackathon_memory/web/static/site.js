@@ -1033,7 +1033,25 @@
   // comparison carries the words of the failure for each result. Answers of 429 and 403 come from
   // the public copy only, when a visitor's allowance is used, or before Cloudflare found them to
   // be a person, and say so wherever it was asked.
+  // Vercel's firewall may answer a request of the page with its own check that the visitor uses a
+  // browser: an answer of 429 with the header X-Vercel-Mitigated: challenge (seen on 30 October
+  // 2026). That page cannot work inside a part of this one, so the whole page is asked again,
+  // where the browser passes the check by itself; once a minute at most, so it never loops.
+  function checkpoint() {
+    var session = store("sessionStorage");
+    try {
+      var last = Number(session && session.getItem("hm-checkpoint")) || 0;
+      if (Date.now() - last < 60000) return;
+      if (session) session.setItem("hm-checkpoint", String(Date.now()));
+    } catch (error) { /* nothing is kept: the page is asked again all the same */ }
+    window.location.reload();
+  }
   document.addEventListener("htmx:beforeSwap", function (event) {
+    if (event.detail.xhr.getResponseHeader("x-vercel-mitigated") === "challenge") {
+      event.detail.shouldSwap = false;
+      checkpoint();
+      return;
+    }
     // htmx 2 names the target of the swap as `elt` here; the element that asked is in the
     // request's config (htmx 2.0.11, seen in the browser on 18 October 2026).
     var config = event.detail.requestConfig;
