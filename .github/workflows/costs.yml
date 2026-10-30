@@ -1,0 +1,49 @@
+# Where the public copy's budget stands, four times a day (design 12.5, 30 October 2026).
+# The meter stops the spending at the caps by itself; this job only tells. It fails once 80% of a
+# cap is spent, and GitHub mails a failed scheduled run to whoever last changed this schedule.
+# It reads the copy's database with a role that may only read three tables (finops/watch.py).
+#
+# A run takes well under a minute and is billed as one minute of a Linux runner: about 124
+# minutes in a month of 31 days, from the 2,000 that GitHub Free includes for private
+# repositories (with the minutes of the other private repositories of the account).
+# GitHub runs a schedule only from the default branch, and may run it late when it is busy.
+# The caps are the defaults of settings.py: if the copy's caps change on Vercel, give
+# LLM_BUDGET_PUBLIC_USD and LLM_BUDGET_PUBLIC_PER_DAY_USD below too.
+name: costs
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"  # 00:17, 06:17, 12:17, 18:17 UTC: not on the hour, when GitHub is busiest
+  workflow_dispatch:
+  push:
+    paths:  # a change to the watch runs it once, so that it is tried on GitHub
+      - .github/workflows/costs.yml
+      - src/hackathon_memory/finops/watch.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: costs
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: The database driver only
+        run: python -m pip install -c constraints.txt "psycopg[binary]"
+
+      - name: Where the public copy's budget stands
+        env:
+          PUBLIC_COSTS_DATABASE_URL: ${{ secrets.PUBLIC_COSTS_DATABASE_URL }}
+          PYTHONPATH: src
+        run: python -m hackathon_memory.finops.watch

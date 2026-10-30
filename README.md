@@ -219,6 +219,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | 4 | `POSTGRES_PASSWORD` | Any password you choose. Then `docker compose up -d --wait db`. |
 | optional | `PUBLIC_SALT` | Any random text of 32 characters or more. The public copy needs it to count each visitor by a salted hash of their address and browser name, never by the address itself. |
 | optional | `PUBLIC_DATABASE_URL` | The database of the public copy on its host (Neon), seen from this computer: `python -m hackathon_memory.web.switch` writes the copy's switches there. |
+| optional | `PUBLIC_COSTS_DATABASE_URL` | The public copy's database, for a role that may only read the spending, the visitors' uses and the switches (the SQL is at the top of `finops/watch.py`). The watch below reads it, and so does the job `costs` of GitHub Actions, where it is a secret of the repository. |
 | optional | `VERCEL_TOKEN` | A token of Vercel, for the public copy's project there: the switch of the Google account moves the copy too. |
 | optional | `PUBLIC_ADDRESS_HEADER` | The header in which the public copy's host writes the visitor's address itself: `cf-connecting-ip` through the Cloudflare tunnel (the default), `x-vercel-forwarded-for` on Vercel, which `web/vercel_app.py` sets. |
 | optional | `PUBLIC_AI_PER_VISITOR` | How many times one visitor of the public copy may ask Gemini, one time only: 12 by default, so that about 300 visitors who use them all stay within its budget of 30 dollars. |
@@ -288,6 +289,7 @@ The steps have the numbers that `setup_check` prints. Each value goes into `.env
 | `python -m hackathon_memory.finops report` | Where the money for the models went, and what one project page costs |
 | `python -m hackathon_memory.llm.account switch` | Switches the Google account of the models in one step: one sign-in in a browser for gcloud and for this computer's models; in that account's project, a service account that may only call Vertex AI, made once; the project in `.env`, and a free call that proves it. With `VERCEL_TOKEN` in `.env`, the public copy on Vercel follows: the trust that lets it act as that service account with no key (Workload Identity Federation), its settings, a new deployment and its `/health`. `--project ID` when the account sees several projects; `--no-vercel` for this computer only. |
 | `python -m hackathon_memory.finops budget` | Where the three budgets stand: the test work, the tool in use and the public copy |
+| `python -m hackathon_memory.finops.watch` | Where the public copy's own budget stands and what its visitors used, read from its database; it fails once 80% of a cap is spent. The job `costs` of GitHub Actions runs it four times a day and mails a failure; the meter stops the spending at the caps by itself. |
 | `python -m hackathon_memory.finops prices` | The prices in use, with the day each one begins |
 | `python -m hackathon_memory.finops reconcile --billed 1.23` | Our own count against the amount on Google's bill |
 | `python -m hackathon_memory.secret_scan` | Looks for the secrets of `.env` in every commit. It prints names, never values. |
