@@ -46,6 +46,7 @@ TEXT, TRACK, TECHNOLOGIES = "devfolio_text", "devfolio_track", "technologies"
 _CODE_HOSTS = frozenset({"github.com", "gitlab.com", "bitbucket.org"})
 _TITLE = re.compile(r"^(#{1,6})\s+(.*)$")
 _ITEM = re.compile(r"^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$")
+_YEAR = re.compile(r"\s+\d{4}$")  # the organiser is the event's name without its year
 
 
 def markdown_blocks(text: str) -> tuple[Block, ...]:
@@ -151,8 +152,9 @@ def _links(text: str) -> tuple[tuple[Link, ...], int]:
     return tuple(links), hidden
 
 
-def _prizes(project: dict, event: Event | None) -> tuple[Prize, ...]:
-    """The prizes won, each with the track whose name it carries and that track's sponsor."""
+def _prizes(project: dict, event: Event | None, organiser: str) -> tuple[Prize, ...]:
+    """The prizes won, each with the track whose name it carries and that track's sponsor. A prize
+    that no track names, such as "Winner", is the event's own: its sponsor is the organiser."""
     tracks = sorted(event.tracks if event else (), key=lambda track: len(track.name), reverse=True)
     prizes: list[Prize] = []
     for item in project.get("prizes") or []:
@@ -162,7 +164,8 @@ def _prizes(project: dict, event: Event | None) -> tuple[Prize, ...]:
         track = next((one for one in tracks if one.name and one.name.lower() in name.lower()),
                      None)  # fmt: skip
         place = name.split(":", 1)[0].strip() if track and ":" in name else ""
-        prizes.append(Prize(sponsor=track.sponsor if track else "", sponsor_id=None,
+        sponsor = track.sponsor if track and track.sponsor else organiser
+        prizes.append(Prize(sponsor=sponsor, sponsor_id=None,
                             track=track.name if track else name, award=place or name,
                             kind=None, pool=name.endswith("Prize(s)"), line=name))  # fmt: skip
     return tuple(prizes)
@@ -187,7 +190,8 @@ def read_devfolio_project(body: bytes, page: str, events: Mapping[str, Event]) -
     short_line, hidden_in_the_line = hide_in_text(squash(_text(project.get("tagline"))))
     sections, hidden_in_the_texts, _ = _sections(project)
     links, hidden_in_the_links = _links(_text(project.get("links")))
-    prizes = _prizes(project, known)
+    event_name = squash(_text(event.get("name"))) or event_slug
+    prizes = _prizes(project, known, _YEAR.sub("", event_name) or event_name)
     targets = [link.url for link in links if link.url]
     return ProjectPage(
         site=SITE,

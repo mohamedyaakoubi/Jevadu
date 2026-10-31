@@ -89,9 +89,12 @@ def test_a_prize_of_no_hedera_track_is_another_sponsors() -> None:
     page = read_devfolio_project(saved(prizes=[{"uuid": "p9", "name": "Best Hedera Vibes"}]), API,
                                  EVENTS)  # fmt: skip
     (prize,) = page.prizes
-    assert (prize.sponsor, prize.track) == ("", "Best Hedera Vibes")  # no track carries its name
+    assert (prize.sponsor, prize.track) == ("Sample Hack", "Best Hedera Vibes")  # the organiser
     assert page.prize_state == OTHER_PRIZE
     assert read_devfolio_project(saved(prizes=[]), API, EVENTS).prize_state == "no_prize"
+    # a prize of the event itself, named by no track (seen on Devfolio, 1 November 2026)
+    page = read_devfolio_project(saved(prizes=[{"uuid": "w", "name": "Winner"}]), API, EVENTS)
+    assert [(p.sponsor, p.award) for p in page.prizes] == [("Sample Hack", "Winner")]
 
 
 def test_an_unknown_shape_is_said_and_not_guessed() -> None:
@@ -99,7 +102,7 @@ def test_an_unknown_shape_is_said_and_not_guessed() -> None:
         with pytest.raises(PageShapeChanged):
             read_devfolio_project(body, API, EVENTS)
     page = read_devfolio_project(saved(), API, {})  # an event that the find does not know
-    assert page.event.starts_at is None and page.prizes[0].sponsor == ""
+    assert page.event.starts_at is None and page.prizes[0].sponsor == "Sample Hack"
 
 
 def test_markdown_becomes_blocks_with_its_words_as_written() -> None:
