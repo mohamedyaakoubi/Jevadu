@@ -13,6 +13,7 @@ from fakes import Reply
 from hackathon_memory.collect.github import allowed
 from hackathon_memory.collect.github_history import (
     BLOCKED,
+    EMPTY,
     FOUND,
     GONE,
     MOST_FILES,
@@ -114,6 +115,19 @@ def test_each_answer_is_asked_once_and_read_back(tmp_path: Path) -> None:
     assert saved_until(store, REPO, date(2026, 9, 13)) is None  # a day never asked for
     assert all(request.headers["User-Agent"].startswith("TestTool-research")
                for request in site.seen)  # fmt: skip
+
+
+def test_a_day_before_the_first_commit_reads_as_empty(tmp_path: Path) -> None:
+    """GitHub answers an empty list for a day before the first commit: the repository was empty on
+    that day, which is not the same as a repository that is gone."""
+    pages = {until_address(REPO, MARCH): Reply(200, b"[]"),
+             until_address(REPO, JUNE): Reply(404, b'{"message": "Not Found"}')}  # fmt: skip
+    client, _ = github(tmp_path, pages)
+    store = RawStore(tmp_path / "answers")
+    run = fetch_untils(client, store, [(REPO, MARCH), (REPO, JUNE)], collector=COLLECTOR)
+    assert (run.by_status[EMPTY], run.by_status[GONE]) == (1, 1)
+    empty, gone = saved_until(store, REPO, MARCH), saved_until(store, REPO, JUNE)
+    assert (empty.status, empty.sha, gone.status) == (EMPTY, None, GONE)
 
 
 def test_a_comparison_that_is_not_there_reads_as_none(tmp_path: Path) -> None:

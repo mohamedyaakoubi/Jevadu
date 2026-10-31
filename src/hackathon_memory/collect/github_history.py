@@ -4,7 +4,8 @@ once through GitHub's API: the newest commit on or before a day, and the compari
 * The newest commit on or before the last day of an event:
   GET /repos/{owner}/{repo}/commits?until={day}T23:59:59Z&per_page=1. "Only commits before this
   date will be returned" (GitHub's documentation, read on 31 October 2026). Kept as
-  github_commits.py keeps the newest commit: its ID and its date, nothing else.
+  github_commits.py keeps the newest commit: its ID and its date, nothing else. A day before the
+  first commit gives no commit: the repository was empty on that day.
 * The comparison of two commits: GET /repos/{owner}/{repo}/compare/{base}...{head}?per_page=1.
   Read on 31 October 2026: "status" ("ahead" when the second commit follows the first),
   "ahead_by", "behind_by", "total_commits", and "files", "up to 300 changed files for the entire
@@ -20,7 +21,7 @@ dates are the team's word, unlike the consensus time of the ledger. The card say
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 
 from hackathon_memory.collect import github_commits
@@ -30,7 +31,8 @@ from hackathon_memory.collect.github_once import AnswersRun, fetch_once
 from hackathon_memory.collect.polite import FetchResult, PoliteClient
 from hackathon_memory.collect.rawstore import RawStore, SavedPage
 
-FOUND, GONE, BLOCKED = github_commits.FOUND, github_commits.GONE, github_commits.BLOCKED
+FOUND, EMPTY = github_commits.FOUND, github_commits.EMPTY
+GONE, BLOCKED = github_commits.GONE, github_commits.BLOCKED
 MOST_FILES = 300  # GitHub lists at most this many files of a comparison
 
 
@@ -116,10 +118,20 @@ def status_of_change(saved: SavedPage) -> str:
     return FOUND if status == 200 else BLOCKED if status in (403, 451) else GONE
 
 
+def read_until(saved: SavedPage) -> Version:
+    """What a saved answer says about the newest commit on or before a day: as read_version, but
+    an answer with no commit, which GitHub gives for a day before the first commit, is EMPTY (the
+    repository was empty on that day), not GONE."""
+    version = read_version(saved)
+    if saved.meta["status"] == 200 and version.sha is None:
+        return replace(version, status=EMPTY)
+    return version
+
+
 def saved_until(store: RawStore, repository: str, day: date) -> Version | None:
     """The saved newest commit on or before `day`, or None when it was never asked for."""
     saved = store.load(until_address(repository, day), SUFFIX)
-    return read_version(saved) if saved is not None else None
+    return read_until(saved) if saved is not None else None
 
 
 def saved_change(store: RawStore, repository: str, base: str, head: str) -> Change | None:
@@ -128,12 +140,17 @@ def saved_change(store: RawStore, repository: str, base: str, head: str) -> Chan
     return read_change(saved) if saved is not None else None
 
 
+def asked_change(store: RawStore, repository: str, base: str, head: str) -> bool:
+    """Whether the comparison of two commits was asked for, found or not."""
+    return store.has(compare_address(repository, base, head), SUFFIX)
+
+
 def fetch_untils(client: PoliteClient, store: RawStore, wanted: list[tuple[str, date]], *,
                  collector: str, limit: int | None = None) -> AnswersRun:  # fmt: skip
     """Ask for the newest commit on or before each day of `wanted` that has none saved yet."""
     addresses = list(dict.fromkeys(until_address(repo, day) for repo, day in wanted))
     return fetch_once(client, store, addresses, address_of=lambda address: address, keep=kept_of,
-                      status_of=lambda saved: read_version(saved).status, statuses=STATUSES,
+                      status_of=lambda saved: read_until(saved).status, statuses=STATUSES,
                       suffix=SUFFIX, collector=collector, limit=limit)  # fmt: skip
 
 
