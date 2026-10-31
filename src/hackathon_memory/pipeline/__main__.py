@@ -257,7 +257,8 @@ def parse_lines(run: Run) -> list[str]:
         )
     if counts["event_ends_written"] or counts["event_ends_same"] or counts["events_without_an_end"]:
         lines.append(
-            f"Ends of events typed by hand: {counts['event_ends_written']} written, "
+            "Ends of events, typed by hand or from Devfolio's data: "
+            f"{counts['event_ends_written']} written, "
             f"{counts['event_ends_same']} the same as before. "
             f"Events with no end yet: {counts['events_without_an_end']}."
         )
