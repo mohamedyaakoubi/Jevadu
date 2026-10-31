@@ -11,7 +11,8 @@ when it was saved. The second one must never happen (design rule 5), so it is sa
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from datetime import date
 from functools import partial
 from pathlib import Path
 
@@ -151,6 +152,14 @@ def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) ->
         run.counts["event_ends_not_read"] += 1
         run.problem("the ends of events typed by hand", str(wrong))
         return
+    write_event_ends(projects, site, ends, run, path.name)
+
+
+def write_event_ends(
+    projects: ProjectStore, site: str, ends: Mapping[str, date], run: Run, source: str
+) -> None:
+    """Write the last day of each event of `site` that `ends` names, and count what was done;
+    `source` names where the days come from in the problems of the run."""
     done = projects.set_event_ends(site, ends)
     for key, value in (
         ("event_ends_written", done.written),
@@ -160,6 +169,6 @@ def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) ->
         if value:
             run.counts[key] += value
     for slug in done.unknown:
-        run.problem(f"{path.name}: {slug}", "no saved project names this event")
+        run.problem(f"{source}: {slug}", "no saved project names this event")
     for slug in done.before_start:
-        run.problem(f"{path.name}: {slug}", "the last day is before the start of the event")
+        run.problem(f"{source}: {slug}", "the last day is before the start of the event")
