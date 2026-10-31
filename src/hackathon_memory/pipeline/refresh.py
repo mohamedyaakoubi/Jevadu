@@ -13,9 +13,9 @@ A repository lives on after its event, and so do the Hedera IDs of a project. In
    read again whole (collect/github_code.py).
 3. With no request: the READMEs and their Hedera IDs, the facts of the code, and what the code
    says about Hedera are written again from the newest answers of the repositories answered.
-4. GitHub, for the timeline of each team that came back with one repository (design 8.7): the
-   newest commit at the end of each of its events, and the comparison of two that follow, each
-   asked once (pipeline/timeline.py).
+4. GitHub, for the timeline of each group of projects that came back (design 8.7): the newest
+   commit at the end of each event, and the comparison of two that follow with the same
+   repository, each asked once (pipeline/timeline.py).
 5. The ledger: the IDs of the code, then every ID, from the table when its answer is younger than
    the age, else from the mirror node; the proof rule judges them again.
 6. The histories of the own IDs: those never read or read before the depth of use (design 7.5),
@@ -181,8 +181,8 @@ def refresh(
         readmes.read_readmes(repositories, ProjectStore(conninfo), answers, run, only=answered)
         code.read_code(repositories, answers, run, only=answered)
         hedera_code.read_hedera_code(repositories, answers, run, only=answered)
-    # What the timelines of the teams that came back still lack (design 8.7): a new group, or a
-    # new event of one, gets its answers here without anybody asking for them.
+    # What the timelines of the projects that came back still lack (design 8.7): a new group,
+    # or a new event of one, gets its answers here without anybody asking for them.
     timeline.ask_timelines(client, answers, conninfo, run, collector=collector, projects=projects,
                            limit=limit)  # fmt: skip
     step(LEDGER)

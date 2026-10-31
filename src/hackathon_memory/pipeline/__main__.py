@@ -26,9 +26,10 @@
                                                            contracts, around its event (--limit N)
     python -m hackathon_memory.pipeline makers             who made each own contract, topic,
                                                            token and schedule (--limit N)
-    python -m hackathon_memory.pipeline timeline           how the code of a team that came back
-                                                           changed between its hackathons, asked
-                                                           of GitHub once (design 8.7)
+    python -m hackathon_memory.pipeline timeline           the code of projects that came back,
+                                                           at the end of each event, and how it
+                                                           changed, asked of GitHub once
+                                                           (design 8.7)
     python -m hackathon_memory.pipeline refresh            ask GitHub and the ledger again about
                                                            what is a day old, then write what
                                                            changed (--hours N, --repos N, --wait)

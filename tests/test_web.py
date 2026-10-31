@@ -370,6 +370,8 @@ def test_the_card_of_a_team_that_came_back_shows_its_timeline(site, tmp_path: Pa
     assert box.index("8 March 2026") < box.index("14 June 2026")  # the oldest event first
     assert "(this card)" in box and f'hx-get="/project/{cedar}/panel"' in box
     assert "The code between the two is not compared yet: the next reading asks GitHub." in box
+    assert box.count("Its code at the end of the event: not read yet.") == 2
+    assert "Same repository." not in box  # one repository: the title says it once
     assert "The dates of commits are the team's own" in box
     assert "Linked projects" not in part  # its only link is in the timeline already
     answers = Answers(tmp_path / "data" / "raw" / "api.github.com")  # where the step saves them
@@ -386,9 +388,43 @@ def test_the_card_of_a_team_that_came_back_shows_its_timeline(site, tmp_path: Pa
     assert "Between the two: 4 commits, 3 files changed, 60 lines added and 3 removed." in box
     assert f'href="{REPO}/compare/{COMMIT}...{LATER_COMMIT}"' in box
     assert f'href="{REPO}/commit/{COMMIT}"' in box and f">{COMMIT[:7]}<span" in box
-    assert "not compared yet" not in box
+    assert "not compared yet" not in box and "not read yet" not in box
     page = client.get("/", params={"open": str(cedar)}).text  # its (i) opens its one note
     assert 'popovertarget="tip-timeline"' in page and page.count('id="tip-timeline" popover') == 1
+
+
+def test_projects_linked_by_a_hedera_id_show_a_timeline_whatever_they_won(site) -> None:  # noqa: ANN001
+    """Two projects at two events, with two repositories and the same topic, and no prize
+    (design 8.7): the timeline shows both, says how they are linked, and that their code is not
+    compared."""
+    from hackathon_memory.db.repositories import RepositoryStore
+
+    client, _, ids, database = site
+    pebble, cedar = ids["Pebble Pay"], ids["Cedar Post"]
+    with psycopg.connect(database) as conn:
+        (later,) = conn.execute(
+            "INSERT INTO events (site, slug, name, ends_on) "
+            "VALUES ('ethglobal.com', 'later', 'Later', '2026-06-14') RETURNING id"
+        ).fetchone()
+        conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (later, cedar))
+        conn.execute("UPDATE events SET ends_on = '2026-03-08' WHERE slug = 'sample-event'")
+        for pid in (pebble, cedar):
+            (hid,) = conn.execute(
+                "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+                "words_around, in_hashscan_link) VALUES (%s, '0.0.7000123', 'testnet', 'topic', "
+                "'page', 'invented', false) RETURNING id", (pid,)).fetchone()  # fmt: skip
+            conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                         "VALUES (%s, 'testnet', 'proof_found')", (hid,))  # fmt: skip
+        (prizes,) = conn.execute("SELECT count(*) FROM prizes WHERE project_id = ANY(%s)",
+                                 ([pebble, cedar],)).fetchone()  # fmt: skip
+    assert prizes == 0  # neither won anything
+    RepositoryStore(database).link({pebble: REPO, cedar: "https://github.com/sample-org/cedar"})
+    part = client.get(f"/project/{cedar}/panel").text
+    box = part.split("Timeline: 2 hackathons", 1)[1].split("</section>", 1)[0]
+    assert "Same Hedera ID: 0.0.7000123 on testnet, confirmed by the ledger for both." in box
+    assert "Different repositories, so the code is not compared." in box
+    assert box.count("Its code at the end of the event: not read yet.") == 2
+    assert "Linked projects" not in part  # its only link is in the timeline already
 
 
 def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: ANN001
@@ -577,7 +613,9 @@ def test_the_hbar_row_says_not_checked_and_its_mark_says_why(site) -> None:  # n
     row = re.search(r'<th scope="row">Accounts and HBAR transfers</th>(.*?)</tr>', page, re.DOTALL)
     assert row and '<span class="text-secondary">not checked</span>' in row.group(1)
     assert 'popovertarget="tip-hbar"' in row.group(1) and ">2</td>" in row.group(1)
-    assert "not compared" not in page
+    # the old words of the HBAR cell are gone from its table (the timeline's note uses them)
+    table = page[page.rindex("<table", 0, row.start()) : page.index("</table>", row.end())]
+    assert "not compared" not in table
     tip = page.split('id="tip-hbar" popover>', 1)[1].split("</div>", 1)[0]
     assert "Nearly every project moves HBAR" in tip and "not checked" in tip
     marks = set(re.findall(r'popovertarget="tip-([a-z0-9-]+)"', page))

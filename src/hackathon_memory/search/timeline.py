@@ -1,18 +1,20 @@
-"""The timeline of a team that came back (design 8.7, 31 October 2026): its projects at several
-hackathons with one repository, oldest first, each with what it won, what its page said and what
-its own Hedera IDs did around its event, and between two of them, how its code changed as GitHub
-counts it (collect/github_history.py).
+"""The timeline of projects that came back (design 8.7, 31 October 2026): the projects linked
+across hackathons, oldest first, whatever they won, each with what it won, what its page said, what
+its own Hedera IDs did around its event and its code at the end of its event, and between two of
+them, how they are linked and how their code changed as GitHub counts it
+(collect/github_history.py).
 
-The groups are those of "seen before" (search/seen.py) whose projects all have one repository; a
-group linked by a Hedera ID alone has no code to compare. The ledger's part is each project's own
-depth of use (design 7.5), from the ledger, whose times nobody can change. The code's part rests
-on the dates of commits, which a team sets: the card says so.
+The groups are those of "seen before" (search/seen.py): the same repository or the same Hedera ID.
+The code of two entries is compared only when they have the same repository; with two repositories,
+or one with none, each entry shows its own code and the step says why nothing is compared. The
+ledger's part is each project's own depth of use (design 7.5), from the ledger, whose times nobody
+can change. The code's part rests on the dates of commits, which a team sets: the card says so.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date
 from itertools import pairwise
@@ -27,20 +29,35 @@ from hackathon_memory.search import seen
 
 SHOWN_KINDS = 3  # the kinds of transaction named in a line of the timeline; the rest are counted
 
+# What is known of the change of the code from one entry to the next.
+COMPARED = "compared"  # GitHub's count of the change
+SAME_COMMIT = "same_commit"  # the same commit at the end of both events
+NOT_ASKED = "not_asked"  # an answer of GitHub is missing: the next reading asks for it
+NO_COMMIT = "no_commit"  # GitHub gives no commit at the end of one of the two events
+NOT_GIVEN = "not_given"  # GitHub gave no comparison of the two commits
+OTHER_REPOSITORY = "other_repository"  # two repositories: nothing to compare
+NO_REPOSITORY = "no_repository"  # one of the two has no known repository
+
 
 @dataclass(frozen=True)
 class Group:
-    """A team that came back: its projects with one repository, oldest event first."""
+    """Projects linked across events (search/seen.py), oldest event first."""
 
-    repository: str
     project_ids: tuple[int, ...]
     last_days: tuple[date, ...]  # the last day of each one's event, in the same order
+    repositories: tuple[str | None, ...]  # each one's repository, in the same order
+
+    @property
+    def repository(self) -> str | None:
+        """The one repository of every project, or None when they differ or one has none."""
+        found = set(self.repositories)
+        return next(iter(found)) if len(found) == 1 and None not in found else None
 
 
-def groups_with_one_repository(conninfo: str, projects: Iterable[int] | None = None) -> list[Group]:
-    """Each group of projects linked across events (search/seen.py) whose projects all have the
-    same repository and a known last day, two or more; with `projects`, only the groups that hold
-    one of them."""
+def returning_groups(conninfo: str, projects: Iterable[int] | None = None) -> list[Group]:
+    """Each group of projects linked across events (search/seen.py), with those of its projects
+    whose event has a known last day, two or more; with `projects`, only the groups that hold one
+    of them."""
     groups = seen.came_back(conninfo)
     wanted = set(projects) if projects is not None else None
     members = [pid for group in groups for pid in group]
@@ -55,12 +72,11 @@ def groups_with_one_repository(conninfo: str, projects: Iterable[int] | None = N
     for group in groups:
         if wanted is not None and not wanted.intersection(group):
             continue
-        urls = {rows[pid][0] for pid in group if pid in rows}
         dated = sorted((rows[pid][1], pid) for pid in group if pid in rows and rows[pid][1])
-        if len(urls) != 1 or None in urls or len(dated) < 2:
+        if len(dated) < 2:
             continue
-        found.append(Group(urls.pop(), tuple(pid for _, pid in dated),
-                           tuple(day for day, _ in dated)))  # fmt: skip
+        found.append(Group(tuple(pid for _, pid in dated), tuple(day for day, _ in dated),
+                           tuple(rows[pid][0] for _, pid in dated)))  # fmt: skip
     return found
 
 
@@ -77,7 +93,8 @@ class Entry:
     short_line: str
     did: tuple[tuple[str, int], ...]  # what its own IDs did around its event, most first
     more: int  # the transactions of the kinds not named in `did`
-    commit: Version | None  # the newest commit on or before the last day of its event
+    repository: str | None
+    commit: Version | None  # the newest commit on or before the last day; None: not asked
 
     @property
     def did_text(self) -> str:
@@ -90,20 +107,26 @@ class Entry:
 
 
 @dataclass(frozen=True)
+class Step:
+    """From one entry of the timeline to the next: how the two are linked, and what is known of
+    the change of their code."""
+
+    link: str | None  # "repository" or "network:ID" when the two are linked directly, else None
+    state: str  # one of the states above
+    change: github_history.Change | None = None  # GitHub's count, when compared
+    page: str | None = None  # GitHub's page of the comparison, when compared
+
+
+@dataclass(frozen=True)
 class Timeline:
-    repository: str
     entries: tuple[Entry, ...]
-    changes: tuple[github_history.Change | None, ...]  # from each entry to the next; None: not read
+    steps: tuple[Step, ...]  # from each entry to the next
 
-    def compare_page(self, index: int) -> str | None:
-        """GitHub's page of the comparison from entry `index` to the next, when both are known."""
-        one, two = self.entries[index].commit, self.entries[index + 1].commit
-        if not (one and two and one.sha and two.sha):
-            return None
-        return github_history.compare_page(self.repository, one.sha, two.sha)
-
-
-SAME = github_history.Change("identical", 0, 0, 0, 0)  # no commit between the two last days
+    @property
+    def repository(self) -> str | None:
+        """The one repository of every entry, or None when they differ or one has none."""
+        found = {entry.repository for entry in self.entries}
+        return next(iter(found)) if len(found) == 1 and None not in found else None
 
 
 def _prize(sponsor: str | None, track: str | None, award: str | None) -> str:
@@ -111,12 +134,37 @@ def _prize(sponsor: str | None, track: str | None, award: str | None) -> str:
     return f"{words}, {award}" if award and track and award != track else words
 
 
+def _step(store: RawStore, one: Entry, two: Entry, linked: Mapping[int, str]) -> Step:
+    """What the timeline can say from `one` to `two`, from the saved answers of GitHub."""
+    link = linked.get(two.project_id)
+    if one.repository is None or two.repository is None:
+        return Step(link, NO_REPOSITORY)
+    if one.repository != two.repository:
+        return Step(link, OTHER_REPOSITORY)
+    first, second = one.commit, two.commit
+    if first is None or second is None:
+        return Step(link, NOT_ASKED)
+    if not (first.sha and second.sha):
+        return Step(link, NO_COMMIT)
+    if first.sha == second.sha:
+        return Step(link, SAME_COMMIT)
+    repository = one.repository
+    change = github_history.saved_change(store, repository, first.sha, second.sha)
+    if change is not None:
+        return Step(link, COMPARED, change,
+                    github_history.compare_page(repository, first.sha, second.sha))  # fmt: skip
+    if github_history.asked_change(store, repository, first.sha, second.sha):
+        return Step(link, NOT_GIVEN)
+    return Step(link, NOT_ASKED)
+
+
 def timeline_of(conninfo: str, store: RawStore, project_id: int,
                 depth_of: Callable[[int], Depth | None]) -> Timeline | None:  # fmt: skip
-    """The timeline of the team of `project_id`, or None when it did not come back with one
-    repository. `depth_of` gives the depth of use of a project (from its card)."""
-    groups = groups_with_one_repository(conninfo, [project_id])
-    if not groups:
+    """The timeline of the projects linked to `project_id` across events, or None when it did not
+    come back, or when the last day of its event is not known. `depth_of` gives the depth of use
+    of a project (from its card)."""
+    groups = returning_groups(conninfo, [project_id])
+    if not groups or project_id not in groups[0].project_ids:
         return None
     group = groups[0]
     ids = list(group.project_ids)
@@ -131,21 +179,15 @@ def timeline_of(conninfo: str, store: RawStore, project_id: int,
             "ORDER BY project_id, position", (ids,)):  # fmt: skip
             prizes[pid].append(_prize(sponsor, track, award))
     entries = []
-    for pid, day in zip(group.project_ids, group.last_days, strict=True):
+    for pid, day, repository in zip(group.project_ids, group.last_days, group.repositories,
+                                    strict=True):  # fmt: skip
         name, event, starts, line = rows[pid]
         depth = depth_of(pid)
+        commit = github_history.saved_until(store, repository, day) if repository else None
         entries.append(Entry(pid, name, event, starts.date() if starts else None, day,
                              tuple(prizes[pid]), line or "", depth.did if depth else (),
-                             depth.more_count if depth else 0,
-                             github_history.saved_until(store, group.repository, day)))  # fmt: skip
-    changes: list[github_history.Change | None] = []
-    for one, two in pairwise(entries):
-        first, second = one.commit, two.commit
-        if not (first and second and first.sha and second.sha):
-            changes.append(None)
-        elif first.sha == second.sha:
-            changes.append(SAME)
-        else:
-            changes.append(github_history.saved_change(store, group.repository, first.sha,
-                                                       second.sha))  # fmt: skip
-    return Timeline(group.repository, tuple(entries), tuple(changes))
+                             depth.more_count if depth else 0, repository, commit))  # fmt: skip
+    links = seen.links_within(conninfo, ids)
+    steps = tuple(_step(store, one, two, dict(links.get(one.project_id, [])))
+                  for one, two in pairwise(entries))  # fmt: skip
+    return Timeline(tuple(entries), steps)
