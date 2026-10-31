@@ -6,17 +6,20 @@ Every page, answer and archive here is invented. No request leaves the test."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import psycopg
 import pytest
 
 from checkfakes import (
+    COMMIT,
     DOWNLOAD,
+    LATER_COMMIT,
     NOW,
     REPO,
     commits_answer,
+    compare_answer,
     facts_answer,
     github,
     nodes,
@@ -27,6 +30,7 @@ from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.github import archive_address, readme_address
 from hackathon_memory.collect.github_commits import commits_address
 from hackathon_memory.collect.github_facts import facts_address
+from hackathon_memory.collect.github_history import compare_address, until_address
 from hackathon_memory.db.migrate import migrate
 from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.db.runs import recorded_run
@@ -165,3 +169,46 @@ def test_each_reading_keeps_what_changed_and_says_its_steps(database: str, tmp_p
     read(LATER + timedelta(minutes=2), projects={pebble}, source=BUTTON)
     pressed = store.latest(pebble)
     assert pressed is not None and pressed.source == BUTTON and pressed.changes == ()
+
+
+def test_a_team_that_comes_back_gets_its_timeline_in_the_reading(
+    database: str, tmp_path: Path
+) -> None:
+    """A new list of projects brings Pebble Pay back to another event with the same repository:
+    the next reading asks GitHub for what its timeline lacks, with nobody asking for it, and a
+    later reading asks nothing more (design 8.7, 31 October 2026)."""
+    back = project_page(name="Pebble Pay Two", slug="pebble-pay-two", short_id="p2q3r",
+                        event_slug="later-event", event_name="Later Event",
+                        starts_at="2026-06-12T16:00:00.000Z", code=REPO)  # fmt: skip
+    ProjectStore(database).save(
+        read_project_page(back, "https://ethglobal.com/showcase/pebble-pay-two-p2q3r"), "b" * 64
+    )
+    march, june = date(2026, 3, 8), date(2026, 6, 14)
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE events SET ends_on = %s WHERE slug = 'sample-event'", (march,))
+        conn.execute("UPDATE events SET ends_on = %s WHERE slug = 'later-event'", (june,))
+    pages = {
+        facts_address(REPO): Reply(200, facts_answer()),
+        readme_address(REPO): Reply(200, readme_answer(FIRST)),
+        commits_address(REPO): Reply(200, commits_answer(ARCHIVE_COMMIT)),
+        archive_address(REPO): Reply(302, b"", {"Location": DOWNLOAD}),
+        DOWNLOAD: Reply(200, archive({"src/a.ts": b"// nothing"})),
+        until_address(REPO, march): Reply(200, commits_answer()),
+        until_address(REPO, june): Reply(200, commits_answer(LATER_COMMIT)),
+        compare_address(REPO, COMMIT, LATER_COMMIT): Reply(200, compare_answer()),
+    }
+    client, site = github(tmp_path, pages)
+    answers = Answers(tmp_path / "raw")
+    with recorded_run(database, STEP) as run:
+        refresh(database, answers, client, nodes(), run, collector=COLLECTOR, older_than=DAY,
+                now=lambda: NOW)  # fmt: skip
+    counts = run.counts
+    assert (counts["timeline_groups"], counts["timeline_commits_asked"],
+            counts["timeline_changes_asked"]) == (1, 2, 1)  # fmt: skip
+    assert "GitHub, comparisons of two commits: 1 asked" in "\n".join(refresh_lines(run))
+    asked = len(site.seen)
+    with recorded_run(database, STEP) as run:
+        refresh(database, answers, client, nodes(), run, collector=COLLECTOR, older_than=DAY,
+                now=lambda: NOW)  # fmt: skip
+    assert len(site.seen) == asked and run.counts["timeline_commits_saved_before"] == 2
+    assert "comparisons of two commits" not in "\n".join(refresh_lines(run))

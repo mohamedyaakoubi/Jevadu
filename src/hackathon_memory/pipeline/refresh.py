@@ -13,18 +13,21 @@ A repository lives on after its event, and so do the Hedera IDs of a project. In
    read again whole (collect/github_code.py).
 3. With no request: the READMEs and their Hedera IDs, the facts of the code, and what the code
    says about Hedera are written again from the newest answers of the repositories answered.
-4. The ledger: the IDs of the code, then every ID, from the table when its answer is younger than
+4. GitHub, for the timeline of each group of projects that came back (design 8.7): the newest
+   commit at the end of each event, and the comparison of two that follow with the same
+   repository, each asked once (pipeline/timeline.py).
+5. The ledger: the IDs of the code, then every ID, from the table when its answer is younger than
    the age, else from the mirror node; the proof rule judges them again.
-5. The histories of the own IDs: those never read or read before the depth of use (design 7.5),
+6. The histories of the own IDs: those never read or read before the depth of use (design 7.5),
    whole, and the new transactions of the others, from their newest event on.
-6. What the calls of the own contracts reached among Hedera's system contracts (design 7.5): a
+7. What the calls of the own contracts reached among Hedera's system contracts (design 7.5): a
    contract never read, or read while its time was open and longer ago than the age; with a
    limit of requests (a round of the website), CONTRACTS_A_ROUND at most.
-7. What changed for each project, compared with what the tool held before the reading, is kept
+8. What changed for each project, compared with what the tool held before the reading, is kept
    (db/readings.py): always for a reading by the button of a card, else only when something did.
 
-GitHub is asked only when the switch COLLECT_GITHUB is on; without it, steps 3 to 6 run on what
-is saved. The pages of the sites that were asked for permission are never read again (design
+GitHub is asked only when the switch COLLECT_GITHUB is on; without it, steps 3 and 5 to 7 run on
+what is saved. The pages of the sites that were asked for permission are never read again (design
 5.7). It is safe to stop and to run again: an answer is saved as it comes, and a later run asks
 only for what is older than the age. The website runs the same work in the background, and for
 one project at the press of "Read again now" (web/refresher.py).
@@ -60,6 +63,7 @@ from hackathon_memory.pipeline import (
     hedera_code,
     history,
     readmes,
+    timeline,
 )
 
 STEP = "refresh"
@@ -177,6 +181,10 @@ def refresh(
         readmes.read_readmes(repositories, ProjectStore(conninfo), answers, run, only=answered)
         code.read_code(repositories, answers, run, only=answered)
         hedera_code.read_hedera_code(repositories, answers, run, only=answered)
+    # What the timelines of the projects that came back still lack (design 8.7): a new group,
+    # or a new event of one, gets its answers here without anybody asking for them.
+    timeline.ask_timelines(client, answers, conninfo, run, collector=collector, projects=projects,
+                           limit=limit)  # fmt: skip
     step(LEDGER)
     ledger = LedgerStore(conninfo)
     code_ids.give_code_ids(CodeIdStore(conninfo), ledger, mirrors, run, max_age=older_than,
@@ -231,4 +239,6 @@ def refresh_lines(run: Run) -> list[str]:
     )
     lines.append(f"Contracts whose calls were read: {counts['contracts_read']}, with "
                  f"{counts['calls_read']:,} calls.")  # fmt: skip
+    if counts["timeline_commits_asked"] or counts["timeline_changes_asked"]:
+        lines.extend(timeline.timeline_lines(run)[1:])  # what was asked for the timelines
     return lines

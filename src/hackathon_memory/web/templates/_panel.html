@@ -44,6 +44,33 @@
   <div class="project-cols">
     <div class="project-col project-facts">
       {% set how = judged_of(facts) %}
+      {# Projects linked across hackathons, oldest first, whatever they won (design 8.7, 31 October
+         2026): the facts of each entry, and between two, how they are linked and how the code
+         changed by GitHub's count. #}
+      {% if timeline %}
+      {% set one_repository = timeline.repository %}
+      <section class="card project-section timeline-section" aria-labelledby="timeline-{{ pid }}-title">
+        <div class="card-body">
+          <h3 id="timeline-{{ pid }}-title">Timeline: {% if one_repository %}one repository, {% endif %}{{ timeline.entries | length }} hackathons{{ parts.info("timeline", "the timeline") }}</h3>
+          <ol class="hm-timeline">
+          {% for entry in timeline.entries %}
+            <li class="hm-timeline-entry{% if entry.project_id == pid %} is-this{% endif %}">
+              <p class="hm-timeline-when">{% if entry.starts %}{{ entry.starts | day }} to {% endif %}{{ entry.ends | day }} &middot; {{ entry.event }}</p>
+              <p class="hm-timeline-name">{% if entry.project_id == pid %}<b>{{ entry.name }}</b> <span class="text-secondary">(this card)</span>{% else %}<a href="/project/{{ entry.project_id }}" hx-get="/project/{{ entry.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML" data-open-viewer="{{ entry.project_id }}">{{ entry.name }}</a>{% endif %}</p>
+              {% if entry.prizes %}<p class="hm-small">Won: {{ entry.prizes | join("; ") }}</p>{% endif %}
+              {% if entry.short_line %}<p class="hm-small">Its page: &ldquo;{{ entry.short_line }}&rdquo;</p>{% endif %}
+              <p class="hm-small">On the ledger, around its event: {{ entry.did_text }}.</p>
+              <p class="hm-small">{% if not entry.repository %}No repository is known for it.{% elif not entry.commit %}Its code at the end of the event: not read yet.{% elif entry.commit.sha %}Its code at the end of the event: <a class="id" href="{{ entry.repository }}/commit/{{ entry.commit.sha }}" rel="noopener" target="_blank">{{ entry.commit.sha[:7] }}<span class="visually-hidden"> on GitHub (opens in a new tab)</span></a>{% if entry.commit.made_at %}, dated {{ entry.commit.made_at | day }}{% endif %}.{% elif entry.commit.status == "empty" %}Its repository had no commit yet at the end of the event.{% else %}GitHub does not show its repository now.{% endif %}</p>
+            </li>
+            {% if not loop.last %}{% set step = timeline.steps[loop.index0] %}{% set change = step.change %}
+            <li class="hm-timeline-change">{% if not one_repository %}{% if step.link %}{{ parts.link_reason(step.link) }}{% else %}Linked through another project of this timeline.{% endif %} {% endif %}{% if step.state == "compared" %}Between the two: {{ "{:,}".format(change.commits) }} commit{{ "s" if change.commits != 1 }}, {% if change.files_capped %}at least {% endif %}{{ "{:,}".format(change.files) }} files changed, {% if change.files_capped %}at least {% endif %}{{ "{:,}".format(change.additions) }} lines added and {{ "{:,}".format(change.deletions) }} removed.{% if step.page %} <a href="{{ step.page }}" rel="noopener" target="_blank">Compare on GitHub<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}{% elif step.state == "same_commit" %}No commit between the two.{% elif step.state == "no_commit" %}The code is not compared: GitHub gives no commit at the end of one of the two events.{% elif step.state == "not_given" %}GitHub gave no comparison of these two commits.{% elif step.state == "other_repository" %}Different repositories, so the code is not compared.{% elif step.state == "no_repository" %}One of the two has no known repository, so the code is not compared.{% else %}The code between the two is not compared yet: the next reading asks GitHub.{% endif %}</li>
+            {% endif %}
+          {% endfor %}
+          </ol>
+          <p class="hm-small">The ledger's times cannot be changed. The dates of commits are the team's own: a team can set them, and can write its history again.</p>
+        </div>
+      </section>
+      {% endif %}
       {% if linked %}
       <section class="card project-section linked-section" aria-labelledby="linked-{{ pid }}-title">
         <div class="card-body">

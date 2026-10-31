@@ -86,6 +86,7 @@ from hackathon_memory.search import closeness, engine, listing, rerank, seen, st
 from hackathon_memory.search import compare as comparing
 from hackathon_memory.search import counts as counting
 from hackathon_memory.search import filters as filtering
+from hackathon_memory.search import timeline as timelines
 from hackathon_memory.settings import Settings, SettingsError
 from hackathon_memory.web import (
     charts,
@@ -748,6 +749,24 @@ def create_app(
         named = data.members(conninfo, [[pid] for pid, _ in found])
         return [(by, group[0]) for (_, by), group in zip(found, named, strict=True) if group]
 
+    def team_timeline(
+        conninfo: str, card: Any, project_id: int, linked: list[tuple[str, Any]]
+    ) -> tuple[Any, list[tuple[str, Any]]]:
+        """The timeline of the team of a project that came back with one repository (design 8.7),
+        or None, and the linked projects that the timeline does not show already."""
+        if not linked:
+            return None, linked
+
+        def depth_of(pid: int) -> Any:
+            one = card if pid == project_id else card_of(conninfo, pid)
+            return one.depth if one else None
+
+        shown = timelines.timeline_of(conninfo, answers, project_id, depth_of)
+        if shown is None:
+            return None, linked
+        inside = {entry.project_id for entry in shown.entries}
+        return shown, [(by, member) for by, member in linked if member.project_id not in inside]
+
     def kept_comparisons(conninfo: str, idea: str, ids: list[int]) -> dict[int, Any]:
         """The comparisons of the last day for this idea, by project, for those of `ids` that
         have one: never asked here."""
@@ -1054,7 +1073,10 @@ def create_app(
                  "with_category": every.with_category, "notes": notes}  # fmt: skip
         try:
             panel_card = card_of(conninfo, open_id) if open_id else None
-            shown["panel_linked"] = linked_to(conninfo, open_id) if panel_card else []
+            opened = linked_to(conninfo, open_id) if panel_card else []
+            shown["panel_timeline"], shown["panel_linked"] = team_timeline(
+                conninfo, panel_card, open_id, opened
+            )
             # a link to a project that is not in the collection opens the window with that sentence
             shown["panel_problem"] = NO_SUCH_PROJECT if open_id and panel_card is None else None
             if not idea:
@@ -1673,13 +1695,15 @@ def create_app(
             conninfo = database()
             card = card_of(conninfo, project_id)
             linked = linked_to(conninfo, project_id) if card else []
+            line, linked = team_timeline(conninfo, card, project_id, linked)
         except (SettingsError, psycopg.OperationalError):
             return render(request, "project.html", 503, card=None, back_query=back,
                           problem=DATABASE_DOWN)  # fmt: skip
         if card is None:
             return render(request, "project.html", 404, card=None, back_query=back,
                           problem=NO_SUCH_PROJECT)  # fmt: skip
-        return render(request, "project.html", card=card, back_query=back, idea="", linked=linked)
+        return render(request, "project.html", card=card, back_query=back, idea="", linked=linked,
+                      timeline=line)  # fmt: skip
 
     @app.get("/project/{project_id}/panel", response_class=HTMLResponse)
     def project_panel(request: Request, project_id: int, idea: str = "") -> HTMLResponse:
@@ -1692,12 +1716,13 @@ def create_app(
             card = card_of(conninfo, project_id)
             kept = kept_comparison(conninfo, idea, project_id) if card and idea else None
             linked = linked_to(conninfo, project_id) if card else []
+            line, linked = team_timeline(conninfo, card, project_id, linked)
         except (SettingsError, psycopg.OperationalError):
             return render(request, "_problem.html", 503, problem=DATABASE_DOWN)
         if card is None:
             return render(request, "_problem.html", 404, problem=NO_SUCH_PROJECT)
         return render(request, "_panel.html", card=card, back_query=back, idea=idea,
-                      kept_comparison=kept, linked=linked)  # fmt: skip
+                      kept_comparison=kept, linked=linked, timeline=line)  # fmt: skip
 
     def read_again_shown(
         request: Request, project_id: int, state: refreshing.State | None
