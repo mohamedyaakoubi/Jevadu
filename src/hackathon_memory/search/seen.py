@@ -172,12 +172,17 @@ def links(
     return sorted(linked.items())
 
 
-def links_of(conninfo: str, project_id: int) -> list[tuple[int, str]]:
-    """The links of one project, read from the tables."""
+def links_within(conninfo: str, project_ids: Iterable[int]) -> dict[int, list[tuple[int, str]]]:
+    """The links of each of some projects (`links`), read from the tables once."""
     with psycopg.connect(conninfo) as conn:
         members, ids, named = _collection(conn)
         public = public_keys(conn)
-    return links(members, ids, named, project_id, public)
+    return {pid: links(members, ids, named, pid, public) for pid in project_ids}
+
+
+def links_of(conninfo: str, project_id: int) -> list[tuple[int, str]]:
+    """The links of one project, read from the tables."""
+    return links_within(conninfo, [project_id])[project_id]
 
 
 @dataclass(frozen=True)
