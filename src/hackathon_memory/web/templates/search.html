@@ -181,4 +181,4 @@
   <div data-step data-element="[data-tour-again]" data-side="top"><h3>Take the tour again</h3><p>This link, at the bottom of every page, starts the tour again whenever you want.</p></div>
 </template>
 {% endblock %}
-{% block viewer %}{% if panel_card %}{% with card = panel_card, back_query = search_query, linked = panel_linked %}{% include "_panel.html" %}{% endwith %}{% elif panel_problem %}{% with problem = panel_problem %}{% include "_problem.html" %}{% endwith %}{% endif %}{% endblock %}
+{% block viewer %}{% if panel_card %}{% with card = panel_card, back_query = search_query, linked = panel_linked, timeline = panel_timeline %}{% include "_panel.html" %}{% endwith %}{% elif panel_problem %}{% with problem = panel_problem %}{% include "_problem.html" %}{% endwith %}{% endif %}{% endblock %}

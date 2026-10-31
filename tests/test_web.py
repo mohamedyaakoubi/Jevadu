@@ -340,6 +340,57 @@ def test_the_card_of_a_project_names_the_projects_linked_to_it(site) -> None:  #
     assert "Linked projects" in shared.text and f'hx-get="/project/{pebble}/panel"' in shared.text
 
 
+def test_the_card_of_a_team_that_came_back_shows_its_timeline(site, tmp_path: Path) -> None:  # noqa: ANN001
+    """The same repository at two events (design 8.7, 31 October 2026): the card shows both, the
+    oldest first, says that the code is not compared until GitHub's answers are saved, then how
+    it changed, and that the dates of commits are the team's own. The box of linked projects does
+    not name them again."""
+    from checkfakes import COMMIT, LATER_COMMIT, commits_answer, compare_answer
+    from hackathon_memory.collect.answers import Answers
+    from hackathon_memory.collect.github_commits import kept_of
+    from hackathon_memory.collect.github_history import compare_address, kept_change, until_address
+    from hackathon_memory.db.repositories import RepositoryStore
+
+    client, _, ids, database = site
+    pebble, cedar = ids["Pebble Pay"], ids["Cedar Post"]
+    with psycopg.connect(database) as conn:
+        (later,) = conn.execute(
+            "INSERT INTO events (site, slug, name, ends_on) "
+            "VALUES ('ethglobal.com', 'later', 'Later', '2026-06-14') RETURNING id"
+        ).fetchone()
+        conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (later, cedar))
+        conn.execute("UPDATE events SET ends_on = '2026-03-08' WHERE slug = 'sample-event'")
+    RepositoryStore(database).link({pebble: REPO, cedar: REPO})
+
+    def timeline(text: str) -> str:
+        return text.split("Timeline: one repository, 2 hackathons", 1)[1].split("</section>", 1)[0]
+
+    part = client.get(f"/project/{pebble}/panel").text
+    box = timeline(part)
+    assert box.index("8 March 2026") < box.index("14 June 2026")  # the oldest event first
+    assert "(this card)" in box and f'hx-get="/project/{cedar}/panel"' in box
+    assert "The code between the two is not compared yet: the next reading asks GitHub." in box
+    assert "The dates of commits are the team's own" in box
+    assert "Linked projects" not in part  # its only link is in the timeline already
+    answers = Answers(tmp_path / "data" / "raw" / "api.github.com")  # where the step saves them
+    for url, body, keep in (
+        (until_address(REPO, date(2026, 3, 8)), commits_answer(), kept_of),
+        (until_address(REPO, date(2026, 6, 14)), commits_answer(LATER_COMMIT), kept_of),
+        (compare_address(REPO, COMMIT, LATER_COMMIT), compare_answer(), kept_change),
+    ):
+        fetch = FetchResult(url, url, 200, body, "application/json", "2026-10-31T08:00:00Z")
+        kept, facts, taken_out = keep(fetch)
+        answers.save(fetch, kept, received=body, collector="TestTool/0.1.0", team_cut=taken_out,
+                     answer=facts, suffix=".json")  # fmt: skip
+    box = timeline(client.get(f"/project/{cedar}").text)  # the page of its own shows it too
+    assert "Between the two: 4 commits, 3 files changed, 60 lines added and 3 removed." in box
+    assert f'href="{REPO}/compare/{COMMIT}...{LATER_COMMIT}"' in box
+    assert f'href="{REPO}/commit/{COMMIT}"' in box and f">{COMMIT[:7]}<span" in box
+    assert "not compared yet" not in box
+    page = client.get("/", params={"open": str(cedar)}).text  # its (i) opens its one note
+    assert 'popovertarget="tip-timeline"' in page and page.count('id="tip-timeline" popover') == 1
+
+
 def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: ANN001
     """What the code says about Hedera (design 7.3): a line for each kind of thing found, each
     thing with its files, linked at the commit that was read; code that was not read says so."""
