@@ -5,9 +5,10 @@ Each project gets its eight facts from the tables: the organiser of its event, i
 year of that event, the category of its card when the model wrote one, the result of the proof
 rule, whether its team put an own ID on the main network (the tag "Mainnet" of design 7.5, by the
 rule of search/listing.py; 31 October 2026), its life by the rule of design 7.4, and its prize.
-The organiser of an event of ETHGlobal's showcase is ETHGlobal; of any other event, the organiser
-that its list of winners names, which the parser keeps as the sponsor of each entry's prize (30
-October 2026). A filter keeps the projects
+The organiser of an event of ETHGlobal's showcase is ETHGlobal; of an event of Devfolio, the
+event's name without its year, such as ETHDenver (31 October 2026); of any other event, the
+organiser that its list of winners names, which the parser keeps as the sponsor of each entry's
+prize (30 October 2026). A filter keeps the projects
 whose fact matches it, and the search then ranks only those (search/engine.py). With no filter set,
 every project is searched.
 The prize is the one fact with two values at once: a project known only from a winners' list
@@ -35,6 +36,8 @@ from hackathon_memory.search import listing, seen
 NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
 # The site of ETHGlobal's showcase, and the organiser of every event read there.
 ETHGLOBAL_SITE, ETHGLOBAL = "ethglobal.com", "ETHGlobal"
+# Devfolio, whose events are run by their own organisers: the event's name without its year.
+DEVFOLIO_SITE, YEAR_AT_THE_END = "devfolio.co", r"\s+\d{4}$"
 # The kinds of Hedera ID that the charts count.
 KINDS = ("account", "topic", "token", "contract", "schedule")
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
@@ -151,11 +154,12 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
         ).fetchall()
         signs = listing.signs_of_life(conn, [row[0] for row in rows])
         organisers = dict(conn.execute(
-            "SELECT e.id, CASE WHEN e.site = %s THEN %s ELSE ("
+            "SELECT e.id, CASE WHEN e.site = %s THEN %s"
+            " WHEN e.site = %s THEN regexp_replace(e.name, %s, '') ELSE ("
             " SELECT pr.sponsor FROM projects p JOIN prizes pr ON pr.project_id = p.id"
             " WHERE p.event_id = e.id AND p.entry_kind = 'winner_entry'"
             " ORDER BY p.id, pr.position LIMIT 1) END FROM events e",
-            (ETHGLOBAL_SITE, ETHGLOBAL),
+            (ETHGLOBAL_SITE, ETHGLOBAL, DEVFOLIO_SITE, YEAR_AT_THE_END),
         ).fetchall())  # fmt: skip
         on_main = listing.on_mainnet(conn, [row[0] for row in rows])
     found = []
