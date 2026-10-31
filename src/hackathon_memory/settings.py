@@ -160,6 +160,8 @@ class Settings(BaseSettings):
     collect_africa_winners: bool = Field(False, json_schema_extra=_PUBLIC)
     # Hedera's own posts with the winners of its older hackathons (design 4.6).
     collect_hedera_posts: bool = Field(False, json_schema_extra=_PUBLIC)
+    # Devfolio's projects of a Hedera prize track (design 5.6, 31 October 2026).
+    collect_devfolio: bool = Field(False, json_schema_extra=_PUBLIC)
     # What changes after an event is asked again once its newest answer is this old: GitHub's
     # answers and the facts of the ledger (design 7.3, 25 October 2026).
     refresh_after_hours: float = Field(24.0, gt=0, json_schema_extra=_PUBLIC)

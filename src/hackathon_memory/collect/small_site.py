@@ -48,6 +48,7 @@ def client_for(
     *,
     allow: Callable[[str], bool],
     env_file: Path | None = None,
+    client_class: type[PoliteClient] = PoliteClient,
     **client_options: object,
 ) -> PoliteClient:
     """A polite client that may read what `allow` names, and nothing else.
@@ -82,7 +83,7 @@ def client_for(
         # Read again before every request, so that turning the switch off stops at once.
         return bool(getattr(Settings(_env_file=env_file or ".env"), site.switch))
 
-    return PoliteClient(
+    return client_class(
         site=site.host,
         identity=identity,
         allow=allow,
