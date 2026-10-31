@@ -130,7 +130,7 @@ Each number below comes from a dated result file, named under the table. How eac
 | **Ledger** | Checks every Hedera ID of a page, a README or the code on the mirror node: its kind, and its dates against the event. Then reads what the project's own IDs did around the event. | 358 of the 658 have a Hedera ID active during their hackathon, 100 of them found only in the code. For 279, the ledger or the code shows something that the page does not say. |
 | **Cards** | Gemini 3.1 Pro writes seven fields for each full page, each with quotes that code checks against the page. A field whose quotes are not found is dropped. | 8,909 of the 8,931 quotes were found word for word in their page. |
 | **Search** | By keyword or by meaning. On a button, Gemini 3.8 Flash orders the 30 closest and says what each shares with the idea and how it differs. | Test 2, below. |
-| **Website** | The search, a card for each project, eight filters, a graph and charts of any list, the check of a submission from its GitHub link, and the register. | The graph's groups are regions of the map, not proven categories: a silhouette of about 0.04. |
+| **Website** | The search, a card for each project (with a timeline when its team came back with the same code), eight filters, a graph and charts of any list, the check of a submission from its GitHub link, and the register. | The graph's groups are regions of the map, not proven categories: a silhouette of about 0.04. |
 | **Register** | Writes a fingerprint of a team's repository and its commit to a Hedera topic with no admin key, once the README carries the line that the page gives. The team can sign it with its own wallet. | The topic `0.0.11126502` is on the test network. No registration yet. |
 
 Sources: the collection, `proofs/results/` (11 October 2026); the parser, `evals/results/20261022T094656Z-overview.json`; the code, `evals/results/20261022T094650Z-code-findings.json`; the ledger, `evals/results/20261029T082910Z-overview.json` and `evals/results/20261029T160737Z-depth.json`; the cards, `evals/results/20261018T050534Z-overview.json`; the graph, `evals/results/20261031T104649Z-graph-groups.json`.
@@ -214,9 +214,10 @@ The optional settings, for the public copy, the wallets, the GitHub App, Turnsti
 | `python -m hackathon_memory.pipeline readmes` | Asks GitHub for each project's README, then reads it for Hedera IDs. |
 | `python -m hackathon_memory.pipeline code` | Asks GitHub for the facts of each repository. |
 | `python -m hackathon_memory.pipeline hedera_code` | Reads the code of each repository for its use of Hedera. |
+| `python -m hackathon_memory.pipeline timeline` | Asks GitHub, once, how the code of a team that came back with the same repository changed between its hackathons. |
 | `python -m hackathon_memory.pipeline check` | Asks the mirror node about every Hedera ID and applies the proof rule. |
 | `python -m hackathon_memory.pipeline embed` | Makes the embedding of each project whose text changed (it costs money, within the budget). |
-| `python -m hackathon_memory.pipeline all` | The six steps above, in order. |
+| `python -m hackathon_memory.pipeline all` | The seven steps above, in order. |
 | `python -m hackathon_memory.pipeline history` | Reads the transactions of each project's own Hedera IDs. |
 | `python -m hackathon_memory.pipeline makers` | Keeps the account that created each project's own contract, topic, token and schedule. |
 | `python -m hackathon_memory.pipeline refresh` | Asks GitHub and the ledger again about what is a day old, and writes what changed. |
