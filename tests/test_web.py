@@ -2258,6 +2258,60 @@ def test_the_graph_of_a_search_stands_around_the_idea(site, monkeypatch) -> None
     assert "the graph draws at most 2" in many and '<a class="hm-dot ' not in many
 
 
+def test_the_first_ten_wear_a_crown_for_a_prize(site) -> None:  # noqa: ANN001
+    """A filled gold crown for a Hedera prize, an outlined grey one for another sponsor's prize,
+    each named in the key and in the lists under the graph (31 October 2026)."""
+    client, _, ids, database = site
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET prize_state = 'hedera_prize' WHERE id = %s",
+                     (ids["Pebble Pay"],))  # fmt: skip
+        conn.execute("UPDATE projects SET prize_state = 'other_prize' WHERE id = %s",
+                     (ids["Cedar Post"],))  # fmt: skip
+    page = client.get("/", params={"idea": VENDOR, "view": "graph", "mode": "meaning"}).text
+    dots = re.findall(r'<a class="hm-dot[^>]*data-graph-id="(\d+)".*?</a>', page, re.S)
+    assert len(dots) == 3
+    crowns = re.findall(r'data-graph-id="(\d+)"(?:(?!</a>).)*?class="hm-crown is-(\w+)"',
+                        page, re.S)  # fmt: skip
+    assert sorted(crowns) == sorted([(str(ids["Pebble Pay"]), "hedera"),
+                                     (str(ids["Cedar Post"]), "other")])  # fmt: skip
+    assert "Won a Hedera prize</li>" in page and "Won another sponsor's prize</li>" in page
+    assert "&middot; won a Hedera prize</span>" in page  # the lists say it too
+    # an event's list has no ranks, so no crowns, and no key of them
+    with psycopg.connect(database) as conn:
+        (event,) = conn.execute("SELECT id FROM events LIMIT 1").fetchone()
+    listed = client.get("/", params={"event": event, "view": "graph"}).text
+    assert 'class="hm-crown' not in listed and "Won a Hedera prize</li>" not in listed
+
+
+@pytest.mark.browser
+def test_a_crown_keeps_its_size_and_its_place_when_the_graph_zooms(site, chromium) -> None:  # noqa: ANN001
+    client, _, ids, database = site
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE projects SET prize_state = 'hedera_prize' WHERE id = %s",
+                     (ids["Pebble Pay"],))  # fmt: skip
+    page = served(chromium, client, viewport={"width": 1280, "height": 900})
+    page.goto(f"http://site.test/?idea={VENDOR}&view=graph&mode=meaning")
+    crown = page.locator(f'.hm-dot[data-graph-id="{ids["Pebble Pay"]}"] .hm-crown')
+    mark = page.locator(f'.hm-dot[data-graph-id="{ids["Pebble Pay"]}"] .hm-mark')
+
+    def measured() -> tuple[float, float]:
+        top, dot = crown.bounding_box(), mark.bounding_box()
+        return top["width"], dot["y"] - (top["y"] + top["height"])  # its width, the gap
+
+    page.locator(".hm-graph-svg").scroll_into_view_if_needed()  # below the box of the idea
+    width, gap = measured()
+    assert width > 4 and 0 <= gap < 6  # small, and just above its dot
+    box = page.locator(".hm-graph-svg").bounding_box()
+    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.keyboard.down("Control")
+    page.mouse.wheel(0, -400)
+    page.keyboard.up("Control")
+    page.wait_for_selector(".hm-graph-svg.is-zoomed")
+    zoomed_width, zoomed_gap = measured()
+    assert abs(zoomed_width - width) < 1.5 and abs(zoomed_gap - gap) < 1.5
+    page.context.close()
+
+
 @pytest.mark.browser
 def test_right_clicks_keep_dots_lit_and_each_empty_click_lets_the_latest_go(site, chromium) -> None:  # noqa: ANN001
     """A right click keeps a dot lit with its closest project and their line, for as many dots as
