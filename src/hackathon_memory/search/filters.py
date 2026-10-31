@@ -1,9 +1,15 @@
-"""The filters of the search (design 8.2): event, year, category, Hedera proof, life and prize.
+"""The filters of the search (design 8.2): organiser, event, year, category, Hedera proof, main
+network, life and prize.
 
-Each project gets its six facts from the tables: its event, the year of that event, the
-category of its card when the model wrote one, the result of the proof rule, its life by the
-rule of design 7.4, and its prize. A filter keeps the projects whose fact matches it, and the
-search then ranks only those (search/engine.py). With no filter set, every project is searched.
+Each project gets its eight facts from the tables: the organiser of its event, its event, the
+year of that event, the category of its card when the model wrote one, the result of the proof
+rule, whether its team put an own ID on the main network (the tag "Mainnet" of design 7.5, by the
+rule of search/listing.py; 31 October 2026), its life by the rule of design 7.4, and its prize.
+The organiser of an event of ETHGlobal's showcase is ETHGlobal; of any other event, the organiser
+that its list of winners names, which the parser keeps as the sponsor of each entry's prize (30
+October 2026). A filter keeps the projects
+whose fact matches it, and the search then ranks only those (search/engine.py). With no filter set,
+every project is searched.
 The prize is the one fact with two values at once: a project known only from a winners' list
 also won a Hedera prize, so each of the choices keeps the projects that have it. A prize of
 another sponsor and no Hedera prize is a choice of its own (28 October 2026).
@@ -17,7 +23,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, field, fields, replace
 from datetime import UTC, datetime
 
 import psycopg
@@ -27,6 +33,8 @@ from hackathon_memory.read.quotes import KEPT
 from hackathon_memory.search import listing, seen
 
 NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
+# The site of ETHGlobal's showcase, and the organiser of every event read there.
+ETHGLOBAL_SITE, ETHGLOBAL = "ethglobal.com", "ETHGlobal"
 # The kinds of Hedera ID that the charts count.
 KINDS = ("account", "topic", "token", "contract", "schedule")
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
@@ -34,6 +42,9 @@ LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
 HEDERA_PRIZE, OTHER_PRIZE, WINNERS_LIST = "hedera_prize", "other_prize", "winners_list"
 WINNER_WORDS = {HEDERA_PRIZE: "Won a Hedera prize", OTHER_PRIZE: "Won another sponsor's prize",
                 WINNERS_LIST: "Winners' list only"}  # fmt: skip
+# The choices of the main network filter: a project with the tag "Mainnet", or one without it.
+YES, NO = "yes", "no"
+MAINNET_WORDS = {YES: "Yes", NO: "No"}
 PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
 PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
                NOT_CHECKED: listing.STATUS_WORDS[None]}  # fmt: skip
@@ -49,6 +60,8 @@ class Filters:
     proof: str = ""
     life: str = ""
     winner: str = ""
+    organiser: str = ""
+    mainnet: str = ""
 
     def chosen(self) -> dict[str, str]:
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name)}
@@ -56,7 +69,7 @@ class Filters:
 
 @dataclass(frozen=True)
 class Facts:
-    """The five facts of one project that the filters look at, and more that the charts count:
+    """The facts of one project that the filters look at, and more that the charts count:
     its prize, its kind of entry, the kinds of its Hedera IDs that the ledger confirms, and what
     the reading of its code found (design 7.3): the Hedera services it calls and the Hedera
     packages it names."""
@@ -74,6 +87,8 @@ class Facts:
     code_read: bool = False  # the code of its repository was read, whole or in part
     code_services: tuple[str, ...] = ()
     code_packages: tuple[str, ...] = ()
+    organiser: str = ""  # who ran its event: ETHGlobal, or the organiser of its winners' list
+    mainnet: str = NO  # YES when its team put an own ID on the main network (design 7.5)
 
     @property
     def winner(self) -> tuple[str, ...]:
@@ -101,6 +116,8 @@ class Choices:
     winner: list[Choice]
     projects: int
     with_category: int
+    organiser: list[Choice] = field(default_factory=list)
+    mainnet: list[Choice] = field(default_factory=list)
 
     def knows(self, name: str, value: str) -> bool:
         return any(choice.value == value for choice in getattr(self, name))
@@ -133,6 +150,14 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
             (list(seen.CONFIRMED), list(KINDS), model, version),
         ).fetchall()
         signs = listing.signs_of_life(conn, [row[0] for row in rows])
+        organisers = dict(conn.execute(
+            "SELECT e.id, CASE WHEN e.site = %s THEN %s ELSE ("
+            " SELECT pr.sponsor FROM projects p JOIN prizes pr ON pr.project_id = p.id"
+            " WHERE p.event_id = e.id AND p.entry_kind = 'winner_entry'"
+            " ORDER BY p.id, pr.position LIMIT 1) END FROM events e",
+            (ETHGLOBAL_SITE, ETHGLOBAL),
+        ).fetchall())  # fmt: skip
+        on_main = listing.on_mainnet(conn, [row[0] for row in rows])
     found = []
     for (project_id, event_id, event_name, year, proof, category, prize, entry, kinds, code_read,
          services, packages) in rows:  # fmt: skip
@@ -142,7 +167,9 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
         kept = category and category.get("state") == KEPT and category.get("value")
         found.append(Facts(project_id, str(event_id), event_name, str(year) if year else "",
                            kept or "", proof or NOT_CHECKED, life.status, prize, entry,
-                           tuple(kinds), code_read, tuple(services), tuple(packages)))  # fmt: skip
+                           tuple(kinds), code_read, tuple(services), tuple(packages),
+                           organisers.get(event_id) or "",
+                           YES if project_id in on_main else NO))  # fmt: skip
     return found
 
 
@@ -206,4 +233,9 @@ def choices(rows: Sequence[Facts]) -> Choices:
         ],  # fmt: skip
         projects=len(rows),
         with_category=sum(bool(row.category) for row in rows),
+        organiser=[Choice(v, v, n) for v, n in _counted(row.organiser for row in rows)],
+        mainnet=[
+            Choice(v, MAINNET_WORDS[v], n)
+            for v, n in _counted((row.mainnet for row in rows), (YES, NO))
+        ],
     )

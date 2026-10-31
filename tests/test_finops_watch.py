@@ -85,6 +85,27 @@ def test_the_watch_says_when_it_cannot_read(capsys) -> None:  # noqa: ANN001
     assert "could not be read (ProgrammingError)" in said and "not a connection" not in said
 
 
+def test_the_watch_reads_the_dotenv_of_a_laptop(empty_database: str, tmp_path: Path,
+                                                 monkeypatch, capsys) -> None:  # noqa: ANN001  # fmt: skip
+    """The README tells to keep the setting in .env, and the command printed "not set" on a
+    laptop, where only the job gives it in the environment (31 October 2026)."""
+    migrate(empty_database)
+    called(empty_database, 4.0, datetime.now(UTC))
+    lines = ["# the database of the public copy", f'PUBLIC_COSTS_DATABASE_URL="{empty_database}"',
+             "LLM_BUDGET_PUBLIC_PER_DAY_USD=10", "OTHER=x=y"]  # fmt: skip
+    (tmp_path / ".env").write_text("\n".join(lines), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    for name in watch.GIVEN:
+        monkeypatch.delenv(name, raising=False)
+    assert watch.main() == 0  # $4 of the .env's $10 a day; the default $5 would have warned
+    assert "- Today (UTC): $4.0000 of $10.00" in capsys.readouterr().out
+    monkeypatch.setenv("LLM_BUDGET_PUBLIC_PER_DAY_USD", "5")
+    assert watch.main() == 1  # the environment wins over .env, as for the settings
+    assert watch.from_dotenv(tmp_path / ".env", ["OTHER"]) == {"OTHER": "x=y"}
+    assert watch.from_dotenv(tmp_path / "none", watch.GIVEN) == {}
+    assert watch.main({}) == 2  # a run of the tests gives its own settings, and no .env is read
+
+
 def test_the_watch_knows_the_caps_of_the_settings_and_needs_only_psycopg() -> None:
     """The job gives no caps, so the watch's are the settings' own; and it installs psycopg
     alone, so the module may import nothing else."""

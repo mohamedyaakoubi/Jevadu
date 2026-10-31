@@ -781,6 +781,33 @@ def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site)
     assert "Mainnet" not in named("mainnet", datetime(2021, 9, 20, tzinfo=UTC))  # long before
 
 
+def test_the_mainnet_filter_keeps_the_teams_on_the_main_network(site) -> None:  # noqa: ANN001
+    """The tag "Mainnet" as a filter, yes or no (31 October 2026): each choice counts its projects
+    and keeps only those."""
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    LedgerStore(database).save_facts(LedgerFacts(
+        "0.0.4517", "mainnet", datetime(2026, 10, 28, tzinfo=UTC), found=True, kind="topic",
+        ledger_id="0.0.4517", created_at=datetime(2026, 3, 7, tzinfo=UTC)))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        conn.execute("DELETE FROM hedera_ids WHERE entity_id = '0.0.4517'")
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, '0.0.4517', 'mainnet', 'topic', 'page', "
+            "'invented', false) RETURNING id", (pebble,)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    page = client.get("/").text
+    assert 'name="mainnet"' in page and ">Yes (1)</option>" in page and ">No (2)</option>" in page
+    kept = client.get("/", params={"mainnet": "yes"}).text
+    assert "1 project matches the filters" in kept and f"/project/{pebble}/panel" in kept
+    left = client.get("/", params={"mainnet": "no"}).text
+    assert "2 projects match the filters" in left and f"/project/{pebble}/panel" not in left
+
+
 def test_the_sites_own_files_are_never_run_old(site) -> None:  # noqa: ANN001
     """The script and the styles are linked with a fingerprint of their content, and a browser
     checks its copy each time (design 12.2, 28 October 2026)."""
@@ -1140,6 +1167,7 @@ def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
     page = client.get("/")
     assert 'name="event"' in page.text and 'name="life"' in page.text
     assert "ETHGlobal Sample Event (3)" in page.text
+    assert 'name="organiser"' in page.text and ">ETHGlobal (3)</option>" in page.text
     assert f"{PAYMENTS} (1)" in page.text  # the one card of the fixture
     assert "1 of 3 projects have one" in page.text
 
@@ -1862,6 +1890,21 @@ def test_a_closed_register_is_said_and_offers_no_button(site) -> None:  # noqa: 
     assert "Register on Hedera testnet" not in check.text
 
 
+def test_the_box_says_plainly_what_the_line_does_before_and_after_it_is_added(site) -> None:  # noqa: ANN001
+    """The words under the line say what it proves and what the button does with it, in both
+    states (30 October 2026: "The README already contains it. When you click the button, the
+    README is read again" was not clear)."""
+    client, _, _, database = site
+    asked = {"repo": REPO, "event": checkable(database)}
+    before = client.get("/check", params=asked, headers=HX).text
+    assert "Only someone who can change this repository can add the line" in before
+    assert "the site reads your README on GitHub again, to find the line." in before
+    with_line(client, before)
+    after = client.get("/check", params=asked, headers=HX).text
+    assert "Your README already has this line, so you can register now." in after
+    assert "once more, to make sure the line is still there." in after
+
+
 # --------------------------------------------- the line of the register, through GitHub (9.2)
 
 
@@ -2418,13 +2461,32 @@ def test_a_mark_lights_the_part_it_leads_to(site, chromium, motion) -> None:  # 
 
 
 @pytest.mark.browser
-def test_the_six_filters_stand_in_one_row(site, chromium) -> None:  # noqa: ANN001
+def test_the_eight_filters_stand_in_one_row(site, chromium) -> None:  # noqa: ANN001
+    """The prize had wrapped to a second row (24 October 2026); the organiser came as a seventh
+    filter, with the year and the activity in narrower columns (30 October 2026), and the main
+    network as an eighth, narrow too (31 October 2026). One row also when "Clear filters" takes its
+    place at the end."""
     client, _, _, _ = site
     page = served(chromium, client, viewport={"width": 1280, "height": 900})
-    page.goto("http://site.test/")
-    tops = page.evaluate("[...document.querySelectorAll('.hm-filter')]"
-                         ".map(f => Math.round(f.getBoundingClientRect().top))")  # fmt: skip
-    assert len(tops) == 6 and len(set(tops)) == 1  # the prize had wrapped to a second row
+    for address in ("http://site.test/", "http://site.test/?organiser=ETHGlobal"):
+        page.goto(address)
+        tops = page.evaluate("[...document.querySelectorAll('.hm-filter')]"
+                             ".map(f => Math.round(f.getBoundingClientRect().top))")  # fmt: skip
+        assert len(tops) == 8 and len(set(tops)) == 1, address
+        # the text shown in each select, measured against its room: a select's own cut-off is
+        # not seen by its scrollWidth ("All years" showed as "Al..." with the button there)
+        fits = page.evaluate("""[...document.querySelectorAll('.hm-filter select')].map(s => {
+          const style = getComputedStyle(s);
+          const pen = document.createElement('canvas').getContext('2d');
+          pen.font = style.font;
+          const room = s.clientWidth - parseFloat(style.paddingLeft)
+            - parseFloat(style.paddingRight);
+          return pen.measureText(s.options[s.selectedIndex].text).width <= room;
+        })""")
+        # every value shown whole here: the words of "all" and the short choices (a long name of
+        # an event may show its start, by design); the arrow's room was cut (31 October 2026)
+        assert all(fits), (address, fits)
+    assert page.locator(".hm-clear-filters").count() == 1
 
 
 @pytest.mark.browser

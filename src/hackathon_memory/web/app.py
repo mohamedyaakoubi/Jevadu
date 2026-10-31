@@ -166,13 +166,14 @@ MODES = (MEANING, WORDS)
 # The page opens on keyword search (design 12.1, S1, 28 October 2026): it needs no call to
 # Google, so it answers when Google does not; semantic search is one click away.
 DEFAULT_MODE = WORDS
-FILTERS = ("event", "year", "category", "proof", "life", "winner")
+FILTERS = ("event", "year", "category", "proof", "life", "winner", "organiser", "mainnet")
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 CHARTS = "charts"
 GRAPH = "graph"
 VIEWS = (CHARTS, GRAPH)  # the views beside the cards, each named in the address
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
-                "proof": "the Hedera proof", "life": "the life", "winner": "the prize"}  # fmt: skip
+                "proof": "the Hedera proof", "life": "the life", "winner": "the prize",
+                "organiser": "the organiser", "mainnet": "the main network"}  # fmt: skip
 EXAMPLES = EXAMPLE_IDEAS  # what the search learns about them is kept for good
 # The block of the readings of a card (design 7.3, S2): who read, the steps of a reading as
 # pipeline/refresh.py says them, and a failure of the reading by the kind of its error.
@@ -981,6 +982,8 @@ def create_app(
         proof: str = "",
         life: str = "",
         winner: str = "",
+        organiser: str = "",
+        mainnet: str = "",
         open: str = "",  # noqa: A002  (the name in the address)
         page: str = "1",
         view: str = "",
@@ -1015,7 +1018,9 @@ def create_app(
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
-        asked = filtering.Filters(event, year, category, proof, life, winner)
+        asked = filtering.Filters(event=event, year=year, category=category, proof=proof,
+                                  life=life, winner=winner, organiser=organiser,
+                                  mainnet=mainnet)  # fmt: skip
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
                 "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,

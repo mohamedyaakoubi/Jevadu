@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 import psycopg
 import pytest
 
 from hackathon_memory.search.filters import (
+    NO,
     NOT_CHECKED,
+    YES,
     Facts,
     Filters,
     allowed,
@@ -94,6 +97,47 @@ def test_the_facts_come_from_the_tables(empty_database: str) -> None:
     assert {row.event_name for row in rows.values()} == {"ETHGlobal Sample Event"}
     assert {row.life for row in rows.values()} == {"unknown"}  # no end and no dates of code
     assert {row.year for row in rows.values()} == {"2026"}  # from the start of the event
+
+
+def test_the_organiser_is_ethglobal_or_the_one_of_its_winners_list(empty_database: str) -> None:
+    """ETHGlobal for the events of its showcase; for another event, the organiser that its list of
+    winners names, which the parser keeps as the sponsor of each entry's prize (30 October 2026)."""
+    database = three_projects(empty_database)
+    with psycopg.connect(database) as conn:
+        (event,) = conn.execute(
+            "INSERT INTO events (site, slug, name) "
+            "VALUES ('hol.org', 'ai-2025', 'An AI hackathon') RETURNING id"
+        ).fetchone()
+        (entry,) = conn.execute(
+            "INSERT INTO projects (site, page_url, site_key, entry_kind, event_id, name, "
+            "short_line, prize_state, has_video, page_sha256, parser) VALUES ('hol.org', "
+            "'https://hol.org/blog/winners#franky', 'franky', 'winner_entry', %s, 'Franky', "
+            "'A line.', 'hedera_prize', false, %s, 'p') RETURNING id",
+            (event, "b" * 64),
+        ).fetchone()
+        conn.execute(
+            "INSERT INTO prizes (project_id, position, sponsor, track, award, pool, line) "
+            "VALUES (%s, 1, 'Hashgraph Online', 'Agent Kit', 'First Place', false, "
+            "'Hashgraph Online - Agent Kit - First Place')",
+            (entry,),
+        )
+    rows = facts(database, model="m", version="v")
+    by_id = {row.project_id: row for row in rows}
+    assert by_id[entry].organiser == "Hashgraph Online"
+    assert {row.organiser for row in rows if row.project_id != entry} == {"ETHGlobal"}
+    offered = [(choice.value, choice.count) for choice in choices(rows).organiser]
+    assert offered == [("ETHGlobal", 3), ("Hashgraph Online", 1)]
+    assert allowed(rows, Filters(organiser="Hashgraph Online")) == [entry]
+
+
+def test_the_mainnet_filter_keeps_the_teams_with_an_own_id_on_the_main_network() -> None:
+    """The tag "Mainnet" of a card (design 7.5) as a filter, yes or no (31 October 2026)."""
+    rows = [replace(ROWS[0], mainnet=YES), *ROWS[1:]]
+    offered = [(choice.value, choice.words, choice.count) for choice in choices(rows).mainnet]
+    assert offered == [(YES, "Yes", 1), (NO, "No", 3)]
+    assert allowed(rows, Filters(mainnet=YES)) == [1]
+    assert allowed(rows, Filters(mainnet=NO)) == [2, 3, 4]
+    assert [choice.value for choice in choices(ROWS).mainnet] == [NO]  # none has it: no "Yes"
 
 
 def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list() -> None:

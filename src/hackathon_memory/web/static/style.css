@@ -153,18 +153,24 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-check-days { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .hm-check-days[hidden] { display: none; }
 
-/* the six filters in one row under the search, in columns of the same width: a long value shows
-   its start, and its list opens it whole (24 October 2026: the sixth, the prize, had wrapped to a
-   second row) */
+/* the eight filters in one row under the search: a long value shows its start, and its list
+   opens it whole (24 October 2026: the sixth, the prize, had wrapped to a second row). The year and
+   the activity hold short values, so their columns are narrower, which makes room for the
+   organiser (30 October 2026); so does the main network, after the Hedera proof (31 October 2026). */
 .hm-filters {
-  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)) auto; align-items: end;
+  display: grid; align-items: end;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.75fr) minmax(0, 1.05fr)
+    minmax(0, 1fr) minmax(0, 0.75fr) minmax(0, 0.9fr) minmax(0, 1fr) auto;
   gap: 0.5rem 0.75rem; margin-bottom: 1rem;
   padding: 0.75rem 1rem; background: var(--tblr-bg-surface); border: 1px solid var(--tblr-border-color);
   border-radius: var(--tblr-border-radius);
 }
 .hm-filter { display: grid; gap: 0.125rem; min-width: 0; }
 .hm-filter-head { display: inline-flex; align-items: center; min-height: 24px; font-size: 0.75rem; font-weight: 600; color: var(--tblr-secondary); }
-.hm-filter select { width: 100%; text-overflow: ellipsis; }
+/* the arrow nearer the edge (Tabler keeps 3rem for it), so that each value has 20px more room:
+   with eight filters at 1280px, "Yes (5)" and "All organisers" were cut (31 October 2026) */
+.hm-filter select { width: 100%; text-overflow: ellipsis; padding-right: 1.75rem;
+  background-position: right 0.5rem center; }
 .hm-filter.chosen select { border-color: var(--tblr-primary); box-shadow: 0 0 0 1px var(--tblr-primary); }
 .hm-filters-note { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: var(--tblr-secondary); }
 .hm-clear-filters { align-self: flex-end; }
