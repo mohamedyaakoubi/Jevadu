@@ -2,7 +2,7 @@
 
 This document explains what the tool is, how it is built, and why. The code and the tests point to its sections by number, for example "design 5.7" or "design section 11.6". So the numbers are fixed: a new section is added at the end, never in the middle.
 
-**State on 11 October 2026.** Phase A is done: the setup and four small proofs, which all passed (section 14.2). Phase B is being built: the parser (section 6.1) and the check on the ledger (sections 7.1 and 7.2) already run on the saved pages. The rest of sections 6 to 13 describes what comes next. It is a plan, not a result. Where a number in this document comes from a run, the text says so and names the result file.
+**State on 31 October 2026.** The parts that sections 5 to 13 describe run on the real data, each change with its date. A part that is still to come says so, such as Test 4 (section 13.5), the review of the screens by both layers (section 12.3) and the first registration in the register (section 9.2). Where a number comes from a run, the text names its result file. The website runs on a laptop and as a public copy online (section 12.5).
 
 Words in **bold** on first use are explained in section 17.
 
@@ -143,6 +143,26 @@ One consequence for the collected pages. The data of an ETHGlobal project page h
 - **The proof is asked for.** Hello Future asks each team for a test account as proof (section 1.3). That is exactly what the tool checks.
 
 ---
+
+### 3.5 The rules, by number
+
+The code and the tests name these rules by number, for example "design rule 9". The numbers that are missing are about how the work is organised, not about the tool. The rules for reading a site, each with a test, are in section 5.7.
+
+| # | Rule |
+|---|---|
+| 1 | The AI never gives a score, never ranks quality, never picks a winner, and never says that a project is a copy. It shows facts side by side, and people judge. |
+| 2 | Facts never come from the LLM. IDs, links, dates, counts and statuses come only from the parser, the code host or the ledger. |
+| 3 | Every field written by the LLM carries a label (stated, inferred or not found) and exact quotes from the page. Code checks every quote against the saved page. A field with no checked quote is dropped. |
+| 4 | Parser first. A titled section is copied word for word, and the LLM is never asked to rewrite it. |
+| 5 | A saved page is never edited afterwards. Before it is saved, the part that shows team members is cut out, and the page is written again by the parser: the text, the links and the order of the tags stay the same. One exception: personal data that is found in a saved page later is taken out, and the reason and the old fingerprint are written next to the page. |
+| 6 | No number is shown unless it comes from a test with a dated result file. A model never grades its own work. |
+| 7 | All LLM calls go through Vertex AI: Gemini 3.1 Pro reads and rewrites the pages, Gemini 3.8 Flash does the search, and after five failures of Gemini in a row DeepSeek V4.1 Flash, which Google serves on Vertex AI, stands in for the search for ten minutes. Embeddings use Google's embedding model. |
+| 8 | Only a fixed fingerprint record goes to the Hedera topic. No free text, no names, no secrets. A message on a topic can never be deleted. |
+| 9 | Secrets live only in `.env`. They never appear in git, in a log, in the database or in a test file. |
+| 10 | The terms of a site are read before the first request to it. Requests go one at a time, with a pause, with the name of the tool and a contact address. A block is never worked around, and the tool never signs in. |
+| 11 | No personal data that the check does not need: no names, emails or photos of team members. A handle, an email address or a link to a profile that a team wrote inside its own text is hidden before the text is stored. |
+| 17 | No collector runs against a live site before the maintainer has said yes for that site and for the pages that will be read. |
+| 18 | The way a site is read is fixed in the code, and each rule has a test. |
 
 ## 4. The card
 
@@ -454,7 +474,7 @@ The numbers 30 and 14 are a first choice. Test 3 (section 13.4) tells whether th
 - For a project, the best status of its IDs counts. An ID whose page names no network is asked on the test network and on the main network.
 - No page gives the end of its event, so it is typed into a file by hand. For an event of one weekend, the last day is the day of the judging, which the data of its project pages shows.
 
-**What this check does not show.** It does not show that the project is good. It does not prove that the ID belongs to the team: a team could paste somebody else's ID. Two things reduce that risk: the same ID must also appear in the team's own code or README, and the dates on Hedera must fit the dates of the code.
+**What this check does not show.** It does not show that the project is good. It does not prove that the ID belongs to the team: a team could paste somebody else's ID. The rule does not compare the ID with the team's code or its dates. What helps a judge see it: when another project of the collection names the same ID, the card links the two (section 8.4), and an ID that several teams name is shown as a shared service, not as any team's own (section 8.4).
 
 ### 7.3 Facts from the code
 
@@ -983,7 +1003,7 @@ The statuses and the labels are shown as small marks. Each mark has one meaning,
 
 ### 12.3 Two review layers
 
-- **Layer 1.** Each task T1 to T5 is done on the running site in a real browser, on a wide screen and on a phone, moving through the page as a person does. The findings are written to a file, each one marked as sure or unsure.
+- **Layer 1.** Each task T1 to T5 is done on the running site in a real browser, on a computer's screen, in the light and the dark theme (since 24 October 2026 the reviews leave phones out: the tool is shown on a laptop; what the site already does on a phone stays), moving through the page as a person does. The findings are written to a file, each one marked as sure or unsure.
 - **Layer 2.** The maintainer does the same tasks, accepts or rejects each finding, and adds new ones.
 
 What is checked on every screen:
@@ -994,7 +1014,7 @@ What is checked on every screen:
 4. Can the person go back and correct a mistake?
 5. Does every button and link say what it does? "Click here" and "Submit" are not enough.
 6. Does every mark have its legend?
-7. Is the text readable on a phone, with enough contrast?
+7. Is the text readable, with enough contrast, in both themes?
 8. Does every error say what went wrong and what to do?
 
 ### 12.4 Why a study before the build
@@ -1007,7 +1027,7 @@ A page generated by an LLM without guidance comes out badly. Nielsen Norman Grou
 The same site runs a second time as a public copy at `jevadu.mohamedyaakoubi.com` (29 October 2026): on Vercel's free plan, which is for non-commercial use only, with its database on Neon's free plan. Both stop when a free limit is reached, until the next month, and never charge. Its database is the laptop's, copied with PostgreSQL's own pg_dump and pg_restore, every table alike. The limits are those of a public site with no accounts:
 
 - **Not indexed.** Every page says `noindex`, in `robots.txt`, in the header `X-Robots-Tag` and in a meta of the page, on the laptop too: the site is reached by its link only.
-- **Two switches, off until turned on.** `ai` for every call to a model, which costs money, and `register` for a record written on Hedera. They are kept in the database and set by a command (`python -m hackathon_memory.web.switch ai on`). With the AI off, the search is by keyword and says so; everything else works.
+- **Two switches, off until turned on** (both on since 30 October 2026). `ai` for every call to a model, which costs money, and `register` for a record written on Hedera. They are kept in the database and set by a command (`python -m hackathon_memory.web.switch ai on`). With the AI off, the search is by keyword and says so; everything else works.
 - **A budget of its own.** The public copy counts its calls to a model under an environment of its own, `public`: 30 dollars in all and 5 dollars a day (`LLM_BUDGET_PUBLIC_USD`, `LLM_BUDGET_PUBLIC_PER_DAY_USD`), apart from the budgets of the test work and of the tool in use, so that strangers can never spend their money. When it is spent, the search is by keyword and says so.
 - **An allowance for each visitor, one time only, never renewed.** A visitor may ask Gemini 12 times (`PUBLIC_AI_PER_VISITOR`): each press of one of its buttons for an idea counts once, however many calls its answer takes, and an answer kept for a day costs nothing again. Then 200 searches by meaning (an embedding costs about two thousandths of a cent: this count only stops a program that would ask for thousands), 10 checks, 10 readings again and 3 registrations. The meter counts just before each call to a model, so only what is really asked is counted. The page says how many asks are left, and why when none is.
 - **The copy's owner** (30 October 2026). The GitHub account named in `PUBLIC_OWNER_GITHUB` signs in with GitHub on an unlisted page, `/owner`, through Jevadu's GitHub App; its browser then holds a sealed pass for 90 days, and its checks, readings again and registrations are not counted. Any other account changes nothing, and the token of the sign-in is not kept. Gemini's allowance and the copy's budget still hold.
@@ -1195,7 +1215,7 @@ A collector also needs the yes of the site, and the maintainer's yes for the pag
 | The LLM misreads projects | Labels, the quote check, the original text, and Test 1. |
 | Many pages give no Hedera ID | The card says "no ID given". The README of the code is also searched. The share is reported. |
 | The test network is reset | Old test IDs become "cannot be checked". The code facts stay. |
-| An ID is pasted from another team | Section 7.2: the ID must also be in the team's code, and the dates must fit. |
+| An ID is pasted from another team | The proof rule cannot see it (section 7.2). When another project names the same ID, the card links the two, and an ID that several teams name is shown as a shared service (section 8.4). |
 | The submit key of the topic is lost or stolen | It cannot be replaced (section 9.5). A new topic is created, and the method screen says so. |
 | It is not the first of its kind | Solana's hackathon organiser built this for Solana (section 18). The ledger check is what this tool adds. |
 
@@ -1235,7 +1255,8 @@ A collector also needs the yes of the site, and the maintainer's yes for the pag
 ### 18.1 What already exists
 
 - **Colosseum Copilot, for Solana.** Solana's hackathon organiser built this idea for its own events. Its own page says its records show "what teams submitted, not what they run today". The ledger check is what this tool adds. ([README](https://github.com/colosseumorg/colosseum-copilot))
-- **AI tools that score submissions.** There are many. This tool does not score (section 3.3).
+- **Two hackathon projects that search past projects.** [ETHSearch](https://github.com/pauldev20/ethglobalsearch) searches the projects of ETHGlobal's showcase by text and by meaning. [HackathAttest Agent](https://github.com/TheSoftwareDevGuild/the-guild-attestation-intelligent-agent), from ETHOnline 2025, answers questions about past hackathon projects from attestations on Arbitrum.
+- **AI tools that score submissions.** There are many. DoraHacks' Hackathon AI, for example, gives each submission a score and feedback against the organiser's criteria, can approve every submission that reaches a score the organiser sets, and ranks the approved projects of each track ([its own article](https://dorahacks.io/blog/guides/hackathon-ai/)). This tool does not score (section 3.3).
 - **For Hedera:** a few searches found no memory of past hackathon projects. That is not proof that none exists.
 
 ### 18.2 Facts that were checked, with the date
