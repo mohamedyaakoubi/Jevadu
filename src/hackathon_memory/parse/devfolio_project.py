@@ -40,8 +40,9 @@ from hackathon_memory.parse.project import (
 )
 
 PARSER_VERSION = "devfolio-project-1"
-# The kinds of a section: a text under a question of the event, the team's words for a track
-# that it entered, and the technologies that it lists.
+# The kinds of a section: a text under a question of the event and the team's words for a track
+# that it entered, each numbered in its order, since a project holds one section of each kind; and
+# the technologies that it lists.
 TEXT, TRACK, TECHNOLOGIES = "devfolio_text", "devfolio_track", "technologies"
 _CODE_HOSTS = frozenset({"github.com", "gitlab.com", "bitbucket.org"})
 _TITLE = re.compile(r"^(#{1,6})\s+(.*)$")
@@ -114,7 +115,7 @@ def _sections(project: dict) -> tuple[tuple[Section, ...], int, int]:
         cut += kept.team_parts_cut
         blocks = markdown_blocks(kept.text)
         if blocks:
-            sections.append(Section(TEXT, title, blocks))
+            sections.append(Section(f"{TEXT}_{len(sections) + 1}", title, blocks))
     for track in project.get("prize_tracks") or []:
         own = (track.get("project_tracks") or {}) if isinstance(track, dict) else {}
         words = _text(own.get("description") if isinstance(own, dict) else None)
@@ -124,7 +125,8 @@ def _sections(project: dict) -> tuple[tuple[Section, ...], int, int]:
         hidden += kept.words_hidden
         blocks = markdown_blocks(kept.text)
         if blocks:
-            sections.append(Section(TRACK, f"Tracks applied: {squash(_text(track.get('name')))}",
+            sections.append(Section(f"{TRACK}_{len(sections) + 1}",
+                                    f"Tracks applied: {squash(_text(track.get('name')))}",
                                     blocks))  # fmt: skip
     tags = [squash(_text(tag.get("name"))) for tag in project.get("hashtags") or []
             if isinstance(tag, dict) and _text(tag.get("name")).strip()]  # fmt: skip

@@ -72,6 +72,9 @@ def test_a_project_gives_its_facts_texts_and_prizes() -> None:
     assert "invented_handle" not in page.sections[0].text and page.people_words_hidden >= 2
     assert "The event's question" not in json.dumps([s.text for s in page.sections])
     assert page.sections[2].text == "hedera, React"
+    # one section of each kind in a project (the table keeps them so), numbered in their order
+    assert [section.kind for section in page.sections] == [
+        "devfolio_text_1", "devfolio_track_2", "technologies"]  # fmt: skip
     assert [(link.kind, link.url, link.hidden_on) for link in page.links] == [
         (CODE_LINK, "https://github.com/sample-org/pebble-pay", None),
         (OTHER_LINK, "https://pebble.example.test", None),
