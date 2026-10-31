@@ -30,7 +30,7 @@ import os
 import re
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
@@ -461,6 +461,26 @@ class PoliteClient:
                 )
             raise StopCollecting(f"{self.site} sent too many redirects in a row.")
 
+    def post_json(self, url: str, body: Mapping[str, object]) -> FetchResult:
+        """The answer of a search that a site takes as JSON sent to `url` (Devfolio's search of
+        projects, 31 October 2026). Every rule of `get` holds: the switch, the list of pages, the
+        pause, the count on disk, the name and the address, the judging of the answer. A
+        redirect is not followed: it stops the run."""
+        data = json.dumps(dict(body), separators=(",", ":"), sort_keys=True).encode("utf-8")
+        with self._lock:
+            self._check_allowed(url)
+            raw = self._request_once(url, {"Content-Type": "application/json"}, data=data)
+            if raw.status in _REDIRECT_STATUSES:
+                raise StopCollecting(f"{self.site} answered a search with a redirect.")
+            return FetchResult(
+                url=url,
+                final_url=url,
+                status=raw.status,
+                body=raw.body,
+                content_type=raw.headers.get("Content-Type", ""),
+                fetched_at=self.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
+
     # ------------------------------------------------------------------ inside
 
     def _check_allowed(self, url: str) -> None:
@@ -552,14 +572,19 @@ class PoliteClient:
             chunks.append(chunk)
         return b"".join(chunks)
 
-    def _request_once(self, url: str, extra: dict[str, str] | None = None) -> RawAnswer:
+    def _request_once(
+        self, url: str, extra: dict[str, str] | None = None, *, data: bytes | None = None
+    ) -> RawAnswer:
+        """One request: a GET, or a POST of `data` when there is some."""
         self._wait_turn()
         self.requests_made += 1
         if self.count is not None:
             self.count.add_one()  # before it is sent: a request that fails was still a request
         try:
-            response = self.session.get(
+            response = self.session.request(
+                "GET" if data is None else "POST",
                 url,
+                data=data,
                 headers={**self._headers(), **(extra or {})},
                 timeout=self.timeout,
                 allow_redirects=False,

@@ -553,3 +553,39 @@ def test_the_client_keeps_no_cookie_and_uses_no_login_from_the_computer() -> Non
     policy = _NoCookies()
     assert policy.set_ok(None, None) is False
     assert policy.return_ok(None, None) is False
+
+
+# ---------------------------------------- a search sent as JSON (Devfolio, 31 October 2026)
+
+SEARCH = "https://api.devfolio.co/api/search/projects"
+FOUND_NOTHING = Reply(200, b'{"hits": {"total": {"value": 0}, "hits": []}}',
+                      {"Content-Type": "application/json"})  # fmt: skip
+
+
+def test_a_search_is_sent_as_json_by_the_same_rules() -> None:
+    """A POST goes the way of a GET: the name and the address, the pause, the list of pages;
+    its body is the search, as JSON."""
+    client, site, fake_time = make({SEARCH: [FOUND_NOTHING, FOUND_NOTHING]},
+                                   allow=lambda url: url == SEARCH)  # fmt: skip
+    first = client.post_json(SEARCH, {"q": "hedera", "from": 0})
+    client.post_json(SEARCH, {"q": "hedera", "from": 10})
+    assert first.status == 200 and first.body.startswith(b'{"hits"')
+    assert [request.method for request in site.seen] == ["POST", "POST"]
+    assert json.loads(site.seen[1].body) == {"from": 10, "q": "hedera"}
+    for request in site.seen:
+        assert request.headers["Content-Type"] == "application/json"
+        assert request.headers["From"] == CONTACT and NAME in request.headers["User-Agent"]
+    assert fake_time.sleeps == [2.0]  # the pause, as between two pages
+    with pytest.raises(StopCollecting):
+        client.post_json("https://api.devfolio.co/api/other", {})  # not on the list
+    assert len(site.seen) == 2
+
+
+def test_a_search_answered_by_a_redirect_or_a_no_stops() -> None:
+    moved = Reply(302, b"", {"Location": "https://devfolio.co/elsewhere"})
+    client, _, _ = make({SEARCH: moved}, allow=lambda url: url == SEARCH)
+    with pytest.raises(StopCollecting, match="redirect"):
+        client.post_json(SEARCH, {"q": "hedera"})
+    client, _, _ = make({SEARCH: Reply(403, b"no")}, allow=lambda url: url == SEARCH)
+    with pytest.raises(StopCollecting, match="says no"):
+        client.post_json(SEARCH, {"q": "hedera"})
