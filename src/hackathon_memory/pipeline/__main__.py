@@ -76,7 +76,7 @@ import psycopg
 
 from hackathon_memory import __version__
 from hackathon_memory.check import proof
-from hackathon_memory.collect import github
+from hackathon_memory.collect import devfolio, github
 from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.ethglobal_site import SITE
@@ -369,6 +369,10 @@ def _run_step(
             parse_pages.parse_saved_pages(
                 RawStore(paths.raw_dir), projects, run, limit=arguments.limit
             )
+            # Devfolio's projects of a Hedera track, with the events of its last find (design 5.6).
+            parse_pages.parse_devfolio(RawStore(devfolio.raw_dir(settings)),
+                                       devfolio.read_found(devfolio.found_path(settings)), projects,
+                                       run, limit=arguments.limit)  # fmt: skip
             # The winner entries: copied by hand into the folder of what a person typed, or read
             # from a saved winners page in the folder of saved pages.
             parse_pages.parse_winner_entries(
