@@ -54,6 +54,8 @@ REFERENCES = (
     Reference("sdk", "SDKs", "Hedera", f"{DOCS}/sdks-and-apis/sdks"),  # read on 22 October 2026
     Reference("ward", "Ward's method", "Wikipedia",
               "https://en.wikipedia.org/wiki/Ward%27s_method"),  # read on 24 October 2026
+    Reference("silhouette", "Silhouette (clustering)", "Wikipedia",
+              "https://en.wikipedia.org/wiki/Silhouette_(clustering)"),  # read on 31 October 2026
     # read on 28 October 2026
     Reference("fees", "Custom fee schedule", "Hedera",
               f"{DOCS}/core-concepts/tokens/hedera-token-service-hts-native-tokenization/"

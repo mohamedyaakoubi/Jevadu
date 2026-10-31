@@ -1081,7 +1081,8 @@ def test_each_term_links_its_numbered_source(site) -> None:  # noqa: ANN001
 
     client, _, _, _ = site
     page = client.get("/")
-    for key in ("hedera", "mirror", "account", "topic", "token", "contract", "embedding"):
+    terms = ("hedera", "mirror", "account", "topic", "token", "contract", "embedding")
+    for key in (*terms, "ward", "silhouette"):  # the last two: the groups of the graph
         link = f'<a href="{BY_KEY[key].url}" target="_blank" rel="noopener">[{NUMBER[key]}]'
         assert link in page.text, key
     assert NUMBER["hedera"] == 1  # Hedera's own documentation comes first
