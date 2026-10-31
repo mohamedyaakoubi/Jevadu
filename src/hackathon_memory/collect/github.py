@@ -87,6 +87,8 @@ HOURLY_RESERVE = 100
 CODE_HOST = "github.com"
 
 _NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+# The tail of a comparison between two commit IDs, the one place where dots may follow dots.
+_COMPARE = re.compile(r"/compare/[0-9a-f]{7,40}\.\.\.[0-9a-f]{7,40}$")
 _RATE_LIMIT_WORDS = re.compile(r"rate limit", re.IGNORECASE)
 _BLOCKED_WORDS = re.compile(r"^repository access blocked", re.IGNORECASE)
 
@@ -133,13 +135,16 @@ def _raw_reader(response: requests.Response) -> Callable[[int], bytes]:
 
 
 def allowed(url: str) -> bool:
-    """Only the API's own pages about repositories. A redirect elsewhere is refused."""
+    """Only the API's own pages about repositories. A redirect elsewhere is refused. Two dots
+    never pass, but for the three of a comparison between two commit IDs (31 October 2026,
+    GitHub's "BASE...HEAD"): only that exact tail is taken out before the check."""
     parts = urlsplit(url)
+    path = _COMPARE.sub("/compare/", parts.path)
     return (
         parts.scheme == "https"
         and parts.netloc == SITE
-        and parts.path.startswith(("/repos/", "/repositories/"))
-        and ".." not in parts.path
+        and path.startswith(("/repos/", "/repositories/"))
+        and ".." not in path
     )
 
 

@@ -68,6 +68,26 @@ def commits_answer(sha: str = COMMIT) -> bytes:
                         "committer": {"login": "invented"}, "parents": []}]).encode()  # fmt: skip
 
 
+LATER_COMMIT = "5a0d" * 10  # an invented commit ID, made after COMMIT
+
+
+def compare_answer(files: int = 3) -> bytes:
+    """The comparison of COMMIT and LATER_COMMIT, in the shape GitHub gave on 31 October 2026,
+    with invented people, messages and files: 4 commits, 60 lines added and 3 removed."""
+    person = {"name": "Invented Person", "email": "invented@example.test",
+              "date": "2026-06-01T10:00:00Z"}  # fmt: skip
+    commit = {"sha": LATER_COMMIT, "commit": {"author": person, "committer": person,
+              "message": "Invented message"}, "author": {"login": "invented"}}  # fmt: skip
+    changed = [{"filename": f"src/invented-{n}.ts", "status": "modified", "additions": 10 * (n + 1),
+                "deletions": n, "changes": 11 * n + 10, "patch": "@@ -1 +1 @@"}
+               for n in range(files)]  # fmt: skip
+    return json.dumps({
+        "html_url": f"{REPO}/compare/{COMMIT}...{LATER_COMMIT}", "status": "ahead", "ahead_by": 4,
+        "behind_by": 0, "total_commits": 4, "base_commit": {"sha": COMMIT, "commit": commit},
+        "merge_base_commit": {"sha": COMMIT}, "commits": [commit], "files": changed,
+    }).encode()  # fmt: skip
+
+
 def github(tmp_path: Path, pages: dict[str, Reply]) -> tuple[GitHubClient, FakeSite]:
     """The polite client of GitHub, with its real headers, over a stand-in site."""
     site = FakeSite(pages)
