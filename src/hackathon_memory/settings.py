@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Marks a setting whose value is safe to show on a screen. Everything else is shown as
@@ -117,6 +117,10 @@ class Settings(BaseSettings):
     # are model names and a level, not secrets. The defaults are the maintainer's choice.
     gemini_rewrite_model: str = Field("gemini-3.1-pro-preview", json_schema_extra=_PUBLIC)
     gemini_rewrite_thinking_level: ThinkingLevelName = Field("HIGH", json_schema_extra=_PUBLIC)
+    # The model that writes a card when the first one keeps answering "too many requests" (the
+    # maintainer's rule of 1 November 2026: Gemini 4 Argon). The website shows its card where a
+    # project has none of the first model. Empty: no stand-in.
+    gemini_rewrite_stand_in_model: str = Field("", json_schema_extra=_PUBLIC)
     gemini_search_model: str = Field("gemini-3.8-flash", json_schema_extra=_PUBLIC)
     gemini_search_thinking_level: ThinkingLevelName = Field("LOW", json_schema_extra=_PUBLIC)
     # The embedding model of the search (design 8.1). Chosen on 11 October 2026 for its known
@@ -178,14 +182,24 @@ class Settings(BaseSettings):
     def _level_in_capitals(cls, value: object) -> object:
         return value.strip().upper() if isinstance(value, str) else value
 
-    @field_validator("gemini_rewrite_model", "gemini_search_model", "gemini_embedding_model")
+    @field_validator("gemini_rewrite_model", "gemini_search_model", "gemini_embedding_model",
+                     "gemini_rewrite_stand_in_model")  # fmt: skip
     @classmethod
-    def _a_gemini_model(cls, value: str) -> str:
+    def _a_gemini_model(cls, value: str, info: ValidationInfo) -> str:
         """Design rule 7: the LLM is a Gemini model on Vertex AI, and no other service."""
         cleaned = value.strip()
+        if not cleaned and info.field_name == "gemini_rewrite_stand_in_model":
+            return cleaned  # no stand-in
         if not re.fullmatch(r"gemini-[a-z0-9][a-z0-9.\-]*", cleaned):
             raise ValueError("must be the id of a Gemini model, for example gemini-3.8-flash")
         return cleaned
+
+    def card_models(self) -> tuple[str, ...]:
+        """The models whose cards the website shows, in their order: the first model, then the
+        stand-in, for a project that has no card of the first one."""
+        stand_in = self.gemini_rewrite_stand_in_model
+        main = self.gemini_rewrite_model
+        return (main, stand_in) if stand_in and stand_in != main else (main,)
 
     def database_conninfo(self) -> str:
         """The text that psycopg needs to open the database. It holds a password: never print it."""

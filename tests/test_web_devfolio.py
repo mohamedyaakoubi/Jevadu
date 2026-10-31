@@ -29,7 +29,9 @@ def test_the_organiser_of_a_devfolio_event_is_its_name_without_the_year(
                        run)  # fmt: skip
     with psycopg.connect(empty_database) as conn:
         (pid,) = conn.execute("SELECT id FROM projects WHERE page_url = %s", (PAGE,)).fetchone()
-    (row,) = [row for row in facts(empty_database, model="m", version="v") if row.project_id == pid]
+    (row,) = [
+        row for row in facts(empty_database, models=("m",), version="v") if row.project_id == pid
+    ]
     assert row.organiser == "Sample Hack"
 
 

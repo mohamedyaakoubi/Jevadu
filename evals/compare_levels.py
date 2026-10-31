@@ -83,7 +83,7 @@ def measure(settings: Settings, ideas: Sequence[Any], levels: Sequence[str], *,
         hits = engine.search(conninfo, client.tagged(purpose="embed_query"), idea.words,
                              model=settings.gemini_embedding_model, limit=FIRST)  # fmt: skip
         ids = [card.hit.project_id for card in listing.cards(conninfo, hits)]
-        items = comparing.items_for(conninfo, ids, model=settings.gemini_rewrite_model,
+        items = comparing.items_for(conninfo, ids, models=settings.card_models(),
                                     version=INSTRUCTIONS_VERSION)  # fmt: skip
         order = list(levels[turn % len(levels) :]) + list(levels[: turn % len(levels)])
         for level in order:

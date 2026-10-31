@@ -76,11 +76,11 @@ def test_a_comparison_is_asked_only_for_the_projects_not_kept(empty_database: st
                  "fields_used": ["name"]} for n in numbers]}))  # fmt: skip
 
     model = Answers()
-    items = comparing.items_for(database, ids[:2], model="m", version="v")
+    items = comparing.items_for(database, ids[:2], models=("m",), version="v")
     found, asked = comparing.kept_or_compared(database, model, "an idea", items, model="f",
                                               thinking_level="LOW")  # fmt: skip
     assert asked == 2 and len(model.asked) == 1 and found[ids[0]].same == "Same 1."
-    items = comparing.items_for(database, ids, model="m", version="v")
+    items = comparing.items_for(database, ids, models=("m",), version="v")
     found, asked = comparing.kept_or_compared(database, model, "an idea", items, model="f",
                                               thinking_level="LOW")  # fmt: skip
     assert asked == 1 and len(model.asked) == 2  # only the third project was asked about

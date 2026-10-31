@@ -57,6 +57,7 @@ def test_the_example_settings_file_holds_no_value() -> None:
             # model names and levels, chosen by the maintainer: not secrets
             "GEMINI_REWRITE_MODEL": "gemini-3.1-pro-preview",
             "GEMINI_REWRITE_THINKING_LEVEL": "HIGH",
+            "GEMINI_REWRITE_STAND_IN_MODEL": "gemini-4-argon",
             "GEMINI_SEARCH_MODEL": "gemini-3.8-flash",
             "GEMINI_SEARCH_THINKING_LEVEL": "LOW",
             "GEMINI_EMBEDDING_MODEL": "gemini-embedding-2",

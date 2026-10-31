@@ -30,6 +30,7 @@ from datetime import UTC, datetime
 import psycopg
 
 from hackathon_memory.check.life import ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN, life_of
+from hackathon_memory.db.card_choice import CARD_OF_PROJECT
 from hackathon_memory.read.quotes import KEPT
 from hackathon_memory.search import listing, seen
 
@@ -126,7 +127,9 @@ class Choices:
         return any(choice.value == value for choice in getattr(self, name))
 
 
-def facts(conninfo: str, *, model: str, version: str, now: datetime | None = None) -> list[Facts]:
+def facts(
+    conninfo: str, *, models: Sequence[str], version: str, now: datetime | None = None
+) -> list[Facts]:
     """The facts of every project. The category is the one kept on the project's card of
     this model and these instructions; a project without such a card has none. The kinds are
     those of its IDs that the ledger found as the kind the project gave (search/seen.py). The
@@ -134,7 +137,7 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
     now = now or datetime.now(UTC)
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
-            "SELECT p.id, e.id, e.name, "
+            "SELECT p.id, e.id, e.name, "  # noqa: S608  (fixed text)
             "coalesce(extract(year FROM e.ends_on), extract(year FROM e.starts_at), e.year)::int, "
             "p.proof_status, c.fields -> 'category', p.prize_state, p.entry_kind, "
             "(SELECT coalesce(array_agg(DISTINCT f.kind ORDER BY f.kind), '{}') "
@@ -148,9 +151,9 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
             " WHERE hc.repository_id = r.id AND hc.kind = 'package') "
             "FROM projects p JOIN events e ON e.id = p.event_id "
             "LEFT JOIN repositories r ON r.id = p.repository_id "
-            "LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
-            "AND c.instructions_version = %s ORDER BY p.id",
-            (list(seen.CONFIRMED), list(KINDS), model, version),
+            + CARD_OF_PROJECT
+            + "ORDER BY p.id",
+            (list(seen.CONFIRMED), list(KINDS), list(models), version, list(models)),
         ).fetchall()
         signs = listing.signs_of_life(conn, [row[0] for row in rows])
         organisers = dict(conn.execute(

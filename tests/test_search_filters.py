@@ -89,7 +89,7 @@ def test_the_facts_come_from_the_tables(empty_database: str) -> None:
                 "attempts) VALUES (%s, 'm', 'v', 'HIGH', %s, %s, '{}', 1, 1, 0, 1)",
                 (ids[name], "a" * 64, json.dumps({"category": field})),
             )
-    rows = {row.project_id: row for row in facts(database, model="m", version="v")}
+    rows = {row.project_id: row for row in facts(database, models=("m",), version="v")}
     assert rows[ids["Pebble Pay"]].category == "Payments and remittance"
     assert rows[ids["Cedar Post"]].category == ""  # a category the quote check dropped is none
     assert rows[ids["Pebble Pay"]].proof == "proof_found"
@@ -121,7 +121,7 @@ def test_the_organiser_is_ethglobal_or_the_one_of_its_winners_list(empty_databas
             "'Hashgraph Online - Agent Kit - First Place')",
             (entry,),
         )
-    rows = facts(database, model="m", version="v")
+    rows = facts(database, models=("m",), version="v")
     by_id = {row.project_id: row for row in rows}
     assert by_id[entry].organiser == "Hashgraph Online"
     assert {row.organiser for row in rows if row.project_id != entry} == {"ETHGlobal"}

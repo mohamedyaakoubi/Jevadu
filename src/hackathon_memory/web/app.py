@@ -722,13 +722,13 @@ def create_app(
         """The facts of every project for the filters, read at most once a minute."""
         if cache["facts"] is None or time.monotonic() - cache["at"] > FACTS_SECONDS:
             cache["facts"] = filtering.facts(
-                conninfo, model=settings.gemini_rewrite_model, version=INSTRUCTIONS_VERSION
+                conninfo, models=settings.card_models(), version=INSTRUCTIONS_VERSION
             )
             cache["at"] = time.monotonic()
         return cache["facts"]
 
     def card_of(conninfo: str, project_id: int) -> data.ProjectCard | None:
-        return data.project_card(conninfo, project_id, model=settings.gemini_rewrite_model,
+        return data.project_card(conninfo, project_id, models=settings.card_models(),
                                  version=INSTRUCTIONS_VERSION,
                                  raw_dir=data_paths(settings).raw_dir)  # fmt: skip
 
@@ -772,7 +772,7 @@ def create_app(
         have one: never asked here."""
         if not idea or not ids:
             return {}
-        items = comparing.items_for(conninfo, ids, model=settings.gemini_rewrite_model,
+        items = comparing.items_for(conninfo, ids, models=settings.card_models(),
                                     version=INSTRUCTIONS_VERSION)  # fmt: skip
         if not items:
             return {}
@@ -836,7 +836,7 @@ def create_app(
         rows = {row.project_id: row for row in facts_of(conninfo, order)}
         (members,) = data.members(conninfo, [order])
         named = {member.project_id: member for member in members}
-        lines = data.summaries(conninfo, order, model=settings.gemini_rewrite_model,
+        lines = data.summaries(conninfo, order, models=settings.card_models(),
                                version=INSTRUCTIONS_VERSION)  # fmt: skip
         distance = None
         if idea:
@@ -887,7 +887,7 @@ def create_app(
     def results_of(conninfo: str, ids: list[int], idea: str, words: bool) -> list[tuple]:
         """The card facts, the sentence, the marked sentence and the words found, of each id."""
         found = listing.cards(conninfo, [engine.Hit(pid, 0.0, None, None) for pid in ids])
-        summaries = data.summaries(conninfo, ids, model=settings.gemini_rewrite_model,
+        summaries = data.summaries(conninfo, ids, models=settings.card_models(),
                                    version=INSTRUCTIONS_VERSION)  # fmt: skip
         lines = {pid: one.text for pid, one in summaries.items() if one.text}
         marked = data.marked_lines(conninfo, lines, idea) if idea else {}
@@ -1808,7 +1808,7 @@ def create_app(
         by_stand_in = breaker.standing_in()
         try:
             conninfo = database()
-            items = comparing.items_for(conninfo, project_ids, model=settings.gemini_rewrite_model,
+            items = comparing.items_for(conninfo, project_ids, models=settings.card_models(),
                                         version=INSTRUCTIONS_VERSION)  # fmt: skip
             try:
                 found, asked = compared(conninfo, items, by_stand_in)

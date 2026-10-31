@@ -120,7 +120,7 @@
 {% endcall %}
 
 {% call tip("category", "Category") %}
-<p>One of 17 categories, chosen by Gemini 3.1 Pro from the project page, with the quotes it rests on.{% if all_projects %} {{ with_category }} of {{ "{:,}".format(all_projects) }} projects have one; entries from a winners' list have no page to read.{% endif %}</p>
+<p>One of 17 categories, chosen by Gemini from the project page (Gemini 3.1 Pro, or Gemini 4 Argon when 3.1 Pro was too busy), with the quotes it rests on.{% if all_projects %} {{ with_category }} of {{ "{:,}".format(all_projects) }} projects have one; entries from a winners' list have no page to read.{% endif %}</p>
 {% endcall %}
 
 {% call tip("proof", "Hedera proof") %}
@@ -221,7 +221,7 @@
 {% endcall %}
 
 {% call tip("model", "AI summary") %}
-<p>Gemini 3.1 Pro read the project page and filled these fields. Each field has a label:</p>
+<p>Gemini read the project page and filled these fields: Gemini 3.1 Pro, or Gemini 4 Argon for the cards that were made while 3.1 Pro was too busy. The card names the model under its fields. Each field has a label:</p>
 <ul>
   <li><b>Stated:</b> a sentence of the page says it.</li>
   <li><b>Inferred:</b> put together from several sentences; read it with more care.</li>
@@ -285,7 +285,7 @@
 <p>A few facts in sentences, counted live from the same list as the charts. A sentence appears only when the list holds enough projects for it.</p>
 <ul>
   <li><b>Won again:</b> linked projects (the same repository, or the same Hedera ID confirmed by the ledger) that each won a Hedera prize, at more than one event.</li>
-  <li><b>Categories with the most Hedera prizes:</b> the categories are chosen by Gemini 3.1 Pro from each page, so an entry from a winners' list has none.</li>
+  <li><b>Categories with the most Hedera prizes:</b> the categories are chosen by Gemini from each page, so an entry from a winners' list has none.</li>
   <li><b>Still worked on after the event:</b> active or quiet, among the projects whose activity is known 90 days after their event; each group needs at least 20 such projects.</li>
 </ul>
 {% endcall %}

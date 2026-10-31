@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -45,9 +46,10 @@ _CODE_ONLY = (
 )
 
 
-def counts(conninfo: str, *, model: str, version: str, now: datetime) -> dict:
-    """The counts of every event, the projects in all, and the projects linked across events."""
-    rows = filters.facts(conninfo, model=model, version=version, now=now)
+def counts(conninfo: str, *, models: Sequence[str], version: str, now: datetime) -> dict:
+    """The counts of every event, the projects in all, and the projects linked across events. The
+    cards are those of the first model, and of each model apart (a stand-in, 1 November 2026)."""
+    rows = filters.facts(conninfo, models=models, version=version, now=now)
     with psycopg.connect(conninfo) as conn:
         names = {str(event_id): (site, slug) for event_id, site, slug in
                  conn.execute("SELECT id, site, slug FROM events").fetchall()}  # fmt: skip
@@ -79,7 +81,8 @@ def counts(conninfo: str, *, model: str, version: str, now: datetime) -> dict:
         "proof_from_the_code_only": code_only,
         "events": events,
         "came_back": seen.counted(seen.came_back(conninfo)),
-        "cards": CardStore(conninfo).counts(model, version),
+        "cards": CardStore(conninfo).counts(models[0], version),
+        "cards_by_model": {model: CardStore(conninfo).counts(model, version) for model in models},
     }
 
 
@@ -87,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     del argv
     settings = Settings()
     now = datetime.now(UTC)
-    found = counts(settings.database_conninfo(), model=settings.gemini_rewrite_model,
+    found = counts(settings.database_conninfo(), models=settings.card_models(),
                    version=INSTRUCTIONS_VERSION, now=now)  # fmt: skip
     RESULTS.mkdir(exist_ok=True)
     path = RESULTS / f"{now:%Y%m%dT%H%M%SZ}-overview.json"

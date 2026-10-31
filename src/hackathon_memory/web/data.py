@@ -54,6 +54,7 @@ from hackathon_memory.check.story import (
 )
 from hackathon_memory.collect import devfolio
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.card_choice import CARD_OF_PROJECT
 from hackathon_memory.db.history import depth_of_project, story_of_project
 from hackathon_memory.db.public_services import NamedService, public_services_of
 from hackathon_memory.db.readings import Reading, latest_reading
@@ -298,18 +299,17 @@ def first_sentence(text: str) -> str:
 
 
 def summaries(
-    conninfo: str, project_ids: Sequence[int], *, model: str, version: str
+    conninfo: str, project_ids: Sequence[int], *, models: Sequence[str], version: str
 ) -> dict[int, Summary]:
     """For each project: the model's sentence "what it does" when its card keeps it, otherwise
     the short line, otherwise the first sentence of the first text of the page."""
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
-            "SELECT p.id, coalesce(p.short_line, ''), "
+            "SELECT p.id, coalesce(p.short_line, ''), "  # noqa: S608  (fixed text)
             "coalesce((SELECT s.body FROM sections s WHERE s.project_id = p.id "
             "ORDER BY s.position LIMIT 1), ''), c.fields -> 'what_it_does' "
-            "FROM projects p LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
-            "AND c.instructions_version = %s WHERE p.id = ANY(%s)",
-            (model, version, list(project_ids)),
+            "FROM projects p " + CARD_OF_PROJECT + "WHERE p.id = ANY(%s)",
+            (list(models), version, list(models), list(project_ids)),
         ).fetchall()
     found = {}
     for project_id, short_line, first_text, field in rows:
@@ -325,7 +325,7 @@ def project_card(
     conninfo: str,
     project_id: int,
     *,
-    model: str,
+    models: Sequence[str],
     version: str,
     raw_dir: Path | None = None,
     now: datetime | None = None,
@@ -364,9 +364,9 @@ def project_card(
             ).fetchall()
         )
         row = conn.execute(
-            "SELECT fields, made_at FROM cards WHERE project_id = %s AND model = %s "
-            "AND instructions_version = %s",
-            (project_id, model, version),
+            "SELECT fields, made_at, model FROM cards WHERE project_id = %s AND model = ANY(%s) "
+            "AND instructions_version = %s ORDER BY array_position(%s::text[], model) LIMIT 1",
+            (project_id, list(models), version, list(models)),
         ).fetchone()
         repository = found[0].repository
         code_reading = view_of_repository(conn, repository) if repository else None
@@ -381,7 +381,7 @@ def project_card(
         public = public_services_of(conn, project_id)
     card = None
     if row is not None:
-        fields, made_at = row
+        fields, made_at, model = row  # the model that wrote this card
         card = ModelCard(model, version, made_at, tuple(
             ModelField(name, FIELD_TITLES[name], fields[name]["label"], fields[name]["state"],
                        fields[name]["value"], tuple(fields[name]["quotes"]))

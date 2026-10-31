@@ -22,7 +22,7 @@ pytestmark = pytest.mark.integration
 def test_the_counts_of_each_event_hold_numbers_only(empty_database: str) -> None:
     database = three_projects(empty_database)
     now = datetime(2026, 10, 16, 8, 0, tzinfo=UTC)
-    found = overview.counts(database, model="m", version="v", now=now)
+    found = overview.counts(database, models=("m",), version="v", now=now)
     assert found["test"] == "overview" and found["made_on"] == "2026-10-16"
     assert found["projects"] == 3 and len(found["events"]) == 1
     event = found["events"][0]
@@ -51,7 +51,7 @@ def test_a_proof_that_only_the_code_gives_is_counted(empty_database: str) -> Non
                 (project, entity, found_in, path)).fetchone()  # fmt: skip
             conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
                          "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
-    found_now = overview.counts(database, model="m", version="v",
+    found_now = overview.counts(database, models=("m",), version="v",
                                 now=datetime(2026, 10, 29, 8, 0, tzinfo=UTC))  # fmt: skip
     assert found_now["proof_from_the_code_only"] == 1
 
@@ -70,11 +70,12 @@ def test_the_cards_of_the_model_and_version_are_counted(empty_database: str) -> 
     checked = check_card(made.fields, card.text)
     store.save(card, made, checked)
     now = datetime(2026, 10, 18, 8, 0, tzinfo=UTC)
-    found = overview.counts(database, model="m", version="v", now=now)
+    found = overview.counts(database, models=("m",), version="v", now=now)
     assert found["cards"] == {"cards": 1, "quotes_given": checked.quotes_given,
                               "quotes_found": checked.quotes_found,
                               "fields_dropped": len(checked.dropped())}  # fmt: skip
-    other = overview.counts(database, model="m", version="another", now=now)
+    assert found["cards_by_model"] == {"m": found["cards"]}
+    other = overview.counts(database, models=("m",), version="another", now=now)
     assert other["cards"]["cards"] == 0  # a card of another version is not counted
 
 

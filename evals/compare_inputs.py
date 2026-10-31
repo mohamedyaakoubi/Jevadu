@@ -87,7 +87,7 @@ def measure(settings: Settings, ideas: Sequence[Any]) -> tuple[list[dict], list[
             model=settings.gemini_embedding_model, limit=FIRST,
         )  # fmt: skip
         given = {
-            "cards": comparing.items_for(conninfo, ids, model=settings.gemini_rewrite_model,
+            "cards": comparing.items_for(conninfo, ids, models=settings.card_models(),
                                          version=INSTRUCTIONS_VERSION),
             "full_text": full_items(conninfo, ids),
         }  # fmt: skip
