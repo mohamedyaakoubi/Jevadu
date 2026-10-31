@@ -144,6 +144,26 @@ One consequence for the collected pages. The data of an ETHGlobal project page h
 
 ---
 
+### 3.5 The rules, by number
+
+The code and the tests name these rules by number, for example "design rule 9". The numbers that are missing are about how the work is organised, not about the tool. The rules for reading a site, each with a test, are in section 5.7.
+
+| # | Rule |
+|---|---|
+| 1 | The AI never gives a score, never ranks quality, never picks a winner, and never says that a project is a copy. It shows facts side by side, and people judge. |
+| 2 | Facts never come from the LLM. IDs, links, dates, counts and statuses come only from the parser, the code host or the ledger. |
+| 3 | Every field written by the LLM carries a label (stated, inferred or not found) and exact quotes from the page. Code checks every quote against the saved page. A field with no checked quote is dropped. |
+| 4 | Parser first. A titled section is copied word for word, and the LLM is never asked to rewrite it. |
+| 5 | A saved page is never edited afterwards. Before it is saved, the part that shows team members is cut out, and the page is written again by the parser: the text, the links and the order of the tags stay the same. One exception: personal data that is found in a saved page later is taken out, and the reason and the old fingerprint are written next to the page. |
+| 6 | No number is shown unless it comes from a test with a dated result file. A model never grades its own work. |
+| 7 | All LLM calls go through Vertex AI: Gemini 3.1 Pro reads and rewrites the pages, Gemini 3.8 Flash does the search, and after five failures of Gemini in a row DeepSeek V4.1 Flash, which Google serves on Vertex AI, stands in for the search for ten minutes. Embeddings use Google's embedding model. |
+| 8 | Only a fixed fingerprint record goes to the Hedera topic. No free text, no names, no secrets. A message on a topic can never be deleted. |
+| 9 | Secrets live only in `.env`. They never appear in git, in a log, in the database or in a test file. |
+| 10 | The terms of a site are read before the first request to it. Requests go one at a time, with a pause, with the name of the tool and a contact address. A block is never worked around, and the tool never signs in. |
+| 11 | No personal data that the check does not need: no names, emails or photos of team members. A handle, an email address or a link to a profile that a team wrote inside its own text is hidden before the text is stored. |
+| 17 | No collector runs against a live site before the maintainer has said yes for that site and for the pages that will be read. |
+| 18 | The way a site is read is fixed in the code, and each rule has a test. |
+
 ## 4. The card
 
 ### 4.1 Three sources
