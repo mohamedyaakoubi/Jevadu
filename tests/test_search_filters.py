@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 import psycopg
 import pytest
 
 from hackathon_memory.search.filters import (
+    NO,
     NOT_CHECKED,
+    YES,
     Facts,
     Filters,
     allowed,
@@ -125,6 +128,16 @@ def test_the_organiser_is_ethglobal_or_the_one_of_its_winners_list(empty_databas
     offered = [(choice.value, choice.count) for choice in choices(rows).organiser]
     assert offered == [("ETHGlobal", 3), ("Hashgraph Online", 1)]
     assert allowed(rows, Filters(organiser="Hashgraph Online")) == [entry]
+
+
+def test_the_mainnet_filter_keeps_the_teams_with_an_own_id_on_the_main_network() -> None:
+    """The tag "Mainnet" of a card (design 7.5) as a filter, yes or no (31 October 2026)."""
+    rows = [replace(ROWS[0], mainnet=YES), *ROWS[1:]]
+    offered = [(choice.value, choice.words, choice.count) for choice in choices(rows).mainnet]
+    assert offered == [(YES, "Yes", 1), (NO, "No", 3)]
+    assert allowed(rows, Filters(mainnet=YES)) == [1]
+    assert allowed(rows, Filters(mainnet=NO)) == [2, 3, 4]
+    assert [choice.value for choice in choices(ROWS).mainnet] == [NO]  # none has it: no "Yes"
 
 
 def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list() -> None:
