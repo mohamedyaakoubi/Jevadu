@@ -26,13 +26,17 @@
                                                            contracts, around its event (--limit N)
     python -m hackathon_memory.pipeline makers             who made each own contract, topic,
                                                            token and schedule (--limit N)
+    python -m hackathon_memory.pipeline timeline           how the code of a team that came back
+                                                           changed between its hackathons, asked
+                                                           of GitHub once (design 8.7)
     python -m hackathon_memory.pipeline refresh            ask GitHub and the ledger again about
                                                            what is a day old, then write what
                                                            changed (--hours N, --repos N, --wait)
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
     python -m hackathon_memory.pipeline all                parse, readmes, code, hedera_code,
-                                                           check and embed, in this order
+                                                           timeline, check and embed, in this
+                                                           order
     python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json
                                                            the cards of the LLM for the pages
                                                            of a set (it costs money)
@@ -43,11 +47,12 @@
 "parse" sends no request: it works on the pages that are saved, and on the winner entries that a
 person copied by hand into data/by-hand (design 4.6). It also writes the last day of
 each event that a person typed into data/by-hand/ethglobal.com/event-ends.txt, because the proof
-rule needs it and no page gives it (design 7.2). "readmes", "code" and "hedera_code" ask GitHub's
-API, which the maintainer allowed, and only when the switch COLLECT_GITHUB is on in .env; --wait
-lets them wait for the end of a cooldown (design 7.3). "check" asks the Hedera mirror node, a
-public API made for programs, and no site (design rule 17); so do "history", "contract_calls"
-and "makers", which are not part of "all" (evals/ledger_story, design 7.5). "embed" calls
+rule needs it and no page gives it (design 7.2). "readmes", "code", "hedera_code" and "timeline"
+ask GitHub's API, which the maintainer allowed, and only when the switch COLLECT_GITHUB is on in
+.env; --wait lets them wait for the end of a cooldown (design 7.3). "check" asks the Hedera mirror
+node, a public API made for programs, and no site (design rule 17); so do "history",
+"contract_calls" and "makers", which are not part of "all" (evals/ledger_story, design 7.5).
+"embed" calls
 Google's embedding model through the meter and its budget (design 11.4). "cards" calls the
 REWRITE layer of Gemini, through the meter too, for the pages of a set only: it is not part of
 "all" (design 6.2, open question Q29).
@@ -107,6 +112,7 @@ from hackathon_memory.pipeline import (
     parse_pages,
     readmes,
     refresh,
+    timeline,
 )
 from hackathon_memory.read import cards as card_step
 from hackathon_memory.read import restore
@@ -119,6 +125,7 @@ USAGE = (
     "       python -m hackathon_memory.pipeline code [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline hedera_code [--repos N | --no-requests] [--wait] "
     "[--again]\n"
+    "       python -m hackathon_memory.pipeline timeline [--repos N | --no-requests] [--wait]\n"
     "       python -m hackathon_memory.pipeline check [--max-age-days N]\n"
     "       python -m hackathon_memory.pipeline refresh [--hours N] [--repos N] [--wait]\n"
     "       python -m hackathon_memory.pipeline embed [--limit N]\n"
@@ -141,9 +148,11 @@ STATUS_WORDS = {
 # The whole path, in its order (design 14.3: one command processes the projects).
 ALL = "all"
 ALL_STEPS = (
-    parse_pages.STEP, readmes.STEP, code.STEP, hedera_code.STEP, check_ids.STEP, embed.STEP
+    parse_pages.STEP, readmes.STEP, code.STEP, hedera_code.STEP, timeline.STEP, check_ids.STEP,
+    embed.STEP,
 )  # fmt: skip
-GITHUB_STEPS = (readmes.STEP, code.STEP, hedera_code.STEP)  # the steps that ask GitHub
+# the steps that ask GitHub
+GITHUB_STEPS = (readmes.STEP, code.STEP, hedera_code.STEP, timeline.STEP)
 
 
 class _Quiet(argparse.ArgumentParser):
@@ -204,10 +213,13 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
     if arguments.repos is not None and (not is_readmes or arguments.repos < 1):
         raise ValueError(
-            "--repos goes with readmes, code, hedera_code or refresh, and must be 1 or more"
+            "--repos goes with readmes, code, hedera_code, timeline or refresh, and must be 1 or "
+            "more"
         )
     if (arguments.no_requests or arguments.wait) and not is_readmes:
-        raise ValueError("--no-requests and --wait go with readmes, code, hedera_code or refresh")
+        raise ValueError(
+            "--no-requests and --wait go with readmes, code, hedera_code, timeline or refresh"
+        )
     if arguments.hours is not None and (not is_refresh or arguments.hours < 0):
         raise ValueError("--hours goes with refresh, and must be 0 or more")
     if arguments.no_requests and (arguments.repos is not None or arguments.wait):
@@ -385,6 +397,11 @@ def _run_step(
             hedera_code.read_hedera_code(
                 RepositoryStore(conninfo), Answers(github.raw_dir(settings)), run, fetch=fetch
             )
+        elif step == timeline.STEP:
+            client, note = _github_client(settings, arguments, run)
+            timeline.ask_timelines(client, Answers(github.raw_dir(settings)), conninfo, run,
+                                   collector=f"{settings.collector_name.strip()}/{__version__}",
+                                   limit=arguments.repos)  # fmt: skip
         elif step == card_step.STEP and arguments.export_file:
             run.counts["cards_written"] = restore.export_cards(
                 conninfo, Path(arguments.export_file)
@@ -456,6 +473,9 @@ def _run_step(
         lines += _problem_lines(run, "Stopped or not done, and why:")
     elif step == hedera_code.STEP:
         lines = hedera_code.hedera_code_lines(run) + ([note] if note else [])
+        lines += _problem_lines(run, "Stopped or not done, and why:")
+    elif step == timeline.STEP:
+        lines = timeline.timeline_lines(run) + ([note] if note else [])
         lines += _problem_lines(run, "Stopped or not done, and why:")
     elif step == embed.STEP:
         lines = embed.embed_lines(run) + _problem_lines(run, "Not made, with what went wrong:")
