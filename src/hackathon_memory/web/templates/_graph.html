@@ -10,6 +10,11 @@
 {% else %}
 {% set link = "/?" ~ (search_query ~ "&" if search_query else "") ~ "open=" %}
 {% set count = graph.dots | length %}
+{# A crown above each of the first 10 that won (31 October 2026): its bottom stands 4 above the
+   dot, clear of the ring of a numbered dot; site.js keeps its size and its place when the graph zooms. #}
+{% set CROWN = "M-5 0V-5L-2.5-2.5L0-7L2.5-2.5L5-5V0Z" %}
+{% set CROWNS = {"hedera_prize": "hedera", "other_prize": "other"} %}
+{% set crowned = namespace(hedera=false, other=false) %}
 <p class="hm-graph-note">{% if not graph.ranked and not chosen.chosen() %}The whole collection: {% endif %}{{ "{:,}".format(count) }} project{{ "s" if count != 1 }}{% if graph.ranked %}, the closest to your idea,{% endif %} in {{ graph.groups | length }} group{{ "s" if graph.groups | length != 1 }} by meaning.
   {%- if graph.ranked %} {% if graph.by_meaning %}The closer a dot stands to your idea, the closer the project is in meaning, compared with the others of this list.{% else %}The closer a dot stands to your idea, the higher the project is in the list.{% endif %} The first 10 are numbered as in the list
   {%- if graph.by_meaning and with_ai %}, which is Gemini's order: Gemini reads the texts, while the distance follows meaning, so a number can stand farther out than a later one{% elif graph.by_meaning and mode == "words" %}, which is the keyword order, while the distance follows meaning, so a number can stand farther out than a later one{% endif %}.{% endif %}
@@ -37,6 +42,7 @@
           <circle class="hm-hit" cx="{{ dot.x }}" cy="{{ dot.y }}" r="{{ dot.r + 5 }}" data-r="{{ dot.r + 5 }}"/>
           <circle class="hm-mark" cx="{{ dot.x }}" cy="{{ dot.y }}" r="{{ dot.r }}" data-r="{{ dot.r }}"/>
           {% if first %}<text x="{{ dot.x }}" y="{{ dot.y }}">{{ dot.rank }}</text>{% endif %}
+          {% if first and one.prize in CROWNS %}{% if one.prize == "hedera_prize" %}{% set crowned.hedera = true %}{% else %}{% set crowned.other = true %}{% endif %}<path class="hm-crown is-{{ CROWNS[one.prize] }}" d="{{ CROWN }}" transform="translate({{ dot.x }} {{ '%g' % ((dot.y - dot.r - 4) | round(1)) }})" data-crown data-cx="{{ dot.x }}" data-cy="{{ dot.y }}" data-cr="{{ dot.r }}"/>{% endif %}
         </a>{% endfor %}
       </g>
       <g class="hm-graph-names">
@@ -48,6 +54,8 @@
       {% for group in graph.groups %}<li><span class="hm-graph-swatch hm-g{{ group.number }}" aria-hidden="true"></span>{{ group.title }}</li>{% endfor %}
       {% if graph.lines %}<li><span class="hm-graph-stroke" aria-hidden="true"></span>Same code or Hedera ID</li>{% endif %}
       {% if count > 1 %}<li><span class="hm-graph-stroke is-dashed" aria-hidden="true"></span>Closest project in meaning, for a dot you point at or keep</li>{% endif %}
+      {% if crowned.hedera %}<li><svg class="hm-crown-key" viewBox="-6 -8 12 9" aria-hidden="true"><path class="hm-crown is-hedera" d="{{ CROWN }}"/></svg>Won a Hedera prize</li>{% endif %}
+      {% if crowned.other %}<li><svg class="hm-crown-key" viewBox="-6 -8 12 9" aria-hidden="true"><path class="hm-crown is-other" d="{{ CROWN }}"/></svg>Won another sponsor's prize</li>{% endif %}
     </ul>
   </div>
 </div>
@@ -62,7 +70,7 @@
       {% for dot in graph.members(group.number) %}{% set one = graph_about.get(dot.project_id, {}) %}
       <li><a href="{{ link }}{{ dot.project_id }}" data-open-viewer="{{ dot.project_id }}" data-graph-link="{{ dot.project_id }}"
         hx-get="/project/{{ dot.project_id }}/panel{% if search_query %}?{{ search_query }}{% endif %}" hx-target="#viewer-body" hx-swap="innerHTML">{{ one.name }}</a>
-        <span class="text-secondary">{{ one.event }}{% if dot.rank %} &middot; number {{ dot.rank }} in the list{% endif %}</span></li>
+        <span class="text-secondary">{{ one.event }}{% if dot.rank %} &middot; number {{ dot.rank }} in the list{% endif %}{% if dot.rank and dot.rank <= 10 and one.prize == "hedera_prize" %} &middot; won a Hedera prize{% elif dot.rank and dot.rank <= 10 and one.prize == "other_prize" %} &middot; won another sponsor's prize{% endif %}</span></li>
       {% endfor %}
     </ol>
     <div class="hm-more" data-more-for="members-{{ group.number }}" hidden></div>

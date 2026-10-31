@@ -702,6 +702,13 @@
     svg.querySelectorAll("circle[data-r]").forEach(function (circle) {
       circle.setAttribute("r", String(Number(circle.getAttribute("data-r")) / zoom.k));
     });
+    // A crown keeps its size, and its place just above its dot (31 October 2026).
+    svg.querySelectorAll("[data-crown]").forEach(function (crown) {
+      var x = Number(crown.getAttribute("data-cx")), y = Number(crown.getAttribute("data-cy"));
+      var r = Number(crown.getAttribute("data-cr"));
+      crown.setAttribute("transform", "translate(" + x + " " + (y - (r + 4) / zoom.k) +
+        ") scale(" + (1 / zoom.k) + ")");
+    });
     var graph = graphOf(svg), tip = graph.querySelector(".hm-graph-tip");
     if (tip) tip.hidden = true;
     graph.querySelectorAll("[data-zoom]").forEach(function (button) {

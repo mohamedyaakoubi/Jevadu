@@ -266,13 +266,19 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
    palette of the dataviz method, the only four of its eight that stay apart for every reader
    when any two meet, in both themes (its validator with all pairs, on 23 October 2026). Yellow
    and pink are under 3:1 on white, so every group is also named on the graph and in the lists. */
+/* The crowns of the first 10 (31 October 2026): a darker gold than group 2's, at least 3:1 on
+   the page in both themes, and two shapes, filled and outlined, so colour is never alone. */
 :root {
+  --hm-crown-gold: #b8860b;
+  --hm-crown-grey: #6c757d;
   --hm-group-1: #2a78d6;
   --hm-group-2: #eda100;
   --hm-group-3: #e87ba4;
   --hm-group-4: #008300;
 }
 [data-bs-theme="dark"] {
+  --hm-crown-gold: #e3b341;
+  --hm-crown-grey: #a7b0b8;
   --hm-group-1: #3987e5;
   --hm-group-2: #c98500;
   --hm-group-3: #d55181;
@@ -338,6 +344,10 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-graph-swatch { display: inline-block; flex: none; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--hm-group); vertical-align: -0.05em; }
 .hm-graph-stroke { display: inline-block; width: 1.5rem; height: 0; border-top: 3px solid var(--tblr-body-color); }
 .hm-graph-stroke.is-dashed { border-top: 2px dashed var(--tblr-body-color); }
+.hm-crown { pointer-events: none; stroke-linejoin: round; }
+.hm-crown.is-hedera { fill: var(--hm-crown-gold); stroke: var(--hm-crown-gold); stroke-width: 0.8; }
+.hm-crown.is-other { fill: var(--tblr-bg-surface); stroke: var(--hm-crown-grey); stroke-width: 1.4; }
+.hm-crown-key { flex: none; width: 1rem; height: 0.75rem; overflow: visible; }
 .hm-graph-lists { margin: 1.25rem 0 0; }
 .hm-graph-lists-title { display: flex; align-items: center; font-size: 1rem; font-weight: 700; margin: 0 0 0.5rem; }
 .hm-graph-group { border-top: 1px solid var(--tblr-border-color); padding: 0.5rem 0; }
