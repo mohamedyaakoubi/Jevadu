@@ -863,7 +863,7 @@ Each choice is justified by what the job needs and by a source. "Already install
 | Redis | A table in PostgreSQL holds the caches (section 6.5), and PostgreSQL also holds the list of jobs (section 11.6). There is one program on one machine. |
 | Cache-augmented generation (CAG) as the search | It puts all the knowledge into the prompt of the model. The knowledge is too big for that and it changes, each search would cost more, and the model, not the code, would pick the projects. |
 | A cache that answers a similar question | It can give the answer of another idea. Redis's own documentation says that such a cache gives up the guarantee that a hit is correct. |
-| A GitHub Actions job for the pipeline | A job of GitHub starts on an empty machine, and the pages and the database stay on one laptop (section 5.7). GitHub runs the lint and the tests on every push. |
+| A GitHub Actions job for the pipeline | A job of GitHub starts on an empty machine, and the pages and the database are not in git (section 5.7). GitHub runs the lint and the tests on every push. |
 
 ### 11.3 The LLM and the embedding model
 

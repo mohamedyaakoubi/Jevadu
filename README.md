@@ -24,7 +24,7 @@
 > **State on 31 October 2026.** Every project of the allowed sources is collected, read and checked on the Hedera ledger, the cards are written, and the three tests of quality have run. The website runs on a laptop, and a public copy runs online with an allowance for each visitor; its address is in this repository's description. The register's topic [`0.0.11126502`](https://hashscan.io/testnet/topic/0.0.11126502) on the test network has no admin key, and no registration is written in it yet. See [What works today](#what-works-today).
 
 > [!IMPORTANT]
-> **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. The pages stay on one laptop. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
+> **Where the data comes from.** ETHGlobal was asked before any program read its showcase. It agreed in writing to a slow, signed read of its Hedera prize projects, and the other projects that its showcase ties to Hedera are read in exactly the same way. Each page is read once, and the tool is not commercial. Devpost said no, so no program reads Devpost. DoraHacks and AngelHack have not answered yet, so no program reads them.
 
 ## Why
 
@@ -112,7 +112,7 @@ It may read pages, give them structure and find similar ideas. It may not give a
 | Database | PostgreSQL 17 with pgvector, in Docker | The facts, the texts and the vectors in one place. pgvector stores vectors in PostgreSQL. At this size an exact search needs no index. |
 | AI | Gemini 3.1 Pro, Gemini 3.8 Flash and gemini-embedding-2, on Vertex AI, through the Google Gen AI SDK | Gemini 3.1 Pro writes the cards. Gemini 3.8 Flash orders and compares the results of the search, only on a button. The embedding model turns each text into a list of numbers that stands for its meaning, for the semantic search. |
 | Hedera | the public mirror node, hiero-sdk-python 0.2.10, HashScan, Hedera's WalletConnect library | The mirror node for every read. The SDK sends the register's messages to the Consensus Service and checks the teams' signatures. HashPack signs through @hashgraph/hedera-wallet-connect 2.1.3, loaded in the page from a CDN; MetaMask signs with EIP-191. HashScan for the links. |
-| Sources | ETHGlobal's showcase, GitHub's REST API | The project pages, with ETHGlobal's consent. The READMEs, the facts and the code of the public repositories. |
+| Sources | ETHGlobal's showcase, GitHub's REST API | The project pages that the showcase ties to Hedera (how they are read: the top of this README). The READMEs, the facts and the code of the public repositories. |
 | Parsing | Beautiful Soup with lxml | Ordinary code reads every page and README. No AI. |
 | Quality | pytest, Playwright with axe-core 4.14.0, Ruff, GitHub Actions | The tests, a real browser that also checks accessibility, the lint, and a clean run on every push. |
 | Cost | its own meter and budgets | Every model call is counted, and a call that could go over the budget is not made. |
@@ -124,7 +124,7 @@ Each number below comes from a dated result file, named under the table. How eac
 
 | Part | What it does | Measured |
 |---|---|---|
-| **Collection** | Reads 658 project pages of ETHGlobal's showcase, with its written consent, and takes 168 winners from organisers' lists: 826 projects from 26 events on 5 sites. The pages stay on one laptop. | 732 requests to ETHGlobal in all, under the tool's own limit of 800. |
+| **Collection** | Reads the 658 project pages that ETHGlobal's showcase ties to Hedera, in the slow, signed way that ETHGlobal agreed to in writing for its Hedera prize projects, and takes 168 winners from organisers' lists: 826 projects from 26 events on 5 sites. Each page is read once. | 732 requests to ETHGlobal in all, under the tool's own limit of 800. |
 | **Parser** | Ordinary code, no AI, reads each page into its facts: the name, the event, the prizes, the links, the texts word for word, and the Hedera IDs with their network and kind. | 392 of the 658 ETHGlobal projects name no Hedera ID; 60 of the 92 Hedera prize winners name none. |
 | **Code** | Reads each project's repository for Hedera's packages, the files that import them, and the Hedera services that the code calls. | Of the 392 projects that name no ID, the code of 259 shows a use of Hedera. |
 | **Ledger** | Checks every Hedera ID of a page, a README or the code on the mirror node: its kind, and its dates against the event. Then reads what the project's own IDs did around the event. | 358 of the 658 have a Hedera ID active during their hackathon, 100 of them found only in the code. For 279, the ledger or the code shows something that the page does not say. |
