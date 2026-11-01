@@ -6,6 +6,7 @@ repository, ID and date is invented."""
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
@@ -257,6 +258,30 @@ def test_an_account_of_another_project_is_the_same_account_not_the_same_project(
     known = seen.submission_matches(database, "https://github.com/someone/else",
                                     [("testnet", "0.0.4729347", "0.0.4729347")])  # fmt: skip
     assert known.same_id == {"account:testnet:0.0.4729347": [cedar]}
+
+
+def test_a_use_in_the_window_that_another_project_may_explain_proves_nothing() -> None:
+    """A builder's account, made in 2024 and used until October 2026, was used during ETHDenver
+    2026 for another project of the builder; checked against ETHDenver 2026, a repository that
+    names it got "proof found" from that use (1 November 2026). Only its own dates count now."""
+    from hackathon_memory.check.proof import window_of
+    from hackathon_memory.parse.hedera_ids import FoundId
+
+    window = window_of(datetime(2026, 2, 18, 16, tzinfo=UTC), date(2026, 2, 21))
+    facts = LedgerFacts("0.0.4729347", "testnet", NOW, found=True, kind="account",
+                        created_at=datetime(2024, 8, 23, tzinfo=UTC),
+                        first_activity_at=datetime(2024, 8, 23, tzinfo=UTC),
+                        last_activity_at=datetime(2026, 10, 5, tzinfo=UTC))  # fmt: skip
+    found = FoundId("0.0.4729347", "testnet", "account", "the account of the README")
+    shared = submission.IdResult(found, "proof_found", "testnet", facts, named_elsewhere=True)
+    judged = submission.own_dates_only(shared, window)
+    assert judged.status == "dates_do_not_fit" and judged.use_not_counted
+    own = submission.IdResult(found, "proof_found", "testnet", facts)  # nobody else names it
+    assert submission.own_dates_only(own, window) == own
+    made_then = submission.IdResult(found, "proof_found", "testnet",
+                                    replace(facts, created_at=datetime(2026, 2, 19, tzinfo=UTC)),
+                                    named_elsewhere=True)  # fmt: skip
+    assert submission.own_dates_only(made_then, window) == made_then  # its own date proves
 
 
 ADDRESS, CONTRACT = "0x8004a818bfb912233c491871b3d84c89a494bd9e", "0.0.7919997"

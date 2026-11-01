@@ -122,11 +122,64 @@
   // ---------------------------------------------------------------- the check of a submission
   document.addEventListener("change", function (event) {
     if (event.target.id !== "check-event") return;
+    var search = $("check-event-search");
+    if (search && search.value) { // a choice ends the search: the whole list comes back
+      search.value = "";
+      searchHackathons(search);
+    }
     var other = event.target.value === "other";
     var days = document.querySelector("[data-check-days]");
     if (!days) return;
     days.hidden = !other;
     days.querySelectorAll("input").forEach(function (input) { input.required = other; });
+  });
+
+  // The box above the list of hackathons (design 12.1, S3): it keeps the hackathons whose name
+  // holds its words and opens the list to show them; Enter picks the first, Escape empties the
+  // box, and the down arrow goes into the list. "None" and "Other hackathon" always stay
+  // (1 November 2026).
+  function searchHackathons(box) {
+    var list = $("check-event");
+    if (!list) return [];
+    var words = box.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    var kept = [];
+    list.querySelectorAll("option").forEach(function (option) {
+      if (option.value === "" || option.value === "other") return;
+      var name = option.textContent.toLowerCase();
+      var keep = words.every(function (word) { return name.indexOf(word) !== -1; });
+      option.hidden = !keep;
+      if (keep) kept.push(option);
+    });
+    var years = 0; // each year's heading takes a line of the list too
+    list.querySelectorAll("optgroup").forEach(function (group) {
+      group.hidden = !group.querySelector("option:not([hidden])");
+      if (!group.hidden) years += 1;
+    });
+    if (words.length) list.size = Math.max(2, Math.min(10, kept.length + years + 2));
+    else list.removeAttribute("size");
+    return kept;
+  }
+  document.addEventListener("input", function (event) {
+    if (event.target.id === "check-event-search") searchHackathons(event.target);
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.target.id !== "check-event-search") return;
+    var list = $("check-event");
+    if (event.key === "Enter") {
+      event.preventDefault(); // the box picks a hackathon; it does not send the check
+      var first = searchHackathons(event.target)[0];
+      if (first && list) {
+        list.value = first.value;
+        list.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } else if (event.key === "Escape" && event.target.value) {
+      event.preventDefault();
+      event.target.value = "";
+      searchHackathons(event.target);
+    } else if (event.key === "ArrowDown" && list && list.size > 1) {
+      event.preventDefault();
+      list.focus();
+    }
   });
 
   // ---------------------------------------------------------------- the charts

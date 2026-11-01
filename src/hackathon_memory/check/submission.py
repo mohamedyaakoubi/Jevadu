@@ -35,7 +35,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Callable, Collection, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
@@ -168,6 +168,8 @@ class IdResult:
     shared: bool = False  # a shared service: many teams name it (design 8.4)
     named_elsewhere: bool = False  # a project with other code names it: not a sign of life
     in_code: str | None = None  # an ID of the code: the first file where it stands
+    # used inside the window, but a project with other code names it, so that use proves nothing
+    use_not_counted: bool = False
 
 
 @dataclass(frozen=True)
@@ -353,6 +355,17 @@ def judge_ids(
         network = min(on, key=lambda name: ORDER.index(on[name][0]))
         results.append(IdResult(item, on[network][0], network, on[network][1]))
     return results
+
+
+def own_dates_only(one: IdResult, window: Window | None) -> IdResult:
+    """An ID that a project with other code names too, and that the rule found by its use inside
+    the window: that use may be the other project's, so only its own dates count, when it was made
+    and first and last used (1 November 2026: a builder's account, used at one hackathon for one
+    project, proved another project of the builder at that hackathon)."""
+    if one.status != PROOF_FOUND or not one.named_elsewhere or one.facts is None:
+        return one
+    status = judge(one.facts, one.found.said_kind, window)
+    return one if status == PROOF_FOUND else replace(one, status=status, use_not_counted=True)
 
 
 def thing_of(one: IdResult) -> str:
@@ -637,6 +650,7 @@ def check_submission(
                                       & known.named_by_other_code))
         for one in judged
     ] + from_code  # fmt: skip
+    check.ids = [own_dates_only(one, window) for one in check.ids]
     if found and all(one.status == NOT_ASKED for one in check.ids):
         check.problems.append("The mirror node of Hedera did not answer. Try again in a moment.")
     check.proof = best([one.status for one in check.ids if one.status != NOT_ASKED])

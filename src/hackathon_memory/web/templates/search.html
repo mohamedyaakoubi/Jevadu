@@ -142,6 +142,7 @@
     <label class="form-label" for="check-repo">GitHub repository</label>
     <input class="form-control" id="check-repo" name="repo" placeholder="github.com/owner/project" autocomplete="off" spellcheck="false" required>
     <div class="hm-idea-label hm-check-label"><label class="form-label" for="check-event">Hackathon <span class="text-secondary">(optional)</span></label>{{ parts.info("hackathon", "the hackathon of a submission") }}</div>
+    <input class="form-control form-control-sm hm-check-search" type="search" id="check-event-search" placeholder="Search the hackathons" aria-label="Search the hackathons" aria-controls="check-event" autocomplete="off" spellcheck="false">
     <select class="form-select" id="check-event" name="event">
       <option value="">None: show the facts, without judging dates</option>
       {% for group in hackathon_groups(check_events or []) %}
