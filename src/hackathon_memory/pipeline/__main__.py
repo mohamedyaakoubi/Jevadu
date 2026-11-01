@@ -36,7 +36,7 @@
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
     python -m hackathon_memory.pipeline all                parse, readmes, code, hedera_code,
-                                                           timeline, check and embed, in this
+                                                           check, timeline and embed, in this
                                                            order
     python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json
                                                            the cards of the LLM for the pages
@@ -146,10 +146,11 @@ STATUS_WORDS = {
 }
 
 
-# The whole path, in its order (design 14.3: one command processes the projects).
+# The whole path, in its order (design 14.3: one command processes the projects). The timeline
+# comes after the check: a group that a Hedera ID joins needs the ledger's word first.
 ALL = "all"
 ALL_STEPS = (
-    parse_pages.STEP, readmes.STEP, code.STEP, hedera_code.STEP, timeline.STEP, check_ids.STEP,
+    parse_pages.STEP, readmes.STEP, code.STEP, hedera_code.STEP, check_ids.STEP, timeline.STEP,
     embed.STEP,
 )  # fmt: skip
 # the steps that ask GitHub

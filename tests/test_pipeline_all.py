@@ -68,7 +68,7 @@ def test_one_command_runs_every_step_in_order(
     said = capsys.readouterr().out
     headers = [line for line in said.splitlines() if line.startswith("== ")]
     assert headers == ["== parse ==", "== readmes ==", "== code ==", "== hedera_code ==",
-                       "== timeline ==", "== check ==", "== embed =="]  # fmt: skip
+                       "== check ==", "== timeline ==", "== embed =="]  # fmt: skip
     # the timelines of projects that came back are asked in the same run (design 8.7)
     assert "Groups of projects that came back, with a timeline: 0." in said
     assert "Saved pages: 2. New: 2." in said
@@ -79,8 +79,8 @@ def test_one_command_runs_every_step_in_order(
         "readmes",
         "code",
         "hedera_code",
-        "timeline",
         "check",
+        "timeline",
         "embed",
     ]
     with psycopg.connect(settings.database_conninfo()) as conn:
