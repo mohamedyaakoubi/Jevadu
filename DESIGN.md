@@ -156,7 +156,7 @@ The code and the tests name these rules by number, for example "design rule 9". 
 | 4 | Parser first. A titled section is copied word for word, and the LLM is never asked to rewrite it. |
 | 5 | A saved page is never edited afterwards. Before it is saved, the part that shows team members is cut out, and the page is written again by the parser: the text, the links and the order of the tags stay the same. One exception: personal data that is found in a saved page later is taken out, and the reason and the old fingerprint are written next to the page. |
 | 6 | No number is shown unless it comes from a test with a dated result file. A model never grades its own work. |
-| 7 | All LLM calls go through Vertex AI: Gemini 3.1 Pro reads and rewrites the pages, Gemini 3.8 Flash does the search, and after five failures of Gemini in a row DeepSeek V4.1 Flash, which Google serves on Vertex AI, stands in for the search for ten minutes. Embeddings use Google's embedding model. |
+| 7 | All LLM calls go through Vertex AI: Gemini 3.1 Pro reads and rewrites the pages, with Gemini 4 Argon for the cards still missing when 3.1 Pro keeps answering "too many requests", Gemini 3.8 Flash does the search, and after five failures of Gemini in a row DeepSeek V4.1 Flash, which Google serves on Vertex AI, stands in for the search for ten minutes. Embeddings use Google's embedding model. |
 | 8 | Only a fixed fingerprint record goes to the Hedera topic. No free text, no names, no secrets. A message on a topic can never be deleted. |
 | 9 | Secrets live only in `.env`. They never appear in git, in a log, in the database or in a test file. |
 | 10 | The terms of a site are read before the first request to it. Requests go one at a time, with a pause, with the name of the tool and a contact address. A block is never worked around, and the tool never signs in. |
@@ -880,7 +880,7 @@ Each choice is justified by what the job needs and by a source. "Already install
 
 There are two layers of LLM. The models and their thinking levels are settings, so a change of model is a change of one line.
 
-**The first layer reads the pages and rewrites them into cards. It uses Gemini 3.1 Pro,** for the quality of the rewrite. Facts from Google's own pages, read on 9 and 10 October 2026:
+**The first layer reads the pages and rewrites them into cards. It uses Gemini 3.1 Pro,** for the quality of the rewrite. When it keeps answering "too many requests", Gemini 4 Argon makes the cards still missing (1 November 2026: the 106 cards of Devfolio), and a project shows the card of 3.1 Pro when it has one, else the card of Argon, which names its model (GEMINI_REWRITE_STAND_IN_MODEL). Facts from Google's own pages, read on 9 and 10 October 2026:
 
 - It is a public preview model. Google may change or retire it.
 - It can be forced to answer in a fixed form.
