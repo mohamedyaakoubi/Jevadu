@@ -96,7 +96,8 @@
               <a class="btn btn-sm{% if not view %} active{% endif %}" href="/{{ '?' ~ cards_query if cards_query }}" hx-get="/{{ '?' ~ cards_query if cards_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if not view %} aria-current="true"{% endif %}>Cards</a>
               <a class="btn btn-sm{% if view == 'graph' %} active{% endif %}" href="/?{{ graph_query }}" hx-get="/?{{ graph_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == 'graph' %} aria-current="true"{% endif %}>Graph</a>
               <a class="btn btn-sm{% if view == 'charts' %} active{% endif %}" href="/?{{ charts_query }}" hx-get="/?{{ charts_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == 'charts' %} aria-current="true"{% endif %}>Insights</a>
-            </div>{{ parts.info("views", "the three views") }}
+              <a class="btn btn-sm{% if view == 'mainnet' %} active{% endif %}" href="/?{{ mainnet_query }}" hx-get="/?{{ mainnet_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true"{% if view == 'mainnet' %} aria-current="true"{% endif %}>Mainnet</a>
+            </div>{{ parts.info("views", "the four views") }}
           </div>
         </div>
       </div>
@@ -105,6 +106,8 @@
         {% include "_charts.html" %}
       {% elif view == "graph" %}
         {% include "_graph.html" %}
+      {% elif view == "mainnet" %}
+        {% include "_mainnet.html" %}
       {% elif nothing_matches %}
         <div class="empty"><p class="empty-title">No project matches these filters</p><p class="empty-subtitle text-secondary">Remove a filter to see more.</p></div>
       {% elif none_close %}
@@ -176,7 +179,7 @@
   <div data-step data-element=".hm-ai-group" data-side="bottom"><h3>Sort and compare with Gemini</h3><p>Gemini puts the closest projects in order and says, for the first ten, what they share with your idea and how they differ. It never scores a project: you judge.</p></div>
   <div data-step data-element=".hm-filters" data-side="bottom"><h3>Filters</h3><p>Keep one or more organisers, hackathons, years or categories (tick several values of one filter), or the projects by what the ledger shows of their Hedera use, the main network included, by their activity, or by their prizes.</p></div>
   <div data-step data-element="#result-list" data-side="top"><h3>The projects</h3><p>Each card is a past project: what its page said, and what its Hedera IDs did on the ledger. Click one to open its full card over the list.</p></div>
-  <div data-step data-element=".hm-switches" data-side="bottom"><h3>Other views</h3><p>See the same list as charts, or as a graph of groups of similar projects.</p></div>
+  <div data-step data-element=".hm-switches" data-side="bottom"><h3>Other views</h3><p>See the same list as charts, as a graph of groups of similar projects, or by what its projects did on Hedera's main network.</p></div>
   <div data-step data-element=".hm-check" data-side="left"><h3>Check a submission</h3><p>Paste a GitHub repository. Jevadu reads its README and its code, looks up its Hedera IDs on the ledger, and finds the most similar past projects. A team can then register its submission on Hedera.</p></div>
   <div data-step data-element=".hm-idea-label .info" data-side="right"><h3>The (i) marks</h3><p>Every (i) explains its term in plain words, with numbered sources.</p></div>
   <div data-step data-element="[data-tour-again]" data-side="top"><h3>Take the tour again</h3><p>This link, at the bottom of every page, starts the tour again whenever you want.</p></div>

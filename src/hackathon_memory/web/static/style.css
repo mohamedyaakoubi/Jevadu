@@ -276,6 +276,21 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-linked { padding-left: 1.1rem; margin: 0; display: grid; gap: 0.5rem; }
 .hm-linked a { font-weight: 600; }
 
+/* the main network in a list (design 12.1, S10): one line for each count, its bar as long as its
+   share of the list, in the colour of the charts; the projects in a table that scrolls sideways */
+.hm-mainnet-title { display: flex; align-items: center; font-size: 1.25rem; font-weight: 700; margin: 0 0 0.25rem; }
+.hm-ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+.hm-ladder li { display: grid; grid-template-columns: minmax(12rem, 18rem) 1fr 7.5rem; gap: 0.75rem; align-items: center; }
+.hm-ladder-words { display: flex; align-items: center; }
+.hm-ladder-bar { height: 0.75rem; border-radius: 2px; background: var(--tblr-bg-surface-secondary); overflow: hidden; }
+.hm-ladder-bar > span { display: block; height: 100%; min-width: 3px; border-radius: 2px; background: var(--hm-chart-all); }
+.hm-ladder-count { text-align: right; font-variant-numeric: tabular-nums; }
+.hm-mainnet-table td { white-space: nowrap; vertical-align: top; }
+.hm-mainnet-table thead th { white-space: normal; vertical-align: bottom; } /* over Tabler's nowrap */
+.hm-mainnet-table td.hm-mainnet-ids { white-space: normal; overflow-wrap: anywhere; min-width: 14rem; }
+.hm-mainnet-table td.text-end { font-variant-numeric: tabular-nums; }
+.hm-mainnet-id { display: block; }
+
 /* ------------------------------------------------------------------ the graph of a list */
 
 /* The colours of the groups (design 8.6, S7): blue, yellow, pink and green of the reference

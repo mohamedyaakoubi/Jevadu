@@ -46,12 +46,13 @@
 </ul>
 {% endcall %}
 
-{% call tip("views", "Cards, Graph and Insights") %}
-<p>Three views of the current list: the closest to your idea, or the whole collection with your filters.</p>
+{% call tip("views", "Cards, Graph, Insights and Mainnet") %}
+<p>Four views of the current list: the closest to your idea, or the whole collection with your filters.</p>
 <ul>
   <li><b>Cards:</b> the projects ten at a time, closest first when you search.</li>
   <li><b>Graph:</b> the same projects as dots, in groups by meaning, from the embeddings{{ parts.ref("embedding") }} of their pages. With an idea, the closest stand nearest to it. Without a search or a filter, the whole collection.</li>
   <li><b>Insights:</b> counts computed live from the database, in four tabs: <b>Overview</b> (proof, activity, linked projects), <b>Hedera services</b> (what the code and the ledger show), <b>Winners</b> (what projects with a Hedera prize use, next to the others) and <b>Events</b>. A percentage appears only when at least 20 projects stand behind it.</li>
+  <li><b>Mainnet:</b> how many of the projects put an own ID on Hedera's main network{{ parts.ref("mainnet") }}, where HBAR has real value, and what those IDs did there: their transactions, the days they were used, the fees paid and the HBAR moved.</li>
 </ul>
 {% endcall %}
 
@@ -115,6 +116,10 @@
 <p>Its own page is no longer public, or never was, so it comes from the organiser's list of winners and has fewer details: a name and a line, no full card. Every project on such a list won a prize, but most winners still have their own page.</p>
 {% endcall %}
 
+{% call tip("mainnet-fees", "Fees, HBAR and dollars") %}
+<p>Every transaction on Hedera pays a fee to the network{{ parts.ref("networkfees") }}. The fee is set in US dollars and paid in HBAR, at an exchange rate that the network itself sets for each hour. The mirror node{{ parts.ref("mirror") }} gives the fee of each transaction and the rate of its hour, so the dollars here are those of the day each fee was paid, not of today.</p>
+<p>"HBAR moved" counts what changed hands between accounts, besides the fees. "Accounts that paid" counts the accounts whose HBAR went out in these transactions, for a fee or a payment.</p>
+{% endcall %}
 {% call tip("mainnet", "Mainnet") %}
 <p>The team names one of its own Hedera IDs on the main network{{ parts.ref("mainnet") }}, where real value moves, and the main network knows it as that kind, made from 30 days before the event or later. The test network{{ parts.ref("testnet") }} is free and is emptied from time to time. An ID named with no network does not count, since nearly every number also exists on the main network as somebody else's.</p>
 {% endcall %}

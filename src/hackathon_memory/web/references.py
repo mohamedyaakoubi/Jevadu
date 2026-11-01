@@ -65,6 +65,9 @@ REFERENCES = (
     Reference("keys", "Keys and signatures", "Hedera", f"{DOCS}/core-concepts/keys-and-signatures"),
     Reference("system", "System smart contracts", "Hedera",
               f"{DOCS}/core-concepts/smart-contracts/system-smart-contracts"),
+    # read on 1 November 2026: "Fees are charged in HBAR, converted from USD at the live exchange
+    # rate"
+    Reference("networkfees", "Fees", "Hedera", f"{DOCS}/networks/mainnet/fees"),
 )  # fmt: skip
 BY_KEY = {reference.key: reference for reference in REFERENCES}
 NUMBER = {reference.key: number for number, reference in enumerate(REFERENCES, start=1)}

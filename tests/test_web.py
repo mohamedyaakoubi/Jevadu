@@ -965,6 +965,60 @@ def test_the_mainnet_filter_keeps_the_teams_on_the_main_network(site) -> None:  
     assert "2 projects match the filters" in left and f"/project/{pebble}/panel" not in left
 
 
+def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) -> None:  # noqa: ANN001
+    """The fourth view (design 12.1, S10, 1 November 2026): how many projects of the list put an
+    own ID on the main network, its transactions, their fees in HBAR and in dollars at the rate of
+    the network, and a table of the projects; a transaction whose cost is not read yet is said."""
+    from hackathon_memory.check.history import CONSENSUS, History
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.check.mainnet import Detail, Rate
+    from hackathon_memory.db.history import HistoryStore
+    from hackathon_memory.db.ledger import LedgerStore
+    from hackathon_memory.db.mainnet import MainnetStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    asked = datetime(2026, 11, 1, tzinfo=UTC)
+    LedgerStore(database).save_facts(LedgerFacts(
+        "0.0.4517", "mainnet", asked, found=True, kind="topic", ledger_id="0.0.4517",
+        created_at=datetime(2026, 3, 7, tzinfo=UTC)))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        conn.execute("DELETE FROM hedera_ids WHERE entity_id = '0.0.4517'")
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, '0.0.4517', 'mainnet', 'topic', 'page', "
+            "'invented', false) RETURNING id", (pebble,)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    one = f"{int(datetime(2026, 3, 7, 10, tzinfo=UTC).timestamp())}.000000001"
+    two = f"{int(datetime(2026, 4, 7, 10, tzinfo=UTC).timestamp())}.000000002"
+    HistoryStore(database).save(
+        "0.0.4517", "mainnet", "topic", History({one: CONSENSUS, two: CONSENSUS}, False), asked
+    )
+    MainnetStore(database).save(
+        Detail(one, "CONSENSUSSUBMITMESSAGE", True, 59_829_520, 0, ("0.0.7001",), 0),
+        Rate(637_060, 30_000), asked,
+    )  # fmt: skip
+    assert ">Mainnet</a>" in client.get("/").text  # the switch beside the other views
+    page = client.get("/", params={"view": "mainnet"}).text
+    assert "1 of 3 projects put its own ID on Hedera's main network" in page
+    assert ("Their own IDs made 2 transactions there, on 2 days, from 7 March 2026 to 7 April "
+            "2026.") in page  # fmt: skip
+    # 0.598 HBAR at 637,060 cents for 30,000 HBAR: 12.7 cents
+    assert "The network charged 0.60 HBAR in fees for them: $0.13 at the exchange rate" in page
+    assert "The cost of 1 transaction is not read yet." in page
+    assert "No HBAR changed hands in them besides the fees." in page
+    assert "1 account paid for them." in page
+    assert "The last day of its event is not known." in page
+    assert f'data-open-viewer="{pebble}"' in page
+    assert 'href="https://hashscan.io/mainnet/topic/0.0.4517"' in page
+    assert 'aria-current="true">Mainnet</a>' in page
+    # a filter that leaves no project on the main network
+    other = client.get("/", params={"view": "mainnet", "mainnet": "no"}).text
+    assert "0 of 2 projects put their own ID on Hedera's main network" in other
+    assert "No project of this list put an own ID on the main network." in other
+
+
 def test_the_sites_own_files_are_never_run_old(site) -> None:  # noqa: ANN001
     """The script and the styles are linked with a fingerprint of their content, and a browser
     checks its copy each time (design 12.2, 28 October 2026)."""

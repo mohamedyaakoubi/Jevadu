@@ -80,8 +80,9 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
             detail["filters"] = chosen
         if params.get("open", "").isdigit():
             return "card", {**detail, "project": int(params["open"])}
-        if params.get("view") in ("graph", "charts", "overview"):
-            return ("graph" if params["view"] == "graph" else "charts"), detail
+        if params.get("view") in ("graph", "charts", "overview", "mainnet"):
+            view = params["view"]
+            return (view if view in ("graph", "mainnet") else "charts"), detail
         if params.get("idea"):
             return ("gemini" if params.get("ai") == "1" else "search"), detail
         if chosen:
@@ -205,6 +206,7 @@ def described(one: Action, projects: Mapping[int, str], events: Mapping[str, str
         "card": f"opened the card of {named}",
         "graph": "looked at the graph" + (f" of {idea}" if idea else ""),
         "charts": "looked at the charts" + (f" of {idea}" if idea else ""),
+        "mainnet": "looked at the main network" + (f" of {idea}" if idea else ""),
         "compare": "asked Gemini to compare",
         "register": f"registration, step {detail.get('step')}",
         "about": f"read the note “{detail.get('note')}”",
