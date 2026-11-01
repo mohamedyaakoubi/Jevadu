@@ -551,6 +551,11 @@ class StandInMirror:
         found = [str(one) for one in self.lists.get(("holders", entity), [])]
         return found[:max_rows], len(found) > max_rows
 
+    # The accounts whose key is a public key, in self.lists[("key", public key)].
+    def accounts_with_key(self, public_key: str, *, limit: int = 10) -> list[str]:
+        self.asked.append(("key", public_key))
+        return [str(one) for one in self.lists.get(("key", public_key), [])][:limit]
+
     # The calls that an EVM address sent, in self.lists[("from", address)], oldest first.
     def results_from(
         self, address: str, *, since: datetime, max_rows: int

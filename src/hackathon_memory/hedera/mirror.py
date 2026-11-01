@@ -67,6 +67,7 @@ MAX_LINKS = 24
 
 _ENTITY_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}$")
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_PUBLIC_KEY = re.compile(r"^[0-9a-fA-F]{64,200}$")  # raw ED25519 or ECDSA, or DER-encoded
 _TRANSACTION_HASH = re.compile(r"^0x[0-9a-fA-F]{64}(?:[0-9a-fA-F]{32})?$")
 _TRANSACTION_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}-\d{1,11}-\d{1,9}$")
 _STAMP = re.compile(r"^\d{1,12}\.\d{1,9}$")  # a moment of consensus
@@ -388,6 +389,14 @@ class MirrorNode:
         "created_contract_ids" names the contract itself."""
         path = f"/contracts/{self._entity_or_address(contract)}/results?limit=100&order=asc"
         return self._all(path + self._range(since, None), "results", max_rows)
+
+    def accounts_with_key(self, public_key: str, *, limit: int = 10) -> list[str]:
+        """The accounts whose own key is this public key, in hex (ED25519 or ECDSA). Read on 1
+        November 2026: /accounts?account.publickey= found an account of each kind by its key."""
+        if not _PUBLIC_KEY.match(public_key):
+            raise MirrorError(f"not a public key: {public_key[:20]!r}")
+        answer = self._get(f"/accounts?account.publickey={public_key}&limit={int(limit)}") or {}
+        return [str(one["account"]) for one in answer.get("accounts") or [] if one.get("account")]
 
     def results_from(
         self, address: str, *, since: datetime, max_rows: int

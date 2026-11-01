@@ -1,0 +1,27 @@
+{
+ "cases_of": "test2, the counted cases",
+ "embedding_model": "gemini-embedding-2",
+ "first_10": {
+  "found": 36,
+  "known": 57,
+  "share": 0.6316
+ },
+ "first_30": {
+  "found": 50,
+  "known": 57,
+  "share": 0.8772
+ },
+ "first_50": {
+  "found": 54,
+  "known": 57,
+  "share": 0.9474
+ },
+ "made_on": "2026-11-01",
+ "outside_the_pool_by_kind": {
+  "idea": 1,
+  "same idea": 6
+ },
+ "pool_ordered": 30,
+ "projects_searched": 933,
+ "test": "search-pool"
+}

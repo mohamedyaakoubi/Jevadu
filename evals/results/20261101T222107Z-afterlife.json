@@ -1,0 +1,60 @@
+{
+ "code_and_test_network": {
+  "180_days": {
+   "code_pushed": 24,
+   "code_pushed_share": 0.0702,
+   "events_old_enough": 478,
+   "repositories_with_a_known_push": 342,
+   "testnet_ever_used": 134,
+   "testnet_still_used": 8,
+   "testnet_still_used_share": 0.0597
+  },
+  "30_days": {
+   "code_pushed": 92,
+   "code_pushed_share": 0.1388,
+   "events_old_enough": 828,
+   "repositories_with_a_known_push": 663,
+   "testnet_ever_used": 385,
+   "testnet_still_used": 36,
+   "testnet_still_used_share": 0.0935
+  },
+  "365_days": {
+   "code_pushed": 8,
+   "code_pushed_share": 0.0319,
+   "events_old_enough": 372,
+   "repositories_with_a_known_push": 251,
+   "testnet_ever_used": 87,
+   "testnet_still_used": 3,
+   "testnet_still_used_share": 0.0345
+  },
+  "90_days": {
+   "code_pushed": 46,
+   "code_pushed_share": 0.1111,
+   "events_old_enough": 557,
+   "repositories_with_a_known_push": 414,
+   "testnet_ever_used": 187,
+   "testnet_still_used": 15,
+   "testnet_still_used_share": 0.0802
+  },
+  "projects": 933,
+  "repositories_at_a_new_address": 29,
+  "repositories_under_another_owner": 15,
+  "with_a_repository": 748
+ },
+ "made_on": "2026-11-01",
+ "makers_on_the_main_network": {
+  "accounts_that_made_own_mainnet_ids": 8,
+  "made_something_after_the_event": 0
+ },
+ "same_keys_on_the_main_network": {
+  "accounts_behind_testnet_ids": 807,
+  "built_there_after_the_event": 0,
+  "key_also_on_the_main_network": 2,
+  "not_read": 0,
+  "projects_behind_them": 374,
+  "projects_of_those_keys": 3,
+  "projects_that_built_there_after_the_event": 0,
+  "with_one_simple_key": 767
+ },
+ "test": "afterlife"
+}

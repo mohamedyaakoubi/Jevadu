@@ -140,6 +140,26 @@ def signer_address(message: bytes, signature: bytes) -> str | None:
     return "0x" + keccak256(key[0].to_bytes(32, "big") + key[1].to_bytes(32, "big"))[-20:].hex()
 
 
+def evm_address_of(key: str) -> str | None:
+    """The EVM address of a compressed secp256k1 public key (33 bytes in hex, 02 or 03 first), as a
+    wallet such as MetaMask names it on every network: the last 20 bytes of the Keccak-256 hash of
+    its point. None for a key that is not one."""
+    try:
+        raw = bytes.fromhex(key.removeprefix("0x"))
+    except ValueError:
+        return None
+    if len(raw) != 33 or raw[0] not in (2, 3):
+        return None
+    x = int.from_bytes(raw[1:], "big")
+    square = (pow(x, 3, _P) + 7) % _P
+    y = pow(square, (_P + 1) // 4, _P)
+    if x >= _P or y * y % _P != square:
+        return None
+    if y % 2 != raw[0] - 2:
+        y = _P - y
+    return "0x" + keccak256(x.to_bytes(32, "big") + y.to_bytes(32, "big"))[-20:].hex()
+
+
 def account_key(mirror: MirrorNode, account: str) -> AccountKey | None:
     """The key of an account, or of the account of a 0x address, from the mirror node; None when
     the network has no such account."""
