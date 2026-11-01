@@ -1875,7 +1875,15 @@ def create_app(
     templates.env.filters["iso_day"] = iso_day
     templates.env.filters["said"] = data.said
     templates.env.filters["casefold"] = str.casefold
+
+    def analytics() -> bool:
+        """Vercel's Web Analytics on the public copy, for every visitor but its owner: it counts
+        pages, with no cookie (design 12.5, 1 November 2026)."""
+        who = public_copy.visitor.get()
+        return public and who is not None and not who.owner
+
     templates.env.globals |= {
+        "analytics": analytics,
         "READING_BY": READING_BY,
         "READING_STEPS": list(refresh_step.STEPS),
         "READING_STEP_WORDS": READING_STEP_WORDS,

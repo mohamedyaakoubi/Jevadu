@@ -42,6 +42,12 @@
 <script src="/static/vendor/chart.umd.js" defer></script>
 <script src="{{ static_url('site.js') }}" defer></script>
 <script type="module" src="{{ static_url('sign.js') }}"></script>
+{% if analytics() %}
+{# Vercel's Web Analytics on the public copy (design 12.5): it counts pages, with no cookie; the
+   visits of the copy's owner are left out (1 November 2026). #}
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+{% endif %}
 </head>
 <body>
 <div class="splash" aria-hidden="true">

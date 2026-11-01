@@ -44,6 +44,7 @@ SITE_KEY = "1x00000000000000000000AA"
 SECRET = "1x0000000000000000000000000000000AA"
 TOKEN = "XXXX.DUMMY.TOKEN.XXXX"
 CONFIRM = "asks Cloudflare whether you are a person"
+INSIGHTS = "/_vercel/insights/script.js"  # Vercel's Web Analytics (design 12.5)
 
 
 class Cloudflare:
@@ -101,6 +102,8 @@ def test_no_page_is_indexed_on_the_laptop_or_on_the_public_copy(site) -> None:  
     assert moved.status_code == 301 and moved.headers["location"] == "https://testserver/?idea=pay"
     laptop = client.get("/", headers={"X-Forwarded-Proto": "http"}, follow_redirects=False)
     assert laptop.status_code == 200  # the laptop's own site is never redirected
+    # Vercel's analytics count the pages of the public copy only (1 November 2026)
+    assert INSIGHTS not in laptop.text and INSIGHTS in open_copy.get("/").text
 
 
 def test_the_ai_stays_off_on_the_public_copy_until_it_is_turned_on(site) -> None:  # noqa: ANN001, F811
@@ -589,10 +592,12 @@ def test_the_copys_owner_signs_in_with_github_and_checks_with_no_count(site, mon
     page = copy.get("/owner").text
     signed = "signed in as the copy's owner, with the GitHub account <b>mohamedyaakoubi</b>"
     assert signed in page  # the page's own words; a message from the code is escaped (&#39;)
+    assert INSIGHTS not in copy.get("/").text  # the visits of the copy's owner are not counted
     for _ in range(3):  # not counted
         assert copy.get("/check", params=asked, headers=one).status_code == 200
     assert copy.get("/owner/sign-out", follow_redirects=False).status_code == 303
     assert copy.get("/check", params=asked, headers=one).status_code == 429  # counted again
+    assert INSIGHTS in copy.get("/").text
     stranger = owners_copy(client, StandInGitHub(login="someone-else"))
     state = parse_qs(stranger.get("/owner/start", follow_redirects=False)
                      .headers["location"].split("?", 1)[1])["state"][0]  # fmt: skip
