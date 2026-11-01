@@ -505,3 +505,21 @@ def test_a_transaction_is_asked_by_its_moment_with_the_rate_of_that_moment() -> 
         with pytest.raises(MirrorError):
             mirror.exchange_rate(wrong)
     assert len(site.seen) == 3
+
+
+def test_the_calls_that_an_address_sent_are_asked_with_a_time() -> None:
+    """Read on 1 November 2026: /contracts/results?from= answers only with a time range, and
+    "created_contract_ids" names the contracts that a call made."""
+    sender = "0x00000000000000000000000000000000008cc309"
+    since = datetime(2025, 9, 1, tzinfo=UTC)
+    made = {"timestamp": "1759004210.755650000", "created_contract_ids": ["0.0.9989593"]}
+    first = f"{BASE}/contracts/results?from={sender}&limit=100&order=asc&timestamp=gte:"
+    following = "/api/v1/contracts/results?from=x&limit=100&order=asc&timestamp=gt:1759004210"
+    mirror, site, _ = node({
+        first + stamp_of(since): reply({"results": [made], "links": {"next": following}}),
+        BASE + following.removeprefix("/api/v1"): reply({"results": [], "links": {"next": None}}),
+    })  # fmt: skip
+    assert mirror.results_from(sender, since=since, max_rows=10) == ([made], False)
+    with pytest.raises(MirrorError):
+        mirror.results_from("0.0.9224969", since=since, max_rows=10)
+    assert len(site.seen) == 2

@@ -389,6 +389,18 @@ class MirrorNode:
         path = f"/contracts/{self._entity_or_address(contract)}/results?limit=100&order=asc"
         return self._all(path + self._range(since, None), "results", max_rows)
 
+    def results_from(
+        self, address: str, *, since: datetime, max_rows: int
+    ) -> tuple[list[dict], bool]:
+        """Every call of a contract that an EVM address sent from `since` on, oldest first (see
+        _all). Read on 1 November 2026: /contracts/results?from= answers only with a time range
+        (the same question without one gave nothing), and "created_contract_ids" names the
+        contracts that a call made."""
+        if not _EVM_ADDRESS.match(address):
+            raise MirrorError(f"not an EVM address: {address!r}")
+        path = f"/contracts/results?from={address}&limit=100&order=asc"
+        return self._all(path + self._range(since, None), "results", max_rows)
+
     def token_holders(self, token_id: str, *, max_rows: int) -> tuple[list[str], bool]:
         """The accounts that hold a token now, with a balance above zero, at most `max_rows`,
         and True when there are more. Read on 25 October 2026: /tokens/{id}/balances takes the
