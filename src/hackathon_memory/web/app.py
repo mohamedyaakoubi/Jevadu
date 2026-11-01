@@ -69,6 +69,7 @@ from hackathon_memory.db.idea_answers import AnswerStore, scope_of
 from hackathon_memory.db.runs import recorded_run
 from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.finops.budget import BudgetExceeded
+from hackathon_memory.finops.calls import PostgresStore
 from hackathon_memory.hedera import listed, registry, signing
 from hackathon_memory.hedera.mirror import (
     MIRROR_URLS,
@@ -101,6 +102,7 @@ from hackathon_memory.web import (
     references,
     strips,
     turnstile,
+    visits,
 )
 from hackathon_memory.web import public as public_copy
 from hackathon_memory.web import refresher as refreshing
@@ -542,11 +544,32 @@ def create_app(
     gate = limits.admit if limits is not None else None  # the meter asks it before each call
     salt = settings.public_salt.get_secret_value()
 
+    def note_visit(request: Request, key: str, status: int) -> None:
+        """One action of a visitor of the public copy, kept for the copy's owner (design 12.5,
+        S9). A visit that cannot be noted never stops the page."""
+        params = {name: "|".join(request.query_params.getlist(name))
+                  for name in dict.fromkeys(request.query_params.keys())}  # fmt: skip
+        found = visits.action_of(request.url.path, params)
+        if found is None:
+            return
+        action, detail = found
+        if status >= 400:
+            detail = {**detail, "status": status}
+        where = request.url.path + (f"?{request.url.query}" if request.url.query else "")
+        try:
+            visits.record(database(), key[:12], action, detail, where,
+                          visits.place_of(request.headers),
+                          visits.referrer_of(request.headers, request.url.hostname or ""),
+                          visits.device_of(request.headers.get("user-agent", "")))  # fmt: skip
+        except (psycopg.Error, SettingsError):
+            return
+
     @app.middleware("http")
     async def unlisted(request: Request, call_next: Callable) -> Any:
         """No page is indexed (design 12.5); on the public copy, each request knows its visitor;
         on Vercel, the token that signs in to Google with no key goes with it (llm/client.py)."""
         token = None
+        who = None
         if limits is not None and public_copy.plain_http(request.headers):
             return RedirectResponse(str(request.url.replace(scheme="https")), 301)
         if limits is not None:
@@ -565,6 +588,8 @@ def create_app(
                 public_copy.visitor.reset(token)
             if signed is not None:
                 vercel_token.reset(signed)
+        if who is not None and not who.owner:  # what a visitor did, for the copy's owner (S9)
+            await run_in_threadpool(note_visit, request, who.key, response.status_code)
         extra = public_copy.PUBLIC_HEADERS if limits is not None else {}
         for name, value in {**public_copy.HEADERS, **extra}.items():
             response.headers[name] = value
@@ -1517,6 +1542,31 @@ def create_app(
     def owner_page(request: Request) -> HTMLResponse:
         """Where the copy's owner signs in with GitHub, or sees that this browser is signed in."""
         return render(request, "owner.html", login=owner_here(request), ready=owner_ready())
+
+    @app.get("/owner/visits", response_model=None)
+    def owner_visits(request: Request) -> HTMLResponse | RedirectResponse:
+        """S9: what the visitors of the public copy did, and what is left of its budget; for the
+        copy's owner only (design 12.5). Anybody else is sent to the sign-in."""
+        if limits is None or not owner_here(request):
+            return RedirectResponse("/owner", 303)
+        conninfo = database()
+        found = visits.visits(conninfo)
+        with psycopg.connect(conninfo) as conn:
+            projects = dict(conn.execute("SELECT id, name FROM projects").fetchall())
+            events = {str(key): name for key, name in
+                      conn.execute("SELECT id, name FROM events").fetchall()}  # fmt: skip
+        meter = PostgresStore(conninfo)
+        midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        spent = meter.spent("public")
+        budget = {"total": settings.llm_budget_public_usd, "spent": spent,
+                  "left": max(settings.llm_budget_public_usd - spent, 0.0),
+                  "today": meter.spent("public", midnight),
+                  "daily": settings.llm_budget_public_per_day_usd}  # fmt: skip
+        lines = [(visit, [(one.at, visits.described(one, projects, events))
+                          for one in visit.actions]) for visit in found]  # fmt: skip
+        return render(request, "visits.html", visits=lines, summary=visits.summary(found),
+                      projects=projects, budget=budget,
+                      actions_count=sum(len(visit.actions) for visit in found))  # fmt: skip
 
     @app.get("/owner/start", response_model=None)
     def owner_start(request: Request) -> Response:

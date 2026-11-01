@@ -607,3 +607,46 @@ def test_the_copys_owner_signs_in_with_github_and_checks_with_no_count(site, mon
     assert "hm-owner=" not in refused.headers.get("set-cookie", "")
     plain = public_site(client)  # a copy without the settings offers no sign-in
     assert "has no sign-in for its owner" in plain.get("/owner").text
+
+
+def test_the_copy_notes_what_its_visitors_do_for_its_owner_only(site) -> None:  # noqa: ANN001, F811
+    """Each action of a visitor is noted with Vercel's place of its address, the site it came
+    from and its browser; the copy's owner reads them on /owner/visits, with the public budget,
+    and is not noted; anybody else is sent to the sign-in (design 12.5, S9, 1 November 2026)."""
+    from test_github_app import StandInGitHub
+
+    client, _, ids, database = site
+    copy = owners_copy(client, StandInGitHub(login="mohamedyaakoubi"))
+    where = {
+        "CF-Connecting-IP": "203.0.113.9",
+        "x-vercel-ip-country": "TN",
+        "x-vercel-ip-country-region": "11",
+        "x-vercel-ip-city": "Tunis",
+        "referer": "https://4hacks.io/fss/projects?page=2",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36",
+    }
+    copy.get("/", params={"idea": "pay street"}, headers=where)
+    copy.get("/", params={"idea": "pay street vendors"}, headers=where)  # typed on: one search
+    copy.get(f"/project/{ids['Pebble Pay']}/panel", headers=where)
+    copy.get("/static/style.css", headers=where)  # a file: no action
+    assert copy.get("/owner/visits", follow_redirects=False).headers["location"] == "/owner"
+    with psycopg.connect(database) as conn:
+        (noted,) = conn.execute("SELECT count(*) FROM visit_actions").fetchone()
+    assert noted == 3
+    start = copy.get("/owner/start", follow_redirects=False)
+    state = parse_qs(start.headers["location"].split("?", 1)[1])["state"][0]
+    copy.get("/github/callback", params={"code": "the-code", "state": state},
+             follow_redirects=False)  # fmt: skip
+    page = copy.get("/owner/visits").text
+    assert "Tunis, TN" in page and "4hacks.io/fss/projects" in page and "Chrome on Windows" in page
+    assert "searched “pay street vendors”" in page and "searched “pay street”" not in page
+    assert "opened the card of Pebble Pay" in page
+    assert "0.00 of 30.00 dollars spent" in page
+    copy.get("/", params={"idea": "a search of the copy's owner"}, headers=where)
+    with psycopg.connect(database) as conn:
+        (after,) = conn.execute("SELECT count(*) FROM visit_actions").fetchone()
+    assert after == noted  # the copy's owner is not noted
+    assert (
+        "This copy notes which pages and actions its visitors use"
+        in public_site(client).get("/").text
+    )
