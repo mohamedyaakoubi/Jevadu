@@ -523,3 +523,16 @@ def test_the_calls_that_an_address_sent_are_asked_with_a_time() -> None:
     with pytest.raises(MirrorError):
         mirror.results_from("0.0.9224969", since=since, max_rows=10)
     assert len(site.seen) == 2
+
+
+def test_the_accounts_with_a_key_are_asked_by_the_key() -> None:
+    """Read on 1 November 2026: /accounts?account.publickey= found an account by its own key."""
+    key = "ab" * 32
+    mirror, site, _ = node({
+        f"{BASE}/accounts?account.publickey={key}&limit=10": reply(
+            {"accounts": [{"account": "0.0.9001"}], "links": {"next": None}}),
+    })  # fmt: skip
+    assert mirror.accounts_with_key(key) == ["0.0.9001"]
+    with pytest.raises(MirrorError):
+        mirror.accounts_with_key("0.0.9001")
+    assert len(site.seen) == 1

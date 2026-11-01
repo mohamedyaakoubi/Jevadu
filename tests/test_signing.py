@@ -22,6 +22,7 @@ from hackathon_memory.hedera.signing import (
     SignatureError,
     check,
     ethereum_message,
+    evm_address_of,
     hedera_message,
     raw_signature,
     signed_text,
@@ -163,3 +164,13 @@ def test_an_account_known_by_its_address_only_is_checked_by_the_signer() -> None
         check(ETHEREUM, TEXT, other + bytes([27]), hollow)
     with pytest.raises(SignatureError, match="no key yet"):  # a Hedera wallet needs the key
         check(HEDERA, TEXT, raw, hollow)
+
+
+def test_the_evm_address_of_a_compressed_key() -> None:
+    """The key of the private key 1 gives the well-known address 0x7E5F...5bdf; a key that is not
+    a point of the curve, or not compressed, gives none."""
+    assert evm_address_of("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798") == (
+        "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf")  # fmt: skip
+    assert evm_address_of("04" + "11" * 32) is None
+    assert evm_address_of("not hex") is None
+    assert evm_address_of("02" + "ff" * 32) is None  # x past the field

@@ -1211,9 +1211,22 @@ They cannot prove that every card is right. They give a measured error rate on a
 
 ### 13.10 The main network, counted
 
-**1 November 2026** (`evals/mainnet.py`, `evals/results/20261101T133450Z-mainnet.json`, section 7.6). Of the 933 projects of the collection, 404 name a Hedera ID, 395 have a Hedera proof, and 393 used an own ID on the test network, with 141,880 transactions. 7 put an own ID on the main network. Their own IDs made 1,169 transactions there, on 20 days between 26 February 2025 and 23 September 2026, and 1 of them failed. The network charged 59.48 HBAR in fees for them, $11.36 at its own exchange rate of each hour, and 10.60 HBAR ($0.89) changed hands besides the fees. 11 accounts paid for them. One of the 7 was used there after the last day of its event. Most of the transactions are the messages of one project's topic, and most of the fees the calls of one project's contract.
+**1 November 2026** (`evals/mainnet.py`, `evals/results/20261101T133450Z-mainnet.json`, section 7.6; the same counts with what the transactions did in `evals/results/20261101T175806Z-mainnet.json`: 1,110 of the 1,169 transactions are messages to two topics, 1,090 of which name Base; the accounts that made the own IDs also made 165 contracts, 5 tokens, 2 topics and a scheduled transaction that the projects do not name, all during their events). Of the 933 projects of the collection, 404 name a Hedera ID, 395 have a Hedera proof, and 393 used an own ID on the test network, with 141,880 transactions. 7 put an own ID on the main network. Their own IDs made 1,169 transactions there, on 20 days between 26 February 2025 and 23 September 2026, and 1 of them failed. The network charged 59.48 HBAR in fees for them, $11.36 at its own exchange rate of each hour, and 10.60 HBAR ($0.89) changed hands besides the fees. 11 accounts paid for them. One of the 7 was used there after the last day of its event. Most of the transactions are the messages of one project's topic, and most of the fees the calls of one project's contract.
 
 These are counts, not a measure with a pass mark. They say what the IDs that the projects name did on the main network; a team may have used accounts that it never names.
+
+
+### 13.11 Life after the event, counted
+
+**1 November 2026** (`evals/afterlife.py`, `evals/results/20261101T222107Z-afterlife.json`). What a project that lived on after its hackathon, or moved elsewhere, would leave in public data, over the whole collection. A count of N days takes only the events that ended at least N days before the reading.
+
+- **The code.** 30 days after the end of the event, 92 of 663 repositories got a push (13.9%); 90 days after, 46 of 414 (11.1%); a year after, 8 of 251 (3.2%).
+- **The test network.** 30 days after, 36 of 385 projects still used their own testnet IDs (9.3%); a year after, 3 of 87 (3.5%).
+- **A new home.** 29 repositories are at a new address, 15 of them under another owner; the tool reads them there.
+- **The same keys.** Of the 807 accounts behind the own testnet IDs of 374 projects, 767 have one simple key; 2 of those keys are also a key on the main network, and 0 of them made or used a contract, a topic or a token there after the event.
+- **The makers on the main network.** Of the 8 accounts that made the projects' own mainnet IDs, 0 made anything there after the event (section 7.6).
+
+These are counts, not a measure with a pass mark. A project rebuilt with new code, new accounts and a new name leaves none of these traces, and no outside reader can count it.
 
 ---
 
