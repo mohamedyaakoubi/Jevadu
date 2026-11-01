@@ -52,7 +52,9 @@ from hackathon_memory.check.story import (
     services_in_code,
     set_up_in_code,
 )
+from hackathon_memory.collect import devfolio
 from hackathon_memory.collect.rawstore import RawStore
+from hackathon_memory.db.card_choice import CARD_OF_PROJECT
 from hackathon_memory.db.history import depth_of_project, story_of_project
 from hackathon_memory.db.public_services import NamedService, public_services_of
 from hackathon_memory.db.readings import Reading, latest_reading
@@ -297,18 +299,17 @@ def first_sentence(text: str) -> str:
 
 
 def summaries(
-    conninfo: str, project_ids: Sequence[int], *, model: str, version: str
+    conninfo: str, project_ids: Sequence[int], *, models: Sequence[str], version: str
 ) -> dict[int, Summary]:
     """For each project: the model's sentence "what it does" when its card keeps it, otherwise
     the short line, otherwise the first sentence of the first text of the page."""
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
-            "SELECT p.id, coalesce(p.short_line, ''), "
+            "SELECT p.id, coalesce(p.short_line, ''), "  # noqa: S608  (fixed text)
             "coalesce((SELECT s.body FROM sections s WHERE s.project_id = p.id "
             "ORDER BY s.position LIMIT 1), ''), c.fields -> 'what_it_does' "
-            "FROM projects p LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
-            "AND c.instructions_version = %s WHERE p.id = ANY(%s)",
-            (model, version, list(project_ids)),
+            "FROM projects p " + CARD_OF_PROJECT + "WHERE p.id = ANY(%s)",
+            (list(models), version, list(models), list(project_ids)),
         ).fetchall()
     found = {}
     for project_id, short_line, first_text, field in rows:
@@ -324,7 +325,7 @@ def project_card(
     conninfo: str,
     project_id: int,
     *,
-    model: str,
+    models: Sequence[str],
     version: str,
     raw_dir: Path | None = None,
     now: datetime | None = None,
@@ -363,9 +364,9 @@ def project_card(
             ).fetchall()
         )
         row = conn.execute(
-            "SELECT fields, made_at FROM cards WHERE project_id = %s AND model = %s "
-            "AND instructions_version = %s",
-            (project_id, model, version),
+            "SELECT fields, made_at, model FROM cards WHERE project_id = %s AND model = ANY(%s) "
+            "AND instructions_version = %s ORDER BY array_position(%s::text[], model) LIMIT 1",
+            (project_id, list(models), version, list(models)),
         ).fetchone()
         repository = found[0].repository
         code_reading = view_of_repository(conn, repository) if repository else None
@@ -380,7 +381,7 @@ def project_card(
         public = public_services_of(conn, project_id)
     card = None
     if row is not None:
-        fields, made_at = row
+        fields, made_at, model = row  # the model that wrote this card
         card = ModelCard(model, version, made_at, tuple(
             ModelField(name, FIELD_TITLES[name], fields[name]["label"], fields[name]["state"],
                        fields[name]["value"], tuple(fields[name]["quotes"]))
@@ -436,8 +437,14 @@ def set_up_of(view: CodeView | None) -> frozenset[str]:
 
 
 def collected_at(raw_dir: Path | None, page_url: str) -> datetime | None:
-    """When the page was saved from its site, from the record kept next to the saved page."""
-    saved = RawStore(raw_dir).load(page_url) if raw_dir is not None else None
+    """When the page was saved from its site, from the record kept next to the saved page. A
+    project of Devfolio is saved as the answer of its data service, in the folder of that site."""
+    if raw_dir is not None and page_url.startswith(devfolio.project_page("")):
+        name = page_url.removeprefix(devfolio.project_page(""))
+        saved = RawStore(raw_dir.parent / devfolio.SITE).load(devfolio.project_address(name),
+                                                                devfolio.SUFFIX)  # fmt: skip
+    else:
+        saved = RawStore(raw_dir).load(page_url) if raw_dir is not None else None
     fetched = saved.meta.get("fetched_at") if saved else None
     try:
         return datetime.fromisoformat(fetched.replace("Z", "+00:00")) if fetched else None
@@ -540,10 +547,13 @@ class Member:
 
 def event_page(site: str, slug: str, project_page: str | None) -> str | None:
     """The page of an event: on ETHGlobal, the page that its project pages link to
-    (/events/<short name>, seen in the saved pages on 16 October 2026); for an event known from
-    an organiser's list of winners, that list, which its projects link to."""
+    (/events/<short name>, seen in the saved pages on 16 October 2026); on Devfolio, the event's
+    own address, <short name>.devfolio.co (31 October 2026); for an event known from an
+    organiser's list of winners, that list, which its projects link to."""
     if site == "ethglobal.com":
         return f"https://ethglobal.com/events/{slug}"
+    if site == devfolio.SITE:
+        return f"https://{slug}.{devfolio.SITE}/"
     return project_page.split("#", 1)[0] if project_page else None
 
 

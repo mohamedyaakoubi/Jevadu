@@ -1439,4 +1439,43 @@
       steps();
     }
   });
+
+  // The values of a filter (design 8.2): the list stays open while its boxes are ticked, though
+  // each tick sends the search and the row of filters comes back new; Escape or a click outside
+  // closes it (1 November 2026).
+  var openFilter = null;
+  var tickedValue = null;
+  document.addEventListener("htmx:beforeSwap", function () {
+    var menu = document.querySelector(".hm-filter-menu[open]");
+    openFilter = menu ? menu.getAttribute("data-filter") : null;
+    var active = document.activeElement;
+    tickedValue = menu && active && menu.contains(active) ? active.value : null;
+  });
+  document.addEventListener("htmx:afterSettle", function () {
+    if (!openFilter) return;
+    var menu = document.querySelector('.hm-filter-menu[data-filter="' + openFilter + '"]');
+    openFilter = null;
+    if (!menu) return;
+    menu.open = true;
+    var boxes = menu.querySelectorAll("input");
+    for (var i = 0; i < boxes.length; i += 1) {
+      if (boxes[i].value === tickedValue) {
+        boxes[i].focus();
+        break;
+      }
+    }
+  });
+  document.addEventListener("click", function (event) {
+    var menus = document.querySelectorAll(".hm-filter-menu[open]");
+    for (var i = 0; i < menus.length; i += 1) {
+      if (!menus[i].contains(event.target)) menus[i].open = false;
+    }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+    var menu = document.querySelector(".hm-filter-menu[open]");
+    if (!menu) return;
+    menu.open = false;
+    menu.querySelector("summary").focus();
+  });
 })();

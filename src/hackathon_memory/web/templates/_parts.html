@@ -292,9 +292,10 @@
 </div>
 {%- endmacro %}
 
-{# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
+{# Why two projects are linked (design 8.4): `by` is "repository", "network:ID", or
+   "account:network:ID" for an account alone, which is the builder's rather than the project's. #}
 {% macro link_reason(by) -%}
-{% if by == "repository" %}Same repository.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}
+{% if by == "repository" %}Same repository.{% elif by.startswith("account:") %}{% set account = by.split(":", 2) %}Same Hedera account: {{ account[2] }} on {{ account[1] }}, confirmed by the ledger for both. The same account, not necessarily the same project.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}
 {%- endmacro %}
 
 {% macro pager(page, pages, query, label="Pages of the list") -%}
@@ -321,14 +322,22 @@
 in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ path }}<span class="visually-hidden"> (opens in a new tab)</span></a>{% else %}{{ path }}{% endif %}: no page or README names it, and it was made during the event
 {%- endmacro %}
 
-{% macro filter_select(name, label, all_words, options, current, tip=none) -%}
-<div class="hm-filter{% if current %} chosen{% endif %}">
-  <span class="hm-filter-head"><label for="filter-{{ name }}">{{ label }}</label>{% if tip %}{{ info(tip, label) }}{% endif %}</span>
-  <select class="form-select form-select-sm" id="filter-{{ name }}" name="{{ name }}">
-    <option value="">{{ all_words }}</option>
-    {% for choice in options %}<option value="{{ choice.value }}"{% if choice.value == current %} selected{% endif %}>{{ choice.words }} ({{ "{:,}".format(choice.count) }})</option>
-    {% endfor %}
-  </select>
+{# A filter (design 8.2): a button that opens its values, each with a small box, so that several
+   can be kept at once; a project with any of them stays (1 November 2026). `picked` holds the
+   chosen values. #}
+{% macro filter_select(name, label, all_words, options, picked, tip=none) -%}
+{% set names = options | selectattr("value", "in", picked) | map(attribute="words") | list %}
+{% set shown = names | join(", ") if names else all_words %}
+<div class="hm-filter{% if picked %} chosen{% endif %}">
+  <span class="hm-filter-head"><span>{{ label }}</span>{% if tip %}{{ info(tip, label) }}{% endif %}</span>
+  <details class="hm-filter-menu" data-filter="{{ name }}">
+    <summary class="form-select form-select-sm" id="filter-{{ name }}" aria-label="{{ label }}: {{ shown }}" title="{{ shown }}">{{ shown }}</summary>
+    <fieldset class="hm-filter-options">
+      <legend class="visually-hidden">{{ label }}</legend>
+      {% for choice in options %}<label class="hm-filter-option"><input class="form-check-input" type="checkbox" name="{{ name }}" value="{{ choice.value }}"{% if choice.value in picked %} checked{% endif %}><span>{{ choice.words }} ({{ "{:,}".format(choice.count) }})</span></label>
+      {% endfor %}
+    </fieldset>
+  </details>
 </div>
 {%- endmacro %}
 

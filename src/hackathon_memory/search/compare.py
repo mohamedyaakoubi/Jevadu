@@ -23,6 +23,7 @@ import psycopg
 from google.genai import types
 from pydantic import BaseModel, ValidationError
 
+from hackathon_memory.db.card_choice import CARD_OF_PROJECT
 from hackathon_memory.db.embeddings import idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, KeptComparison
 from hackathon_memory.llm.client import again_if_dropped
@@ -84,19 +85,20 @@ class Item:
     texts: dict[str, str]
 
 
-def items_for(conninfo: str, project_ids: Sequence[int], *, model: str, version: str) -> list[Item]:
+def items_for(
+    conninfo: str, project_ids: Sequence[int], *, models: Sequence[str], version: str
+) -> list[Item]:
     """The texts of each project, in the order given: its card's fields when kept, otherwise its
     short line and the start of its first text."""
     with psycopg.connect(conninfo) as conn:
         rows = {
             row[0]: row[1:]
             for row in conn.execute(
-                "SELECT p.id, p.name, coalesce(p.short_line, ''), "
+                "SELECT p.id, p.name, coalesce(p.short_line, ''), "  # noqa: S608  (fixed text)
                 "coalesce((SELECT s.body FROM sections s WHERE s.project_id = p.id "
                 "ORDER BY s.position LIMIT 1), ''), c.fields "
-                "FROM projects p LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
-                "AND c.instructions_version = %s WHERE p.id = ANY(%s)",
-                (model, version, list(project_ids)),
+                "FROM projects p " + CARD_OF_PROJECT + "WHERE p.id = ANY(%s)",
+                (list(models), version, list(models), list(project_ids)),
             ).fetchall()
         }
     items = []

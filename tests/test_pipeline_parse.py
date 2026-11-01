@@ -242,7 +242,8 @@ def test_the_command_writes_the_ends_of_events_typed_by_hand(
     assert main(["parse"], settings_for(database, raw)) == 0
     said = capsys.readouterr().out
     assert (
-        "Ends of events typed by hand: 1 written, 0 the same as before. Events with no end yet: 0."
+        "Ends of events, typed by hand or from Devfolio's data: 1 written, 0 the same as before. "
+        "Events with no end yet: 0."
     ) in said
     assert ends_in(database) == [("sample-event", "2026-03-08")]
 

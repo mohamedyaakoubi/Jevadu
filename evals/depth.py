@@ -107,7 +107,7 @@ def cards(conninfo: str, model: str) -> list[tuple[int, str, object]]:
         ids = [row[0] for row in conn.execute("SELECT id FROM projects ORDER BY id")]
     found = []
     for project_id in ids:
-        card = project_card(conninfo, project_id, model=model, version=INSTRUCTIONS_VERSION)
+        card = project_card(conninfo, project_id, models=(model,), version=INSTRUCTIONS_VERSION)
         if card is not None and card.depth is not None:
             found.append((project_id, card.facts.proof_status or "", card))
     return found

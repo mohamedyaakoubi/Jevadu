@@ -156,7 +156,7 @@ The code and the tests name these rules by number, for example "design rule 9". 
 | 4 | Parser first. A titled section is copied word for word, and the LLM is never asked to rewrite it. |
 | 5 | A saved page is never edited afterwards. Before it is saved, the part that shows team members is cut out, and the page is written again by the parser: the text, the links and the order of the tags stay the same. One exception: personal data that is found in a saved page later is taken out, and the reason and the old fingerprint are written next to the page. |
 | 6 | No number is shown unless it comes from a test with a dated result file. A model never grades its own work. |
-| 7 | All LLM calls go through Vertex AI: Gemini 3.1 Pro reads and rewrites the pages, Gemini 3.8 Flash does the search, and after five failures of Gemini in a row DeepSeek V4.1 Flash, which Google serves on Vertex AI, stands in for the search for ten minutes. Embeddings use Google's embedding model. |
+| 7 | All LLM calls go through Vertex AI: Gemini 3.1 Pro reads and rewrites the pages, with Gemini 4 Argon for the cards still missing when 3.1 Pro keeps answering "too many requests", Gemini 3.8 Flash does the search, and after five failures of Gemini in a row DeepSeek V4.1 Flash, which Google serves on Vertex AI, stands in for the search for ten minutes. Embeddings use Google's embedding model. |
 | 8 | Only a fixed fingerprint record goes to the Hedera topic. No free text, no names, no secrets. A message on a topic can never be deleted. |
 | 9 | Secrets live only in `.env`. They never appear in git, in a log, in the database or in a test file. |
 | 10 | The terms of a site are read before the first request to it. Requests go one at a time, with a pause, with the name of the tool and a contact address. A block is never worked around, and the tool never signs in. |
@@ -234,6 +234,7 @@ For an event whose submissions are not public, the only thing left is the organi
 | ETHGlobal's showcase | Simple requests. A walk through one list of the showcase finds the winners, and a run reads their pages (section 5.7). |
 | DoraHacks, list of an event's projects | A real browser driven by a program, because the list is built in the browser. Only after written permission. |
 | DoraHacks, one project page | A simple request. Only after written permission. |
+| Devfolio | Its own data service, the one that its pages use: a search of projects, sent as JSON, finds the events and the projects of each Hedera track, and one simple request reads each project (section 5.7). |
 | A project's README | The GitHub API (section 7.3). |
 | Winner posts | One simple request, or a copy made by hand when the server refuses a program. |
 
@@ -310,6 +311,7 @@ Checked on 9 October 2026.
 | ETHGlobal's showcase | Projects tied to Hedera at ETHGlobal's events | Yes | Asked on 9 October 2026. **It agreed in writing** to a slow, signed read of its Hedera prize projects (section 5.7). This is the first source. |
 | DoraHacks | Africa 2025, Hello Future Origins 2025 | Yes | Forbidden without its written permission. Asked on 9 October 2026. No answer yet. |
 | Devpost | Hedera21, Hedera22 | Yes | **Refused on 9 October 2026.** No program ever touches Devpost. A person may browse the galleries and link to the pages. |
+| Devfolio | ETHDenver 2024, 2025 and 2026, and PEC Hacks: every project of a Hedera prize track | Yes | Its terms (effective 29 December 2020) have no clause on automated access, and its robots.txt closes nothing; read on 31 October 2026. Read in the same slow, signed way as ETHGlobal's showcase (section 5.7). |
 | StackUp, which is part of AngelHack | Hello Future Ascension 2025, Hello Future Apex 2026 | No | The submissions are private, so there is nothing to collect. |
 | The Hello Future site, by AngelHack | The winners of Origins and Ascension, later Apex | Yes | AngelHack's terms ask for written consent. Asked on 9 October 2026. No answer yet. |
 | 4hacks | The 12 campus editions of the Hedera Cross Campus Challenge 2026 | No | Excluded. The organiser keeps submissions private. |
@@ -319,7 +321,7 @@ Checked on 9 October 2026.
 
 For four events no submission site was found at all. The platforms of Hedera18 and Hedera20 no longer exist. These events get winner entries (section 4.6).
 
-**What the table shows.** Almost every site that holds the submissions either forbids a program or hides the projects behind a sign-in. So a memory of all Hedera hackathons cannot be built by a program alone. It needs the sites or the organisers to agree, or to hand over the data. This is the honest limit of the idea.
+**What the table shows.** Almost every site that holds the submissions either forbids a program or hides the projects behind a sign-in. Devfolio is the exception: its terms have no clause on automated access (31 October 2026). So a memory of all Hedera hackathons cannot be built by a program alone. It needs the sites or the organisers to agree, or to hand over the data. This is the honest limit of the idea.
 
 **One rule about who can say yes.** An organiser can agree for its own site and its own data. It cannot agree for another company's site.
 
@@ -361,6 +363,14 @@ The way a site is read is fixed in the code, with a test for each rule. ETHGloba
 - 732 requests were sent to the site over both collections, out of the limit of 800.
 
 ---
+
+
+**Devfolio (31 October 2026).** Devfolio was not asked: its terms have no clause on automated access and its robots.txt closes nothing. It is read in the same way all the same, with a switch of its own, the tool's name and the maintainer's address in each request, one request at a time with a pause, a count of requests on disk with a limit of 1,000, and a refusal remembered. Its pages build themselves from Devfolio's data service, so the tool asks that service directly, as the pages do:
+
+- **The find.** The search of projects, sent as JSON, with the word "hedera" and no event, meets the events where a project entered a track of a Hedera sponsor. Each such event's own page data then gives its dates and all its tracks with their sponsors, and the search lists every project of each Hedera track. The find keeps the names of the projects, their events and the ids of the tracks: no text of a project and no person, not even the judges that an event's data names. On 31 October 2026: 1,276 projects of all Devfolio carried the word, 4 events had a Hedera track, and 107 projects entered one.
+- **The read.** One request for each project. The answer holds the project, its members and its event; it is saved without its members.
+- **A trap.** Devfolio files some prizes of a track under another sponsor: the first prizes of ETHDenver 2025's Hedera tracks sit under "Organizer". So a prize belongs to the track whose name it carries, and the sponsor of that track decides whether it is a prize of Hedera. A prize that no track names, such as "Winner", is the event's own.
+- **What it does not meet.** An event whose Hedera tracks no project with the word "hedera" entered.
 
 ## 6. Steps 2 and 3: Parse and Read
 
@@ -633,7 +643,7 @@ Each method finds what the other misses. The original text is always searched, s
 - **The listing.** For each project: the event, the prize, the result of the proof rule, the links, and for each Hedera ID what the mirror node answered and on which day. Nothing in it is written by a model, and the place in the list says only how close a project is to the idea.
 - **The idea.** It is kept nowhere. Its embedding is kept for one day under the fingerprint of the idea, so the same idea is not paid for twice. An idea holds at most 4,000 characters, from its cost: each 1,000 characters add about 0.024 cent to a search (the embedding, and the comparison that reads the idea again), so 4,000 keep a search within about 0.1 cent of a one-line idea.
 
-The user can filter by organiser, event, year, category, proof status, the main network, life status and prize. The organiser filter (30 October 2026) keeps the hackathons of one organiser: ETHGlobal for the events of its showcase, where Hedera is one sponsor among others, and for every other hackathon the organiser that its list of winners names (Hedera, or Hashgraph Online for the Hedera x AI Hackathon), which the parser keeps as the sponsor of each entry's prize. The main network filter (31 October 2026) keeps the projects that carry the tag "Mainnet" of section 7.5, whose team put an own ID on the main network, or those that do not. The eight filters stand in one row: the year, the main network and the activity, with short values, have narrower columns. The prize filter (added on 24 October 2026) offers the projects that won a Hedera prize, and among them the projects known only from an organiser's list of winners (section 4.6), whose own page is gone or was never public. Since 28 October 2026 it also offers the projects that won a prize of another sponsor, and no Hedera prize, as the block "Winner of" of their own page says.
+The user can filter by organiser, event, year, category, proof status, the main network, life status and prize. Each filter can keep several values at once (1 November 2026): a project with any of them stays, and the filters still all apply together. The numbers of each filter count the projects that the other chosen filters keep, so each number says how many projects its value shows with the rest of the choice; a filter's own values do not narrow its numbers, so another of its values can still be added. The organiser filter (30 October 2026) keeps the hackathons of one organiser: ETHGlobal for the events of its showcase, where Hedera is one sponsor among others, and for every other hackathon the organiser that its list of winners names (Hedera, or Hashgraph Online for the Hedera x AI Hackathon), which the parser keeps as the sponsor of each entry's prize. The main network filter (31 October 2026) keeps the projects that carry the tag "Mainnet" of section 7.5, whose team put an own ID on the main network, or those that do not. The eight filters stand in one row: the year, the main network and the activity, with short values, have narrower columns. The prize filter (added on 24 October 2026) offers the projects that won a Hedera prize, and among them the projects known only from an organiser's list of winners (section 4.6), whose own page is gone or was never public. Since 28 October 2026 it also offers the projects that won a prize of another sponsor, and no Hedera prize, as the block "Winner of" of their own page says.
 
 **The ways to search (16 October 2026).** The maintainer asked whether the ways of searching should be separate choices, each with its speed and accuracy. Six ways ran on the counted cases of Test 2 (`evals/search_modes.py`, `evals/results/20261016T023934Z-search-modes.json`):
 
@@ -695,6 +705,8 @@ One trap: some IDs are services that many projects use, like a popular token. An
 
 **Since 18 October 2026.** The second part of the rule is new: three teams of one event, each with its own code, named one account of the main network, and the first part alone made them one group, with a fourth project. The groups of the collection went from 2 with 7 projects to 2 with 5 (`evals/results/20261018T092000Z-overview.json`). The card of a project names the projects it is linked to, and why; the charts show the projects linked across events first.
 
+**Since 1 November 2026.** An account joins no projects either. A builder most often keeps one account for every project, so two projects that use one account share a builder, not a project: one testnet account made one timeline of two different projects of one builder, at ETHOnline 2026 and ETHDenver 2026, and another account did the same for two projects of another builder. Contracts, tokens, topics and the other things that the ledger finds still join projects. The card still names such a link, in these words: the same account, not necessarily the same project. The groups of the collection went from 4 with 9 projects (`evals/results/20261031T234422Z-overview.json`) to 2 with 5 (`evals/results/20261101T083148Z-overview.json`).
+
 A returning name is a hint, not "seen before". Two teams can pick the same name.
 
 ### 8.5 Groups for the overview
@@ -716,7 +728,7 @@ For an event, the overview counts projects by category, by proof status and by l
 
 ### 8.7 The timeline of projects that came back
 
-**Built on 31 October 2026.** When a project came back to another hackathon, by the same repository or the same Hedera ID, its card shows a timeline: the linked projects, the oldest event first, whatever they won, and between two of them, how they are linked and how the code changed. Nothing in it is written by a model.
+**Built on 31 October 2026.** When a project came back to another hackathon, by the same repository or the same Hedera ID other than an account (section 8.4), its card shows a timeline: the linked projects, the oldest event first, whatever they won, and between two of them, how they are linked and how the code changed. Nothing in it is written by a model.
 
 - **Which projects.** The groups of "seen before" (section 8.4), with those of their projects whose event has a known last day, two or more. A prize plays no part.
 - **Each entry.** The dates and the name of the event, the name of the project, what it won, the one line of its page, what its own Hedera IDs did in the time around its event (section 7.5), from the ledger, whose times nobody can change, and its code at the end of its event: the newest commit of its own repository on or before the last day, or that the repository had no commit yet on that day.
@@ -870,7 +882,7 @@ Each choice is justified by what the job needs and by a source. "Already install
 
 There are two layers of LLM. The models and their thinking levels are settings, so a change of model is a change of one line.
 
-**The first layer reads the pages and rewrites them into cards. It uses Gemini 3.1 Pro,** for the quality of the rewrite. Facts from Google's own pages, read on 9 and 10 October 2026:
+**The first layer reads the pages and rewrites them into cards. It uses Gemini 3.1 Pro,** for the quality of the rewrite. When it keeps answering "too many requests", Gemini 4 Argon makes the cards still missing (1 November 2026: the 106 cards of Devfolio), and a project shows the card of 3.1 Pro when it has one, else the card of Argon, which names its model (GEMINI_REWRITE_STAND_IN_MODEL). Facts from Google's own pages, read on 9 and 10 October 2026:
 
 - It is a public preview model. Google may change or retire it.
 - It can be forced to answer in a fixed form.
@@ -985,6 +997,7 @@ Every screen also needs three more states: while loading, when there is nothing 
 - **The idea takes the width.** The box of the idea is wide, and the check of a submission (S3) stands beside it.
 - **Charts for every list** (S5), with a switch between cards and charts.
 - **Filters that follow the search.** The numbers of a filter count the 50 projects closest to the idea. A chosen value stays offered, with 0, even when none of them has it.
+- **Several values in one filter (1 November 2026).** Each filter opens a short list with a small box before each value, so a list can keep two events, two categories or more at once. The list stays open while its boxes are ticked, and Escape or a click outside closes it. The address keeps the values of one filter in one parameter, joined by `|`, and takes them also in the parameter given once for each value.
 - **Clear words for the two orders.** "Quick order" and "Gemini's order" are two switches with an (i), and a button clears the search.
 - **Each event links to its own page**, on ETHGlobal or on the organiser's list of winners.
 - **Contrast.** Tabler's teal gives white text a contrast of 3 to 1, and WCAG AA asks 4.5 to 1. The light theme uses a deeper teal, and the dark theme a lighter one with dark text; the coloured pills and labels get darker text. axe-core finds no problem on the real collection in seven views, in both themes and at both widths.

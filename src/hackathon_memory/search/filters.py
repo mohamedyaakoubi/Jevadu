@@ -5,9 +5,10 @@ Each project gets its eight facts from the tables: the organiser of its event, i
 year of that event, the category of its card when the model wrote one, the result of the proof
 rule, whether its team put an own ID on the main network (the tag "Mainnet" of design 7.5, by the
 rule of search/listing.py; 31 October 2026), its life by the rule of design 7.4, and its prize.
-The organiser of an event of ETHGlobal's showcase is ETHGlobal; of any other event, the organiser
-that its list of winners names, which the parser keeps as the sponsor of each entry's prize (30
-October 2026). A filter keeps the projects
+The organiser of an event of ETHGlobal's showcase is ETHGlobal; of an event of Devfolio, the
+event's name without its year, such as ETHDenver (31 October 2026); of any other event, the
+organiser that its list of winners names, which the parser keeps as the sponsor of each entry's
+prize (30 October 2026). A filter keeps the projects
 whose fact matches it, and the search then ranks only those (search/engine.py). With no filter set,
 every project is searched.
 The prize is the one fact with two values at once: a project known only from a winners' list
@@ -17,6 +18,10 @@ another sponsor and no Hedera prize is a choice of its own (28 October 2026).
 The choices that the page offers are the values that the projects really have, each with its
 number of projects. A value that a request names but no project has is left out, and the page
 says so.
+
+A filter can keep several values (1 November 2026): a project that has any of them stays, and the
+filters still all apply together. The address holds the values of one filter in one text, joined
+by SEPARATOR, or in the parameter given once for each value, as the boxes of the page send them.
 """
 
 from __future__ import annotations
@@ -29,12 +34,15 @@ from datetime import UTC, datetime
 import psycopg
 
 from hackathon_memory.check.life import ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN, life_of
+from hackathon_memory.db.card_choice import CARD_OF_PROJECT
 from hackathon_memory.read.quotes import KEPT
 from hackathon_memory.search import listing, seen
 
 NOT_CHECKED = "not_checked"  # a project that the proof rule has not seen yet
 # The site of ETHGlobal's showcase, and the organiser of every event read there.
 ETHGLOBAL_SITE, ETHGLOBAL = "ethglobal.com", "ETHGlobal"
+# Devfolio, whose events are run by their own organisers: the event's name without its year.
+DEVFOLIO_SITE, YEAR_AT_THE_END = "devfolio.co", r"\s+\d{4}$"
 # The kinds of Hedera ID that the charts count.
 KINDS = ("account", "topic", "token", "contract", "schedule")
 LIFE_ORDER = (ACTIVE, QUIET, STOPPED, TOO_EARLY, UNKNOWN)
@@ -48,11 +56,25 @@ MAINNET_WORDS = {YES: "Yes", NO: "No"}
 PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
 PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
                NOT_CHECKED: listing.STATUS_WORDS[None]}  # fmt: skip
+SEPARATOR = "|"  # between the values of one filter; no value holds it
+
+
+def values_of(text: str) -> tuple[str, ...]:
+    """The values of one filter, from its text."""
+    return tuple(value for value in text.split(SEPARATOR) if value)
+
+
+def joined(texts: Iterable[str]) -> str:
+    """The values of one filter, given in one text or several, as one text: each value once and
+    always in the same order, so that one choice has one address and one key of a kept order."""
+    found = {value.strip() for text in texts for value in text.split(SEPARATOR)}
+    return SEPARATOR.join(sorted(value for value in found if value))
 
 
 @dataclass(frozen=True)
 class Filters:
-    """The values chosen on the page; an empty text is "all"."""
+    """The values chosen on the page; an empty text is "all", and several values of one filter
+    are joined by SEPARATOR."""
 
     event: str = ""  # the number of an event
     year: str = ""
@@ -65,6 +87,10 @@ class Filters:
 
     def chosen(self) -> dict[str, str]:
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name)}
+
+    def values(self, name: str) -> tuple[str, ...]:
+        """The values chosen for one filter: one, several, or none for "all"."""
+        return values_of(getattr(self, name))
 
 
 @dataclass(frozen=True)
@@ -123,7 +149,9 @@ class Choices:
         return any(choice.value == value for choice in getattr(self, name))
 
 
-def facts(conninfo: str, *, model: str, version: str, now: datetime | None = None) -> list[Facts]:
+def facts(
+    conninfo: str, *, models: Sequence[str], version: str, now: datetime | None = None
+) -> list[Facts]:
     """The facts of every project. The category is the one kept on the project's card of
     this model and these instructions; a project without such a card has none. The kinds are
     those of its IDs that the ledger found as the kind the project gave (search/seen.py). The
@@ -131,7 +159,7 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
     now = now or datetime.now(UTC)
     with psycopg.connect(conninfo) as conn:
         rows = conn.execute(
-            "SELECT p.id, e.id, e.name, "
+            "SELECT p.id, e.id, e.name, "  # noqa: S608  (fixed text)
             "coalesce(extract(year FROM e.ends_on), extract(year FROM e.starts_at), e.year)::int, "
             "p.proof_status, c.fields -> 'category', p.prize_state, p.entry_kind, "
             "(SELECT coalesce(array_agg(DISTINCT f.kind ORDER BY f.kind), '{}') "
@@ -145,17 +173,18 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
             " WHERE hc.repository_id = r.id AND hc.kind = 'package') "
             "FROM projects p JOIN events e ON e.id = p.event_id "
             "LEFT JOIN repositories r ON r.id = p.repository_id "
-            "LEFT JOIN cards c ON c.project_id = p.id AND c.model = %s "
-            "AND c.instructions_version = %s ORDER BY p.id",
-            (list(seen.CONFIRMED), list(KINDS), model, version),
+            + CARD_OF_PROJECT
+            + "ORDER BY p.id",
+            (list(seen.CONFIRMED), list(KINDS), list(models), version, list(models)),
         ).fetchall()
         signs = listing.signs_of_life(conn, [row[0] for row in rows])
         organisers = dict(conn.execute(
-            "SELECT e.id, CASE WHEN e.site = %s THEN %s ELSE ("
+            "SELECT e.id, CASE WHEN e.site = %s THEN %s"
+            " WHEN e.site = %s THEN regexp_replace(e.name, %s, '') ELSE ("
             " SELECT pr.sponsor FROM projects p JOIN prizes pr ON pr.project_id = p.id"
             " WHERE p.event_id = e.id AND p.entry_kind = 'winner_entry'"
             " ORDER BY p.id, pr.position LIMIT 1) END FROM events e",
-            (ETHGLOBAL_SITE, ETHGLOBAL),
+            (ETHGLOBAL_SITE, ETHGLOBAL, DEVFOLIO_SITE, YEAR_AT_THE_END),
         ).fetchall())  # fmt: skip
         on_main = listing.on_mainnet(conn, [row[0] for row in rows])
     found = []
@@ -174,12 +203,14 @@ def facts(conninfo: str, *, model: str, version: str, now: datetime | None = Non
 
 
 def allowed(rows: Sequence[Facts], chosen: Filters) -> list[int] | None:
-    """The projects that match every chosen filter, or None when no filter is chosen."""
-    wanted = chosen.chosen()
+    """The projects that match every chosen filter, or None when no filter is chosen. A filter
+    with several values keeps a project that has any of them."""
+    wanted = {name: values_of(text) for name, text in chosen.chosen().items()}
     if not wanted:
         return None
     return [row.project_id for row in rows
-            if all(_has(getattr(row, k), v) for k, v in wanted.items())]  # fmt: skip
+            if all(any(_has(getattr(row, k), v) for v in values)
+                   for k, values in wanted.items())]  # fmt: skip
 
 
 def _has(fact: str | tuple[str, ...], value: str) -> bool:
@@ -195,14 +226,15 @@ def _counted(values: Iterable[str], order: Sequence[str] | None = None) -> list[
 
 def keep_chosen(offer: Choices, every: Choices, chosen: Filters) -> Choices:
     """`offer`, with each chosen value that it lacks added with no project, so that a filter of
-    a search keeps its value on the page even when none of the closest projects has it."""
+    a search keeps its values on the page even when none of the closest projects has them."""
     lists = {}
-    for name, value in chosen.chosen().items():
+    for name, text in chosen.chosen().items():
         options = list(getattr(offer, name))
-        if not any(choice.value == value for choice in options):
-            known = next((c for c in getattr(every, name) if c.value == value), None)
-            if known is not None:
-                options.append(Choice(known.value, known.words, 0))
+        for value in values_of(text):
+            if not any(choice.value == value for choice in options):
+                known = next((c for c in getattr(every, name) if c.value == value), None)
+                if known is not None:
+                    options.append(Choice(known.value, known.words, 0))
         lists[name] = options
     return replace(offer, **lists)
 
@@ -239,3 +271,21 @@ def choices(rows: Sequence[Facts]) -> Choices:
             for v, n in _counted((row.mainnet for row in rows), (YES, NO))
         ],
     )
+
+
+def counted_with(rows: Sequence[Facts], chosen: Filters) -> Choices:
+    """What each filter offers once values are chosen (1 November 2026): its numbers count the
+    projects that every other chosen filter keeps, so that each number says how many projects its
+    value shows with the rest of the choice. A filter's own values do not narrow its numbers, so
+    that another of its values can still be added. With no choice, `choices(rows)`."""
+    whole = choices(rows)
+    picked = chosen.chosen()
+    if not picked:
+        return whole
+    lists = {}
+    for name in (one.name for one in fields(Filters)):
+        others = allowed(rows, Filters(**{k: v for k, v in picked.items() if k != name}))
+        if others is not None:
+            kept = set(others)
+            lists[name] = getattr(choices([row for row in rows if row.project_id in kept]), name)
+    return replace(whole, **lists)

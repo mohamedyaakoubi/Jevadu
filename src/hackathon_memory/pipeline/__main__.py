@@ -36,7 +36,7 @@
     python -m hackathon_memory.pipeline embed              make the embedding of every project
                                                            whose text changed (it costs money)
     python -m hackathon_memory.pipeline all                parse, readmes, code, hedera_code,
-                                                           timeline, check and embed, in this
+                                                           check, timeline and embed, in this
                                                            order
     python -m hackathon_memory.pipeline cards --set evals/sets/tuning.json
                                                            the cards of the LLM for the pages
@@ -76,7 +76,7 @@ import psycopg
 
 from hackathon_memory import __version__
 from hackathon_memory.check import proof
-from hackathon_memory.collect import github
+from hackathon_memory.collect import devfolio, github
 from hackathon_memory.collect.answers import Answers
 from hackathon_memory.collect.ethglobal import data_paths
 from hackathon_memory.collect.ethglobal_site import SITE
@@ -146,10 +146,11 @@ STATUS_WORDS = {
 }
 
 
-# The whole path, in its order (design 14.3: one command processes the projects).
+# The whole path, in its order (design 14.3: one command processes the projects). The timeline
+# comes after the check: a group that a Hedera ID joins needs the ledger's word first.
 ALL = "all"
 ALL_STEPS = (
-    parse_pages.STEP, readmes.STEP, code.STEP, hedera_code.STEP, timeline.STEP, check_ids.STEP,
+    parse_pages.STEP, readmes.STEP, code.STEP, hedera_code.STEP, check_ids.STEP, timeline.STEP,
     embed.STEP,
 )  # fmt: skip
 # the steps that ask GitHub
@@ -257,7 +258,8 @@ def parse_lines(run: Run) -> list[str]:
         )
     if counts["event_ends_written"] or counts["event_ends_same"] or counts["events_without_an_end"]:
         lines.append(
-            f"Ends of events typed by hand: {counts['event_ends_written']} written, "
+            "Ends of events, typed by hand or from Devfolio's data: "
+            f"{counts['event_ends_written']} written, "
             f"{counts['event_ends_same']} the same as before. "
             f"Events with no end yet: {counts['events_without_an_end']}."
         )
@@ -369,6 +371,10 @@ def _run_step(
             parse_pages.parse_saved_pages(
                 RawStore(paths.raw_dir), projects, run, limit=arguments.limit
             )
+            # Devfolio's projects of a Hedera track, with the events of its last find (design 5.6).
+            parse_pages.parse_devfolio(RawStore(devfolio.raw_dir(settings)),
+                                       devfolio.read_found(devfolio.found_path(settings)), projects,
+                                       run, limit=arguments.limit)  # fmt: skip
             # The winner entries: copied by hand into the folder of what a person typed, or read
             # from a saved winners page in the folder of saved pages.
             parse_pages.parse_winner_entries(

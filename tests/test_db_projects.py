@@ -384,11 +384,11 @@ def test_the_typed_year_of_an_event_is_written_and_used_when_no_date_is_known(
     written, unknown = store.set_event_years(years)
     assert (written, unknown) == (1, ["ethglobal.com none"])  # no event is made up
     assert store.set_event_years(years)[0] == 0  # the same year again writes nothing
-    found = filters.facts(database, model="m", version="v")
+    found = filters.facts(database, models=("m",), version="v")
     assert {row.year for row in found} == {"2025"}
     with psycopg.connect(database) as conn:  # a known date wins over the typed year
         conn.execute("UPDATE events SET ends_on = '2026-03-08'")
-    assert {row.year for row in filters.facts(database, model="m", version="v")} == {"2026"}
+    assert {row.year for row in filters.facts(database, models=("m",), version="v")} == {"2026"}
 
 
 def test_the_typed_days_of_an_event_become_its_start_and_its_end(database: str) -> None:

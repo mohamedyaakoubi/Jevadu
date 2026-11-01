@@ -722,13 +722,13 @@ def create_app(
         """The facts of every project for the filters, read at most once a minute."""
         if cache["facts"] is None or time.monotonic() - cache["at"] > FACTS_SECONDS:
             cache["facts"] = filtering.facts(
-                conninfo, model=settings.gemini_rewrite_model, version=INSTRUCTIONS_VERSION
+                conninfo, models=settings.card_models(), version=INSTRUCTIONS_VERSION
             )
             cache["at"] = time.monotonic()
         return cache["facts"]
 
     def card_of(conninfo: str, project_id: int) -> data.ProjectCard | None:
-        return data.project_card(conninfo, project_id, model=settings.gemini_rewrite_model,
+        return data.project_card(conninfo, project_id, models=settings.card_models(),
                                  version=INSTRUCTIONS_VERSION,
                                  raw_dir=data_paths(settings).raw_dir)  # fmt: skip
 
@@ -772,7 +772,7 @@ def create_app(
         have one: never asked here."""
         if not idea or not ids:
             return {}
-        items = comparing.items_for(conninfo, ids, model=settings.gemini_rewrite_model,
+        items = comparing.items_for(conninfo, ids, models=settings.card_models(),
                                     version=INSTRUCTIONS_VERSION)  # fmt: skip
         if not items:
             return {}
@@ -836,7 +836,7 @@ def create_app(
         rows = {row.project_id: row for row in facts_of(conninfo, order)}
         (members,) = data.members(conninfo, [order])
         named = {member.project_id: member for member in members}
-        lines = data.summaries(conninfo, order, model=settings.gemini_rewrite_model,
+        lines = data.summaries(conninfo, order, models=settings.card_models(),
                                version=INSTRUCTIONS_VERSION)  # fmt: skip
         distance = None
         if idea:
@@ -887,7 +887,7 @@ def create_app(
     def results_of(conninfo: str, ids: list[int], idea: str, words: bool) -> list[tuple]:
         """The card facts, the sentence, the marked sentence and the words found, of each id."""
         found = listing.cards(conninfo, [engine.Hit(pid, 0.0, None, None) for pid in ids])
-        summaries = data.summaries(conninfo, ids, model=settings.gemini_rewrite_model,
+        summaries = data.summaries(conninfo, ids, models=settings.card_models(),
                                    version=INSTRUCTIONS_VERSION)  # fmt: skip
         lines = {pid: one.text for pid, one in summaries.items() if one.text}
         marked = data.marked_lines(conninfo, lines, idea) if idea else {}
@@ -982,12 +982,15 @@ def create_app(
         filters, so that each value says how many of them it would keep. The embedding of the
         idea is kept for a day, so this costs nothing more. A chosen value stays offered."""
         if only == []:  # no project matches the filters: nothing is searched, Google is not asked
-            return every
+            return filtering.keep_chosen(
+                filtering.counted_with(project_facts(conninfo), chosen), every, chosen
+            )
         if only is None:
             ids = ranking
         else:
             ids, _, _ = ranking_of(conninfo, idea, mode, None, False, filtering.Filters(), [])
-        return filtering.keep_chosen(filtering.choices(facts_of(conninfo, ids)), every, chosen)
+        return filtering.keep_chosen(filtering.counted_with(facts_of(conninfo, ids), chosen),
+                                     every, chosen)  # fmt: skip
 
     @app.get("/", response_class=HTMLResponse)
     def search(
@@ -995,14 +998,6 @@ def create_app(
         idea: str = "",
         mode: str = "",
         ai: str = "",
-        event: str = "",
-        year: str = "",
-        category: str = "",
-        proof: str = "",
-        life: str = "",
-        winner: str = "",
-        organiser: str = "",
-        mainnet: str = "",
         open: str = "",  # noqa: A002  (the name in the address)
         page: str = "1",
         view: str = "",
@@ -1037,9 +1032,9 @@ def create_app(
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
-        asked = filtering.Filters(event=event, year=year, category=category, proof=proof,
-                                  life=life, winner=winner, organiser=organiser,
-                                  mainnet=mainnet)  # fmt: skip
+        # A filter's values come in one parameter, or in one for each value (the page's boxes).
+        asked = filtering.Filters(**{name: filtering.joined(request.query_params.getlist(name))
+                                     for name in FILTERS})  # fmt: skip
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
                 "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,
@@ -1052,15 +1047,21 @@ def create_app(
                 return render(request, "search.html", asked=False, **down)
             return render(request, "search.html", 503, asked=True, **down)
         notes = [public_note] if public_note else []
-        unknown = [name for name, value in asked.chosen().items() if not every.knows(name, value)]
+        known = {name: [value for value in asked.values(name) if every.knows(name, value)]
+                 for name in asked.chosen()}  # fmt: skip
+        unknown = [name for name, values in known.items() if len(values) < len(asked.values(name))]
         if unknown:
             notes.append("No project has the value given for "
                          + " or ".join(FILTER_WORDS[name] for name in unknown)
-                         + ", so that filter was left out.")  # fmt: skip
-        chosen = filtering.Filters(**{k: v for k, v in asked.chosen().items() if k not in unknown})
+                         + ", so that value was left out.")  # fmt: skip
+        chosen = filtering.Filters(**{name: filtering.joined(values)
+                                      for name, values in known.items()})  # fmt: skip
         values = {"idea": idea, "mode": mode, "ai": "1" if with_ai else "", "view": view,
                   **chosen.chosen()}  # fmt: skip
         only = filtering.allowed(project_facts(conninfo), chosen)
+        # Each filter's numbers count what the other chosen filters keep (design 8.2).
+        offered = filtering.keep_chosen(filtering.counted_with(project_facts(conninfo), chosen),
+                                        every, chosen)  # fmt: skip
         shown = {**base, "chosen": chosen, "search_query": search_query(values),
                  "quick_query": search_query(values, drop=("ai",)),
                  "ai_query": search_query({**values, "ai": "1", "mode": MEANING}),
@@ -1084,18 +1085,18 @@ def create_app(
                 if view == CHARTS:
                     built, groups, said = charts_of(conninfo, only)
                     return render(request, "search.html", asked=False, results=[], total=total,
-                                  charts=built, came_back=groups, insights=said, offer=every,
+                                  charts=built, came_back=groups, insights=said, offer=offered,
                                   panel_card=panel_card, **shown)  # fmt: skip
                 if view == GRAPH:
                     drawn, why, about = graph_of(conninfo, only)
                     return render(request, "search.html", asked=False, results=[], total=total,
                                   graph=drawn, graph_problem=why, graph_about=about,
-                                  offer=every, panel_card=panel_card, **shown)  # fmt: skip
+                                  offer=offered, panel_card=panel_card, **shown)  # fmt: skip
                 ids, total = data.browse(conninfo, only, offset=(page_number - 1) * PAGE_SIZE,
                                          limit=PAGE_SIZE)  # fmt: skip
                 results = results_of(conninfo, ids, "", False)
                 first = (page_number - 1) * PAGE_SIZE + 1
-                return render(request, "search.html", asked=False, results=results, offer=every,
+                return render(request, "search.html", asked=False, results=results, offer=offered,
                               panel_card=panel_card, total=total, page=page_number,
                               pages=math.ceil(total / PAGE_SIZE), first_shown=first,
                               last_shown=first + len(results) - 1, **shown)  # fmt: skip
@@ -1808,7 +1809,7 @@ def create_app(
         by_stand_in = breaker.standing_in()
         try:
             conninfo = database()
-            items = comparing.items_for(conninfo, project_ids, model=settings.gemini_rewrite_model,
+            items = comparing.items_for(conninfo, project_ids, models=settings.card_models(),
                                         version=INSTRUCTIONS_VERSION)  # fmt: skip
             try:
                 found, asked = compared(conninfo, items, by_stand_in)

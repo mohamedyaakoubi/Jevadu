@@ -169,9 +169,24 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-filter-head { display: inline-flex; align-items: center; min-height: 24px; font-size: 0.75rem; font-weight: 600; color: var(--tblr-secondary); }
 /* the arrow nearer the edge (Tabler keeps 3rem for it), so that each value has 20px more room:
    with eight filters at 1280px, "Yes (5)" and "All organisers" were cut (31 October 2026) */
-.hm-filter select { width: 100%; text-overflow: ellipsis; padding-right: 1.75rem;
-  background-position: right 0.5rem center; }
-.hm-filter.chosen select { border-color: var(--tblr-primary); box-shadow: 0 0 0 1px var(--tblr-primary); }
+.hm-filter-menu { position: relative; min-width: 0; }
+.hm-filter-menu > summary { display: block; width: 100%; overflow: hidden; white-space: nowrap;
+  text-overflow: ellipsis; padding-right: 1.75rem; background-position: right 0.5rem center;
+  cursor: pointer; list-style: none; }
+.hm-filter-menu > summary::-webkit-details-marker { display: none; }
+.hm-filter.chosen .hm-filter-menu > summary { border-color: var(--tblr-primary); box-shadow: 0 0 0 1px var(--tblr-primary); }
+/* the values of a filter, each with a small box, so that several can be kept at once; the last
+   two filters open toward the left, inside the page (1 November 2026) */
+.hm-filter-options { position: absolute; z-index: 40; top: calc(100% + 0.25rem); left: 0;
+  min-width: 100%; width: max-content; max-width: 22rem; max-height: 18rem; overflow-y: auto;
+  margin: 0; padding: 0.375rem; border: 1px solid var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius); background: var(--tblr-bg-surface);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); }
+.hm-filters > .hm-filter:nth-last-of-type(-n+2) .hm-filter-options { left: auto; right: 0; }
+.hm-filter-option { display: flex; align-items: center; gap: 0.5rem; margin: 0;
+  padding: 0.3rem 0.4rem; border-radius: 4px; font-size: 0.8125rem; cursor: pointer; }
+.hm-filter-option:hover { background: var(--tblr-bg-surface-secondary); }
+.hm-filter-option .form-check-input { flex: none; margin: 0; }
 .hm-filters-note { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: var(--tblr-secondary); }
 .hm-clear-filters { align-self: flex-end; }
 .hm-notices { display: grid; gap: 0.5rem; margin-bottom: 1rem; }

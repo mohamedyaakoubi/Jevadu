@@ -11,16 +11,19 @@ when it was saved. The second one must never happen (design rule 5), so it is sa
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from datetime import date
 from functools import partial
 from pathlib import Path
 
 from hackathon_memory.collect import africa_winners as africa_page
-from hackathon_memory.collect import hedera_posts
+from hackathon_memory.collect import devfolio, hedera_posts
 from hackathon_memory.collect.rawstore import RawStore, fingerprint
 from hackathon_memory.db.projects import SAME, ProjectStore
 from hackathon_memory.db.runs import Run
 from hackathon_memory.parse.africa_winners import read_africa_winners
+from hackathon_memory.parse.devfolio_project import PARSER_VERSION as DEVFOLIO_PARSER
+from hackathon_memory.parse.devfolio_project import read_devfolio_project
 from hackathon_memory.parse.ethglobal_page import (
     PARSER_VERSION,
     PageShapeChanged,
@@ -49,17 +52,21 @@ def parse_saved_pages(
     limit: int | None = None,
     read: Callable[[bytes, str], ProjectPage] = read_project_page,
     parser: str = PARSER_VERSION,
+    suffix: str = ".html",
+    page_of: Callable[[str], str] | None = None,
 ) -> None:
     """Read every saved page that is not parsed yet, and count what was done in `run`.
 
-    With `limit`, at most that many pages are read, the ones that were saved first.
+    With `limit`, at most that many pages are read, the ones that were saved first. `suffix` is
+    the kind of the saved files; `page_of` gives the project's page for the address that was
+    saved, when the two differ (Devfolio saves the answer of its data service).
     """
     already = projects.already_parsed()
     read_now = 0
-    for page in sorted(raw.saved(), key=lambda saved: (saved.meta["fetched_at"], saved.url)):
+    for page in sorted(raw.saved(suffix), key=lambda saved: (saved.meta["fetched_at"], saved.url)):
         run.counts["pages"] += 1
         sha256 = page.meta["sha256"]
-        if already.get(page.url) == (sha256, parser):
+        if already.get(page_of(page.url) if page_of else page.url) == (sha256, parser):
             run.counts[SAME] += 1
             continue
         if limit is not None and read_now >= limit:
@@ -81,6 +88,25 @@ def parse_saved_pages(
         run.counts[projects.save(project, sha256)] += 1
         if project.people_words_hidden:
             run.counts["words_about_people_hidden"] += project.people_words_hidden
+
+
+def parse_devfolio(
+    raw: RawStore,
+    found: devfolio.Found | None,
+    projects: ProjectStore,
+    run: Run,
+    *,
+    limit: int | None = None,
+) -> None:
+    """Devfolio's saved projects (design 5.6), with the events of its last find, and the last day
+    of each of those events from the event's own data. Nothing when there was no find."""
+    if found is None:
+        return
+    parse_saved_pages(raw, projects, run, limit=limit,
+                      read=partial(read_devfolio_project, events=found.events),
+                      parser=DEVFOLIO_PARSER, suffix=devfolio.SUFFIX,
+                      page_of=devfolio.page_of_address)  # fmt: skip
+    write_event_ends(projects, devfolio.SITE, found.ends(), run, "Devfolio's data of the events")
 
 
 def parse_winner_entries(
@@ -151,6 +177,14 @@ def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) ->
         run.counts["event_ends_not_read"] += 1
         run.problem("the ends of events typed by hand", str(wrong))
         return
+    write_event_ends(projects, site, ends, run, path.name)
+
+
+def write_event_ends(
+    projects: ProjectStore, site: str, ends: Mapping[str, date], run: Run, source: str
+) -> None:
+    """Write the last day of each event of `site` that `ends` names, and count what was done;
+    `source` names where the days come from in the problems of the run."""
     done = projects.set_event_ends(site, ends)
     for key, value in (
         ("event_ends_written", done.written),
@@ -160,6 +194,6 @@ def apply_event_ends(projects: ProjectStore, path: Path, site: str, run: Run) ->
         if value:
             run.counts[key] += value
     for slug in done.unknown:
-        run.problem(f"{path.name}: {slug}", "no saved project names this event")
+        run.problem(f"{source}: {slug}", "no saved project names this event")
     for slug in done.before_start:
-        run.problem(f"{path.name}: {slug}", "the last day is before the start of the event")
+        run.problem(f"{source}: {slug}", "the last day is before the start of the event")
