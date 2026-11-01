@@ -292,9 +292,10 @@
 </div>
 {%- endmacro %}
 
-{# Why two projects are linked (design 8.4): `by` is "repository" or "network:ID". #}
+{# Why two projects are linked (design 8.4): `by` is "repository", "network:ID", or
+   "account:network:ID" for an account alone, which is the builder's rather than the project's. #}
 {% macro link_reason(by) -%}
-{% if by == "repository" %}Same repository.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}
+{% if by == "repository" %}Same repository.{% elif by.startswith("account:") %}{% set account = by.split(":", 2) %}Same Hedera account: {{ account[2] }} on {{ account[1] }}, confirmed by the ledger for both. The same account, not necessarily the same project.{% else %}Same Hedera ID: {{ by.split(":", 1)[1] }} on {{ "testnet" if by.startswith("testnet") else "mainnet" if by.startswith("mainnet") else "previewnet" }}, confirmed by the ledger for both.{% endif %}
 {%- endmacro %}
 
 {% macro pager(page, pages, query, label="Pages of the list") -%}

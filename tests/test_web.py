@@ -427,6 +427,45 @@ def test_projects_linked_by_a_hedera_id_show_a_timeline_whatever_they_won(site) 
     assert "Linked projects" not in part  # its only link is in the timeline already
 
 
+def test_projects_that_share_only_an_account_show_no_timeline(site) -> None:  # noqa: ANN001
+    """Two projects at two events, with two repositories and the same testnet account (design
+    8.4, 1 November 2026): an account is the builder's, so there is no timeline, and the linked
+    projects say that the account is the same, not that the project is."""
+    from datetime import UTC, datetime
+
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.db.ledger import LedgerStore
+    from hackathon_memory.db.repositories import RepositoryStore
+
+    client, _, ids, database = site
+    pebble, cedar = ids["Pebble Pay"], ids["Cedar Post"]
+    with psycopg.connect(database) as conn:
+        (later,) = conn.execute(
+            "INSERT INTO events (site, slug, name, ends_on) "
+            "VALUES ('ethglobal.com', 'later', 'Later', '2026-06-14') RETURNING id"
+        ).fetchone()
+        conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (later, cedar))
+        conn.execute("UPDATE events SET ends_on = '2026-03-08' WHERE slug = 'sample-event'")
+        for pid in (pebble, cedar):
+            (hid,) = conn.execute(
+                "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+                "words_around, in_hashscan_link) VALUES (%s, '0.0.4729347', 'testnet', 'account', "
+                "'page', 'invented', false) RETURNING id", (pid,)).fetchone()  # fmt: skip
+            conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                         "VALUES (%s, 'testnet', 'proof_found')", (hid,))  # fmt: skip
+    asked = datetime(2026, 10, 31, tzinfo=UTC)
+    LedgerStore(database).save_facts(LedgerFacts("0.0.4729347", "testnet", asked, found=True,
+                                                 kind="account"))  # fmt: skip
+    RepositoryStore(database).link({pebble: REPO, cedar: "https://github.com/sample-org/cedar"})
+    part = client.get(f"/project/{cedar}/panel").text
+    assert "Timeline: 2 hackathons" not in part
+    links = part.split("Linked projects", 1)[1].split("</section>", 1)[0]
+    assert (
+        "Same Hedera account: 0.0.4729347 on testnet, confirmed by the ledger for both. "
+        "The same account, not necessarily the same project."
+    ) in links
+
+
 def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: ANN001
     """What the code says about Hedera (design 7.3): a line for each kind of thing found, each
     thing with its files, linked at the commit that was read; code that was not read says so."""

@@ -188,6 +188,8 @@ def timeline_of(conninfo: str, store: RawStore, project_id: int,
                              tuple(prizes[pid]), line or "", depth.did if depth else (),
                              depth.more_count if depth else 0, repository, commit))  # fmt: skip
     links = seen.links_within(conninfo, ids)
-    steps = tuple(_step(store, one, two, dict(links.get(one.project_id, [])))
+    # An account joins no group, so it explains no step: another project of the timeline does.
+    steps = tuple(_step(store, one, two, {pid: by for pid, by in links.get(one.project_id, [])
+                                          if not by.startswith(seen.ACCOUNT)})
                   for one, two in pairwise(entries))  # fmt: skip
     return Timeline(tuple(entries), steps)

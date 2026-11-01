@@ -86,7 +86,7 @@
 {% endcall %}
 
 {% call tip("timeline", "Timeline") %}
-<p>Projects linked across hackathons, by the same repository or the same Hedera ID as under Linked projects, oldest first, whatever they won: what each won, what its page said, what its own Hedera IDs did around its event, read from the ledger, whose times nobody can change, and its code at the end of its event.</p>
+<p>Projects linked across hackathons, by the same repository or the same Hedera ID as under Linked projects (an account alone is not enough), oldest first, whatever they won: what each won, what its page said, what its own Hedera IDs did around its event, read from the ledger, whose times nobody can change, and its code at the end of its event.</p>
 <p>Between two entries with the same repository, how much the code changed, as GitHub counts it from the newest commit on or before the last day of each event: commits, files changed, lines added and removed. GitHub lists 300 files at most, so above that the numbers are a floor. Two entries with different repositories are not compared. The dates of commits are the team's own: a team can set them, and can write its history again.</p>
 <p>Jevadu asks GitHub for these once, as soon as a project comes back, in its daily reading and when a card is read again.</p>
 {% endcall %}
@@ -249,6 +249,7 @@
 <p>Two projects are linked when they share a repository{{ parts.ref("repository") }}, or a Hedera ID on the same network that the ledger confirmed for both. Exact matching.</p>
 <ul>
   <li>An ID that many teams use is most likely a shared service, such as a common test account or a public payment address: more than three different repositories in all, or two at one hackathon. Such an ID links nothing.</li>
+  <li>An account alone makes no timeline: a builder often keeps one account for every project, so two projects with one account share a builder, not necessarily a project. The link says so.</li>
   <li>A shared name links nothing either: two teams can pick the same name.</li>
 </ul>
 {% endcall %}

@@ -65,3 +65,24 @@ def test_a_public_service_that_its_owner_lists_links_nothing() -> None:
     assert groups(members, found) == [[1, 2]]
     assert groups(members, found, public={"testnet:0.0.3042133"}) == []
     assert links(members, found, found, 1, public={"testnet:0.0.3042133"}) == []
+
+
+def test_an_account_links_no_group_but_its_link_says_so() -> None:
+    """A builder keeps one testnet account for every project: two projects of two hackathons
+    that use it share a builder, not a project (projects 164 and 837, 1 November 2026)."""
+    members = [Member(1, A, 10), Member(2, B, 11)]
+    found = [(1, "testnet:0.0.4729347"), (2, "testnet:0.0.4729347")]
+    accounts = {"testnet:0.0.4729347"}
+    assert groups(members, found) == [[1, 2]]  # any other kind of ID joins them
+    assert groups(members, found, accounts=accounts) == []
+    assert links(members, found, found, 1, accounts=accounts) == [
+        (2, "account:testnet:0.0.4729347")
+    ]
+
+
+def test_a_project_that_shares_more_than_an_account_says_the_stronger_link() -> None:
+    members = [Member(1, A, 10), Member(2, B, 11)]
+    account, topic = "testnet:0.0.100", "testnet:0.0.5"  # the account sorts first by its number
+    found = [(1, account), (2, account), (1, topic), (2, topic)]
+    assert groups(members, found, accounts={account}) == [[1, 2]]  # the topic joins them
+    assert links(members, found, found, 1, accounts={account}) == [(2, topic)]

@@ -705,6 +705,8 @@ One trap: some IDs are services that many projects use, like a popular token. An
 
 **Since 18 October 2026.** The second part of the rule is new: three teams of one event, each with its own code, named one account of the main network, and the first part alone made them one group, with a fourth project. The groups of the collection went from 2 with 7 projects to 2 with 5 (`evals/results/20261018T092000Z-overview.json`). The card of a project names the projects it is linked to, and why; the charts show the projects linked across events first.
 
+**Since 1 November 2026.** An account joins no projects either. A builder most often keeps one account for every project, so two projects that use one account share a builder, not a project: one testnet account made one timeline of two different projects of one builder, at ETHOnline 2026 and ETHDenver 2026, and another account did the same for two projects of another builder. Contracts, tokens, topics and the other things that the ledger finds still join projects. The card still names such a link, in these words: the same account, not necessarily the same project. The groups of the collection went from 4 with 9 projects (`evals/results/20261031T234422Z-overview.json`) to 2 with 5 (`evals/results/20261101T083148Z-overview.json`).
+
 A returning name is a hint, not "seen before". Two teams can pick the same name.
 
 ### 8.5 Groups for the overview
@@ -726,7 +728,7 @@ For an event, the overview counts projects by category, by proof status and by l
 
 ### 8.7 The timeline of projects that came back
 
-**Built on 31 October 2026.** When a project came back to another hackathon, by the same repository or the same Hedera ID, its card shows a timeline: the linked projects, the oldest event first, whatever they won, and between two of them, how they are linked and how the code changed. Nothing in it is written by a model.
+**Built on 31 October 2026.** When a project came back to another hackathon, by the same repository or the same Hedera ID other than an account (section 8.4), its card shows a timeline: the linked projects, the oldest event first, whatever they won, and between two of them, how they are linked and how the code changed. Nothing in it is written by a model.
 
 - **Which projects.** The groups of "seen before" (section 8.4), with those of their projects whose event has a known last day, two or more. A prize plays no part.
 - **Each entry.** The dates and the name of the event, the name of the project, what it won, the one line of its page, what its own Hedera IDs did in the time around its event (section 7.5), from the ledger, whose times nobody can change, and its code at the end of its event: the newest commit of its own repository on or before the last day, or that the repository had no commit yet on that day.

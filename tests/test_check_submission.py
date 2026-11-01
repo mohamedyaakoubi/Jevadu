@@ -43,6 +43,7 @@ from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.hedera.mirror import MirrorError
 from hackathon_memory.parse.ethglobal_page import read_project_page
+from hackathon_memory.search import seen
 
 OTHER = "https://github.com/sample-org/cedar-post"
 EVENT = EventDays("ETHGlobal Sample Event", datetime(2026, 3, 6, 16, tzinfo=UTC), date(2026, 3, 8))
@@ -235,6 +236,27 @@ def test_an_id_that_many_projects_with_other_code_name_links_nothing(
     result = run(database, tmp_path, found_code(tmp_path)[0])
     assert result.ids[0].shared
     assert [one.by for one in result.seen] == ["repository"]
+
+
+@pytest.mark.integration
+def test_an_account_of_another_project_is_the_same_account_not_the_same_project(
+    database: str,
+) -> None:
+    """A builder's testnet account that another project names is a link by the account alone
+    (design 8.4, 1 November 2026)."""
+    with psycopg.connect(database) as conn:
+        (cedar,) = conn.execute("SELECT id FROM projects WHERE name = 'Cedar Post'").fetchone()
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, '0.0.4729347', 'testnet', 'account', "
+            "'page', 'invented', false) RETURNING id", (cedar,)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                     "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    LedgerStore(database).save_facts(LedgerFacts("0.0.4729347", "testnet", NOW, found=True,
+                                                 kind="account"))  # fmt: skip
+    known = seen.submission_matches(database, "https://github.com/someone/else",
+                                    [("testnet", "0.0.4729347", "0.0.4729347")])  # fmt: skip
+    assert known.same_id == {"account:testnet:0.0.4729347": [cedar]}
 
 
 ADDRESS, CONTRACT = "0x8004a818bfb912233c491871b3d84c89a494bd9e", "0.0.7919997"

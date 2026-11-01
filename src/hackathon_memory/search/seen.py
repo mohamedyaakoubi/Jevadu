@@ -7,7 +7,10 @@ contract by its address was not matched with a page that named its 0.0 ID). An I
 three projects with other code name is a shared service, such as a popular token, and joins
 nothing. So is an ID that two projects with other code name at one event: teams of one hackathon
 that use one ID most likely use a service, such as a public payment address, and are not one
-team. A returning name is only a hint and joins nothing.
+team. An account joins nothing either: a builder most often keeps one account for every project,
+so two projects that use it share a builder, not a project (1 November 2026: one testnet account
+joined two different projects of one builder at two hackathons). Their link is still shown, as
+an account's. A returning name is only a hint and joins nothing.
 Exact matching, with no AI.
 """
 
@@ -24,6 +27,7 @@ from hackathon_memory.db.public_services import public_keys
 # The checks that found the ID as the kind the project gave: the ledger knows what it is.
 CONFIRMED = ("proof_found", "window_not_known", "dates_do_not_fit", "found_but_empty")
 SHARED_AFTER = 3  # projects with other code that may name one ID before it is a shared service
+ACCOUNT = "account:"  # the mark of a link by an account alone: "account:network:ID"
 
 # The (project, network:ID) pairs that the ledger found as the kind the project gave. An ID is the
 # one that the ledger gives the thing on that network where it found it (coalesce), and the name
@@ -45,6 +49,11 @@ _NAMED = (
     "CROSS JOIN LATERAL (SELECT unnest(CASE WHEN c.network IS NULL "
     "THEN ARRAY['mainnet', 'testnet'] ELSE ARRAY[c.network] END) AS network) n "
     "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.network = n.network AND f.found"
+)
+# The network:IDs that the ledger found as accounts, by the ID that it gives the thing.
+_ACCOUNTS = (
+    "SELECT DISTINCT network || ':' || coalesce(ledger_id, entity_id) FROM ledger_facts "
+    "WHERE found AND kind = 'account'"
 )
 
 
@@ -75,12 +84,14 @@ def groups(
     ids: Iterable[tuple[int, str]],
     named: Iterable[tuple[int, str]] | None = None,
     public: Collection[str] = frozenset(),
+    accounts: Collection[str] = frozenset(),
 ) -> list[list[int]]:
     """The groups of projects that share a repository or a Hedera ID and stand at two events or
     more, each group in the order of its project ids. `ids` holds the (project, network:ID) pairs
     that the ledger found, which may join projects; `named` holds every pair that a page or a
     README names, found or not, and decides which IDs are shared services (by default `ids`);
-    `public` the public services that their owners list, which join nothing either."""
+    `public` the public services that their owners list, and `accounts` the IDs that the ledger
+    found as accounts, which join nothing either."""
     found = {member.project_id: member for member in members}
     ids = list(ids)
     shared = shared_services(
@@ -111,7 +122,7 @@ def groups(
     for together in by_repository.values():
         join(together)
     for key, together in by_id.items():
-        if key not in shared:
+        if key not in shared and key not in accounts:
             join(together)
     grouped: dict[int, list[int]] = defaultdict(list)
     for pid in sorted(found):
@@ -120,24 +131,25 @@ def groups(
             if len({found[pid].event for pid in together}) > 1]  # fmt: skip
 
 
-def _collection(conn: psycopg.Connection) -> tuple[list[Member], list, list]:
+def _collection(conn: psycopg.Connection) -> tuple[list[Member], list, list, set[str]]:
     """Every project with its event and its repository, the (project, network:ID) pairs that the
-    ledger found, and every pair that a page or a README names: each counts for a shared
-    service."""
+    ledger found, every pair that a page or a README names (each counts for a shared service),
+    and the IDs that the ledger found as accounts."""
     members = [Member(pid, (site, slug), repository) for pid, site, slug, repository in
                conn.execute("SELECT p.id, e.site, e.slug, p.repository_id FROM projects p "
                             "JOIN events e ON e.id = p.event_id").fetchall()]  # fmt: skip
     ids = conn.execute(_FOUND, (list(CONFIRMED),)).fetchall()
     named = [(pid, key) for pid, key, _, _, _ in conn.execute(_NAMED).fetchall()]
-    return members, ids, named
+    accounts = {key for (key,) in conn.execute(_ACCOUNTS).fetchall()}
+    return members, ids, named, accounts
 
 
 def came_back(conninfo: str) -> list[list[int]]:
     """The groups of projects that came back, read from the tables."""
     with psycopg.connect(conninfo) as conn:
-        members, ids, named = _collection(conn)
+        members, ids, named, accounts = _collection(conn)
         public = public_keys(conn)
-    return groups(members, ids, named, public)
+    return groups(members, ids, named, public, accounts)
 
 
 def links(
@@ -146,10 +158,12 @@ def links(
     named: Iterable[tuple[int, str]],
     project_id: int,
     public: Collection[str] = frozenset(),
+    accounts: Collection[str] = frozenset(),
 ) -> list[tuple[int, str]]:
     """The projects that one project shares its repository or a Hedera ID with, by the rule of
-    `groups` but with no chain, at its own event or at another: each as (project, "repository")
-    or (project, "network:ID"), in the order of their numbers."""
+    `groups` but with no chain, at its own event or at another: each as (project, "repository"),
+    (project, "network:ID"), or (project, "account:network:ID") when they share only an account,
+    which is the builder's rather than the project's; in the order of their numbers."""
     found = {member.project_id: member for member in members}
     own = found.get(project_id)
     if own is None:
@@ -166,18 +180,19 @@ def links(
             if pid != project_id and member.repository_id == own.repository_id:
                 linked[pid] = "repository"
     keys = {key for pid, key in ids if pid == project_id and key not in shared}
-    for pid, key in sorted(ids):
+    # An account comes last: a project that shares more than an account says the stronger link.
+    for pid, key in sorted(ids, key=lambda pair: (pair[1] in accounts, pair)):
         if pid != project_id and key in keys:
-            linked.setdefault(pid, key)
+            linked.setdefault(pid, ACCOUNT + key if key in accounts else key)
     return sorted(linked.items())
 
 
 def links_within(conninfo: str, project_ids: Iterable[int]) -> dict[int, list[tuple[int, str]]]:
     """The links of each of some projects (`links`), read from the tables once."""
     with psycopg.connect(conninfo) as conn:
-        members, ids, named = _collection(conn)
+        members, ids, named, accounts = _collection(conn)
         public = public_keys(conn)
-    return {pid: links(members, ids, named, pid, public) for pid in project_ids}
+    return {pid: links(members, ids, named, pid, public, accounts) for pid in project_ids}
 
 
 def links_of(conninfo: str, project_id: int) -> list[tuple[int, str]]:
@@ -190,7 +205,9 @@ class Matches:
     """What the collection says about the repository and the Hedera IDs of one submission."""
 
     same_repository: list[int]  # the projects with the same repository
-    same_id: dict[str, list[int]]  # network:ID -> the projects whose ID the ledger found too
+    # network:ID -> the projects whose ID the ledger found too; "account:network:ID" for an account,
+    # which is the builder's rather than the project's
+    same_id: dict[str, list[int]]
     shared: set[str]  # the network:IDs that are shared services, which join nothing
     # the IDs, on any network, that a project with other code names: as its text writes them,
     # and as the ledger gives them
@@ -218,6 +235,9 @@ def submission_matches(
                              "OR coalesce(f.ledger_id, h.entity_id) = ANY(%s)",
                              (names, names)).fetchall()  # fmt: skip
         public = public_keys(conn)
+        accounts = {key for (key,) in conn.execute(
+            _ACCOUNTS + " AND coalesce(ledger_id, entity_id) = ANY(%s)", (names,)
+        ).fetchall()}  # fmt: skip
     other_code: set[str] = set()
     for _, key, repository_id, _, name in named:
         if own_code is None or repository_id != own_code:
@@ -228,8 +248,9 @@ def submission_matches(
     shared = (shared_services(users) | public) & set(keys)
     same_id: dict[str, list[int]] = defaultdict(list)
     for pid, key in sorted(found):
-        if key in keys and key not in shared and pid not in same_id[key]:
-            same_id[key].append(pid)
+        marked = ACCOUNT + key if key in accounts else key
+        if key in keys and key not in shared and pid not in same_id[marked]:
+            same_id[marked].append(pid)
     return Matches(same_repository, dict(same_id), shared, other_code)
 
 
