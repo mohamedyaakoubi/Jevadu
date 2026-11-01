@@ -957,6 +957,10 @@ def test_the_mainnet_filter_keeps_the_teams_on_the_main_network(site) -> None:  
     assert 'name="mainnet"' in page and ">Yes (1)</span>" in page and ">No (2)</span>" in page
     kept = client.get("/", params={"mainnet": "yes"}).text
     assert "1 project matches the filters" in kept and f"/project/{pebble}/panel" in kept
+    # the other filters count what this one keeps; its own numbers stay whole (1 November 2026)
+    assert "ETHGlobal Sample Event (1)" in kept
+    assert ">Yes (1)</span>" in kept and ">No (2)</span>" in kept
+    assert "Each number says how many projects that value shows with your other filters." in kept
     left = client.get("/", params={"mainnet": "no"}).text
     assert "2 projects match the filters" in left and f"/project/{pebble}/panel" not in left
 

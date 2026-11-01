@@ -982,12 +982,15 @@ def create_app(
         filters, so that each value says how many of them it would keep. The embedding of the
         idea is kept for a day, so this costs nothing more. A chosen value stays offered."""
         if only == []:  # no project matches the filters: nothing is searched, Google is not asked
-            return every
+            return filtering.keep_chosen(
+                filtering.counted_with(project_facts(conninfo), chosen), every, chosen
+            )
         if only is None:
             ids = ranking
         else:
             ids, _, _ = ranking_of(conninfo, idea, mode, None, False, filtering.Filters(), [])
-        return filtering.keep_chosen(filtering.choices(facts_of(conninfo, ids)), every, chosen)
+        return filtering.keep_chosen(filtering.counted_with(facts_of(conninfo, ids), chosen),
+                                     every, chosen)  # fmt: skip
 
     @app.get("/", response_class=HTMLResponse)
     def search(
@@ -1056,6 +1059,9 @@ def create_app(
         values = {"idea": idea, "mode": mode, "ai": "1" if with_ai else "", "view": view,
                   **chosen.chosen()}  # fmt: skip
         only = filtering.allowed(project_facts(conninfo), chosen)
+        # Each filter's numbers count what the other chosen filters keep (design 8.2).
+        offered = filtering.keep_chosen(filtering.counted_with(project_facts(conninfo), chosen),
+                                        every, chosen)  # fmt: skip
         shown = {**base, "chosen": chosen, "search_query": search_query(values),
                  "quick_query": search_query(values, drop=("ai",)),
                  "ai_query": search_query({**values, "ai": "1", "mode": MEANING}),
@@ -1079,18 +1085,18 @@ def create_app(
                 if view == CHARTS:
                     built, groups, said = charts_of(conninfo, only)
                     return render(request, "search.html", asked=False, results=[], total=total,
-                                  charts=built, came_back=groups, insights=said, offer=every,
+                                  charts=built, came_back=groups, insights=said, offer=offered,
                                   panel_card=panel_card, **shown)  # fmt: skip
                 if view == GRAPH:
                     drawn, why, about = graph_of(conninfo, only)
                     return render(request, "search.html", asked=False, results=[], total=total,
                                   graph=drawn, graph_problem=why, graph_about=about,
-                                  offer=every, panel_card=panel_card, **shown)  # fmt: skip
+                                  offer=offered, panel_card=panel_card, **shown)  # fmt: skip
                 ids, total = data.browse(conninfo, only, offset=(page_number - 1) * PAGE_SIZE,
                                          limit=PAGE_SIZE)  # fmt: skip
                 results = results_of(conninfo, ids, "", False)
                 first = (page_number - 1) * PAGE_SIZE + 1
-                return render(request, "search.html", asked=False, results=results, offer=every,
+                return render(request, "search.html", asked=False, results=results, offer=offered,
                               panel_card=panel_card, total=total, page=page_number,
                               pages=math.ceil(total / PAGE_SIZE), first_shown=first,
                               last_shown=first + len(results) - 1, **shown)  # fmt: skip

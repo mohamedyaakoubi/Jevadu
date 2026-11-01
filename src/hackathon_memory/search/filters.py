@@ -271,3 +271,21 @@ def choices(rows: Sequence[Facts]) -> Choices:
             for v, n in _counted((row.mainnet for row in rows), (YES, NO))
         ],
     )
+
+
+def counted_with(rows: Sequence[Facts], chosen: Filters) -> Choices:
+    """What each filter offers once values are chosen (1 November 2026): its numbers count the
+    projects that every other chosen filter keeps, so that each number says how many projects its
+    value shows with the rest of the choice. A filter's own values do not narrow its numbers, so
+    that another of its values can still be added. With no choice, `choices(rows)`."""
+    whole = choices(rows)
+    picked = chosen.chosen()
+    if not picked:
+        return whole
+    lists = {}
+    for name in (one.name for one in fields(Filters)):
+        others = allowed(rows, Filters(**{k: v for k, v in picked.items() if k != name}))
+        if others is not None:
+            kept = set(others)
+            lists[name] = getattr(choices([row for row in rows if row.project_id in kept]), name)
+    return replace(whole, **lists)

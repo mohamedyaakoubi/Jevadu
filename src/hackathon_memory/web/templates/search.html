@@ -63,7 +63,7 @@
       {{ parts.filter_select("winner", "Prize", "All projects", offer.winner, chosen.values("winner"), "winner") }}
       <noscript><button class="btn btn-sm" type="submit">Apply filters</button></noscript>
       {% if picked %}<a class="btn btn-sm btn-ghost-secondary hm-clear-filters" href="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-get="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true">Clear filters</a>{% endif %}
-      {% if asked %}<p class="hm-filters-note">The counts are for the {{ offer.projects }} projects closest to your idea.</p>{% endif %}
+      {% if asked or picked %}<p class="hm-filters-note">{% if asked %}The counts are for the {{ offer.projects }} projects closest to your idea{% if picked %}, each with your other filters{% endif %}.{% else %}Each number says how many projects that value shows with your other filters.{% endif %}</p>{% endif %}
     </div>
     {% endif %}
 

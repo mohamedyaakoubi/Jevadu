@@ -16,6 +16,7 @@ from hackathon_memory.search.filters import (
     Filters,
     allowed,
     choices,
+    counted_with,
     facts,
     joined,
     keep_chosen,
@@ -84,6 +85,18 @@ def test_a_chosen_value_stays_offered_when_the_closest_projects_lack_it() -> Non
     assert [c.value for c in unknown.year] == ["2026"]
     several = keep_chosen(offer, every, Filters(event="8|9|99"))  # each value apart; 99: none
     assert [(c.value, c.count) for c in several.event] == [("7", 2), ("8", 0), ("9", 0)]
+
+
+def test_each_filter_counts_what_the_other_filters_keep() -> None:
+    """The numbers follow the choice (1 November 2026): with Event A chosen, the years count only
+    its projects, while the events still count them all, so that another event can be added."""
+    offer = counted_with(ROWS, Filters(event="7"))
+    assert [(c.value, c.count) for c in offer.year] == [("2026", 2)]
+    assert [(c.value, c.count) for c in offer.event] == [("7", 2), ("8", 1), ("9", 1)]
+    both = counted_with(ROWS, Filters(event="7", life="stopped"))
+    assert [(c.value, c.count) for c in both.life] == [("active", 1), ("stopped", 1)]
+    assert [(c.value, c.count) for c in both.event] == [("7", 1), ("8", 1)]
+    assert counted_with(ROWS, Filters()) == choices(ROWS)
 
 
 def test_the_facts_come_from_the_tables(empty_database: str) -> None:
