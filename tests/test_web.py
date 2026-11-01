@@ -965,10 +965,13 @@ def test_the_mainnet_filter_keeps_the_teams_on_the_main_network(site) -> None:  
     assert "2 projects match the filters" in left and f"/project/{pebble}/panel" not in left
 
 
-def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) -> None:  # noqa: ANN001
-    """The fourth view (design 12.1, S10, 1 November 2026): how many projects of the list put an
-    own ID on the main network, its transactions, their fees in HBAR and in dollars at the rate of
-    the network, and a table of the projects; a transaction whose cost is not read yet is said."""
+MAINNET_ASKED = datetime(2026, 11, 1, tzinfo=UTC)
+
+
+def put_on_mainnet(database: str, project_id: int) -> tuple[str, str]:
+    """The topic 0.0.4517 of a project, named on the main network and made on 7 March 2026, with
+    two messages in its history (7 March and 7 April 2026), the cost of the first one read.
+    Returns the two moments."""
     from hackathon_memory.check.history import CONSENSUS, History
     from hackathon_memory.check.ledger import LedgerFacts
     from hackathon_memory.check.mainnet import Detail, Rate
@@ -976,29 +979,35 @@ def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) 
     from hackathon_memory.db.ledger import LedgerStore
     from hackathon_memory.db.mainnet import MainnetStore
 
-    client, _, ids, database = site
-    pebble = ids["Pebble Pay"]
-    asked = datetime(2026, 11, 1, tzinfo=UTC)
     LedgerStore(database).save_facts(LedgerFacts(
-        "0.0.4517", "mainnet", asked, found=True, kind="topic", ledger_id="0.0.4517",
+        "0.0.4517", "mainnet", MAINNET_ASKED, found=True, kind="topic", ledger_id="0.0.4517",
         created_at=datetime(2026, 3, 7, tzinfo=UTC)))  # fmt: skip
     with psycopg.connect(database) as conn:
         conn.execute("DELETE FROM hedera_ids WHERE entity_id = '0.0.4517'")
         (hedera_id,) = conn.execute(
             "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
             "words_around, in_hashscan_link) VALUES (%s, '0.0.4517', 'mainnet', 'topic', 'page', "
-            "'invented', false) RETURNING id", (pebble,)).fetchone()  # fmt: skip
+            "'invented', false) RETURNING id", (project_id,)).fetchone()  # fmt: skip
         conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
                      "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
     one = f"{int(datetime(2026, 3, 7, 10, tzinfo=UTC).timestamp())}.000000001"
     two = f"{int(datetime(2026, 4, 7, 10, tzinfo=UTC).timestamp())}.000000002"
-    HistoryStore(database).save(
-        "0.0.4517", "mainnet", "topic", History({one: CONSENSUS, two: CONSENSUS}, False), asked
-    )
+    history = History({one: CONSENSUS, two: CONSENSUS}, False)
+    HistoryStore(database).save("0.0.4517", "mainnet", "topic", history, MAINNET_ASKED)
     MainnetStore(database).save(
         Detail(one, "CONSENSUSSUBMITMESSAGE", True, 59_829_520, 0, ("0.0.7001",), 0),
-        Rate(637_060, 30_000), asked,
+        Rate(637_060, 30_000), MAINNET_ASKED,
     )  # fmt: skip
+    return one, two
+
+
+def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) -> None:  # noqa: ANN001
+    """The fourth view (design 12.1, S10, 1 November 2026): how many projects of the list put an
+    own ID on the main network, its transactions, their fees in HBAR and in dollars at the rate of
+    the network, and a table of the projects; a transaction whose cost is not read yet is said."""
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    put_on_mainnet(database, pebble)
     assert ">Mainnet</a>" in client.get("/").text  # the switch beside the other views
     page = client.get("/", params={"view": "mainnet"}).text
     assert "1 of 3 projects put its own ID on Hedera's main network" in page
