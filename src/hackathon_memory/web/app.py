@@ -87,6 +87,7 @@ from hackathon_memory.search import closeness, engine, listing, rerank, seen, st
 from hackathon_memory.search import compare as comparing
 from hackathon_memory.search import counts as counting
 from hackathon_memory.search import filters as filtering
+from hackathon_memory.search import mainnet as on_mainnet
 from hackathon_memory.search import timeline as timelines
 from hackathon_memory.settings import Settings, SettingsError
 from hackathon_memory.web import (
@@ -173,7 +174,8 @@ FILTERS = ("event", "year", "category", "proof", "life", "winner", "organiser", 
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 CHARTS = "charts"
 GRAPH = "graph"
-VIEWS = (CHARTS, GRAPH)  # the views beside the cards, each named in the address
+MAINNET = "mainnet"
+VIEWS = (CHARTS, GRAPH, MAINNET)  # the views beside the cards, each named in the address
 FILTER_WORDS = {"event": "the event", "year": "the year", "category": "the category",
                 "proof": "the Hedera proof", "life": "the life", "winner": "the prize",
                 "organiser": "the organiser", "mainnet": "the main network"}  # fmt: skip
@@ -1094,6 +1096,7 @@ def create_app(
                  "cards_query": search_query(values, drop=("view",)),
                  "charts_query": search_query({**values, "view": CHARTS}),
                  "graph_query": search_query({**values, "view": GRAPH}),
+                 "mainnet_query": search_query({**values, "view": MAINNET}),
                  "check_events": data.dated_events(conninfo), "all_projects": every.projects,
                  "shown_limit": SHOWN,
                  "with_category": every.with_category, "notes": notes}  # fmt: skip
@@ -1112,6 +1115,10 @@ def create_app(
                     return render(request, "search.html", asked=False, results=[], total=total,
                                   charts=built, came_back=groups, insights=said, offer=offered,
                                   panel_card=panel_card, **shown)  # fmt: skip
+                if view == MAINNET:
+                    return render(request, "search.html", asked=False, results=[], total=total,
+                                  mainnet=on_mainnet.summary(conninfo, facts_of(conninfo, only)),
+                                  offer=offered, panel_card=panel_card, **shown)  # fmt: skip
                 if view == GRAPH:
                     drawn, why, about = graph_of(conninfo, only)
                     return render(request, "search.html", asked=False, results=[], total=total,
@@ -1142,6 +1149,12 @@ def create_app(
                 return render(request, "search.html", asked=True, results=[], total=len(ranking),
                               charts=built, came_back=groups, insights=said, offer=offer,
                               nothing_matches=only == [], none_close=none_close,
+                              panel_card=panel_card,
+                              **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
+            if view == MAINNET:
+                return render(request, "search.html", asked=True, results=[], total=len(ranking),
+                              mainnet=on_mainnet.summary(conninfo, facts_of(conninfo, ranking)),
+                              offer=offer, nothing_matches=only == [], none_close=none_close,
                               panel_card=panel_card,
                               **{**shown, "elapsed": elapsed, "with_ai": ordered})  # fmt: skip
             if view == GRAPH:
@@ -1925,6 +1938,8 @@ def create_app(
     templates.env.filters["iso_day"] = iso_day
     templates.env.filters["said"] = data.said
     templates.env.filters["casefold"] = str.casefold
+    templates.env.filters["hbar"] = on_mainnet.hbar_words
+    templates.env.filters["dollars"] = on_mainnet.dollar_words
 
     def analytics() -> bool:
         """Vercel's Web Analytics on the public copy, for every visitor but its owner: it counts
@@ -1955,6 +1970,7 @@ def create_app(
         "REF_NUMBER": references.NUMBER,
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
+        "days_between": on_mainnet.days_between,
         "file_link": code_reading.file_link,
         "judged_of": data.judged_of,
         "strip_view": strips.strip_view,

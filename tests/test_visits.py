@@ -21,6 +21,8 @@ def test_each_request_says_what_a_visitor_did() -> None:
     assert action_of("/", {"event": "7|8"}) == ("filter", {"filters": {"event": "7|8"}})
     assert action_of("/", {"open": "837", "idea": "x"}) == ("card", {"idea": "x", "project": 837})
     assert action_of("/", {"view": "graph"})[0] == "graph"
+    assert action_of("/", {"view": "mainnet", "event": "7"}) == (
+        "mainnet", {"view": "mainnet", "filters": {"event": "7"}})  # fmt: skip
     assert action_of("/", {}) == ("home", {})
     assert action_of("/", {"page": "3"})[0] == "list"
     assert action_of("/project/837/panel", {}) == ("card", {"project": 837})
@@ -55,6 +57,7 @@ def test_an_action_reads_as_words() -> None:
         return described(Action(at, action, detail), projects, events)
 
     assert words("card", {"project": 837}) == "opened the card of AgentMarkets"
+    assert words("mainnet", {"idea": "pay"}) == "looked at the main network of “pay”"
     assert words("check", {"repo": "github.com/a/b", "event": "7676"}) == (
         "checked github.com/a/b against ETHDenver 2026")  # fmt: skip
     assert words("filter", {"filters": {"event": "7676"}}) == (

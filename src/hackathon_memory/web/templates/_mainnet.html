@@ -1,0 +1,89 @@
+{# The main network in the list on the screen (design 12.1, S10; 1 November 2026): how many of
+   its projects put an own ID on Hedera's main network, what those IDs did there, and beside them
+   how many named a Hedera ID, have a proof and used the test network. Counted from the tables when
+   the page is made (search/mainnet.py), with the same tally as the dated job (evals/mainnet.py).
+   The projects stand in the order of their events: nothing here ranks them (design rule 1). #}
+{% import "_parts.html" as parts %}
+{% if not mainnet or not mainnet.total %}
+<div class="empty"><p class="empty-title">No project to count</p><p class="empty-subtitle text-secondary">Remove a filter, or search with other words.</p></div>
+{% else %}
+{% set n = mainnet.projects | length %}
+{% set used = mainnet.used %}
+<h3 class="hm-mainnet-title">{{ "{:,}".format(n) }} of {{ "{:,}".format(mainnet.total) }} project{{ "s" if mainnet.total != 1 }} put {{ "their" if n != 1 else "its" }} own ID on Hedera's main network{{ parts.info("mainnet", "Mainnet") }}</h3>
+<p class="hm-charts-note">Live counts for {{ "{:,}".format(mainnet.total) }} project{{ "s" if mainnet.total != 1 }}{% if asked %}, the closest to your idea{% endif %}. Most hackathon projects run on the test network, where HBAR has no value. Only the IDs that a project names on its page, in its README or in its code are counted: an account that it used without naming it is not. A percentage appears only when at least 20 projects stand behind it.</p>
+
+<div class="hm-charts">
+<section class="card hm-chart" aria-labelledby="mainnet-ladder">
+  <div class="card-body">
+    <h3 class="hm-chart-title" id="mainnet-ladder">From a Hedera ID to the main network</h3>
+    <p class="hm-chart-note">Each line counts the projects of this list that did it. A project can be on several lines.</p>
+    <ul class="hm-ladder">
+    {% for words, count, tip, label in (
+        ("Named a Hedera ID", mainnet.named, none, none),
+        ("Have a Hedera proof", mainnet.proven, "proof", "a Hedera proof"),
+        ("Used an own ID on the test network", mainnet.on_testnet, none, none),
+        ("Put an own ID on the main network", n, "mainnet", "Mainnet"),
+        ("Used it there after their event", mainnet.used_after, none, none)) %}
+      {% set share = 100 * count / mainnet.total %}
+      <li>
+        <span class="hm-ladder-words">{{ words }}{% if tip %}{{ parts.info(tip, label) }}{% endif %}</span>
+        <span class="hm-ladder-bar" aria-hidden="true">{% if count %}<span style="width: {{ '%.2f' | format(share) }}%"></span>{% endif %}</span>
+        <span class="hm-ladder-count">{{ "{:,}".format(count) }}{% if mainnet.total >= 20 %} <span class="text-secondary">({{ ("%.1f" if 0 < share < 1 else "%.0f") | format(share) }}%)</span>{% endif %}</span>
+      </li>
+    {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<section class="card hm-chart" aria-labelledby="mainnet-did">
+  <div class="card-body">
+    <h3 class="hm-chart-title" id="mainnet-did">What {{ "these" if n != 1 else "this" }} {{ n }} project{{ "s" if n != 1 }} did on the main network{{ parts.info("mainnet-fees", "the fees and the exchange rate") }}</h3>
+    {% if n %}
+    <ul class="hm-insight-list">
+      {% if used.transactions %}
+      <li>Their own IDs made {{ "{:,}".format(used.transactions) }} transaction{{ "s" if used.transactions != 1 }} there, on {{ used.days }} day{{ "s" if used.days != 1 }}, from {{ used.first | day }} to {{ used.last | day }}{% if used.failed %}; {{ used.failed }} failed{% endif %}.</li>
+      <li>The network charged {{ used.fee | hbar }} HBAR in fees for them: {{ used.fee_dollars | dollars }} at the exchange rate that the network itself used at the time{% if used.without_rate %}, without {{ used.without_rate }} transaction{{ "s" if used.without_rate != 1 }} whose rate the mirror node did not give{% endif %}.{% if used.detailed < used.transactions %} The cost of {{ used.transactions - used.detailed }} transaction{{ "s" if used.transactions - used.detailed != 1 }} is not read yet.{% endif %}</li>
+      <li>{% if used.moved %}{{ used.moved | hbar }} HBAR changed hands in them besides the fees, {{ used.moved_dollars | dollars }} at the same rate.{% else %}No HBAR changed hands in them besides the fees.{% endif %}</li>
+      <li>{{ used.payers | length }} account{{ "s" if used.payers | length != 1 }} paid for them.</li>
+      {% else %}
+      <li>Their own IDs made no transaction there that the tool has read.</li>
+      {% endif %}
+      {% set unknown = mainnet.projects | selectattr("after", "none") | list | length %}
+      <li>{% if n == 1 and unknown %}The last day of its event is not known.{% elif n == 1 %}It was {{ "not " if not mainnet.used_after }}used there after the last day of its event.{% else %}{{ mainnet.used_after }} of the {{ n }} {{ "was" if mainnet.used_after == 1 else "were" }} used there after the last day of their event{% if unknown %}; the last day of the event of {{ unknown }} of them is not known{% endif %}.{% endif %}</li>
+      <li>On the test network, {{ "{:,}".format(mainnet.on_testnet) }} project{{ "s" if mainnet.on_testnet != 1 }} of this list used an own ID, with {{ "{:,}".format(mainnet.testnet_transactions) }} transaction{{ "s" if mainnet.testnet_transactions != 1 }}.</li>
+    </ul>
+    {% else %}
+    <p class="hm-chart-note">No project of this list put an own ID on the main network. On the test network, {{ "{:,}".format(mainnet.on_testnet) }} project{{ "s" if mainnet.on_testnet != 1 }} of this list used an own ID, with {{ "{:,}".format(mainnet.testnet_transactions) }} transaction{{ "s" if mainnet.testnet_transactions != 1 }}.</p>
+    {% endif %}
+  </div>
+</section>
+</div>
+
+{% if n %}
+<section class="card hm-chart hm-wide" aria-labelledby="mainnet-projects">
+  <div class="card-body">
+    <h3 class="hm-chart-title" id="mainnet-projects">The projects, the oldest event first</h3>
+    <p class="hm-chart-note">A transaction counts once for a project, even when two of its IDs took part in it. The fees and the HBAR are those of the transactions whose cost the mirror node gave.</p>
+    <div class="table-responsive" tabindex="0" role="region" aria-label="The table of the projects on the main network, which scrolls sideways">
+      <table class="table table-vcenter card-table hm-mainnet-table">
+        <thead><tr><th>Project and event</th><th>Own IDs on the main network</th><th class="text-end">Transactions</th><th>First to last</th><th class="text-end">After its event</th><th class="text-end">Fees</th><th class="text-end">HBAR moved</th><th class="text-end">Accounts that paid</th></tr></thead>
+        <tbody>
+        {% for one in mainnet.projects %}
+          <tr>
+            <td><a href="/?open={{ one.project_id }}" data-open-viewer="{{ one.project_id }}" hx-get="/project/{{ one.project_id }}/panel" hx-target="#viewer-body" hx-swap="innerHTML">{{ one.name }}</a>{% if one.prize == "hedera_prize" %} <span class="badge bg-yellow-lt">Hedera prize</span>{% endif %}<br><span class="text-secondary">{{ one.event }}</span></td>
+            <td class="hm-mainnet-ids">{% for own in one.ids %}{% set link = hashscan("mainnet", own.kind, own.ledger_id or own.entity_id) %}<span class="hm-mainnet-id">{% if own.kind %}{{ KIND_WORDS.get(own.kind, own.kind) }} {% endif %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener">{{ own.ledger_id or own.entity_id }}<span class="visually-hidden">, on HashScan, opens in a new tab</span></a>{% else %}{{ own.ledger_id or own.entity_id }}{% endif %}</span>{% endfor %}</td>
+            <td class="text-end">{{ "{:,}".format(one.used.transactions) }}{% if one.used.days %}<br><span class="text-secondary">on {{ one.used.days }} day{{ "s" if one.used.days != 1 }}</span>{% endif %}</td>
+            <td>{% if one.used.first %}{{ days_between(one.used.first, one.used.last) }}{% else %}<span class="text-secondary">no transaction</span>{% endif %}</td>
+            <td class="text-end">{% if one.after is none %}<span class="text-secondary">not known</span>{% else %}{{ "{:,}".format(one.after) }}{% endif %}</td>
+            <td class="text-end">{{ one.used.fee | hbar }} HBAR<br><span class="text-secondary">{{ one.used.fee_dollars | dollars }}</span></td>
+            <td class="text-end">{{ one.used.moved | hbar }} HBAR</td>
+            <td class="text-end">{{ one.used.payers | length }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endif %}

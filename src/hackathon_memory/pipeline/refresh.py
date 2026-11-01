@@ -19,7 +19,8 @@ A repository lives on after its event, and so do the Hedera IDs of a project. In
 5. The ledger: the IDs of the code, then every ID, from the table when its answer is younger than
    the age, else from the mirror node; the proof rule judges them again.
 6. The histories of the own IDs: those never read or read before the depth of use (design 7.5),
-   whole, and the new transactions of the others, from their newest event on.
+   whole, and the new transactions of the others, from their newest event on; then what each new
+   transaction of the own IDs on the main network cost and moved (design 7.6).
 7. What the calls of the own contracts reached among Hedera's system contracts (design 7.5): a
    contract never read, or read while its time was open and longer ago than the age; with a
    limit of requests (a round of the website), CONTRACTS_A_ROUND at most.
@@ -50,6 +51,7 @@ from hackathon_memory.db.code_ids import CodeIdStore
 from hackathon_memory.db.contract_calls import ContractCallStore
 from hackathon_memory.db.history import HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
+from hackathon_memory.db.mainnet import MainnetStore
 from hackathon_memory.db.projects import ProjectStore
 from hackathon_memory.db.readings import BUTTON, REFRESH, ReadingStore
 from hackathon_memory.db.repositories import RepositoryStore
@@ -62,6 +64,7 @@ from hackathon_memory.pipeline import (
     contract_calls,
     hedera_code,
     history,
+    mainnet,
     readmes,
     timeline,
 )
@@ -196,6 +199,8 @@ def refresh(
                            projects=projects)  # fmt: skip
     history.read_histories_on(histories, mirrors, run, older_than=older_than, limit=limit,
                               now=now, projects=projects)  # fmt: skip
+    mainnet.read_mainnet(MainnetStore(conninfo), mirrors, run, limit=limit, now=now,
+                         projects=projects)  # fmt: skip
     step(CONTRACTS)
     contract_calls.read_contract_calls(
         ContractCallStore(conninfo), mirrors, run, now=now, projects=projects,
@@ -239,6 +244,8 @@ def refresh_lines(run: Run) -> list[str]:
     )
     lines.append(f"Contracts whose calls were read: {counts['contracts_read']}, with "
                  f"{counts['calls_read']:,} calls.")  # fmt: skip
+    if counts["mainnet_read"]:
+        lines.append(f"Transactions on the main network read: {counts['mainnet_read']:,}.")
     if counts["timeline_commits_asked"] or counts["timeline_changes_asked"]:
         lines.extend(timeline.timeline_lines(run)[1:])  # what was asked for the timelines
     return lines

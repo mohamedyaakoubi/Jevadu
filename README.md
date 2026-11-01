@@ -41,7 +41,7 @@ Hedera has run at least 12 big hackathons since 2018, with more than 2,100 proje
 |---|---|
 | A builder | Was my idea already built on Hedera? What happened to it? |
 | A judge | Is this submission's Hedera proof real? What is close to it? Was it sent before? |
-| An organiser | What did our past events produce? |
+| An organiser | What did our past events produce? How much of it reached Hedera's main network? |
 
 ## What it looks like
 
@@ -128,12 +128,13 @@ Each number below comes from a dated result file, named under the table. How eac
 | **Parser** | Ordinary code, no AI, reads each page into its facts: the name, the event, the prizes, the links, the texts word for word, and the Hedera IDs with their network and kind. | 392 of the 658 ETHGlobal projects name no Hedera ID; 60 of the 92 Hedera prize winners name none. |
 | **Code** | Reads each project's repository for Hedera's packages, the files that import them, and the Hedera services that the code calls. | Of the 392 projects that name no ID, the code of 259 shows a use of Hedera. |
 | **Ledger** | Checks every Hedera ID of a page, a README or the code on the mirror node: its kind, and its dates against the event. Then reads what the project's own IDs did around the event. | 358 of the 658 have a Hedera ID active during their hackathon, 100 of them found only in the code. For 279, the ledger or the code shows something that the page does not say. Of Devfolio's 107 projects, 37 have a Hedera ID active during their hackathon. |
+| **Main network** | For the projects that put an own ID on Hedera's main network, reads every transaction of those IDs there: its fee, the HBAR it moved, the accounts that paid, and the network's own exchange rate of its hour, so the fees are also told in dollars of their day. | 7 of the 933 projects did. Their own IDs made 1,169 transactions there, for 59.48 HBAR of fees ($11.36), and one of them was used there after its event. On the test network, 393 projects made 141,880 transactions with their own IDs. |
 | **Cards** | Gemini 3.1 Pro writes seven fields for each full page, each with quotes that code checks against the page. A field whose quotes are not found is dropped. Gemini 4 Argon wrote the 106 cards of Devfolio; a project shows the card of 3.1 Pro when it has one. | Gemini 3.1 Pro: 8,923 of the 8,945 quotes were found word for word in their page. Gemini 4 Argon: 2,020 of 2,021. |
 | **Search** | By keyword or by meaning. On a button, Gemini 3.8 Flash orders the 30 closest and says what each shares with the idea and how it differs. | Test 2, below. |
-| **Website** | The search, a card for each project (with a timeline when it came back to another hackathon), eight filters that each keep one value or several, a graph and charts of any list, the check of a submission from its GitHub link, and the register. | The graph's groups are regions of the map, not proven categories: a silhouette of about 0.04. |
+| **Website** | The search, a card for each project (with a timeline when it came back to another hackathon), eight filters that each keep one value or several, a graph, charts and the main network of any list, the check of a submission from its GitHub link, and the register. | The graph's groups are regions of the map, not proven categories: a silhouette of about 0.04. |
 | **Register** | Writes a fingerprint of a team's repository and its commit to a Hedera topic with no admin key, once the README carries the line that the page gives. The team can sign it with its own wallet. | The topic `0.0.11126502` is on the test network. No registration yet. |
 
-Sources: the collection, `proofs/results/` (11 October 2026) and `evals/results/20261031T234422Z-overview.json`; the parser, `evals/results/20261022T094656Z-overview.json`; the code, `evals/results/20261022T094650Z-code-findings.json`; the ledger, `evals/results/20261029T082910Z-overview.json` and `evals/results/20261029T160737Z-depth.json`, and for Devfolio `evals/results/20261031T234422Z-overview.json`; the cards, `evals/results/20261031T234422Z-overview.json`; the graph, `evals/results/20261031T104649Z-graph-groups.json`.
+Sources: the collection, `proofs/results/` (11 October 2026) and `evals/results/20261031T234422Z-overview.json`; the parser, `evals/results/20261022T094656Z-overview.json`; the code, `evals/results/20261022T094650Z-code-findings.json`; the ledger, `evals/results/20261029T082910Z-overview.json` and `evals/results/20261029T160737Z-depth.json`, and for Devfolio `evals/results/20261031T234422Z-overview.json`; the cards, `evals/results/20261031T234422Z-overview.json`; the main network, `evals/results/20261101T133450Z-mainnet.json`; the graph, `evals/results/20261031T104649Z-graph-groups.json`.
 
 ### The three tests of quality
 
@@ -220,6 +221,7 @@ The optional settings, for the public copy, the wallets, the GitHub App, Turnsti
 | `python -m hackathon_memory.pipeline all` | The seven steps above, in order. |
 | `python -m hackathon_memory.pipeline history` | Reads the transactions of each project's own Hedera IDs. |
 | `python -m hackathon_memory.pipeline makers` | Keeps the account that created each project's own contract, topic, token and schedule. |
+| `python -m hackathon_memory.pipeline mainnet` | Reads what each transaction of the own IDs on the main network cost and moved, with the network's exchange rate of its hour. |
 | `python -m hackathon_memory.pipeline refresh` | Asks GitHub and the ledger again about what is a day old, and writes what changed. |
 | `python -m hackathon_memory.pipeline cards --set FILE` | Writes the cards of a set of pages with Gemini and checks every quote (it costs money, within the budget). |
 | `python -m hackathon_memory.pipeline cards --export FILE`, `--restore FILE` | Saves every card to a file, or puts them back into a rebuilt database with no model call. |
@@ -237,6 +239,7 @@ The optional settings, for the public copy, the wallets, the GitHub App, Turnsti
 | `python -m evals.test2.ideas draw`, `evals.test2.run` | The ideas of Test 2, then the search test. |
 | `python -m evals.test3.sheet`, `evals.test3.run` | The sheet of Test 3, for checking by hand, then its numbers. |
 | `python -m evals.overview` | The counts of the website's charts, for each event. |
+| `python -m evals.mainnet` | The counts of the main network: who put an own ID there, and what those IDs did, cost and moved. |
 | `python -m evals.depth --check 20` | The depth of use over the collection, counted a second time for 20 projects. |
 | `python -m evals.graph_groups` | How well the graph's groups fit the lists that it draws. |
 | `python -m evals.search_modes`, `evals.compare_levels`, `evals.ledger_story.run`, `evals.ledger_days`, `evals.code_times`, `evals.cards_report` | Other measures: the ways to search, the comparisons, the ledger and the readings of the code. |
