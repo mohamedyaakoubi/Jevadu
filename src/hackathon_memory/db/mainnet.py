@@ -9,11 +9,13 @@ mirror node about each moment once (pipeline/mainnet.py).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 
 import psycopg
 
 from hackathon_memory.check.mainnet import Detail, Rate
+from hackathon_memory.check.mainnet_what import Thing
 from hackathon_memory.check.story import WINDOW_BEFORE
 from hackathon_memory.db.history import OWN
 
@@ -40,6 +42,39 @@ def mainnet_ids(conn: psycopg.Connection, ids: Sequence[int]) -> dict[int, set[s
     for project_id, entity_id in rows:
         found.setdefault(project_id, set()).add(entity_id)
     return found
+
+
+@dataclass(frozen=True)
+class OwnThing:
+    """An own ID on the main network, with what the step `mainnet_what` needs about it."""
+
+    entity_id: str  # as its project names it
+    ledger_id: str  # as the ledger names it: 0.0.X, or the ID of a transaction
+    kind: str
+    made_at: datetime | None
+    made_by: str | None  # the account that made it, when the step `makers` found it
+    repository: str | None  # the repository of a project that names it
+    since: datetime | None  # WINDOW_BEFORE before the start of its first event
+    todo: tuple[str, ...]  # the moments of its transactions that are not explained yet
+
+
+# The facts of the own IDs on the main network: one row for each, with the repository of a
+# project that names it, the start of its first event, and the moments not explained yet.
+_OWN_THINGS = """
+SELECT f.entity_id, coalesce(f.ledger_id, f.entity_id), f.kind, f.created_at, f.made_by,
+       (SELECT min(r.url) FROM hedera_ids h JOIN projects p ON p.id = h.project_id
+        JOIN repositories r ON r.id = p.repository_id
+        WHERE h.entity_id = f.entity_id AND h.project_id = ANY(%s)),
+       (SELECT min(e.starts_at) FROM hedera_ids h JOIN projects p ON p.id = h.project_id
+        JOIN events e ON e.id = p.event_id
+        WHERE h.entity_id = f.entity_id AND h.project_id = ANY(%s)) - %s,
+       coalesce((SELECT array_agg(DISTINCT v.stamp ORDER BY v.stamp) FROM ledger_events v
+                 JOIN mainnet_transactions t ON t.stamp = v.stamp
+                 WHERE v.network = 'mainnet' AND v.entity_id = f.entity_id
+                 AND t.explained_at IS NULL), '{}')
+FROM ledger_facts f WHERE f.network = 'mainnet' AND f.found AND f.entity_id = ANY(%s)
+ORDER BY f.entity_id
+"""
 
 
 class MainnetStore:
@@ -77,4 +112,62 @@ class MainnetStore:
                 (detail.stamp, detail.stamp, detail.name, detail.ok, detail.fee, detail.moved,
                  list(detail.paid_by), detail.tokens, rate.cents if rate else None,
                  rate.hbars if rate else None, asked_at),
+            )  # fmt: skip
+
+    # ------------------------------------------------------------- what they were (0029)
+
+    def own_things(self, *, projects: set[int] | None = None) -> list[OwnThing]:
+        """The own IDs on the main network, with the moments of their transactions that the step
+        `mainnet_what` has not explained yet; with `projects`, of these projects only."""
+        with psycopg.connect(self._conninfo) as conn:
+            wanted = (sorted(projects) if projects is not None
+                      else [row[0] for row in conn.execute("SELECT id FROM projects")])  # fmt: skip
+            ids = sorted({one for found in mainnet_ids(conn, wanted).values() for one in found})
+            rows = conn.execute(_OWN_THINGS, (wanted, wanted, WINDOW_BEFORE, ids)).fetchall()
+        return [OwnThing(entity_id, ledger_id, kind, made_at, made_by, repository, since,
+                         tuple(todo)) for entity_id, ledger_id, kind, made_at, made_by, repository,
+                since, todo in rows]  # fmt: skip
+
+    def explain(self, stamp: str, what: str | None, networks: Sequence[str],
+                asked_at: datetime) -> None:  # fmt: skip
+        """What one transaction did. The first explanation stays: a schedule names the moment
+        that it ran before the account whose history holds that moment is read."""
+        with psycopg.connect(self._conninfo) as conn:
+            conn.execute(
+                "UPDATE mainnet_transactions SET what = %s, networks = %s, explained_at = %s "
+                "WHERE stamp = %s AND explained_at IS NULL",
+                (what[:120] if what else None, list(networks), asked_at, stamp),
+            )
+
+    def makers(self) -> dict[str, str | None]:
+        """The things already read, each with the account that made it."""
+        with psycopg.connect(self._conninfo) as conn:
+            return dict(conn.execute("SELECT entity_id, made_by FROM mainnet_things").fetchall())
+
+    def mark_followed(self, account: str, how: str, asked_at: datetime) -> None:
+        """Whether what an account made was read ("read") or not, as a service's ("service")."""
+        with psycopg.connect(self._conninfo) as conn:
+            conn.execute(
+                "INSERT INTO mainnet_things (entity_id, kind, followed, asked_at) VALUES (%s, "
+                "'account', %s, %s) ON CONFLICT (entity_id) DO UPDATE SET followed = "
+                "EXCLUDED.followed",
+                (account, how, asked_at),
+            )
+
+    def save_thing(self, thing: Thing, asked_at: datetime) -> None:
+        """A thing on the main network, read now; a later reading replaces it."""
+        with psycopg.connect(self._conninfo) as conn:
+            conn.execute(
+                "INSERT INTO mainnet_things (entity_id, kind, made_at, made_by, name, fields, "
+                "names_from, scheduled, executed_at, held_by_others, messages, asked_at) VALUES "
+                "(%s, %s, %s, %s, %s, %s, %s, %s, to_timestamp(%s::numeric), %s, %s, %s) "
+                "ON CONFLICT (entity_id) DO UPDATE SET kind = EXCLUDED.kind, made_at = "
+                "EXCLUDED.made_at, made_by = EXCLUDED.made_by, name = EXCLUDED.name, fields = "
+                "EXCLUDED.fields, names_from = coalesce(EXCLUDED.names_from, "
+                "mainnet_things.names_from), scheduled = EXCLUDED.scheduled, executed_at = "
+                "EXCLUDED.executed_at, held_by_others = EXCLUDED.held_by_others, messages = "
+                "EXCLUDED.messages, asked_at = EXCLUDED.asked_at",
+                (thing.entity_id, thing.kind, thing.made_at, thing.made_by,
+                 thing.name[:160] if thing.name else None, list(thing.fields), thing.names_from,
+                 thing.scheduled, thing.executed, thing.held_by_others, thing.messages, asked_at),
             )  # fmt: skip

@@ -38,13 +38,15 @@ How an answer is read here:
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TypeVar
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import quote, urljoin, urlsplit
 
 import requests
 from pydantic import SecretStr
@@ -125,6 +127,49 @@ def archive_address(repository: str) -> str:
     repository ("If you omit :ref, the repository's default branch will be used")."""
     owner, name = repository.removeprefix(f"https://{CODE_HOST}/").split("/")
     return f"https://{SITE}/repos/{owner}/{name}/tarball"
+
+
+# The Solidity files of a repository that are not its own: libraries, tests and scripts.
+_NOT_OWN_SOLIDITY = re.compile(
+    r"(^|/)(lib|node_modules|test|tests|mocks?|script|scripts|forge-std)/|\.[ts]\.sol$", re.I
+)
+
+
+def solidity_files(client: PoliteClient, repository: str, *, limit: int) -> list[tuple[str, str]]:
+    """The own Solidity files of a repository's default branch, at most `limit`, those under a
+    folder "contracts" or "src" first: their paths and texts, for the names of the functions of
+    its contracts (design 7.6, 1 November 2026). Questions to the API, each counted and paused:
+    the repository, its tree, then each file. A question that is not answered gives nothing."""
+    owner, name = repository.removeprefix(f"https://{CODE_HOST}/").split("/")
+    api = f"https://{SITE}/repos/{owner}/{name}"
+    branch = str(_answer(client.get(api)).get("default_branch") or "")
+    if not branch:
+        return []
+    ref = quote(branch, safe="")
+    tree = _answer(client.get(f"{api}/git/trees/{ref}?recursive=1")).get("tree") or []
+    paths = [str(item.get("path")) for item in tree if item.get("type") == "blob"
+             and str(item.get("path", "")).endswith(".sol")
+             and not _NOT_OWN_SOLIDITY.search(str(item.get("path")))]  # fmt: skip
+    paths.sort(key=lambda path: (not path.startswith(("contracts/", "src/")), path))
+    files = []
+    for path in paths[:limit]:
+        content = _answer(client.get(f"{api}/contents/{quote(path)}?ref={ref}")).get("content")
+        try:
+            files.append((path, base64.b64decode(content or "").decode("utf-8", "replace")))
+        except (binascii.Error, ValueError):
+            continue
+    return files
+
+
+def _answer(result: FetchResult) -> dict:
+    """The JSON object of an answer of 200; nothing for another answer."""
+    if result.status != 200:
+        return {}
+    try:
+        answer = json.loads(result.body.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return {}
+    return answer if isinstance(answer, dict) else {}
 
 
 def _raw_reader(response: requests.Response) -> Callable[[int], bytes]:

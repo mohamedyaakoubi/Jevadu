@@ -15,12 +15,14 @@
 {# What a project won, and whether its own page is gone (design 4.6): two facts, two tags. #}
 {# The tags of a project. With `info` (the macro of _parts.html), each tag has its own (i), which
    explains that tag only (design 12.2, 28 October 2026). #}
-{% macro tags(card, info=none) -%}
+{# With `path`, the address of the project's path on the main network, the tag "Mainnet" opens it
+   in a window over the card (design 7.6). #}
+{% macro tags(card, info=none, path=none) -%}
 {% if card.prize_state in ("hedera_prize", "other_prize") or card.entry_kind == WINNER_ENTRY or card.mainnet %}
 <p class="hm-tags">
   {% if card.prize_state == "hedera_prize" %}<span class="hm-tag"><span class="badge bg-yellow-lt">Won a Hedera prize</span>{% if info %}{{ info("hedera-prize", "the tag Won a Hedera prize") }}{% endif %}</span>{% elif card.prize_state == "other_prize" %}<span class="hm-tag"><span class="badge bg-secondary-lt">Won another sponsor's prize</span>{% if info %}{{ info("other-prize", "the tag Won another sponsor's prize") }}{% endif %}</span>{% endif %}
   {% if card.entry_kind == WINNER_ENTRY %}<span class="hm-tag"><span class="badge bg-azure-lt">Winners' list only</span>{% if info %}{{ info("winners-list", "the tag Winners' list only") }}{% endif %}</span>{% endif %}
-  {% if card.mainnet %}<span class="hm-tag"><span class="badge bg-green-lt">Mainnet</span>{% if info %}{{ info("mainnet", "the tag Mainnet") }}{% endif %}</span>{% endif %}
+  {% if card.mainnet %}<span class="hm-tag">{% if path %}<a class="hm-tag-open" href="{{ path }}" data-sheet="{{ path }}" title="What its own IDs did on the main network"><span class="badge bg-green-lt">Mainnet<span aria-hidden="true">&nbsp;&rsaquo;</span></span><span class="visually-hidden">: what its own IDs did there</span></a>{% else %}<span class="badge bg-green-lt">Mainnet</span>{% endif %}{% if info %}{{ info("mainnet", "the tag Mainnet") }}{% endif %}</span>{% endif %}
 </p>
 {% endif %}
 {%- endmacro %}

@@ -81,6 +81,17 @@ HASHSCAN_KINDS = frozenset({"account", "contract", "topic", "token", "transactio
 KIND_WORDS = {"schedule": "scheduled transaction"}
 NETWORK_WORDS = {"testnet": "test network", "mainnet": "main network",
                  "previewnet": "preview network"}  # fmt: skip
+# A network that a message of a topic names (CAIP-2), in words. Read on 1 November 2026: Base's
+# "Network information" (8453 is Base, 84532 Base Sepolia) and Hedera's JSON-RPC relay (295 is its
+# main network, 296 its test network). Another network is shown by its code.
+CAIP2_NAMES = {
+    "eip155:8453": "Base",
+    "eip155:84532": "Base Sepolia",
+    "eip155:295": "Hedera's main network",
+    "eip155:296": "Hedera's test network",
+    "hedera:mainnet": "Hedera's main network",
+    "hedera:testnet": "Hedera's test network",
+}
 # The kinds of action of a transaction that the mirror node names, in plain words. Another kind is
 # shown as the node writes it.
 ACTION_WORDS = {

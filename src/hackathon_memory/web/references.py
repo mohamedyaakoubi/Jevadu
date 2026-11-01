@@ -68,6 +68,10 @@ REFERENCES = (
     # read on 1 November 2026: "Fees are charged in HBAR, converted from USD at the live exchange
     # rate"
     Reference("networkfees", "Fees", "Hedera", f"{DOCS}/networks/mainnet/fees"),
+    # read on 1 November 2026: the numbers of the networks that a message names (CAIP-2), 295 for
+    # Hedera's main network and 296 for its test network, 8453 for Base and 84532 for Base Sepolia
+    Reference("jsonrpc", "JSON-RPC relay", "Hedera", "https://docs.hedera.com/evm/development/json-rpc"),
+    Reference("base", "Connect to Base", "Base", "https://docs.base.org/get-started/connect-to-base"),
 )  # fmt: skip
 BY_KEY = {reference.key: reference for reference in REFERENCES}
 NUMBER = {reference.key: number for number, reference in enumerate(REFERENCES, start=1)}

@@ -20,7 +20,8 @@ A repository lives on after its event, and so do the Hedera IDs of a project. In
    the age, else from the mirror node; the proof rule judges them again.
 6. The histories of the own IDs: those never read or read before the depth of use (design 7.5),
    whole, and the new transactions of the others, from their newest event on; then what each new
-   transaction of the own IDs on the main network cost and moved (design 7.6).
+   transaction of the own IDs on the main network cost and moved, and what it did, with what
+   the accounts that made them made there (design 7.6).
 7. What the calls of the own contracts reached among Hedera's system contracts (design 7.5): a
    contract never read, or read while its time was open and longer ago than the age; with a
    limit of requests (a round of the website), CONTRACTS_A_ROUND at most.
@@ -65,6 +66,7 @@ from hackathon_memory.pipeline import (
     hedera_code,
     history,
     mainnet,
+    mainnet_what,
     readmes,
     timeline,
 )
@@ -201,6 +203,8 @@ def refresh(
                               now=now, projects=projects)  # fmt: skip
     mainnet.read_mainnet(MainnetStore(conninfo), mirrors, run, limit=limit, now=now,
                          projects=projects)  # fmt: skip
+    mainnet_what.explain_mainnet(MainnetStore(conninfo), mirrors, mainnet_what.solidity_of(client),
+                                 run, now=now, projects=projects)  # fmt: skip
     step(CONTRACTS)
     contract_calls.read_contract_calls(
         ContractCallStore(conninfo), mirrors, run, now=now, projects=projects,
@@ -246,6 +250,9 @@ def refresh_lines(run: Run) -> list[str]:
                  f"{counts['calls_read']:,} calls.")  # fmt: skip
     if counts["mainnet_read"]:
         lines.append(f"Transactions on the main network read: {counts['mainnet_read']:,}.")
+    if counts["mainnet_explained"]:
+        lines.append(f"Transactions on the main network explained: "
+                     f"{counts['mainnet_explained']:,}.")  # fmt: skip
     if counts["timeline_commits_asked"] or counts["timeline_changes_asked"]:
         lines.extend(timeline.timeline_lines(run)[1:])  # what was asked for the timelines
     return lines

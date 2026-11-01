@@ -5,6 +5,7 @@ No request leaves the test: an invented site answers. The token is invented too.
 
 from __future__ import annotations
 
+import base64
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,6 +24,7 @@ from hackathon_memory.collect.github import (
     readme_address,
     repository_of,
     request_count,
+    solidity_files,
 )
 from hackathon_memory.collect.polite import (
     CollectorIdentity,
@@ -308,3 +310,34 @@ def test_the_switch_is_read_from_the_settings_file_before_every_request(tmp_path
     assert client.is_enabled() is False
     env.write_text("COLLECT_GITHUB=on\n", encoding="utf-8")
     assert client.is_enabled() is True
+
+
+# ------------------------------------------------------- the Solidity files of a repository
+
+
+def test_the_own_solidity_files_of_a_repository_are_read_contracts_first(tmp_path: Path) -> None:
+    """Design 7.6: the names of the functions that a contract's calls ran come from these files."""
+    api = "https://api.github.com/repos/sample-org/pebble-pay"
+    tree = {"tree": [
+        {"path": "README.md", "type": "blob"},
+        {"path": "lib/forge-std/src/Test.sol", "type": "blob"},
+        {"path": "test/Shop.t.sol", "type": "blob"},
+        {"path": "other/Helper.sol", "type": "blob"},
+        {"path": "contracts/Shop.sol", "type": "blob"},
+    ]}  # fmt: skip
+
+    def file(text: str) -> Reply:
+        return answer(body={"content": base64.b64encode(text.encode()).decode()})
+
+    client, site, _, _ = make({
+        api: answer(body={"default_branch": "main"}),
+        f"{api}/git/trees/main?recursive=1": answer(body=tree),
+        f"{api}/contents/contracts/Shop.sol?ref=main": file("contract Shop {}"),
+        f"{api}/contents/other/Helper.sol?ref=main": file("library Helper {}"),
+    }, tmp_path)  # fmt: skip
+    found = solidity_files(client, "https://github.com/sample-org/pebble-pay", limit=5)
+    assert found == [("contracts/Shop.sol", "contract Shop {}"),
+                     ("other/Helper.sol", "library Helper {}")]  # fmt: skip
+    assert len(site.seen) == 4  # the repository, its tree, two files: never lib/ or test/
+    assert solidity_files(client, "https://github.com/sample-org/pebble-pay", limit=1)[0][0] == (
+        "contracts/Shop.sol")  # fmt: skip

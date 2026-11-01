@@ -551,6 +551,15 @@ class StandInMirror:
         found = [str(one) for one in self.lists.get(("holders", entity), [])]
         return found[:max_rows], len(found) > max_rows
 
+    # The calls that an EVM address sent, in self.lists[("from", address)], oldest first.
+    def results_from(
+        self, address: str, *, since: datetime, max_rows: int
+    ) -> tuple[list[dict], bool]:
+        self.asked.append(("from", address))
+        found = [item for item in self.lists.get(("from", address), [])
+                 if _inside(item, since, None)]  # fmt: skip
+        return found[:max_rows], len(found) >= max_rows
+
     # The messages of the register's topic, in self.lists[("register", topic)].
     def topic_messages_from(self, topic_id: str, first: int, *, limit: int = 100) -> list[dict]:
         self.asked.append(("register", topic_id, first))

@@ -1124,7 +1124,11 @@
     if (!sheet) return;
     $("sheet-body").innerHTML = skeleton();
     if (!sheet.open) sheet.showModal();
-    window.htmx.ajax("GET", "/about/" + link.getAttribute("data-sheet"), { target: "#sheet-body", swap: "innerHTML" });
+    // A name is a window of the bottom of the page; an address, a window of its own, such as the
+    // path of a project on the main network, which opens over a card as well (design 7.6).
+    var where = link.getAttribute("data-sheet");
+    var address = where.charAt(0) === "/" ? where : "/about/" + where;
+    window.htmx.ajax("GET", address, { target: "#sheet-body", swap: "innerHTML" });
   });
   document.addEventListener("click", function (event) {
     if (event.target.closest("[data-close-sheet]")) { var sheet = $("sheet"); if (sheet) sheet.close(); }

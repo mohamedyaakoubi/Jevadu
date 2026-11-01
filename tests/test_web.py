@@ -927,7 +927,10 @@ def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site)
         return client.get(f"/project/{pebble}/panel").text
 
     during = datetime(2026, 3, 7, tzinfo=UTC)  # the event: from 6 March 2026
-    assert '<span class="badge bg-green-lt">Mainnet</span>' in named("mainnet", during)
+    # on the card, the tag opens the project's path on the main network (design 7.6)
+    card = named("mainnet", during)
+    assert f'class="hm-tag-open" href="/project/{pebble}/mainnet"' in card
+    assert '<span class="badge bg-green-lt">Mainnet<span aria-hidden="true">' in card
     found = client.get("/", params={"idea": "help a street vendor get paid with a coin"}).text
     assert '<span class="badge bg-green-lt">Mainnet</span>' in found  # and on the result
     assert "Mainnet" not in named(None, during)  # named with no network
@@ -965,10 +968,13 @@ def test_the_mainnet_filter_keeps_the_teams_on_the_main_network(site) -> None:  
     assert "2 projects match the filters" in left and f"/project/{pebble}/panel" not in left
 
 
-def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) -> None:  # noqa: ANN001
-    """The fourth view (design 12.1, S10, 1 November 2026): how many projects of the list put an
-    own ID on the main network, its transactions, their fees in HBAR and in dollars at the rate of
-    the network, and a table of the projects; a transaction whose cost is not read yet is said."""
+MAINNET_ASKED = datetime(2026, 11, 1, tzinfo=UTC)
+
+
+def put_on_mainnet(database: str, project_id: int) -> tuple[str, str]:
+    """The topic 0.0.4517 of a project, named on the main network and made on 7 March 2026, with
+    two messages in its history (7 March and 7 April 2026), the cost of the first one read.
+    Returns the two moments."""
     from hackathon_memory.check.history import CONSENSUS, History
     from hackathon_memory.check.ledger import LedgerFacts
     from hackathon_memory.check.mainnet import Detail, Rate
@@ -976,29 +982,35 @@ def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) 
     from hackathon_memory.db.ledger import LedgerStore
     from hackathon_memory.db.mainnet import MainnetStore
 
-    client, _, ids, database = site
-    pebble = ids["Pebble Pay"]
-    asked = datetime(2026, 11, 1, tzinfo=UTC)
     LedgerStore(database).save_facts(LedgerFacts(
-        "0.0.4517", "mainnet", asked, found=True, kind="topic", ledger_id="0.0.4517",
+        "0.0.4517", "mainnet", MAINNET_ASKED, found=True, kind="topic", ledger_id="0.0.4517",
         created_at=datetime(2026, 3, 7, tzinfo=UTC)))  # fmt: skip
     with psycopg.connect(database) as conn:
         conn.execute("DELETE FROM hedera_ids WHERE entity_id = '0.0.4517'")
         (hedera_id,) = conn.execute(
             "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
             "words_around, in_hashscan_link) VALUES (%s, '0.0.4517', 'mainnet', 'topic', 'page', "
-            "'invented', false) RETURNING id", (pebble,)).fetchone()  # fmt: skip
+            "'invented', false) RETURNING id", (project_id,)).fetchone()  # fmt: skip
         conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
                      "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
     one = f"{int(datetime(2026, 3, 7, 10, tzinfo=UTC).timestamp())}.000000001"
     two = f"{int(datetime(2026, 4, 7, 10, tzinfo=UTC).timestamp())}.000000002"
-    HistoryStore(database).save(
-        "0.0.4517", "mainnet", "topic", History({one: CONSENSUS, two: CONSENSUS}, False), asked
-    )
+    history = History({one: CONSENSUS, two: CONSENSUS}, False)
+    HistoryStore(database).save("0.0.4517", "mainnet", "topic", history, MAINNET_ASKED)
     MainnetStore(database).save(
         Detail(one, "CONSENSUSSUBMITMESSAGE", True, 59_829_520, 0, ("0.0.7001",), 0),
-        Rate(637_060, 30_000), asked,
+        Rate(637_060, 30_000), MAINNET_ASKED,
     )  # fmt: skip
+    return one, two
+
+
+def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) -> None:  # noqa: ANN001
+    """The fourth view (design 12.1, S10, 1 November 2026): how many projects of the list put an
+    own ID on the main network, its transactions, their fees in HBAR and in dollars at the rate of
+    the network, and a table of the projects; a transaction whose cost is not read yet is said."""
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    put_on_mainnet(database, pebble)
     assert ">Mainnet</a>" in client.get("/").text  # the switch beside the other views
     page = client.get("/", params={"view": "mainnet"}).text
     assert "1 of 3 projects put its own ID on Hedera's main network" in page
@@ -1017,6 +1029,47 @@ def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) 
     other = client.get("/", params={"view": "mainnet", "mainnet": "no"}).text
     assert "0 of 2 projects put their own ID on Hedera's main network" in other
     assert "No project of this list put an own ID on the main network." in other
+
+
+def test_the_path_on_the_main_network_opens_from_the_view_and_from_the_card(site) -> None:  # noqa: ANN001
+    """The window of a project's path on the main network (design 7.6, 1 November 2026): opened
+    from a row of the view Mainnet and from the tag "Mainnet" of a card, in the window over the
+    page; a page of its own without htmx; none for a project that put nothing there."""
+    from hackathon_memory.check.mainnet_what import Thing
+    from hackathon_memory.db.mainnet import MainnetStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    one, _ = put_on_mainnet(database, pebble)
+    store = MainnetStore(database)
+    store.explain(one, "paid", ("eip155:8453",), MAINNET_ASKED)
+    store.save_thing(Thing("0.0.4517", "topic", datetime(2026, 3, 7, tzinfo=UTC), "0.0.7001",
+                           name="shop receipts", fields=("kind", "network"), messages=2),
+                     MAINNET_ASKED)  # fmt: skip
+    store.save_thing(Thing("0.0.4600", "token", datetime(2026, 3, 8, tzinfo=UTC), "0.0.7001",
+                           name="Side Token (SIDE)", held_by_others=0), MAINNET_ASKED)  # fmt: skip
+    store.mark_followed("0.0.7001", "read", MAINNET_ASKED)
+    address = f"/project/{pebble}/mainnet"
+    assert f'data-sheet="{address}"' in client.get("/", params={"view": "mainnet"}).text
+    assert f'class="hm-tag-open" href="{address}" data-sheet="{address}"' in (
+        client.get(f"/project/{pebble}/panel").text)  # fmt: skip
+    window = client.get(address, headers={"HX-Request": "true"})
+    assert window.status_code == 200
+    text = window.text
+    assert 'id="sheet-title"' in text and "Pebble Pay on Hedera's main network" in text
+    assert "Made the topic" in text and "&ldquo;shop receipts&rdquo;, by 0.0.7001." in text
+    assert 'class="hm-path-word">paid</span>' in text  # the kind that the message gives itself
+    assert "Base</span>" not in text and "Base <span" in text and "(eip155:8453)" in text
+    assert "No transaction of its own IDs on the main network" in text
+    assert "to the reading of 1 November 2026" in text
+    assert "Side Token (SIDE)" in text and "no other account holds it now" in text
+    assert "<html" not in text  # a part of the page, for the window
+    page = client.get(address)
+    assert page.status_code == 200 and "Back to the search" in page.text  # a page of its own
+    nothing = client.get(f"/project/{ids['Fern Vote']}/mainnet", headers={"HX-Request": "true"})
+    assert nothing.status_code == 404
+    assert "put no own ID on Hedera" in nothing.text
+    assert 'id="tip-mainnet-path"' in client.get("/").text  # its (i) explains it
 
 
 def test_the_sites_own_files_are_never_run_old(site) -> None:  # noqa: ANN001

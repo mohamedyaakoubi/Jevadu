@@ -1,0 +1,387 @@
+{
+ "hedera_proof": 395,
+ "made_on": "2026-11-01",
+ "messages": 1110,
+ "named_a_hedera_id": 404,
+ "on_the_main_network": {
+  "accounts_that_paid": 11,
+  "days": 20,
+  "failed": 1,
+  "fee_dollars": 11.3648,
+  "fee_tinybars": 5948228610,
+  "first": "2025-02-26T04:33:50.436608+00:00",
+  "last": "2026-09-23T20:41:36.366435+00:00",
+  "moved_dollars": 0.8915,
+  "moved_tinybars": 1059746778,
+  "transactions": 1169,
+  "with_detail": 1169,
+  "without_rate": 0
+ },
+ "own_id_on_the_main_network": 7,
+ "own_id_used_on_the_test_network": 393,
+ "projects": 933,
+ "projects_on_the_main_network": [
+  {
+   "accounts_that_made_its_ids": {
+    "read": 1
+   },
+   "accounts_that_paid": 1,
+   "after_their_event": 0,
+   "days": 1,
+   "event": {
+    "site": "devfolio.co",
+    "slug": "ethdenver2025"
+   },
+   "failed": 0,
+   "fee_dollars": 0.101,
+   "fee_tinybars": 50760796,
+   "first": "2025-02-26T04:33:50.436608+00:00",
+   "hedera_prize": true,
+   "ids": [
+    {
+     "id": "0.0.8353144",
+     "kind": "account"
+    }
+   ],
+   "key": "hedera-agent-index-token-utilizing-dao-governance-3465",
+   "last": "2025-02-26T04:48:08.059862+00:00",
+   "made_by_the_same_accounts": {
+    "token": 2
+   },
+   "messages": 0,
+   "moved_dollars": 0.0995,
+   "moved_tinybars": 50000000,
+   "networks_named": {},
+   "services": [
+    "hbar",
+    "tokens"
+   ],
+   "site": "devfolio.co",
+   "transactions": 2,
+   "what": {
+    "CRYPTOCREATEACCOUNT": 1,
+    "moved SAUCE": 1
+   },
+   "with_detail": 2,
+   "without_rate": 0
+  },
+  {
+   "accounts_that_made_its_ids": {
+    "service": 1
+   },
+   "accounts_that_paid": 0,
+   "after_their_event": 0,
+   "days": 0,
+   "event": {
+    "site": "ethglobal.com",
+    "slug": "prague"
+   },
+   "failed": 0,
+   "fee_dollars": 0,
+   "fee_tinybars": 0,
+   "first": null,
+   "hedera_prize": false,
+   "ids": [
+    {
+     "id": "0.0.9224321",
+     "kind": "account"
+    }
+   ],
+   "key": "d-and-ai-gqs8u",
+   "last": null,
+   "made_by_the_same_accounts": {},
+   "messages": 0,
+   "moved_dollars": 0,
+   "moved_tinybars": 0,
+   "networks_named": {},
+   "services": [],
+   "site": "ethglobal.com",
+   "transactions": 0,
+   "what": {},
+   "with_detail": 0,
+   "without_rate": 0
+  },
+  {
+   "accounts_that_made_its_ids": {
+    "read": 1
+   },
+   "accounts_that_paid": 1,
+   "after_their_event": 0,
+   "days": 1,
+   "event": {
+    "site": "ethglobal.com",
+    "slug": "cannes"
+   },
+   "failed": 0,
+   "fee_dollars": 0.1615,
+   "fee_tinybars": 105624805,
+   "first": "2025-07-06T04:45:04.935344+00:00",
+   "hedera_prize": false,
+   "ids": [
+    {
+     "id": "0.0.9341088",
+     "kind": "contract"
+    }
+   ],
+   "key": "rampnet-xw7or",
+   "last": "2025-07-06T05:31:23.258140+00:00",
+   "made_by_the_same_accounts": {
+    "contract": 1
+   },
+   "messages": 0,
+   "moved_dollars": 0.0,
+   "moved_tinybars": 0,
+   "networks_named": {},
+   "services": [
+    "contracts"
+   ],
+   "site": "ethglobal.com",
+   "transactions": 3,
+   "what": {
+    "deployed the contract": 1,
+    "setPeer": 2
+   },
+   "with_detail": 3,
+   "without_rate": 0
+  },
+  {
+   "accounts_that_made_its_ids": {
+    "read": 1
+   },
+   "accounts_that_paid": 2,
+   "after_their_event": 0,
+   "days": 2,
+   "event": {
+    "site": "ethglobal.com",
+    "slug": "newdelhi"
+   },
+   "failed": 1,
+   "fee_dollars": 10.1733,
+   "fee_tinybars": 4819489548,
+   "first": "2025-09-27T22:56:16.518574+00:00",
+   "hedera_prize": false,
+   "ids": [
+    {
+     "id": "0.0.9990355",
+     "kind": "contract"
+    }
+   ],
+   "key": "memewarp-ymsfd",
+   "last": "2025-09-28T12:53:30.467927+00:00",
+   "made_by_the_same_accounts": {
+    "contract": 164
+   },
+   "messages": 0,
+   "moved_dollars": 0.0,
+   "moved_tinybars": 0,
+   "networks_named": {},
+   "services": [
+    "contracts"
+   ],
+   "site": "ethglobal.com",
+   "transactions": 46,
+   "what": {
+    "createMeme": 25,
+    "deployed the contract": 1,
+    "setCurveRelayer": 19,
+    "setRelayer": 1
+   },
+   "with_detail": 46,
+   "without_rate": 0
+  },
+  {
+   "accounts_that_made_its_ids": {
+    "read": 1
+   },
+   "accounts_that_paid": 1,
+   "after_their_event": 0,
+   "days": 3,
+   "event": {
+    "site": "devfolio.co",
+    "slug": "ethdenver2026"
+   },
+   "failed": 0,
+   "fee_dollars": 0.8258,
+   "fee_tinybars": 841424850,
+   "first": "2026-02-19T16:09:54.976887+00:00",
+   "hedera_prize": false,
+   "ids": [
+    {
+     "id": "0.0.10289158",
+     "kind": "topic"
+    }
+   ],
+   "key": "oculusvault-05f8",
+   "last": "2026-02-21T06:21:58.186703+00:00",
+   "made_by_the_same_accounts": {},
+   "messages": 981,
+   "moved_dollars": 0.0,
+   "moved_tinybars": 0,
+   "networks_named": {
+    "eip155:8453": 981
+   },
+   "services": [
+    "consensus"
+   ],
+   "site": "devfolio.co",
+   "transactions": 981,
+   "what": {
+    "AttackBlocked": 10,
+    "CircuitBreakerTripped": 1,
+    "ComputePaymentExecuted": 959,
+    "SellExecuted": 4,
+    "SwapExecuted": 7
+   },
+   "with_detail": 981,
+   "without_rate": 0
+  },
+  {
+   "accounts_that_made_its_ids": {
+    "read": 2
+   },
+   "accounts_that_paid": 4,
+   "after_their_event": 0,
+   "days": 2,
+   "event": {
+    "site": "ethglobal.com",
+    "slug": "ethonline2026"
+   },
+   "failed": 0,
+   "fee_dollars": 0.0705,
+   "fee_tinybars": 90589119,
+   "first": "2026-09-04T23:09:28.888640+00:00",
+   "hedera_prize": true,
+   "ids": [
+    {
+     "id": "0.0.10843717",
+     "kind": "account"
+    },
+    {
+     "id": "0.0.10843721",
+     "kind": "schedule"
+    },
+    {
+     "id": "0.0.10843725",
+     "kind": "schedule"
+    }
+   ],
+   "key": "aivy-quorum-1b5u1",
+   "last": "2026-09-05T04:58:01.146612+00:00",
+   "made_by_the_same_accounts": {
+    "schedule": 1,
+    "token": 3,
+    "topic": 2
+   },
+   "messages": 0,
+   "moved_dollars": 0.7838,
+   "moved_tinybars": 999746778,
+   "networks_named": {},
+   "services": [
+    "hbar",
+    "scheduled"
+   ],
+   "site": "ethglobal.com",
+   "transactions": 6,
+   "what": {
+    "CRYPTOCREATEACCOUNT": 1,
+    "CRYPTOTRANSFER": 2,
+    "SCHEDULECREATE": 2,
+    "the scheduled transaction ran": 1
+   },
+   "with_detail": 6,
+   "without_rate": 0
+  },
+  {
+   "accounts_that_made_its_ids": {
+    "read": 1
+   },
+   "accounts_that_paid": 2,
+   "after_their_event": 45,
+   "days": 11,
+   "event": {
+    "site": "ethglobal.com",
+    "slug": "ethonline2026"
+   },
+   "failed": 0,
+   "fee_dollars": 0.0328,
+   "fee_tinybars": 40339492,
+   "first": "2026-09-06T22:29:01.532852+00:00",
+   "hedera_prize": false,
+   "ids": [
+    {
+     "id": "0.0.10571514-1788733693-213156813",
+     "kind": "transaction"
+    },
+    {
+     "id": "0.0.10571514-1788735637-380133493",
+     "kind": "transaction"
+    },
+    {
+     "id": "0.0.10847557",
+     "kind": "topic"
+    }
+   ],
+   "key": "froggy-284ag",
+   "last": "2026-09-23T20:41:36.366435+00:00",
+   "made_by_the_same_accounts": {},
+   "messages": 129,
+   "moved_dollars": 0.0081,
+   "moved_tinybars": 10000000,
+   "networks_named": {
+    "eip155:8453": 109,
+    "hedera:mainnet": 20
+   },
+   "services": [
+    "consensus",
+    "hbar"
+   ],
+   "site": "ethglobal.com",
+   "transactions": 131,
+   "what": {
+    "CRYPTOTRANSFER": 2,
+    "paid": 108,
+    "sold": 21
+   },
+   "with_detail": 131,
+   "without_rate": 0
+  }
+ ],
+ "test": "mainnet",
+ "transactions_on_the_test_network": 141880,
+ "used_on_the_main_network_after_their_event": 1,
+ "what_they_did": {
+  "accounts_that_made_its_ids": {
+   "read": 7,
+   "service": 1
+  },
+  "made_by_the_same_accounts": {
+   "contract": 165,
+   "schedule": 1,
+   "token": 5,
+   "topic": 2
+  },
+  "networks_named": {
+   "eip155:8453": 1090,
+   "hedera:mainnet": 20
+  },
+  "what": {
+   "AttackBlocked": 10,
+   "CRYPTOCREATEACCOUNT": 2,
+   "CRYPTOTRANSFER": 4,
+   "CircuitBreakerTripped": 1,
+   "ComputePaymentExecuted": 959,
+   "SCHEDULECREATE": 2,
+   "SellExecuted": 4,
+   "SwapExecuted": 7,
+   "createMeme": 25,
+   "deployed the contract": 2,
+   "moved SAUCE": 1,
+   "paid": 108,
+   "setCurveRelayer": 19,
+   "setPeer": 2,
+   "setRelayer": 1,
+   "sold": 21,
+   "the scheduled transaction ran": 1
+  }
+ }
+}

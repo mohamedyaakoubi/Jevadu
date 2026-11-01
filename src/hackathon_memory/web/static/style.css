@@ -290,6 +290,29 @@ mark { background: color-mix(in oklab, var(--tblr-primary) 20%, transparent); co
 .hm-mainnet-table td.hm-mainnet-ids { white-space: normal; overflow-wrap: anywhere; min-width: 14rem; }
 .hm-mainnet-table td.text-end { font-variant-numeric: tabular-nums; }
 .hm-mainnet-id { display: block; }
+.hm-path-open { font-size: 0.8125rem; white-space: nowrap; }
+.hm-tag-open { text-decoration: none; }
+.hm-tag-open:hover .badge, .hm-tag-open:focus-visible .badge { box-shadow: 0 0 0 2px var(--hm-chart-all); }
+
+/* The path of a project on the main network (design 7.6), in the window: a line of time on the
+   left, a dot for each step, filled after the event; the days above what happened. */
+.hm-path-sheet { max-width: 78ch; }
+.hm-path { list-style: none; margin: 1.25rem 0 0; padding: 0; border-left: 2px solid var(--tblr-border-color); }
+.hm-path-line { position: relative; padding: 0 0 0.875rem 1.125rem; }
+.hm-path-line::before { content: ""; position: absolute; left: -7px; top: 0.3rem; width: 12px; height: 12px; border-radius: 50%; background: var(--tblr-bg-surface); border: 2px solid var(--hm-chart-all); }
+.hm-path-line.is-after::before { background: var(--hm-chart-all); }
+.hm-path-end::before { border-style: dashed; border-color: var(--tblr-secondary); }
+.hm-path-when { margin: 0; font-size: 0.8125rem; color: var(--tblr-secondary); font-variant-numeric: tabular-nums; }
+.hm-path-rel { margin-left: 0.25rem; font-weight: 600; }
+.hm-path-rel.hm-path-after { color: var(--tblr-body-color); }
+.hm-path-what { margin: 0.125rem 0 0; }
+.hm-path-word { font-family: var(--tblr-font-monospace); font-size: 0.875em; }
+.hm-path-note { margin: 0.5rem 0 0; }
+.hm-path-title { font-size: 1.125rem; font-weight: 700; margin: 1.5rem 0 0.25rem; }
+.hm-path-made { padding-left: 1.25rem; margin: 0.25rem 0 0; }
+.hm-path-made > li { margin-bottom: 0.5rem; }
+.hm-path-made ul { padding-left: 1.125rem; margin: 0.25rem 0 0; }
+.hm-path-source { margin-top: 1.25rem; }
 
 /* ------------------------------------------------------------------ the graph of a list */
 

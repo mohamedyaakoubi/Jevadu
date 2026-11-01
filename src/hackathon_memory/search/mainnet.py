@@ -187,10 +187,11 @@ def summary(conninfo: str, rows: Sequence[Facts]) -> Summary:
     )
 
 
-def days_between(first: datetime, last: datetime) -> str:
+def days_between(first: datetime | date, last: datetime | date) -> str:
     """The days from `first` to `last` in few words: "6 July 2025", "19 to 21 February 2026",
     "4 September to 5 October 2026", "26 February 2025 to 23 September 2026"."""
-    one, two = first.date(), last.date()
+    one = first.date() if isinstance(first, datetime) else first
+    two = last.date() if isinstance(last, datetime) else last
     if one == two:
         return f"{one.day} {one:%B %Y}"
     if (one.year, one.month) == (two.year, two.month):

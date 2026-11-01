@@ -29,6 +29,9 @@
     python -m hackathon_memory.pipeline mainnet            what each transaction of the own IDs
                                                            on the main network cost and moved,
                                                            read once (--limit N, design 7.6)
+    python -m hackathon_memory.pipeline mainnet_what       what each of those transactions did,
+                                                           and what the accounts that made the
+                                                           IDs made there (design 7.6)
     python -m hackathon_memory.pipeline timeline           the code of projects that came back,
                                                            at the end of each event, and how it
                                                            changed, asked of GitHub once
@@ -55,8 +58,9 @@ rule needs it and no page gives it (design 7.2). "readmes", "code", "hedera_code
 ask GitHub's API, which the maintainer allowed, and only when the switch COLLECT_GITHUB is on in
 .env; --wait lets them wait for the end of a cooldown (design 7.3). "check" asks the Hedera mirror
 node, a public API made for programs, and no site (design rule 17); so do "history",
-"contract_calls", "makers" and "mainnet", which are not part of "all" (evals/ledger_story, design
-7.5 and 7.6).
+"contract_calls", "makers", "mainnet" and "mainnet_what", which are not part of "all"
+(evals/ledger_story, design 7.5 and 7.6); "mainnet_what" also asks GitHub's API for the Solidity
+files of a project whose contract has calls not explained yet, when COLLECT_GITHUB is on.
 "embed" calls
 Google's embedding model through the meter and its budget (design 11.4). "cards" calls the
 REWRITE layer of Gemini, through the meter too, for the pages of a set only: it is not part of
@@ -115,6 +119,7 @@ from hackathon_memory.pipeline import (
     hedera_code,
     history,
     mainnet,
+    mainnet_what,
     makers,
     parse_pages,
     readmes,
@@ -179,6 +184,7 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
             contract_calls.STEP,
             makers.STEP,
             mainnet.STEP,
+            mainnet_what.STEP,
             refresh.STEP,
             ALL,
         ],
@@ -462,6 +468,11 @@ def _run_step(
         elif step == mainnet.STEP:
             mirrors = services.mirrors or {"mainnet": MirrorNode("mainnet")}
             mainnet.read_mainnet(MainnetStore(conninfo), mirrors, run, limit=arguments.limit)
+        elif step == mainnet_what.STEP:
+            mirrors = services.mirrors or {"mainnet": MirrorNode("mainnet")}
+            client, note = _github_client(settings, arguments, run)
+            mainnet_what.explain_mainnet(MainnetStore(conninfo), mirrors,
+                                         mainnet_what.solidity_of(client), run)  # fmt: skip
         elif step == refresh.STEP:
             mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
             client, note = _github_client(settings, arguments, run)
@@ -510,6 +521,9 @@ def _run_step(
         lines = makers.maker_lines(run) + _problem_lines(run, "Not asked, and why:")
     elif step == mainnet.STEP:
         lines = mainnet.mainnet_lines(run) + _problem_lines(run, "Not read, and why:")
+    elif step == mainnet_what.STEP:
+        lines = mainnet_what.mainnet_what_lines(run) + ([note] if note else [])
+        lines += _problem_lines(run, "Not read, and why:")
     elif step == refresh.STEP:
         lines = refresh.refresh_lines(run) + ([note] if note else [])
         lines += _problem_lines(run, "Stopped or not done, and why:")

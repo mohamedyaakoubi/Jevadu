@@ -11,21 +11,29 @@ accounts that paid. The view "Mainnet" counts in the same way, for the list on t
 (search/mainnet.py). The transactions are those of the histories of the own IDs, with what the step
 `mainnet` read about each; the file says how many have no detail yet.
 
-It writes evals/results/<UTC time>-mainnet.json, in numbers and the IDs of the ledger only: a
-project is named by its site and its key there, its event by its site and its short name in the
-address, never by a text of a page. The counts are those of the day the file was made.
+It also counts what those transactions did (design 7.6, the step `mainnet_what`), in the words of
+the ledger and of the projects' own code: the kind that a message gives itself, the function of a
+call, the words of the tool for a deployment or a schedule that ran, else the kind of the
+transaction; the networks that the messages name (CAIP-2); and the things that the accounts which
+made the own IDs also made on the main network, by kind, with how many of those accounts were
+followed and how many are services. These totals are summed over the projects.
+
+It writes evals/results/<UTC time>-mainnet.json, in numbers, the IDs of the ledger and those words
+only: a project is named by its site and its key there, its event by its site and its short name
+in the address, never by a text of a page. The counts are those of the day the file was made.
 """
 
 from __future__ import annotations
 
 import json
 import sys
+from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
 from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
-from hackathon_memory.search import filters, mainnet
+from hackathon_memory.search import filters, mainnet, mainnet_path
 from hackathon_memory.settings import Settings
 
 RESULTS = Path(__file__).parent / "results"
@@ -48,10 +56,35 @@ def _used(used: mainnet.Used) -> dict:
     }
 
 
+def _did(conninfo: str, project_id: int) -> dict:
+    """What the transactions of a project's own IDs did, and what the accounts that made them
+    also made, from the path of the window (search/mainnet_path.py)."""
+    path = mainnet_path.path_of(conninfo, project_id)
+    what: Counter[str] = Counter()
+    made: Counter[str] = Counter()
+    makers: Counter[str] = Counter()
+    for step in path.steps if path else ():
+        what[step.what or step.name or "unknown"] += step.count
+    for one in path.made if path else ():
+        makers[one.followed or "not read"] += 1
+        made.update(dict(one.counts))
+    return {"what": dict(what.most_common()),
+            "networks_named": dict(path.networks) if path else {},
+            "messages": path.messages if path else 0,
+            "made_by_the_same_accounts": dict(sorted(made.items())),
+            "accounts_that_made_its_ids": dict(sorted(makers.items()))}  # fmt: skip
+
+
 def counts(conninfo: str, *, models: Sequence[str], version: str, now: datetime) -> dict:
     """The main network in the whole collection, in numbers and the IDs of the ledger."""
     found = mainnet.summary(conninfo, filters.facts(conninfo, models=models, version=version,
                                                     now=now))  # fmt: skip
+    did = {one.project_id: _did(conninfo, one.project_id) for one in found.projects}
+    keys = ("what", "networks_named", "made_by_the_same_accounts", "accounts_that_made_its_ids")
+    totals: dict[str, Counter[str]] = {key: Counter() for key in keys}
+    for one in did.values():
+        for key, counter in totals.items():
+            counter.update(one[key])
     return {
         "test": "mainnet",
         "made_on": now.date().isoformat(),
@@ -63,6 +96,8 @@ def counts(conninfo: str, *, models: Sequence[str], version: str, now: datetime)
         "own_id_on_the_main_network": len(found.projects),
         "used_on_the_main_network_after_their_event": found.used_after,
         "on_the_main_network": _used(found.used),
+        "what_they_did": {key: dict(counter.most_common()) for key, counter in totals.items()},
+        "messages": sum(one["messages"] for one in did.values()),
         "projects_on_the_main_network": [
             {
                 "site": one.page[0],
@@ -75,6 +110,7 @@ def counts(conninfo: str, *, models: Sequence[str], version: str, now: datetime)
                 "services": list(one.services),
                 "after_their_event": one.after,
                 **_used(one.used),
+                **did[one.project_id],
             }
             for one in found.projects
         ],
