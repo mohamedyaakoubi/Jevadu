@@ -1153,6 +1153,7 @@ Rules for every test:
 - **The number:** how many of the known similar projects appear in the first 10 results.
 - **What is compared:** the page as it is against the LLM fields, and one embedding model against another.
 - **Code against model, on the same pages.** A card made by code alone is made for every page. The model reads the 15 pages for tuning and the 60 pages of Test 1. On those 60, the maintainer marks once which Hedera services each page names and which theme fits. Code then scores each way against these marks: the search, the services, the theme, and the cost of a page. The rule for "better" is written before the run, and the first layer runs on all pages only after it.
+- **Where the known projects stand (1 November 2026).** Gemini puts the 30 projects closest in meaning in order (section 8.2), so it can bring into the first 10 only the known projects that those 30 hold. On the counted cases of Test 2, 36 of the 57 known projects are in the first 10 by meaning (63.2%), 50 in the first 30 (87.7%) and 54 in the first 50 (94.7%) (`evals/search_pool.py`, `evals/results/20261101T222148Z-search-pool.json`). So the pool already holds enough for the pass mark of 80%: what is missing is the order inside it. In the run of 24 October 2026 with Gemini's order, 42 of 57 (73.7%), 20 of the 56 searches lost Gemini's answer and kept the order by meaning (`evals/results/20261024T051625Z-search-fallback.json`).
 
 ### 13.4 Test 3: Hedera IDs and the proof rule
 
