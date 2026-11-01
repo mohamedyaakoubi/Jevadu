@@ -17,7 +17,9 @@ from hackathon_memory.search.filters import (
     allowed,
     choices,
     facts,
+    joined,
     keep_chosen,
+    values_of,
 )
 from searchfakes import ids_of, three_projects
 
@@ -43,10 +45,19 @@ def test_no_filter_keeps_every_project() -> None:
         (Filters(life="stopped"), [2, 3]),
         (Filters(proof="proof_found", life="stopped"), [3]),  # every filter must match
         (Filters(event="7", category="Health"), []),
+        (Filters(event="7|8"), [1, 2, 3]),  # several values of one filter: any of them
+        (Filters(event="7|8", life="stopped"), [2, 3]),  # and every filter still
     ],
 )
 def test_each_filter_keeps_the_projects_that_have_its_value(chosen: Filters, kept: list) -> None:
     assert allowed(ROWS, chosen) == kept
+
+
+def test_the_values_of_a_filter_have_one_text_whatever_their_order() -> None:
+    """One choice has one address and one key of a kept order (1 November 2026)."""
+    assert joined(["8|7", "7", " ", ""]) == "7|8"
+    assert values_of("7|8") == ("7", "8") and values_of("") == ()
+    assert Filters(event="7|8").values("event") == ("7", "8")
 
 
 def test_the_choices_are_the_values_that_the_projects_have() -> None:
@@ -71,6 +82,8 @@ def test_a_chosen_value_stays_offered_when_the_closest_projects_lack_it() -> Non
     assert kept.proof == offer.proof  # a filter not chosen is left as it was
     unknown = keep_chosen(offer, every, Filters(year="2019"))  # a value that no project has
     assert [c.value for c in unknown.year] == ["2026"]
+    several = keep_chosen(offer, every, Filters(event="8|9|99"))  # each value apart; 99: none
+    assert [(c.value, c.count) for c in several.event] == [("7", 2), ("8", 0), ("9", 0)]
 
 
 def test_the_facts_come_from_the_tables(empty_database: str) -> None:

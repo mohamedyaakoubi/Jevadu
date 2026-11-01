@@ -466,6 +466,31 @@ def test_projects_that_share_only_an_account_show_no_timeline(site) -> None:  # 
     ) in links
 
 
+def test_a_filter_keeps_several_values_at_once(site) -> None:  # noqa: ANN001
+    """Two events ticked in the event filter keep the projects of both, and one keeps its own
+    (design 8.2, 1 November 2026); the boxes say which values are ticked, and the links of the
+    page keep both values in one parameter."""
+    client, _, ids, database = site
+    pebble, cedar = ids["Pebble Pay"], ids["Cedar Post"]
+    with psycopg.connect(database) as conn:
+        (first,) = conn.execute("SELECT event_id FROM projects WHERE id = %s",
+                                (pebble,)).fetchone()  # fmt: skip
+        (later,) = conn.execute(
+            "INSERT INTO events (site, slug, name, ends_on) "
+            "VALUES ('ethglobal.com', 'later', 'Later', '2026-06-14') RETURNING id"
+        ).fetchone()
+        conn.execute("UPDATE projects SET event_id = %s WHERE id = %s", (later, cedar))
+    one = client.get("/", params={"event": str(later)}).text
+    assert "1 project matches the filters" in one
+    assert f"/project/{cedar}/panel" in one and f"/project/{pebble}/panel" not in one
+    both = client.get(f"/?event={first}&event={later}").text
+    assert "3 projects match the filters" in both
+    assert f"/project/{cedar}/panel" in both and f"/project/{pebble}/panel" in both
+    for event in (first, later):
+        assert f'name="event" value="{event}" checked' in both
+    assert "event=" + "%7C".join(sorted([str(first), str(later)])) in both
+
+
 def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: ANN001
     """What the code says about Hedera (design 7.3): a line for each kind of thing found, each
     thing with its files, linked at the commit that was read; code that was not read says so."""
@@ -929,7 +954,7 @@ def test_the_mainnet_filter_keeps_the_teams_on_the_main_network(site) -> None:  
         conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
                      "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
     page = client.get("/").text
-    assert 'name="mainnet"' in page and ">Yes (1)</option>" in page and ">No (2)</option>" in page
+    assert 'name="mainnet"' in page and ">Yes (1)</span>" in page and ">No (2)</span>" in page
     kept = client.get("/", params={"mainnet": "yes"}).text
     assert "1 project matches the filters" in kept and f"/project/{pebble}/panel" in kept
     left = client.get("/", params={"mainnet": "no"}).text
@@ -1296,7 +1321,7 @@ def test_the_filters_offer_what_the_projects_have(site) -> None:  # noqa: ANN001
     page = client.get("/")
     assert 'name="event"' in page.text and 'name="life"' in page.text
     assert "ETHGlobal Sample Event (3)" in page.text
-    assert 'name="organiser"' in page.text and ">ETHGlobal (3)</option>" in page.text
+    assert 'name="organiser"' in page.text and ">ETHGlobal (3)</span>" in page.text
     assert f"{PAYMENTS} (1)" in page.text  # the one card of the fixture
     assert "1 of 3 projects have one" in page.text
 
@@ -1327,15 +1352,15 @@ def test_the_prize_filter_keeps_the_winners_and_those_known_only_from_a_list(sit
         conn.execute("UPDATE projects SET entry_kind = 'winner_entry' WHERE id = %s",
                      (ids["Fern Vote"],))  # fmt: skip
     page = client.get("/").text
-    assert '<option value="hedera_prize">Won a Hedera prize (2)</option>' in page
-    assert '<option value="winners_list">Winners&#39; list only (1)</option>' in page
+    assert 'value="hedera_prize"><span>Won a Hedera prize (2)</span>' in page
+    assert 'value="winners_list"><span>Winners&#39; list only (1)</span>' in page
     assert 'value="other_prize"' not in page  # no project won another sponsor's prize here
     with psycopg.connect(database) as conn:
         conn.execute("UPDATE projects SET prize_state = 'other_prize' WHERE id = %s",
                      (ids["Pebble Pay"],))  # fmt: skip
     fresh = client.make()  # a running site reads the facts of its filters once a minute at most
     other = fresh.get("/").text
-    assert '<option value="other_prize">Won another sponsor&#39;s prize (1)</option>' in other
+    assert 'value="other_prize"><span>Won another sponsor&#39;s prize (1)</span>' in other
     assert order_of(fresh.get("/", params={"winner": "other_prize"}).text) == [
         str(ids["Pebble Pay"])
     ]

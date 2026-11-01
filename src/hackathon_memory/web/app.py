@@ -995,14 +995,6 @@ def create_app(
         idea: str = "",
         mode: str = "",
         ai: str = "",
-        event: str = "",
-        year: str = "",
-        category: str = "",
-        proof: str = "",
-        life: str = "",
-        winner: str = "",
-        organiser: str = "",
-        mainnet: str = "",
         open: str = "",  # noqa: A002  (the name in the address)
         page: str = "1",
         view: str = "",
@@ -1037,9 +1029,9 @@ def create_app(
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
         page_number = int(page) if page.isdigit() and int(page) > 0 else 1
         open_id = int(open) if open.isdigit() else None
-        asked = filtering.Filters(event=event, year=year, category=category, proof=proof,
-                                  life=life, winner=winner, organiser=organiser,
-                                  mainnet=mainnet)  # fmt: skip
+        # A filter's values come in one parameter, or in one for each value (the page's boxes).
+        asked = filtering.Filters(**{name: filtering.joined(request.query_params.getlist(name))
+                                     for name in FILTERS})  # fmt: skip
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
                 "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,
@@ -1052,12 +1044,15 @@ def create_app(
                 return render(request, "search.html", asked=False, **down)
             return render(request, "search.html", 503, asked=True, **down)
         notes = [public_note] if public_note else []
-        unknown = [name for name, value in asked.chosen().items() if not every.knows(name, value)]
+        known = {name: [value for value in asked.values(name) if every.knows(name, value)]
+                 for name in asked.chosen()}  # fmt: skip
+        unknown = [name for name, values in known.items() if len(values) < len(asked.values(name))]
         if unknown:
             notes.append("No project has the value given for "
                          + " or ".join(FILTER_WORDS[name] for name in unknown)
-                         + ", so that filter was left out.")  # fmt: skip
-        chosen = filtering.Filters(**{k: v for k, v in asked.chosen().items() if k not in unknown})
+                         + ", so that value was left out.")  # fmt: skip
+        chosen = filtering.Filters(**{name: filtering.joined(values)
+                                      for name, values in known.items()})  # fmt: skip
         values = {"idea": idea, "mode": mode, "ai": "1" if with_ai else "", "view": view,
                   **chosen.chosen()}  # fmt: skip
         only = filtering.allowed(project_facts(conninfo), chosen)

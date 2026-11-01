@@ -7,7 +7,7 @@
 <form id="ask" class="hm-ask-form" method="get" action="/" role="search" aria-label="Search past projects"
       hx-get="/" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
       hx-push-url="true" hx-sync="this:replace" hx-indicator="#workspace" hx-disinherit="*"
-      hx-trigger="submit, change[target.matches('.hm-filters select, .hm-way input')]">
+      hx-trigger="submit, change[target.matches('.hm-filters input, .hm-way input')]">
   <section class="card hm-idea" aria-labelledby="hero-title">
     <div class="card-body">
       <h1 class="hm-title" id="hero-title">Is your idea new on Hedera?</h1>
@@ -53,14 +53,14 @@
     {% if offer %}
     {% set picked = chosen.chosen() %}
     <div class="hm-filters" role="group" aria-label="Filters">
-      {{ parts.filter_select("organiser", "Organiser", "All organisers", offer.organiser, chosen.organiser, "organiser") }}
-      {{ parts.filter_select("event", "Event", "All events", offer.event, chosen.event, "event") }}
-      {{ parts.filter_select("year", "Year", "All", offer.year, chosen.year) }}
-      {{ parts.filter_select("category", "Category", "All categories", offer.category, chosen.category, "category") }}
-      {{ parts.filter_select("proof", "Hedera proof", "Any result", offer.proof, chosen.proof, "proof") }}
-      {{ parts.filter_select("mainnet", "Mainnet", "Any", offer.mainnet, chosen.mainnet, "mainnet") }}
-      {{ parts.filter_select("life", "Activity", "Any", offer.life, chosen.life, "life") }}
-      {{ parts.filter_select("winner", "Prize", "All projects", offer.winner, chosen.winner, "winner") }}
+      {{ parts.filter_select("organiser", "Organiser", "All organisers", offer.organiser, chosen.values("organiser"), "organiser") }}
+      {{ parts.filter_select("event", "Event", "All events", offer.event, chosen.values("event"), "event") }}
+      {{ parts.filter_select("year", "Year", "All", offer.year, chosen.values("year")) }}
+      {{ parts.filter_select("category", "Category", "All categories", offer.category, chosen.values("category"), "category") }}
+      {{ parts.filter_select("proof", "Hedera proof", "Any result", offer.proof, chosen.values("proof"), "proof") }}
+      {{ parts.filter_select("mainnet", "Mainnet", "Any", offer.mainnet, chosen.values("mainnet"), "mainnet") }}
+      {{ parts.filter_select("life", "Activity", "Any", offer.life, chosen.values("life"), "life") }}
+      {{ parts.filter_select("winner", "Prize", "All projects", offer.winner, chosen.values("winner"), "winner") }}
       <noscript><button class="btn btn-sm" type="submit">Apply filters</button></noscript>
       {% if picked %}<a class="btn btn-sm btn-ghost-secondary hm-clear-filters" href="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-get="/{{ '?' ~ unfiltered_query if unfiltered_query }}" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML" hx-push-url="true">Clear filters</a>{% endif %}
       {% if asked %}<p class="hm-filters-note">The counts are for the {{ offer.projects }} projects closest to your idea.</p>{% endif %}
@@ -173,7 +173,7 @@
   <div data-step data-element="#idea" data-side="bottom"><h3>Your idea</h3><p>Describe what your project does and who it is for. One sentence is enough, and the results update as you type.</p></div>
   <div data-step data-element=".hm-way" data-side="bottom"><h3>Two ways to search</h3><p>Keyword search finds the words of your idea in the pages of the projects. Semantic search finds the projects that mean the same thing in other words.</p></div>
   <div data-step data-element=".hm-ai-group" data-side="bottom"><h3>Sort and compare with Gemini</h3><p>Gemini puts the closest projects in order and says, for the first ten, what they share with your idea and how they differ. It never scores a project: you judge.</p></div>
-  <div data-step data-element=".hm-filters" data-side="bottom"><h3>Filters</h3><p>Keep one organiser, hackathon, year or category, or the projects by what the ledger shows of their Hedera use, the main network included, by their activity, or by their prizes.</p></div>
+  <div data-step data-element=".hm-filters" data-side="bottom"><h3>Filters</h3><p>Keep one or more organisers, hackathons, years or categories (tick several values of one filter), or the projects by what the ledger shows of their Hedera use, the main network included, by their activity, or by their prizes.</p></div>
   <div data-step data-element="#result-list" data-side="top"><h3>The projects</h3><p>Each card is a past project: what its page said, and what its Hedera IDs did on the ledger. Click one to open its full card over the list.</p></div>
   <div data-step data-element=".hm-switches" data-side="bottom"><h3>Other views</h3><p>See the same list as charts, or as a graph of groups of similar projects.</p></div>
   <div data-step data-element=".hm-check" data-side="left"><h3>Check a submission</h3><p>Paste a GitHub repository. Jevadu reads its README and its code, looks up its Hedera IDs on the ledger, and finds the most similar past projects. A team can then register its submission on Hedera.</p></div>

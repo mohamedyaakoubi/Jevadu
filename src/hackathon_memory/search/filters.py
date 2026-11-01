@@ -18,6 +18,10 @@ another sponsor and no Hedera prize is a choice of its own (28 October 2026).
 The choices that the page offers are the values that the projects really have, each with its
 number of projects. A value that a request names but no project has is left out, and the page
 says so.
+
+A filter can keep several values (1 November 2026): a project that has any of them stays, and the
+filters still all apply together. The address holds the values of one filter in one text, joined
+by SEPARATOR, or in the parameter given once for each value, as the boxes of the page send them.
 """
 
 from __future__ import annotations
@@ -52,11 +56,25 @@ MAINNET_WORDS = {YES: "Yes", NO: "No"}
 PROOF_ORDER = (*[status for status in listing.STATUS_WORDS if status], NOT_CHECKED)
 PROOF_WORDS = {**{k: v for k, v in listing.STATUS_WORDS.items() if k},
                NOT_CHECKED: listing.STATUS_WORDS[None]}  # fmt: skip
+SEPARATOR = "|"  # between the values of one filter; no value holds it
+
+
+def values_of(text: str) -> tuple[str, ...]:
+    """The values of one filter, from its text."""
+    return tuple(value for value in text.split(SEPARATOR) if value)
+
+
+def joined(texts: Iterable[str]) -> str:
+    """The values of one filter, given in one text or several, as one text: each value once and
+    always in the same order, so that one choice has one address and one key of a kept order."""
+    found = {value.strip() for text in texts for value in text.split(SEPARATOR)}
+    return SEPARATOR.join(sorted(value for value in found if value))
 
 
 @dataclass(frozen=True)
 class Filters:
-    """The values chosen on the page; an empty text is "all"."""
+    """The values chosen on the page; an empty text is "all", and several values of one filter
+    are joined by SEPARATOR."""
 
     event: str = ""  # the number of an event
     year: str = ""
@@ -69,6 +87,10 @@ class Filters:
 
     def chosen(self) -> dict[str, str]:
         return {f.name: getattr(self, f.name) for f in fields(self) if getattr(self, f.name)}
+
+    def values(self, name: str) -> tuple[str, ...]:
+        """The values chosen for one filter: one, several, or none for "all"."""
+        return values_of(getattr(self, name))
 
 
 @dataclass(frozen=True)
@@ -181,12 +203,14 @@ def facts(
 
 
 def allowed(rows: Sequence[Facts], chosen: Filters) -> list[int] | None:
-    """The projects that match every chosen filter, or None when no filter is chosen."""
-    wanted = chosen.chosen()
+    """The projects that match every chosen filter, or None when no filter is chosen. A filter
+    with several values keeps a project that has any of them."""
+    wanted = {name: values_of(text) for name, text in chosen.chosen().items()}
     if not wanted:
         return None
     return [row.project_id for row in rows
-            if all(_has(getattr(row, k), v) for k, v in wanted.items())]  # fmt: skip
+            if all(any(_has(getattr(row, k), v) for v in values)
+                   for k, values in wanted.items())]  # fmt: skip
 
 
 def _has(fact: str | tuple[str, ...], value: str) -> bool:
@@ -202,14 +226,15 @@ def _counted(values: Iterable[str], order: Sequence[str] | None = None) -> list[
 
 def keep_chosen(offer: Choices, every: Choices, chosen: Filters) -> Choices:
     """`offer`, with each chosen value that it lacks added with no project, so that a filter of
-    a search keeps its value on the page even when none of the closest projects has it."""
+    a search keeps its values on the page even when none of the closest projects has them."""
     lists = {}
-    for name, value in chosen.chosen().items():
+    for name, text in chosen.chosen().items():
         options = list(getattr(offer, name))
-        if not any(choice.value == value for choice in options):
-            known = next((c for c in getattr(every, name) if c.value == value), None)
-            if known is not None:
-                options.append(Choice(known.value, known.words, 0))
+        for value in values_of(text):
+            if not any(choice.value == value for choice in options):
+                known = next((c for c in getattr(every, name) if c.value == value), None)
+                if known is not None:
+                    options.append(Choice(known.value, known.words, 0))
         lists[name] = options
     return replace(offer, **lists)
 
