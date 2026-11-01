@@ -69,6 +69,7 @@ _ENTITY_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}$")
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
 _TRANSACTION_HASH = re.compile(r"^0x[0-9a-fA-F]{64}(?:[0-9a-fA-F]{32})?$")
 _TRANSACTION_ID = re.compile(r"^\d{1,10}\.\d{1,10}\.\d{1,12}-\d{1,11}-\d{1,9}$")
+_STAMP = re.compile(r"^\d{1,12}\.\d{1,9}$")  # a moment of consensus
 _BEFORE = re.compile(r"timestamp=lte?:(\d+\.\d+)")
 _AFTER = re.compile(r"timestamp=gte?:(\d+\.\d+)")
 
@@ -211,6 +212,24 @@ class MirrorNode:
         if not _TRANSACTION_ID.match(transaction_id):
             raise MirrorError(f"not a transaction id: {transaction_id!r}")
         return self._get(f"/transactions/{transaction_id}")
+
+    def transaction_at(self, stamp: str) -> dict | None:
+        """The transaction of one moment of consensus, such as "1771517394.976887000", or None.
+        Read on 1 November 2026: /transactions?timestamp= gives the list "transactions" with the
+        one transaction of that moment, with "charged_tx_fee", "transfers" and
+        "staking_reward_transfers" (check/mainnet.py)."""
+        if not _STAMP.match(stamp):
+            raise MirrorError(f"not a moment of consensus: {stamp!r}")
+        found = (self._get(f"/transactions?timestamp={stamp}") or {}).get("transactions") or []
+        return next((one for one in found if one.get("consensus_timestamp") == stamp), None)
+
+    def exchange_rate(self, stamp: str) -> dict | None:
+        """The exchange rate that the network used for its fees at a moment of consensus. Read on
+        1 November 2026: "current_rate" with "cent_equivalent", "hbar_equivalent" and
+        "expiration_time", the top of the next hour."""
+        if not _STAMP.match(stamp):
+            raise MirrorError(f"not a moment of consensus: {stamp!r}")
+        return self._get(f"/network/exchangerate?timestamp={stamp}")
 
     def topic_message(self, topic_id: str, sequence_number: int) -> dict | None:
         return self._get(f"/topics/{self._entity(topic_id)}/messages/{int(sequence_number)}")

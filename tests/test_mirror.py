@@ -482,3 +482,26 @@ def test_the_transactions_of_one_moment_are_asked_in_a_narrow_time() -> None:
     mirror, site, _ = node({path: reply({"transactions": [made], "links": {"next": None}})})
     assert mirror.transactions_at(since, until) == [made]
     assert site.urls == [path]
+
+
+def test_a_transaction_is_asked_by_its_moment_with_the_rate_of_that_moment() -> None:
+    """Read on 1 November 2026: /transactions?timestamp= gives the one transaction of a moment,
+    and /network/exchangerate?timestamp= the rate that the network used for its fees then."""
+    stamp = "1780000000.000000001"
+    one = {"consensus_timestamp": stamp, "name": "CONSENSUSSUBMITMESSAGE", "charged_tx_fee": 865}
+    rate = {"current_rate": {"cent_equivalent": 292_291, "hbar_equivalent": 30_000,
+                             "expiration_time": 1_780_002_000}}  # fmt: skip
+    mirror, site, _ = node({
+        f"{BASE}/transactions?timestamp={stamp}": reply({"transactions": [one]}),
+        f"{BASE}/network/exchangerate?timestamp={stamp}": reply(rate),
+        f"{BASE}/transactions?timestamp=1780000060.000000002": reply({"transactions": []}),
+    })  # fmt: skip
+    assert mirror.transaction_at(stamp) == one
+    assert mirror.exchange_rate(stamp) == rate
+    assert mirror.transaction_at("1780000060.000000002") is None  # no transaction at that moment
+    for wrong in ("0.0.5-1780000000-1", "1780000000", "1780000000.0000000001"):
+        with pytest.raises(MirrorError):
+            mirror.transaction_at(wrong)
+        with pytest.raises(MirrorError):
+            mirror.exchange_rate(wrong)
+    assert len(site.seen) == 3

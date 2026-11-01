@@ -26,6 +26,9 @@
                                                            contracts, around its event (--limit N)
     python -m hackathon_memory.pipeline makers             who made each own contract, topic,
                                                            token and schedule (--limit N)
+    python -m hackathon_memory.pipeline mainnet            what each transaction of the own IDs
+                                                           on the main network cost and moved,
+                                                           read once (--limit N, design 7.6)
     python -m hackathon_memory.pipeline timeline           the code of projects that came back,
                                                            at the end of each event, and how it
                                                            changed, asked of GitHub once
@@ -52,7 +55,8 @@ rule needs it and no page gives it (design 7.2). "readmes", "code", "hedera_code
 ask GitHub's API, which the maintainer allowed, and only when the switch COLLECT_GITHUB is on in
 .env; --wait lets them wait for the end of a cooldown (design 7.3). "check" asks the Hedera mirror
 node, a public API made for programs, and no site (design rule 17); so do "history",
-"contract_calls" and "makers", which are not part of "all" (evals/ledger_story, design 7.5).
+"contract_calls", "makers" and "mainnet", which are not part of "all" (evals/ledger_story, design
+7.5 and 7.6).
 "embed" calls
 Google's embedding model through the meter and its budget (design 11.4). "cards" calls the
 REWRITE layer of Gemini, through the meter too, for the pages of a set only: it is not part of
@@ -92,6 +96,7 @@ from hackathon_memory.db.contract_calls import ContractCallStore
 from hackathon_memory.db.embeddings import EmbeddingStore
 from hackathon_memory.db.history import HistoryStore
 from hackathon_memory.db.ledger import LedgerStore
+from hackathon_memory.db.mainnet import MainnetStore
 from hackathon_memory.db.makers import MakerStore
 from hackathon_memory.db.projects import CHANGED, NEW, SAME, ProjectStore
 from hackathon_memory.db.repositories import RepositoryStore
@@ -109,6 +114,7 @@ from hackathon_memory.pipeline import (
     embed,
     hedera_code,
     history,
+    mainnet,
     makers,
     parse_pages,
     readmes,
@@ -172,6 +178,7 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
             history.STEP,
             contract_calls.STEP,
             makers.STEP,
+            mainnet.STEP,
             refresh.STEP,
             ALL,
         ],
@@ -204,12 +211,12 @@ def _arguments(argv: list[str]) -> argparse.Namespace:
         )
     if arguments.limit is not None and (arguments.export_file or arguments.restore_file):
         raise ValueError("--limit goes with --set, not with --export or --restore")
-    reading_steps = (history.STEP, contract_calls.STEP, makers.STEP)
+    reading_steps = (history.STEP, contract_calls.STEP, makers.STEP, mainnet.STEP)
     limited = is_parse or is_embed or is_cards or arguments.step in reading_steps
     if arguments.limit is not None and (not limited or arguments.limit < 1):
         raise ValueError(
-            "--limit goes with parse, embed, cards, history, contract_calls or makers, and must be "
-            "1 or more"
+            "--limit goes with parse, embed, cards, history, contract_calls, makers or mainnet, "
+            "and must be 1 or more"
         )
     if arguments.max_age_days is not None and (not is_check or arguments.max_age_days < 0):
         raise ValueError("--max-age-days goes with check, and must be 0 or more")
@@ -452,6 +459,9 @@ def _run_step(
         elif step == makers.STEP:
             mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
             makers.read_makers(MakerStore(conninfo), mirrors, run, limit=arguments.limit)
+        elif step == mainnet.STEP:
+            mirrors = services.mirrors or {"mainnet": MirrorNode("mainnet")}
+            mainnet.read_mainnet(MainnetStore(conninfo), mirrors, run, limit=arguments.limit)
         elif step == refresh.STEP:
             mirrors = services.mirrors or {name: MirrorNode(name) for name in MIRROR_URLS}
             client, note = _github_client(settings, arguments, run)
@@ -498,6 +508,8 @@ def _run_step(
         lines = contract_calls.contract_call_lines(run) + _problem_lines(run, "Not read, and why:")
     elif step == makers.STEP:
         lines = makers.maker_lines(run) + _problem_lines(run, "Not asked, and why:")
+    elif step == mainnet.STEP:
+        lines = mainnet.mainnet_lines(run) + _problem_lines(run, "Not read, and why:")
     elif step == refresh.STEP:
         lines = refresh.refresh_lines(run) + ([note] if note else [])
         lines += _problem_lines(run, "Stopped or not done, and why:")

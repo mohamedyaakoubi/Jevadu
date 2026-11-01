@@ -419,6 +419,12 @@ class StandInMirror:
         self.since: dict[str, datetime | None] = {}  # account -> the start of its history
         self.made: list[dict] = []  # the transactions that made things (transactions_at)
         self.moments: list[tuple[datetime, datetime]] = []  # what transactions_at was asked
+        # The main network in detail (check/mainnet.py): the transaction of each moment, the
+        # answer about the exchange rate, and what was asked, kept apart from `asked`.
+        self.at_moment: dict[str, dict] = {}
+        self.rate: dict | None = None
+        self.moments_asked: list[str] = []
+        self.rates_asked: list[str] = []
 
     @property
     def requests_made(self) -> int:
@@ -456,6 +462,14 @@ class StandInMirror:
         return [one for one in self.made
                 if since <= datetime.fromtimestamp(float(one["consensus_timestamp"]), UTC) < until
                 ][:limit]  # fmt: skip
+
+    def transaction_at(self, stamp: str) -> dict | None:
+        self.moments_asked.append(stamp)
+        return self.at_moment.get(stamp)
+
+    def exchange_rate(self, stamp: str) -> dict | None:
+        self.rates_asked.append(stamp)
+        return self.rate
 
     def _end(
         self,
