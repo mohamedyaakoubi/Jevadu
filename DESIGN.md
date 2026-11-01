@@ -234,6 +234,7 @@ For an event whose submissions are not public, the only thing left is the organi
 | ETHGlobal's showcase | Simple requests. A walk through one list of the showcase finds the winners, and a run reads their pages (section 5.7). |
 | DoraHacks, list of an event's projects | A real browser driven by a program, because the list is built in the browser. Only after written permission. |
 | DoraHacks, one project page | A simple request. Only after written permission. |
+| Devfolio | Its own data service, the one that its pages use: a search of projects, sent as JSON, finds the events and the projects of each Hedera track, and one simple request reads each project (section 5.7). |
 | A project's README | The GitHub API (section 7.3). |
 | Winner posts | One simple request, or a copy made by hand when the server refuses a program. |
 
@@ -310,6 +311,7 @@ Checked on 9 October 2026.
 | ETHGlobal's showcase | Projects tied to Hedera at ETHGlobal's events | Yes | Asked on 9 October 2026. **It agreed in writing** to a slow, signed read of its Hedera prize projects (section 5.7). This is the first source. |
 | DoraHacks | Africa 2025, Hello Future Origins 2025 | Yes | Forbidden without its written permission. Asked on 9 October 2026. No answer yet. |
 | Devpost | Hedera21, Hedera22 | Yes | **Refused on 9 October 2026.** No program ever touches Devpost. A person may browse the galleries and link to the pages. |
+| Devfolio | ETHDenver 2024, 2025 and 2026, and PEC Hacks: every project of a Hedera prize track | Yes | Its terms (effective 29 December 2020) have no clause on automated access, and its robots.txt closes nothing; read on 31 October 2026. Read in the same slow, signed way as ETHGlobal's showcase (section 5.7). |
 | StackUp, which is part of AngelHack | Hello Future Ascension 2025, Hello Future Apex 2026 | No | The submissions are private, so there is nothing to collect. |
 | The Hello Future site, by AngelHack | The winners of Origins and Ascension, later Apex | Yes | AngelHack's terms ask for written consent. Asked on 9 October 2026. No answer yet. |
 | 4hacks | The 12 campus editions of the Hedera Cross Campus Challenge 2026 | No | Excluded. The organiser keeps submissions private. |
@@ -319,7 +321,7 @@ Checked on 9 October 2026.
 
 For four events no submission site was found at all. The platforms of Hedera18 and Hedera20 no longer exist. These events get winner entries (section 4.6).
 
-**What the table shows.** Almost every site that holds the submissions either forbids a program or hides the projects behind a sign-in. So a memory of all Hedera hackathons cannot be built by a program alone. It needs the sites or the organisers to agree, or to hand over the data. This is the honest limit of the idea.
+**What the table shows.** Almost every site that holds the submissions either forbids a program or hides the projects behind a sign-in. Devfolio is the exception: its terms have no clause on automated access (31 October 2026). So a memory of all Hedera hackathons cannot be built by a program alone. It needs the sites or the organisers to agree, or to hand over the data. This is the honest limit of the idea.
 
 **One rule about who can say yes.** An organiser can agree for its own site and its own data. It cannot agree for another company's site.
 
@@ -361,6 +363,14 @@ The way a site is read is fixed in the code, with a test for each rule. ETHGloba
 - 732 requests were sent to the site over both collections, out of the limit of 800.
 
 ---
+
+
+**Devfolio (31 October 2026).** Devfolio was not asked: its terms have no clause on automated access and its robots.txt closes nothing. It is read in the same way all the same, with a switch of its own, the tool's name and the maintainer's address in each request, one request at a time with a pause, a count of requests on disk with a limit of 1,000, and a refusal remembered. Its pages build themselves from Devfolio's data service, so the tool asks that service directly, as the pages do:
+
+- **The find.** The search of projects, sent as JSON, with the word "hedera" and no event, meets the events where a project entered a track of a Hedera sponsor. Each such event's own page data then gives its dates and all its tracks with their sponsors, and the search lists every project of each Hedera track. The find keeps the names of the projects, their events and the ids of the tracks: no text of a project and no person, not even the judges that an event's data names. On 31 October 2026: 1,276 projects of all Devfolio carried the word, 4 events had a Hedera track, and 107 projects entered one.
+- **The read.** One request for each project. The answer holds the project, its members and its event; it is saved without its members.
+- **A trap.** Devfolio files some prizes of a track under another sponsor: the first prizes of ETHDenver 2025's Hedera tracks sit under "Organizer". So a prize belongs to the track whose name it carries, and the sponsor of that track decides whether it is a prize of Hedera. A prize that no track names, such as "Winner", is the event's own.
+- **What it does not meet.** An event whose Hedera tracks no project with the word "hedera" entered.
 
 ## 6. Steps 2 and 3: Parse and Read
 
