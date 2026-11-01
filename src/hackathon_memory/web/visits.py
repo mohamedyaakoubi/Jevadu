@@ -91,6 +91,8 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
     if len(parts) >= 2 and parts[0] == "project" and parts[1].isdigit():
         if parts[-1] == "read-again":
             return "read-again", {"project": int(parts[1])}
+        if parts[-1] == "mainnet":
+            return "mainnet-path", {"project": int(parts[1])}
         return "card", {"project": int(parts[1])}
     if path == "/check" and params.get("repo"):
         return "check", {k: params[k][:LONGEST] for k in ("repo", "event", "starts", "ends")
@@ -211,6 +213,7 @@ def described(one: Action, projects: Mapping[int, str], events: Mapping[str, str
         "register": f"registration, step {detail.get('step')}",
         "about": f"read the note “{detail.get('note')}”",
         "read-again": f"asked to read {named} again",
+        "mainnet-path": f"opened the path of {named} on the main network",
     }.get(one.action, one.action)
     if one.action == "check":
         event = detail.get("event", "")

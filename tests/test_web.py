@@ -927,7 +927,10 @@ def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site)
         return client.get(f"/project/{pebble}/panel").text
 
     during = datetime(2026, 3, 7, tzinfo=UTC)  # the event: from 6 March 2026
-    assert '<span class="badge bg-green-lt">Mainnet</span>' in named("mainnet", during)
+    # on the card, the tag opens the project's path on the main network (design 7.6)
+    card = named("mainnet", during)
+    assert f'class="hm-tag-open" href="/project/{pebble}/mainnet"' in card
+    assert '<span class="badge bg-green-lt">Mainnet<span aria-hidden="true">' in card
     found = client.get("/", params={"idea": "help a street vendor get paid with a coin"}).text
     assert '<span class="badge bg-green-lt">Mainnet</span>' in found  # and on the result
     assert "Mainnet" not in named(None, during)  # named with no network
@@ -1026,6 +1029,47 @@ def test_the_view_mainnet_counts_what_the_own_ids_did_on_the_main_network(site) 
     other = client.get("/", params={"view": "mainnet", "mainnet": "no"}).text
     assert "0 of 2 projects put their own ID on Hedera's main network" in other
     assert "No project of this list put an own ID on the main network." in other
+
+
+def test_the_path_on_the_main_network_opens_from_the_view_and_from_the_card(site) -> None:  # noqa: ANN001
+    """The window of a project's path on the main network (design 7.6, 1 November 2026): opened
+    from a row of the view Mainnet and from the tag "Mainnet" of a card, in the window over the
+    page; a page of its own without htmx; none for a project that put nothing there."""
+    from hackathon_memory.check.mainnet_what import Thing
+    from hackathon_memory.db.mainnet import MainnetStore
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    one, _ = put_on_mainnet(database, pebble)
+    store = MainnetStore(database)
+    store.explain(one, "paid", ("eip155:8453",), MAINNET_ASKED)
+    store.save_thing(Thing("0.0.4517", "topic", datetime(2026, 3, 7, tzinfo=UTC), "0.0.7001",
+                           name="shop receipts", fields=("kind", "network"), messages=2),
+                     MAINNET_ASKED)  # fmt: skip
+    store.save_thing(Thing("0.0.4600", "token", datetime(2026, 3, 8, tzinfo=UTC), "0.0.7001",
+                           name="Side Token (SIDE)", held_by_others=0), MAINNET_ASKED)  # fmt: skip
+    store.mark_followed("0.0.7001", "read", MAINNET_ASKED)
+    address = f"/project/{pebble}/mainnet"
+    assert f'data-sheet="{address}"' in client.get("/", params={"view": "mainnet"}).text
+    assert f'class="hm-tag-open" href="{address}" data-sheet="{address}"' in (
+        client.get(f"/project/{pebble}/panel").text)  # fmt: skip
+    window = client.get(address, headers={"HX-Request": "true"})
+    assert window.status_code == 200
+    text = window.text
+    assert 'id="sheet-title"' in text and "Pebble Pay on Hedera's main network" in text
+    assert "Made the topic" in text and "&ldquo;shop receipts&rdquo;, by 0.0.7001." in text
+    assert 'class="hm-path-word">paid</span>' in text  # the kind that the message gives itself
+    assert "Base</span>" not in text and "Base <span" in text and "(eip155:8453)" in text
+    assert "No transaction of its own IDs on the main network" in text
+    assert "to the reading of 1 November 2026" in text
+    assert "Side Token (SIDE)" in text and "no other account holds it now" in text
+    assert "<html" not in text  # a part of the page, for the window
+    page = client.get(address)
+    assert page.status_code == 200 and "Back to the search" in page.text  # a page of its own
+    nothing = client.get(f"/project/{ids['Fern Vote']}/mainnet", headers={"HX-Request": "true"})
+    assert nothing.status_code == 404
+    assert "put no own ID on Hedera" in nothing.text
+    assert 'id="tip-mainnet-path"' in client.get("/").text  # its (i) explains it
 
 
 def test_the_sites_own_files_are_never_run_old(site) -> None:  # noqa: ANN001

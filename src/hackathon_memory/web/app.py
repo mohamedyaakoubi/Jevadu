@@ -52,6 +52,7 @@ from hackathon_memory import __version__
 from hackathon_memory.check import submission
 from hackathon_memory.check.history import MAX_EVENTS
 from hackathon_memory.check.life import NOT_OVER
+from hackathon_memory.check.mainnet_what import SCHEDULE_RAN
 from hackathon_memory.check.proof import PROOF_FOUND
 from hackathon_memory.collect import github
 from hackathon_memory.collect.answers import Answers
@@ -83,7 +84,7 @@ from hackathon_memory.llm.card_form import INSTRUCTIONS_VERSION
 from hackathon_memory.llm.client import credentials_of, vercel_token
 from hackathon_memory.pipeline import refresh as refresh_step
 from hackathon_memory.pipeline.embed import FAILED_CALLS
-from hackathon_memory.search import closeness, engine, listing, rerank, seen, stand_in
+from hackathon_memory.search import closeness, engine, listing, mainnet_path, rerank, seen, stand_in
 from hackathon_memory.search import compare as comparing
 from hackathon_memory.search import counts as counting
 from hackathon_memory.search import filters as filtering
@@ -218,6 +219,7 @@ PROOF_SHORT = {
     "dates_not_judged": "IDs found, no hackathon chosen",
 }
 NO_SUCH_PROJECT = "There is no project with this ID. Close this window and search again."
+NO_MAINNET_PATH = "This project put no own ID on Hedera's main network. Close this window."
 SERVER_FAILED = (
     "Something went wrong on the server, so this cannot be shown. Please try again in a minute."
 )
@@ -1788,6 +1790,21 @@ def create_app(
         return render(request, "_panel.html", card=card, back_query=back, idea=idea,
                       kept_comparison=kept, linked=linked, timeline=line)  # fmt: skip
 
+    @app.get("/project/{project_id}/mainnet", response_class=HTMLResponse)
+    def project_mainnet(request: Request, project_id: int) -> HTMLResponse:
+        """The path of a project on Hedera's main network (design 7.6), for the window over the
+        page; a page of its own without htmx. Read from the tables, with no request."""
+        try:
+            path = mainnet_path.path_of(database(), project_id)
+        except (SettingsError, psycopg.OperationalError):
+            return render(request, "_problem.html", 503, problem=DATABASE_DOWN)
+        if path is None:
+            return render(request, "_problem.html", 404, problem=NO_MAINNET_PATH)
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "_mainnet_path.html", path=path)
+        return render(request, "about.html", path=path, about_part="_mainnet_path.html",
+                      about_title=f"{path.name} on Hedera's main network")  # fmt: skip
+
     def read_again_shown(
         request: Request, project_id: int, state: refreshing.State | None
     ) -> HTMLResponse:
@@ -1986,6 +2003,8 @@ def create_app(
         "lines_to_show": data.lines_to_show,
         "NETWORK_WORDS": data.NETWORK_WORDS,
         "ACTION_WORDS": data.ACTION_WORDS,
+        "CAIP2_NAMES": data.CAIP2_NAMES,
+        "SCHEDULE_RAN": SCHEDULE_RAN,
         "KIND_WORDS": data.KIND_WORDS,
         "SERVICE_NAMES": data.SERVICE_NAMES,
         "SERVICE_SUBJECTS": data.SERVICE_SUBJECTS,

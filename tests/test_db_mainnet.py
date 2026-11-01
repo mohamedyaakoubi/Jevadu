@@ -27,6 +27,7 @@ from hackathon_memory.parse.hedera_ids import TOPIC
 from hackathon_memory.pipeline.mainnet import STEP, read_mainnet
 from hackathon_memory.pipeline.mainnet_what import STEP as WHAT
 from hackathon_memory.pipeline.mainnet_what import explain_mainnet
+from hackathon_memory.search.mainnet_path import path_of
 
 pytestmark = pytest.mark.integration
 
@@ -147,3 +148,19 @@ def test_a_mark_of_following_keeps_who_made_the_thing(database: str) -> None:
     with psycopg.connect(database) as conn:
         kept = dict(conn.execute("SELECT entity_id, followed FROM mainnet_things").fetchall())
     assert kept == {"0.0.5004": "read", "0.0.7003": "service"}
+
+
+def test_the_path_of_the_window_reads_what_was_kept(database: str) -> None:
+    """The path that the window of a project shows (search/mainnet_path.py), from the tables."""
+    project_id = explained(database)
+    path = path_of(database, project_id)
+    assert path is not None and path.own[0].name == "our log"
+    (step,) = path.steps
+    assert (step.what, step.name, step.count, step.failed) == (
+        "paid", "CONSENSUSSUBMITMESSAGE", 2, 0)  # fmt: skip
+    assert path.networks == (("eip155:8453", 2),) and path.messages == 2
+    assert path.last == datetime.fromtimestamp(1780000060, UTC) and path.read_on == ASKED
+    (made,) = path.made
+    assert (made.account, made.of, made.followed) == ("0.0.7001", (("topic", TOPIC_ID),), "read")
+    assert [(one[0], one[3], one[4]) for one in made.things] == [("0.0.6100", "Side (SD)", 0)]
+    assert path_of(database, project_id + 1) is None  # no project, no path
