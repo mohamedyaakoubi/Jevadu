@@ -1860,6 +1860,33 @@ def test_the_window_shows_the_steps_of_a_check_and_then_its_answer(site, chromiu
 
 
 @pytest.mark.browser
+def test_the_hackathons_of_a_check_can_be_searched(site, chromium) -> None:  # noqa: ANN001
+    """The box above the list of hackathons keeps those whose name holds its words, and Enter
+    picks the first; "None" and "Other hackathon" always stay (1 November 2026)."""
+    client, _, _, database = site
+    event = checkable(database)
+    with psycopg.connect(database) as conn:
+        conn.execute(
+            "INSERT INTO events (site, slug, name, starts_at, ends_on) VALUES "
+            "('ethglobal.com', 'later', 'Later Summit', '2026-06-10', '2026-06-14')"
+        )
+    page = served(chromium, client, reduced_motion="reduce")
+    page.goto("http://site.test/")
+    shown = "[...document.querySelectorAll('#check-event option')].filter(o => !o.hidden)" \
+            ".map(o => o.textContent)"  # fmt: skip
+    assert any("Later Summit" in name for name in page.evaluate(shown))
+    page.fill("#check-event-search", "sample")
+    kept = page.evaluate(shown)
+    assert not any("Later Summit" in name for name in kept)
+    assert kept[0].startswith("None") and kept[-1].startswith("Other hackathon")
+    page.press("#check-event-search", "Enter")
+    assert page.input_value("#check-event") == event
+    assert page.input_value("#check-event-search") == ""  # the whole list is back
+    assert any("Later Summit" in name for name in page.evaluate(shown))
+    page.context.close()
+
+
+@pytest.mark.browser
 def test_a_project_of_a_check_opens_over_it_and_the_check_comes_back(site, chromium) -> None:  # noqa: ANN001
     client, fake, _, database = site
     event = checkable(database)
