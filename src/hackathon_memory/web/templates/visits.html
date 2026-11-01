@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{# What the visitors of the public copy did, for the copy's owner only (design 12.5, screen S9,
+   1 November 2026). Unlisted, never indexed. #}
+{% block title %}Visits: Jevadu{% endblock %}
+{% block skip_target %}main{% endblock %}
+{% block skip_words %}Skip to the content{% endblock %}
+{% block main %}
+<div class="page-own hm-visits">
+  <p class="page-back"><a href="/owner">&lsaquo; Back to the sign-in</a></p>
+  <h1 class="about-title mb-3">Visits of the public copy</h1>
+  <p class="text-secondary">Seen by the copy's owner only. A visitor is a salted code, never an address or a name; the place is the one that Vercel finds for the address. The copy's owner is left out. Delete the record with <code>python -m hackathon_memory.web.visits delete --yes</code>.</p>
+
+  <section class="card mb-3" aria-labelledby="budget-title"><div class="card-body">
+    <h2 id="budget-title" class="h3">The public budget</h2>
+    <p>{{ "%.2f" | format(budget.spent) }} of {{ "%.2f" | format(budget.total) }} dollars spent, <b>{{ "%.2f" | format(budget.left) }} left</b>. Today, in UTC: {{ "%.2f" | format(budget.today) }} of the {{ "%.2f" | format(budget.daily) }} of a day.</p>
+  </div></section>
+
+  <section class="card mb-3" aria-labelledby="all-title"><div class="card-body">
+    <h2 id="all-title" class="h3">In all</h2>
+    <p>{{ visits | length }} visitor{{ "s" if visits | length != 1 }}, {{ actions_count }} action{{ "s" if actions_count != 1 }}.</p>
+    {% for title, key in (("Places", "places"), ("Came from", "sources"), ("Projects opened", "projects"), ("Searches", "ideas"), ("Checks", "checks"), ("Actions", "actions")) %}
+    {% if summary[key] %}<h3 class="h4">{{ title }}</h3>
+    <ul>{% for value, count in summary[key] %}<li>{% if key == "projects" %}<a href="/project/{{ value }}">{{ projects.get(value, value) }}</a>{% else %}{{ value }}{% endif %}: {{ count }}</li>{% endfor %}</ul>{% endif %}
+    {% endfor %}
+  </div></section>
+
+  {% for visit, lines in visits %}
+  <section class="card mb-3"><div class="card-body">
+    <h2 class="h3">{{ visit.place or "Place not known" }} &middot; {{ visit.device }}</h2>
+    <p class="hm-small text-secondary">Visitor {{ visit.visitor }}, from {{ visit.first | moment }} to {{ visit.last | moment }}{% if visit.referrer %}; came from {{ visit.referrer }}{% endif %}.</p>
+    <ol class="hm-small">{% for at, words in lines %}<li>{{ at | moment }}: {{ words }}</li>{% endfor %}</ol>
+  </div></section>
+  {% else %}
+  <p>No visit is noted yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}
