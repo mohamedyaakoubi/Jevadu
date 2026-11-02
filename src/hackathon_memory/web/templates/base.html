@@ -17,7 +17,9 @@
 <script>
 /* Before the page is drawn: the theme chosen with the switch at the top of the page, or else the
    light or dark look of the computer; a search that the person has not cleared comes back (design
-   12.1); and the first page of a visit shows the name of the tool, unless less motion is asked. */
+   12.1), but an address with no idea and no filter is forgotten, so the plain address opens the
+   first page; and the first page of a visit shows the name of the tool, unless less motion is
+   asked. */
 (function () {
   var root = document.documentElement;
   var chosen = null;
@@ -29,7 +31,11 @@
     var here = window.location;
     if (here.pathname === "/" && !here.search) {
       var last = window.localStorage.getItem("hm-last");
-      if (last) { here.replace("/?" + last); return; }
+      var kept = new URLSearchParams(last || "");
+      if ({{ KEPT_SEARCH | tojson }}.some(function (word) { return kept.get(word); })) {
+        here.replace("/?" + last); return;
+      }
+      window.localStorage.removeItem("hm-last");
     }
     if (!window.sessionStorage.getItem("hm-seen") &&
         !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {

@@ -173,6 +173,9 @@ MODES = (MEANING, WORDS)
 DEFAULT_MODE = WORDS
 FILTERS = ("event", "year", "category", "proof", "life", "winner", "organiser", "mainnet")
 SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
+# The words that make a kept address a search, which a later visit brings back (design 12.1): an
+# idea or a filter. A view or the way of searching alone is not a search (2 November 2026).
+KEPT_SEARCH = ("idea", *FILTERS)
 CHARTS = "charts"
 GRAPH = "graph"
 MAINNET = "mainnet"
@@ -1973,6 +1976,7 @@ def create_app(
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,
         "PROOF_SHORT": PROOF_SHORT,
+        "KEPT_SEARCH": KEPT_SEARCH,
         "CODE_WORDS": listing.CODE_WORDS,
         "WINNER_ENTRY": "winner_entry",
         "NOT_ASKED": submission.NOT_ASKED,
