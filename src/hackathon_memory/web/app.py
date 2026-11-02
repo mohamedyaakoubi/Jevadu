@@ -176,6 +176,9 @@ SEARCH_PARAMS = ("idea", "mode", "ai", *FILTERS, "view")
 # The words that make a kept address a search, which a later visit brings back (design 12.1): an
 # idea or a filter. A view or the way of searching alone is not a search (2 November 2026).
 KEPT_SEARCH = ("idea", *FILTERS)
+# The pitch deck's PDF, which the host serves itself from the public folder (out of git); its
+# link, visits.PITCH_DECK, goes through the site first so that the visit is noted (S9).
+PITCH_FILE = "/deck/jevadu-pitch.pdf"
 CHARTS = "charts"
 GRAPH = "graph"
 MAINNET = "mainnet"
@@ -631,6 +634,13 @@ def create_app(
     @app.get("/robots.txt", response_class=PlainTextResponse)
     def robots() -> str:
         return public_copy.ROBOTS
+
+    @app.get(visits.PITCH_DECK)
+    def pitch_deck() -> RedirectResponse:
+        """The pitch deck's PDF, at the link the submission form gives: the middleware notes the
+        visit, then the visitor is sent on to the file. A 302 is never kept by a browser, so each
+        opening is noted (2 November 2026)."""
+        return RedirectResponse(PITCH_FILE, 302)
 
     @app.post("/person-check")
     async def person_check(request: Request) -> Response:

@@ -30,6 +30,7 @@ def test_each_request_says_what_a_visitor_did() -> None:
     assert action_of("/check", {"repo": "github.com/a/b", "event": "7676"}) == (
         "check", {"repo": "github.com/a/b", "event": "7676"})  # fmt: skip
     assert action_of("/about/how", {}) == ("about", {"note": "how"})
+    assert action_of("/jevadu-pitch.pdf", {}) == ("deck", {})
     for nothing in ("/static/style.css", "/owner/visits", "/check/progress", "/health",
                     "/github/callback", "/_vercel/insights/view"):  # fmt: skip
         assert action_of(nothing, {}) is None
@@ -69,3 +70,4 @@ def test_an_action_reads_as_words() -> None:
         "searched “pay vendors” by meaning")  # fmt: skip
     assert words("check", {"repo": "github.com/a/b", "status": 429}) == (
         "checked github.com/a/b, answered 429")  # fmt: skip
+    assert words("deck", {}) == "opened the pitch deck"

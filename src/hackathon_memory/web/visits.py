@@ -2,7 +2,8 @@
 
 To learn what interests the visitors of the public copy, the jury of a hackathon above all, each
 action of a visitor is one row: a search and its words, the filters, a card opened, the graph or
-the charts, a check of a repository, a registration, a comparison by Gemini, a note read. A row
+the charts, a check of a repository, a registration, a comparison by Gemini, a note read, the pitch
+deck opened (its link goes through the copy, which then sends the visitor on to the file). A row
 keeps the visitor's salted code (web/public.py), never an address or a name; the place that
 Vercel finds for the address (its headers x-vercel-ip-country, -country-region and -city); the
 other site that the visitor came from, without its query; and the browser and the system, in two
@@ -32,6 +33,7 @@ FILTERS = ("event", "year", "category", "proof", "life", "winner", "organiser", 
 # No action of its own: files, sign-ins, the copy's own pages, and the steps of a running check.
 NOT_ACTIONS = ("/static/", "/_vercel/", "/owner", "/github/", "/health", "/robots.txt",
                "/person-check", "/check/progress")  # fmt: skip
+PITCH_DECK = "/jevadu-pitch.pdf"  # the link of the pitch deck's PDF that the submission form gives
 TYPING = timedelta(seconds=20)  # searches typed one after another count as the last one
 LONGEST = 300  # the characters kept of an address, a site, or the words of a search
 _BROWSERS = (("edg/", "Edge"), ("opr/", "Opera"), ("firefox/", "Firefox"), ("chrome/", "Chrome"),
@@ -71,6 +73,8 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
     of its own. `params` holds each parameter once, its values joined by |."""
     if any(path == one or path.startswith(one) for one in NOT_ACTIONS):
         return None
+    if path == PITCH_DECK:
+        return "deck", {}
     parts = [part for part in path.split("/") if part]
     if path == "/":
         detail = {k: params[k][:LONGEST] for k in ("idea", "mode", "ai", "view", "page")
@@ -214,6 +218,7 @@ def described(one: Action, projects: Mapping[int, str], events: Mapping[str, str
         "about": f"read the note “{detail.get('note')}”",
         "read-again": f"asked to read {named} again",
         "mainnet-path": f"opened the path of {named} on the main network",
+        "deck": "opened the pitch deck",
     }.get(one.action, one.action)
     if one.action == "check":
         event = detail.get("event", "")
