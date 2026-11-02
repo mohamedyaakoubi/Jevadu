@@ -16,5 +16,8 @@
 /data/*
 !/data/raw
 !/data/requests
+# Files shared by a link, served by the host from its CDN at the root of the address; the folder
+# is not in git.
+!/public
 **/__pycache__
 **/*.pyc
