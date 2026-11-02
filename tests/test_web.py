@@ -3397,6 +3397,26 @@ def test_the_last_search_comes_back_until_it_is_cleared(site, chromium) -> None:
     page.context.close()
 
 
+@pytest.mark.browser
+def test_a_view_alone_does_not_come_back_but_a_filter_does(site, chromium) -> None:  # noqa: ANN001
+    """With nothing searched, the switch "Mainnet" is not a search: the plain address opens the
+    first page, and the memory is forgotten (2 November 2026: the public copy kept going back to
+    ?view=mainnet). A filter is a search, and comes back with its view."""
+    client, _, _, _ = site
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto("http://site.test/")
+    page.locator('[aria-label="How to show the projects"] a[href*="view=mainnet"]').click()
+    page.wait_for_function("new URL(location.href).searchParams.get('view') === 'mainnet'")
+    page.goto("http://site.test/")
+    assert page.url == "http://site.test/"
+    assert page.evaluate("window.localStorage.getItem('hm-last')") is None
+    page.evaluate("window.localStorage.setItem('hm-last', 'proof=no_id_given&view=mainnet')")
+    page.goto("http://site.test/")
+    page.wait_for_function("new URL(location.href).searchParams.get('proof') === 'no_id_given'")
+    assert "view=mainnet" in page.url
+    page.context.close()
+
+
 AXE = Path(__file__).parent / "assets" / "axe.min.js"
 WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]
 
