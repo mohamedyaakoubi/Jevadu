@@ -650,3 +650,18 @@ def test_the_copy_notes_what_its_visitors_do_for_its_owner_only(site) -> None:  
         "This copy notes which pages and actions its visitors use"
         in public_site(client).get("/").text
     )
+
+
+def test_the_pitch_deck_link_is_noted_then_sends_on_to_the_file(site) -> None:  # noqa: ANN001, F811
+    """The link of the pitch deck's PDF goes through the copy, which notes the visit and sends the
+    visitor on to the file that the host serves; a 302, so that a browser never keeps it and each
+    opening is noted (2 November 2026)."""
+    client, _, _, database = site
+    copy = public_site(client)
+    first = copy.get("/jevadu-pitch.pdf", follow_redirects=False)
+    again = copy.get("/jevadu-pitch.pdf", follow_redirects=False)
+    assert first.status_code == again.status_code == 302
+    assert first.headers["location"] == "/deck/jevadu-pitch.pdf"
+    with psycopg.connect(database) as conn:
+        noted = conn.execute("SELECT action FROM visit_actions").fetchall()
+    assert noted == [("deck",), ("deck",)]
