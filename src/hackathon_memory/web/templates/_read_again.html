@@ -15,7 +15,7 @@
     {% endfor %}
   </ol>
   {% if failed %}
-  <p>{{ READING_PROBLEMS.get(state.problem, "Something went wrong while reading.") }} The card keeps what it read before.</p>
+  <p>{{ READING_PROBLEMS.get(state.problem, READING_FAILED) }} The card keeps what it read before.</p>
   <button type="button" class="btn btn-sm btn-outline-primary" hx-post="{{ again }}" hx-target="#read-{{ project_id }}" hx-swap="outerHTML">Try again</button>
   {% endif %}
 </aside>

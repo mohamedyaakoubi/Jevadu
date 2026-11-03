@@ -201,6 +201,7 @@ READING_STEP_WORDS = {
     refresh_step.HISTORIES: "The new transactions of its own IDs",
     refresh_step.CONTRACTS: "What the calls of its contracts reached",
 }
+READING_FAILED = "Something went wrong while reading."  # an error of no other kind
 READING_PROBLEMS = {
     "CollectorRefused": "GitHub refused the reading, or its limit for today is reached.",
     "MirrorError": "The mirror node did not answer.",
@@ -1983,6 +1984,7 @@ def create_app(
         "READING_STEPS": list(refresh_step.STEPS),
         "READING_STEP_WORDS": READING_STEP_WORDS,
         "READING_PROBLEMS": READING_PROBLEMS,
+        "READING_FAILED": READING_FAILED,
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,
         "PROOF_SHORT": PROOF_SHORT,
