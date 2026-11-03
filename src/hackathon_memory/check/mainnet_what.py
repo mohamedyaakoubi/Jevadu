@@ -34,6 +34,7 @@ from hiero_sdk_python.hapi.services.schedulable_transaction_body_pb2 import (
 from hiero_sdk_python.utils.crypto_utils import keccak256
 
 from hackathon_memory.check.mainnet import TINYBARS
+from hackathon_memory.check.setup import joined
 
 DEPLOYED = "deployed the contract"
 SCHEDULE_RAN = "the scheduled transaction ran"
@@ -60,6 +61,14 @@ LIBRARY_SOURCE = "a common library"
 _SCHEDULED_WORDS = {"tokenMint": "a token mint", "consensusSubmitMessage": "a message to a topic",
                     "contractCall": "a call of a contract", "tokenBurn": "a token burn",
                     "cryptoApproveAllowance": "an allowance"}  # fmt: skip
+# What a scheduled transaction acts on, named by its ID (3 November 2026): its words, the field of
+# the body that holds the ID, and the field of the ID that holds its number.
+_SCHEDULED_TARGETS = {
+    "tokenMint": ("a mint of the token", "token", "tokenNum"),
+    "tokenBurn": ("a burn of the token", "token", "tokenNum"),
+    "consensusSubmitMessage": ("a message to the topic", "topicID", "topicNum"),
+    "contractCall": ("a call of the contract", "contractID", "contractNum"),
+}
 
 
 @dataclass(frozen=True)
@@ -256,12 +265,30 @@ def scheduled_of(schedule: Mapping) -> Scheduled:
     if kind == "cryptoTransfer":
         credited = sum(one.amount for one in body.cryptoTransfer.transfers.accountAmounts
                        if one.amount > 0)  # fmt: skip
-        tokens = len(body.cryptoTransfer.tokenTransfers)
-        words = f"a transfer of {hbar_words(credited)}" if credited else "a transfer"
-        return Scheduled(memo, words + (f" and {tokens} token transfer{'s' * (tokens != 1)}"
-                                        if tokens else ""), executed)  # fmt: skip
+        moves = body.cryptoTransfer.tokenTransfers
+        tokens = sorted({_id_of(one.token, "tokenNum") for one in moves})
+        moved = [hbar_words(credited)] if credited else []
+        moved += [f"the token {one}" for one in tokens]
+        return Scheduled(memo, f"a transfer of {joined(moved)}" if moved else "a transfer",
+                         executed)  # fmt: skip
+    if kind in _SCHEDULED_TARGETS:
+        words, field, number = _SCHEDULED_TARGETS[kind]
+        part = getattr(body, kind)
+        if part.HasField(field):
+            return Scheduled(memo, f"{words} {_id_of(getattr(part, field), number)}", executed)
     return Scheduled(memo, _SCHEDULED_WORDS.get(kind or "", kind or "an empty transaction"),
                      executed)  # fmt: skip
+
+
+def _id_of(found: object, number: str) -> str:
+    """The ID that a part of a transaction's body names: "0.0.731861", or a contract's EVM
+    address when the body gives that instead (hiero-sdk-python 0.2.10: TokenID, TopicID and
+    ContractID hold shardNum, realmNum and their number; ContractID's oneof "contract" holds
+    contractNum or evm_address)."""
+    oneof = found.DESCRIPTOR.oneofs_by_name.get("contract")
+    if oneof is not None and found.WhichOneof("contract") == "evm_address":
+        return "0x" + found.evm_address.hex()
+    return f"{found.shardNum}.{found.realmNum}.{getattr(found, number)}"
 
 
 def token_words(token: Mapping) -> str | None:
@@ -274,10 +301,13 @@ def token_words(token: Mapping) -> str | None:
 
 
 def transfer_what(transaction: Mapping, symbols: Mapping[str, str]) -> str | None:
-    """What a transaction with tokens moved, by the symbols of its tokens: "moved SAUCE"; None for
-    any other transaction, whose kind says it all."""
+    """What a transaction with tokens moved, each token by its symbol and its ID: "moved SAUCE
+    (0.0.731861)". A symbol is only the name that a token's maker chose, and two tokens can share
+    one; the ID says which token it is (3 November 2026). None for any other transaction, whose
+    kind says it all."""
     tokens = [str(one.get("token_id")) for one in transaction.get("token_transfers") or ()
               if int(one.get("amount") or 0) > 0]  # fmt: skip
     tokens += [str(one.get("token_id")) for one in transaction.get("nft_transfers") or ()]
-    names = sorted({symbols.get(one, one) for one in tokens if one})
+    names = sorted({one if symbols.get(one, one) == one else f"{symbols[one]} ({one})"
+                    for one in tokens if one})  # fmt: skip
     return f"moved {', '.join(names[:3])}" if names else None

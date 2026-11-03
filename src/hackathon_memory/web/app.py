@@ -23,7 +23,7 @@ import math
 import re
 import secrets
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -201,6 +201,7 @@ READING_STEP_WORDS = {
     refresh_step.HISTORIES: "The new transactions of its own IDs",
     refresh_step.CONTRACTS: "What the calls of its contracts reached",
 }
+READING_FAILED = "Something went wrong while reading."  # an error of no other kind
 READING_PROBLEMS = {
     "CollectorRefused": "GitHub refused the reading, or its limit for today is reached.",
     "MirrorError": "The mirror node did not answer.",
@@ -554,9 +555,10 @@ def create_app(
     gate = limits.admit if limits is not None else None  # the meter asks it before each call
     salt = settings.public_salt.get_secret_value()
 
-    def note_visit(request: Request, key: str, status: int) -> None:
+    def note_visit(request: Request, key: str, status: int, failed: Sequence[str] = ()) -> None:
         """One action of a visitor of the public copy, kept for the copy's owner (design 12.5,
-        S9). A visit that cannot be noted never stops the page."""
+        S9), with what failed for the visitor. A visit that cannot be noted never stops the
+        page."""
         params = {name: "|".join(request.query_params.getlist(name))
                   for name in dict.fromkeys(request.query_params.keys())}  # fmt: skip
         found = visits.action_of(request.url.path, params)
@@ -565,6 +567,8 @@ def create_app(
         action, detail = found
         if status >= 400:
             detail = {**detail, "status": status}
+        if failed:
+            detail = {**detail, "failed": list(failed[: visits.FAILURES_KEPT])}
         where = request.url.path + (f"?{request.url.query}" if request.url.query else "")
         try:
             visits.record(database(), key[:12], action, detail, where,
@@ -591,15 +595,25 @@ def create_app(
             token = public_copy.visitor.set(who)
         oidc = request.headers.get("x-vercel-oidc-token")
         signed = vercel_token.set(oidc) if oidc else None
+        noted = who is not None and not who.owner  # what a visitor did (S9)
+        failed: list[str] = []  # filled by visits.failed() while the request is served
+        listed = visits.failures.set(failed) if noted else None
         try:
             response = await call_next(request)
+        except Exception as error:
+            if noted:  # the page that says so is made outside this middleware
+                failed.append(visits.unexpected(error))
+                await run_in_threadpool(note_visit, request, who.key, 500, failed)
+            raise
         finally:
             if token is not None:
                 public_copy.visitor.reset(token)
             if signed is not None:
                 vercel_token.reset(signed)
-        if who is not None and not who.owner:  # what a visitor did, for the copy's owner (S9)
-            await run_in_threadpool(note_visit, request, who.key, response.status_code)
+            if listed is not None:
+                visits.failures.reset(listed)
+        if noted:
+            await run_in_threadpool(note_visit, request, who.key, response.status_code, failed)
         extra = public_copy.PUBLIC_HEADERS if limits is not None else {}
         for name, value in {**public_copy.HEADERS, **extra}.items():
             response.headers[name] = value
@@ -833,6 +847,8 @@ def create_app(
         if asks_person and limits is not None and not name.startswith("_"):  # a whole page
             # the box of Cloudflare's Turnstile, until the visitor is found to be a person
             values.setdefault("person_check", None if person() else settings.turnstile_site_key)
+        if status >= 400:  # what stopped the visitor, in the page's words (S9)
+            visits.failed(values.get("problem") or values.get("refused"))
         return templates.TemplateResponse(request, name, values, status_code=status)
 
     def facts_of(conninfo: str, ids: list[int] | None) -> list[filtering.Facts]:
@@ -958,13 +974,19 @@ def create_app(
         def narrowed(ids: list[int]) -> list[int]:
             return ids if allowed is None else [pid for pid in ids if pid in allowed]
 
+        def failing(words: str, kind: str = "") -> None:
+            """A note that the search did not go as the visitor asked: on the page, and for the
+            copy's owner with the kind of the error when there is one (S9)."""
+            notes.append(words)
+            visits.failed(f"{words} ({kind})" if kind else words)
+
         try:
             if only == []:
                 return [], None, None
             if mode == WORDS:
                 return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
             if not EmbeddingStore(conninfo).counts(settings.gemini_embedding_model)["embeddings"]:
-                notes.append(NO_PAGE_EMBEDDINGS)
+                failing(NO_PAGE_EMBEDDINGS)
                 return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
             ranking = narrowed(engine.by_meaning(
                 EmbeddingStore(conninfo), client("google", "embed_query"), idea,
@@ -993,28 +1015,30 @@ def create_app(
                         breaker.answered()
                     return order + rest, how, "Gemini"
                 if how == rerank.SPENT:
-                    notes.append(spent())
+                    failing(spent())
                     return ranking, how, None
                 if not breaker.failed():
-                    notes.append(told(AI_LATE if how == rerank.LATE else AI_FAILED))
+                    failing(told(AI_LATE if how == rerank.LATE else AI_FAILED))
                     return ranking, how, None
             order, how = rerank.order_pool(
                 conninfo, standing_in("rerank", ask), idea, pool, model=stand_in.MODEL,
                 level=STAND_IN_LEVEL, scope=scope, timeout_seconds=STAND_IN_RERANK_SECONDS,
             )  # fmt: skip
             if how in rerank.ORDERED:
-                notes.append(told(STAND_IN_USED))
+                failing(told(STAND_IN_USED))
                 return order + rest, how, stand_in.NAME
-            notes.append(spent() if how == rerank.SPENT else told(BOTH_FAILED))
+            failing(spent() if how == rerank.SPENT else told(BOTH_FAILED))
             return ranking, how, None
         except (*FAILED_CALLS, BudgetExceeded) as error:
             # the kind of error only, for whoever runs the site: an expired sign-in to Google
             # (RefreshError) needs a new one, which the page cannot ask for
             LOG.warning("the search by meaning fell back to the words: %s", type(error).__name__)
             if isinstance(error, public_copy.Refused):
-                notes.append(used(public_copy.EMBED, "these are keyword results"))
+                failing(used(public_copy.EMBED, "these are keyword results"))
+            elif isinstance(error, BudgetExceeded):
+                failing(MEANING_SPENT)
             else:
-                notes.append(MEANING_SPENT if isinstance(error, BudgetExceeded) else GOOGLE_AWAY)
+                failing(GOOGLE_AWAY, type(error).__name__)
             return narrowed(engine.by_words(conninfo, idea, limit=SHOWN)), None, None
 
     def search_offer(conninfo: str, idea: str, mode: str, ranking: list[int],
@@ -1089,6 +1113,7 @@ def create_app(
                 return render(request, "search.html", asked=False, **down)
             return render(request, "search.html", 503, asked=True, **down)
         notes = [public_note] if public_note else []
+        visits.failed(public_note)  # the AI turned off, an allowance used, or no pass yet
         known = {name: [value for value in asked.values(name) if every.knows(name, value)]
                  for name in asked.chosen()}  # fmt: skip
         unknown = [name for name, values in known.items() if len(values) < len(asked.values(name))]
@@ -1340,6 +1365,10 @@ def create_app(
             progress(checks.COLLECTION, checks.DONE)
         except (SettingsError, psycopg.OperationalError):
             return 503, {"problem": DATABASE_DOWN}
+        for problem in result.problems:  # GitHub not asked, or not answering (S9)
+            visits.failed(problem)
+        if note != NO_README_TO_SEARCH:  # the closest past projects could not be found
+            visits.failed(note)
         found = result.code is not None and result.code.status == CODE_FOUND
         listed_one = days is not None and not days.typed
         view = register_view(repository, days) if found and listed_one else None
@@ -1753,18 +1782,23 @@ def create_app(
             return render(request, name, 202, problem=NOT_YET_VISIBLE, sent=True)
         return render(request, name, done=done, already=False, **values)
 
+    def problem_json(status: int, problem: str) -> JSONResponse:
+        """A problem that the page's script shows, noted for the copy's owner too (S9)."""
+        visits.failed(problem)
+        return JSONResponse({"problem": problem}, status)
+
     @app.get("/register/account")
     def register_account(address: str = "") -> JSONResponse:
         """The Hedera account of an EVM wallet's address, which the text that the team signs
         names (design 9.6). The wallet knows only the address; the mirror node gives the account."""
         if not re.fullmatch(r"0x[0-9a-fA-F]{40}", address):
-            return JSONResponse({"problem": "This is not an EVM address."}, 400)
+            return problem_json(400, "This is not an EVM address.")
         try:
             key = signing.account_key(mirror_nodes()["testnet"], address.lower())
         except MirrorError:
-            return JSONResponse({"problem": REGISTER_UNREAD}, 503)
+            return problem_json(503, REGISTER_UNREAD)
         if key is None:
-            return JSONResponse({"problem": NO_ACCOUNT_FOR_ADDRESS}, 404)
+            return problem_json(404, NO_ACCOUNT_FOR_ADDRESS)
         return JSONResponse({"account": key.account, "key": key.key_type})
 
     @app.get("/project/{project_id}", response_class=HTMLResponse)
@@ -1832,6 +1866,9 @@ def create_app(
                 return done
             shown = project_panel(request, project_id, request.query_params.get("idea", ""))
             return in_window(shown)
+        if state is not None and state.status == refreshing.FAILED:  # in the page's words (S9)
+            words = READING_PROBLEMS.get(state.problem or "", READING_FAILED)
+            visits.failed(f"{words} ({state.problem})" if state.problem else words)
         return render(request, "_read_again.html", project_id=project_id, state=state,
                       query=query, page=request.query_params.get("page") == "1")  # fmt: skip
 
@@ -1839,9 +1876,11 @@ def create_app(
     def read_again_now(request: Request, project_id: int) -> HTMLResponse:
         """S2: read GitHub and the mirror node again for one project, before the next round."""
         if not person():
+            visits.failed(PERSON_FIRST)
             return HTMLResponse(f'<p class="hm-small">{escape(PERSON_FIRST)}</p>', 403)
         if not allowed(public_copy.REFRESH):
             words = used(public_copy.REFRESH)
+            visits.failed(words)
             return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 429)
         return read_again_shown(request, project_id, reader.ask(project_id))
 
@@ -1918,7 +1957,8 @@ def create_app(
         except public_copy.Refused:
             return render(request, "_compare.html", 429, found={}, failed=True,
                           asked_ids=project_ids, refused=used(public_copy.AI), **place)  # fmt: skip
-        except failures:
+        except failures as error:
+            visits.failed(f"The comparison could not be generated ({type(error).__name__}).")
             return render(request, "_compare.html", 503, found={}, failed=True,
                           asked_ids=project_ids, **place)  # fmt: skip
         return render(request, "_compare.html", found=found, failed=False, asked_ids=project_ids,
@@ -1965,6 +2005,7 @@ def create_app(
 
     templates.env.filters["day"] = day
     templates.env.filters["moment"] = moment
+    templates.env.filters["id_links"] = data.id_links
     templates.env.filters["iso_day"] = iso_day
     templates.env.filters["said"] = data.said
     templates.env.filters["casefold"] = str.casefold
@@ -1983,6 +2024,7 @@ def create_app(
         "READING_STEPS": list(refresh_step.STEPS),
         "READING_STEP_WORDS": READING_STEP_WORDS,
         "READING_PROBLEMS": READING_PROBLEMS,
+        "READING_FAILED": READING_FAILED,
         "PRIZE_WORDS": listing.PRIZE_WORDS,
         "STATUS_WORDS": listing.STATUS_WORDS,
         "PROOF_SHORT": PROOF_SHORT,
@@ -2001,6 +2043,9 @@ def create_app(
         "REF_NUMBER": references.NUMBER,
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
+        "ids_in": data.ids_in,
+        "ledger_ids": data.ledger_ids,
+        "one_network": data.one_network,
         "days_between": on_mainnet.days_between,
         "file_link": code_reading.file_link,
         "judged_of": data.judged_of,

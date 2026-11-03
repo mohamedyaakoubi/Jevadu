@@ -6,11 +6,16 @@ from datetime import UTC, datetime
 
 from hackathon_memory.web.visits import (
     Action,
+    Visit,
     action_of,
     described,
     device_of,
+    failed,
+    failures,
     place_of,
     referrer_of,
+    summary,
+    unexpected,
 )
 
 
@@ -71,3 +76,32 @@ def test_an_action_reads_as_words() -> None:
     assert words("check", {"repo": "github.com/a/b", "status": 429}) == (
         "checked github.com/a/b, answered 429")  # fmt: skip
     assert words("deck", {}) == "opened the pitch deck"
+
+
+def test_a_failed_action_keeps_what_went_wrong() -> None:
+    """A failed action reads with the words that the page showed, and the summary of the copy's
+    owner counts them. An error that no page answers is kept by its kind, never by its message.
+    Nothing is kept outside a request that is noted (3 November 2026)."""
+    at = datetime(2026, 11, 7, 10, tzinfo=UTC)
+    refused = {"repo": "github.com/a/b", "status": 400, "failed": ["This is not a repository."]}
+    soft = {"idea": "pay", "mode": "meaning", "failed": ["Google did not answer (ReadTimeout)."]}
+    assert described(Action(at, "check", refused), {}, {}) == (
+        "checked github.com/a/b, answered 400, and failed: This is not a repository.")  # fmt: skip
+    assert described(Action(at, "search", soft), {}, {}) == (
+        "searched “pay” by meaning, and failed: Google did not answer (ReadTimeout).")  # fmt: skip
+    assert unexpected(RuntimeError("the key sk-123 leaked")) == (
+        "The site failed on an error that it did not expect (RuntimeError).")  # fmt: skip
+    failed("Gemini did not answer.")  # no request is noted: nothing is kept, nothing breaks
+    kept: list[str] = []
+    token = failures.set(kept)
+    try:
+        failed("Gemini did not answer.")
+        failed("Gemini  did not\nanswer.")  # the same words: kept once
+        failed(None)
+    finally:
+        failures.reset(token)
+    assert kept == ["Gemini did not answer."]
+    visit = Visit("a1b2", "Tunis, TN", None, "Chrome on Windows",
+                  [Action(at, "check", refused), Action(at, "search", soft)])  # fmt: skip
+    counted = dict(summary([visit])["failures"])
+    assert counted == {"This is not a repository.": 1, "Google did not answer (ReadTimeout).": 1}

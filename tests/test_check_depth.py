@@ -67,6 +67,28 @@ def test_more_kinds_than_are_named_are_counted_together() -> None:
     assert kinds_in_words(unread)[0] == (("transactions not read in detail yet", 2),)
 
 
+def test_the_number_of_a_service_says_what_it_holds() -> None:
+    """The table counts services, and the line of what the IDs did counts kinds: the note of a
+    number gives each kind of its service, then those that failed, and they add up to the number
+    (3 November 2026)."""
+    day = STARTS + timedelta(hours=2)
+    items = [message(day, n=n) for n in range(3)]
+    items.append(done(day, TEAM, ACCOUNT, CONSENSUS,
+                      Act("CONSENSUSCREATETOPIC", True, TEAM, (TEAM,)), 7))  # fmt: skip
+    items.append(done(day, TOPIC_ID, TOPIC, CONSENSUS,
+                      Act("CONSENSUSSUBMITMESSAGE", False, TEAM, (TEAM,)), 8))  # fmt: skip
+    items.append(done(day, TOKEN_ID, TOKEN, TOKENS, Act("TOKENMINT", True, None, ()), 9))
+    items.append(message(STARTS + timedelta(days=40), n=10))  # after the time of the table
+    result = depth(own((TOPIC_ID, TOPIC), (TOKEN_ID, TOKEN), (TEAM, ACCOUNT)), items)
+    assert result.held_in(CONSENSUS) == "3 messages to a topic, 1 topic made and 1 that failed"
+    assert result.held_in(TOKENS) == "1 mint of tokens or NFTs"
+    assert result.held_in(CONTRACTS) is None  # no transaction: its number stays a number
+    assert result.did[0] == ("messages to a topic", 3)  # the line of kinds: the messages alone
+    added = {service: sum(count for _, count in kinds) + failed
+             for service, kinds, failed in result.services}  # fmt: skip
+    assert added == {CONSENSUS: 5, TOKENS: 1} and sum(added.values()) == result.total
+
+
 def test_who_took_part_leaves_out_the_ids_that_the_project_names() -> None:
     day = STARTS
     items = [message(day, payer=TEAM), message(day, payer="0.0.8001", n=1),

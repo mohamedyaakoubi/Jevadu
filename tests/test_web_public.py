@@ -665,3 +665,41 @@ def test_the_pitch_deck_link_is_noted_then_sends_on_to_the_file(site) -> None:  
     with psycopg.connect(database) as conn:
         noted = conn.execute("SELECT action FROM visit_actions").fetchall()
     assert noted == [("deck",), ("deck",)]
+
+
+def test_a_failed_action_is_noted_with_what_went_wrong(site, monkeypatch) -> None:  # noqa: ANN001, F811
+    """A refused check keeps the words of its page; a search by meaning that fell back to the
+    keywords keeps the note that it showed, with the kind of the error; a page that broke keeps
+    the kind of its error, never its message (3 November 2026)."""
+    from fastapi.testclient import TestClient
+
+    from hackathon_memory.web import data
+    from hackathon_memory.web.app import GOOGLE_AWAY, NOT_A_REPOSITORY
+
+    client, fake, ids, database = site
+    copy = public_site(client)
+    assert copy.get("/check", params={"repo": "not a repository"}).status_code == 400
+    public.turn(database, public.AI, True)  # the search by meaning asks Google
+    fake.fail_with = (503, "unavailable")
+    page = copy.get("/", params={"idea": "a vendor and a coin", "mode": "meaning"})
+    assert page.status_code == 200 and "so these are keyword results" in page.text
+    fake.fail_with = None
+
+    def broken(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("a secret detail of the server")
+
+    monkeypatch.setattr(data, "project_card", broken)
+    calm = TestClient(copy.app, raise_server_exceptions=False)
+    assert calm.get(f"/project/{ids['Pebble Pay']}/panel").status_code == 500
+    with psycopg.connect(database) as conn:
+        rows = conn.execute("SELECT action, detail FROM visit_actions ORDER BY at").fetchall()
+    (check, check_said), (search, search_said), (card, card_said) = rows
+    assert (check, check_said["status"]) == ("check", 400)
+    assert check_said["failed"] == [" ".join(NOT_A_REPOSITORY.split())]
+    assert search == "search" and "status" not in search_said
+    (fell_back,) = search_said["failed"]
+    assert fell_back.startswith(" ".join(GOOGLE_AWAY.split()) + " (") and fell_back.endswith(")")
+    assert (card, card_said["status"]) == ("card", 500)
+    assert card_said["failed"] == [
+        "The site failed on an error that it did not expect (RuntimeError)."]  # fmt: skip
+    assert "secret detail" not in json.dumps([check_said, search_said, card_said])

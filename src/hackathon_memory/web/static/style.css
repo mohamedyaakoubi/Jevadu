@@ -707,6 +707,14 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 .hm-depth-block { margin-top: 0.75rem; }
 /* The calls of a project's contracts that reached a service, under its transactions (7.5). */
 .hm-from-contracts { display: block; font-size: 0.8125rem; color: var(--tblr-secondary); white-space: normal; }
+/* A number of the table opens what it holds, as an (i) opens its text (7.5, 3 November 2026):
+   it reads as the number, with a dotted line under it. */
+.hm-count {
+  padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: help;
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.hm-count:hover { color: var(--tblr-primary); }
+.hm-held { white-space: normal; font-variant-numeric: normal; } /* not the one line of its cell */
 
 /* Started with --rehearsal (design 9.3): a band at the top of every page, in the colour of a
    warning, so that a rehearsal is never taken for the register. */

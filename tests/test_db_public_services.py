@@ -53,9 +53,11 @@ def test_a_public_service_is_named_but_not_owned(database: str) -> None:
         assert public_services_of(conn, project) == (NamedService(
             PYTH, "the price oracle of Pyth",
             "https://github.com/pyth-network/pyth-crosschain/blob/main/contract_manager/src/store/"
-            "contracts/EvmPriceFeedContracts.json", date(2026, 10, 29)),)  # fmt: skip
+            "contracts/EvmPriceFeedContracts.json", date(2026, 10, 29), "testnet", "0.0.3042133",
+            "contract"),)  # fmt: skip
         story = story_of_project(conn, project, words="", in_code=None)
         assert story is not None and [one.entity_id for one in story.ids] == ["0.0.5004"]
         keys = public_keys(conn)
     assert {"testnet:0.0.3042133", f"testnet:{PYTH}", f"mainnet:{PYTH}", "mainnet:0.0.4622850",
-            "mainnet:0.0.456858", "testnet:0.0.429274"} == keys  # fmt: skip
+            "mainnet:0.0.456858", "testnet:0.0.429274", "mainnet:0.0.731861",
+            "mainnet:0x00000000000000000000000000000000000b2ad5"} == keys  # fmt: skip

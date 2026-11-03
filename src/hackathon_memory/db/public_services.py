@@ -11,13 +11,16 @@ from datetime import date
 import psycopg
 
 # The public services that one project names, by the ID that the ledger gives the thing on its
-# network, or by the EVM address, which is the same service on every network.
+# network, or by the EVM address, which is the same service on every network: each once, on the
+# network where the project's ID was found when the service is on several.
 _OF_PROJECT = (
-    "SELECT DISTINCT h.entity_id, s.name, s.source, s.read_on FROM hedera_ids h "
+    "SELECT DISTINCT ON (h.entity_id, s.name) h.entity_id, s.name, s.source, s.read_on, "
+    "s.network, s.ledger_id, f.kind FROM hedera_ids h "
     "LEFT JOIN ledger_facts f ON f.entity_id = h.entity_id AND f.found "
     "JOIN public_services s ON s.evm_address = lower(h.entity_id) "
     "     OR (s.network = f.network AND s.ledger_id = coalesce(f.ledger_id, h.entity_id)) "
-    "WHERE h.project_id = %s ORDER BY 1"
+    "WHERE h.project_id = %s "
+    "ORDER BY h.entity_id, s.name, s.network IS DISTINCT FROM f.network, s.network"
 )
 # A public service as search/seen.py writes an ID: network:ID, in both forms.
 _KEYS = (
@@ -34,6 +37,10 @@ class NamedService:
     name: str  # "the price oracle of Pyth"
     source: str  # the list that the service's maker publishes
     read_on: date
+    # where its page on HashScan is (3 November 2026): its network and its ID there, and its kind
+    network: str | None = None
+    ledger_id: str | None = None
+    kind: str | None = None
 
 
 def public_services_of(conn: psycopg.Connection, project_id: int) -> tuple[NamedService, ...]:

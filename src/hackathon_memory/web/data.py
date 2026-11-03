@@ -15,7 +15,7 @@ A card has three sources, and the page keeps them apart:
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from pathlib import Path
@@ -236,6 +236,60 @@ def hashscan(network: str | None, kind: str | None, entity_id: str) -> str | Non
     if network not in NETWORKS or kind not in HASHSCAN_KINDS:
         return None
     return f"https://hashscan.io/{network}/{kind}/{entity_id}"
+
+
+# A Hedera ID inside a sentence of the card or of the main network's window: "0.0.731861".
+LEDGER_ID = re.compile(r"\b0\.0\.\d+\b")
+# The word before an ID that names its kind: "its token 0.0.5", "the topics 0.0.6".
+_KIND_BEFORE = re.compile(r"\b(account|token|topic|contract|schedule)s?\s+$")
+_ID_LINK = Markup(
+    '<a class="id" href="{}" rel="noopener" target="_blank">{}<span '
+    'class="visually-hidden"> on HashScan (opens in a new tab)</span></a>'
+)
+
+
+def ids_in(text: str | None) -> list[str]:
+    """The Hedera IDs that a text names, in their order."""
+    return LEDGER_ID.findall(text or "")
+
+
+def id_links(
+    text: str | None,
+    known: Mapping[str, tuple[str | None, str | None]] | None = None,
+    network: str | None = None,
+    kind: str = "account",
+) -> Markup:
+    """A sentence with each Hedera ID in it as a link to its page on HashScan, as every other ID
+    of the site is (3 November 2026: the main network's window named a token by its symbol
+    alone, and the card's sentences gave their IDs as plain text). An ID of `known` has its own
+    network and kind; another has the network of the ID before it in the sentence, or
+    `network`, and the kind that the word before it names, or `kind`. An ID whose network is
+    not known stays as it is."""
+    text, known = text or "", known or {}
+    parts: list[Markup] = []
+    last = 0
+    for found in LEDGER_ID.finditer(text):
+        entity, before = found.group(), text[last : found.start()]
+        on, what = known.get(entity, (None, None))
+        named = _KIND_BEFORE.search(before)
+        network = on or network
+        link = hashscan(network, what or (named.group(1) if named else kind), entity)
+        parts += [escape(before), _ID_LINK.format(link, entity) if link else escape(entity)]
+        last = found.end()
+    parts.append(escape(text[last:]))
+    return Markup("").join(parts)
+
+
+def ledger_ids(story: Story | None) -> dict[str, tuple[str, str | None]]:
+    """The own IDs of a ledger story, each with its network and kind, for id_links."""
+    return {one.entity_id: (one.network, one.kind) for one in story.ids} if story else {}
+
+
+def one_network(story: Story | None) -> str | None:
+    """The network of the own IDs of a story when they all share one, for an ID of a sentence
+    that no ID before it places, such as the account that made several of them."""
+    networks = {one.network for one in story.ids} if story else set()
+    return networks.pop() if len(networks) == 1 else None
 
 
 @dataclass(frozen=True)

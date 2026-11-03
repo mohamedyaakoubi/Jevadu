@@ -145,7 +145,7 @@ def test_each_transaction_is_explained_in_the_words_of_the_ledger_and_the_code()
     assert store.explained[C2] == ("call 0xdeadbeef", ())
     assert store.explained[SC] == (None, ())  # the creation of the schedule: its kind says it
     assert store.explained[E1] == (SCHEDULE_RAN, ())  # the account's moment, named by its schedule
-    assert store.explained[A1] == ("moved INV", ())
+    assert store.explained[A1] == ("moved INV (0.0.6001)", ())  # its symbol and its ID
     assert asked == [REPOSITORY]
     assert run.counts["mainnet_explained"] == 9  # S1 to A1, each moment once
 

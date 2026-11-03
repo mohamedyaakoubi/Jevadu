@@ -6,7 +6,14 @@ from __future__ import annotations
 import base64
 import json
 
-from hiero_sdk_python.hapi.services.basic_types_pb2 import AccountAmount, AccountID
+from hiero_sdk_python.hapi.services.basic_types_pb2 import (
+    AccountAmount,
+    AccountID,
+    ContractID,
+    TokenID,
+    TokenTransferList,
+    TopicID,
+)
 from hiero_sdk_python.hapi.services.schedulable_transaction_body_pb2 import (
     SchedulableTransactionBody,
 )
@@ -110,12 +117,45 @@ def test_a_scheduled_transaction_is_read_with_what_it_holds_and_when_it_ran() ->
     assert scheduled_of({"transaction_body": "not base64!"}).what.startswith("a transaction that")
 
 
+def body_of(body: SchedulableTransactionBody) -> dict:
+    return {"memo": "", "transaction_body": base64.b64encode(body.SerializeToString()).decode()}
+
+
+def test_a_scheduled_transaction_names_what_it_acts_on_by_its_id() -> None:
+    """A schedule's words name the token, the topic or the contract that it acts on, by its ID,
+    as the window names a moved token (3 November 2026). Every ID is invented."""
+    mint = SchedulableTransactionBody()
+    mint.tokenMint.token.CopyFrom(TokenID(tokenNum=9101))
+    assert scheduled_of(body_of(mint)).what == "a mint of the token 0.0.9101"
+    message = SchedulableTransactionBody()
+    message.consensusSubmitMessage.topicID.CopyFrom(TopicID(topicNum=9102))
+    assert scheduled_of(body_of(message)).what == "a message to the topic 0.0.9102"
+    call = SchedulableTransactionBody()
+    call.contractCall.contractID.CopyFrom(ContractID(contractNum=9103))
+    assert scheduled_of(body_of(call)).what == "a call of the contract 0.0.9103"
+    by_address = SchedulableTransactionBody()
+    by_address.contractCall.contractID.CopyFrom(ContractID(evm_address=bytes.fromhex("ab" * 20)))
+    assert scheduled_of(body_of(by_address)).what == "a call of the contract 0x" + "ab" * 20
+    unnamed = SchedulableTransactionBody()
+    unnamed.tokenBurn.amount = 5  # no token given: the words of before
+    assert scheduled_of(body_of(unnamed)).what == "a token burn"
+    paid = SchedulableTransactionBody()
+    paid.cryptoTransfer.transfers.accountAmounts.append(
+        AccountAmount(accountID=AccountID(accountNum=7001), amount=200_000_000))  # fmt: skip
+    for number in (9105, 9104, 9105):
+        paid.cryptoTransfer.tokenTransfers.append(TokenTransferList(token=TokenID(tokenNum=number)))
+    assert scheduled_of(body_of(paid)).what == (
+        "a transfer of 2 HBAR, the token 0.0.9104 and the token 0.0.9105")  # fmt: skip
+
+
 def test_tokens_and_accounts_in_few_words() -> None:
     assert token_words({"name": "Invented Index", "symbol": "INX"}) == "Invented Index (INX)"
     assert token_words({"name": "SAME", "symbol": "SAME"}) == "SAME"
     moved = {"token_transfers": [{"token_id": "0.0.731", "amount": 100},
                                  {"token_id": "0.0.731", "amount": -100}]}  # fmt: skip
-    assert transfer_what(moved, {"0.0.731": "SAUCE"}) == "moved SAUCE"
+    assert transfer_what(moved, {"0.0.731": "SAUCE"}) == "moved SAUCE (0.0.731)"
+    nameless = {"token_transfers": [{"token_id": "0.0.732", "amount": 5}]}
+    assert transfer_what(nameless, {"0.0.732": "0.0.732"}) == "moved 0.0.732"  # no symbol: the ID
     assert transfer_what({"transfers": []}, {}) is None
     assert hbar_words(400_000_000) == "4 HBAR" and hbar_words(12_345_678) == "0.12345678 HBAR"
     assert long_zero("0.0.9224969") == "0x00000000000000000000000000000000008cc309"
