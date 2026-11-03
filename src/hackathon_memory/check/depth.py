@@ -28,7 +28,7 @@ from datetime import date, datetime
 
 from hackathon_memory.check.history import HBAR, NETWORK_ACCOUNTS, SERVICES, Act
 from hackathon_memory.check.makers import Earlier, Made, made_lines
-from hackathon_memory.check.setup import Setup, read_on, setup_words
+from hackathon_memory.check.setup import Setup, joined, read_on, setup_words
 from hackathon_memory.check.story import OwnId, Stop, stops, time_of
 from hackathon_memory.parse.hedera_ids import ACCOUNT, CONTRACT, TOKEN, TOPIC
 
@@ -127,6 +127,21 @@ class Depth:
     setup: tuple[str, ...] = ()  # how the own IDs are set up, each a sentence (check/setup.py)
     setup_read_at: datetime | None = None  # the day of the check that it comes from
     made: tuple[str, ...] = ()  # who made its own things, each a sentence (check/makers.py)
+    # each service with a transaction in the time of the table: every kind of its transactions
+    # that did not fail, the most first, and how many failed; together, its number in the table
+    services: tuple[tuple[str, tuple[tuple[str, int], ...], int], ...] = ()
+
+    def held_in(self, service: str) -> str | None:
+        """What the number of a service in the table holds: each kind of its transactions with
+        its number, then those that failed; None when it has none. The table counts services,
+        and the line of what its IDs did counts kinds: without this, a Consensus Service one
+        higher than the messages to a topic read as a mistake, when the one more had made the
+        topic (3 November 2026)."""
+        for one, kinds, failed in self.services:
+            if one == service:
+                parts = [f"{count:,} {words}" for words, count in kinds]
+                return joined([*parts, f"{failed:,} that failed"] if failed else parts) or None
+        return None
 
 
 def merged(done: Sequence[Done]) -> list[Done]:
@@ -297,4 +312,6 @@ def depth_of(
         setup_words(setups),
         read_on(setups),
         made_lines(made, named, starts_at, earlier),
+        tuple((service, *kinds_counted([one for one in inside if one.service == service]))
+              for service in SERVICES if any(one.service == service for one in inside)),
     )  # fmt: skip

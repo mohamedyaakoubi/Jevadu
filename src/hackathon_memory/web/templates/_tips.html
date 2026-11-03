@@ -182,7 +182,7 @@
 <ul>
   <li><b>Page:</b> the words of the project page that name the service, such as &ldquo;HCS&rdquo; or &ldquo;topic ID&rdquo; for the Consensus Service{{ parts.ref("topic") }}, &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}, or &ldquo;smart contract&rdquo; and &ldquo;Solidity&rdquo; for smart contracts{{ parts.ref("contract") }}. Each word is a button that marks where the page says it.</li>
   <li><b>Code:</b> whether a source file names one of the service's SDK classes, such as TokenCreateTransaction. A package alone does not count. &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
-  <li><b>Ledger:</b> the transactions of its own Hedera IDs, read from a mirror node{{ parts.ref("mirror") }}, from 30 days before the event to 30 days after it.</li>
+  <li><b>Ledger:</b> the transactions of its own Hedera IDs, read from a mirror node{{ parts.ref("mirror") }}, from 30 days before the event to 30 days after it. A number counts every transaction of the service, those that failed too. Point at it, or press it, to see each kind with its number: for the Consensus Service, the messages to a topic and the transaction that made the topic.</li>
   <li><b>From its contracts:</b> the calls of its own smart contracts that reached one of Hedera's system contracts, which give a contract the Token Service, the Account Service, the Schedule Service, random numbers and the exchange rate{{ parts.ref("system") }}. They count for their service beside the transactions. Of a contract with many calls, the first 100 in that time are read.</li>
 </ul>
 <p>Its own IDs are those whose kind fits the page and that no other team names: an ID that several teams name is often a shared service. A public service that its owner lists, such as the price oracle of Pyth or Circle's USDC, is named on the card with its source, and is never counted as the project's own. The entries of one team's code at several hackathons share their IDs. The page is not checked for HBAR, since nearly every project moves HBAR to set itself up. A team can also use a service through an ID that its page does not give.</p>
@@ -200,7 +200,7 @@
 <ul>
   <li><b>README:</b> the words of its README that name a Hedera service, such as &ldquo;HCS&rdquo; for the Consensus Service{{ parts.ref("topic") }} or &ldquo;HTS&rdquo; for the Token Service{{ parts.ref("token") }}. Each word is a button that marks where the README says it, in the lines under the table.</li>
   <li><b>Code:</b> whether its code calls the service, from the reading of the code below. A package alone does not count, and &ldquo;EVM setup&rdquo; means that the code points EVM tools such as Hardhat at Hedera, which is not a call by itself.</li>
-  <li><b>Ledger:</b> the transactions of the README's IDs whose kind fits, read from a mirror node{{ parts.ref("mirror") }} during the check and kept for 7 days: in the time of the hackathon and 30 days on each side, or every transaction when no hackathon is chosen.</li>
+  <li><b>Ledger:</b> the transactions of the README's IDs whose kind fits, read from a mirror node{{ parts.ref("mirror") }} during the check and kept for 7 days: in the time of the hackathon and 30 days on each side, or every transaction when no hackathon is chosen. A number counts every transaction of the service, those that failed too. Point at it, or press it, to see each kind with its number.</li>
 </ul>
 <p>A team can also use a service through an ID that its README does not give.</p>
 <ul>

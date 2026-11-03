@@ -637,7 +637,7 @@ def test_the_card_tells_the_ledger_story_of_its_own_ids(site) -> None:  # noqa: 
     rows = re.findall(r"<tr>\s*<th scope=\"row\">([^<]+)</th>(.*?)</tr>", block, re.DOTALL)
     assert [name for name, _ in rows] == ["Consensus Service (topics)", "Token Service",
                                           "Smart contracts"]  # fmt: skip
-    assert "&ldquo;HCS&rdquo;" in rows[0][1] and ">1</td>" in rows[0][1]
+    assert "&ldquo;HCS&rdquo;" in rows[0][1] and ">1</button>" in rows[0][1]  # opens its note
     assert "&ldquo;Hedera token&rdquo;" in rows[1][1] and ">0</td>" in rows[1][1]
     assert "Its code was not read, so the table leaves it out." in block
     named = re.search(r"<li>The page names the Token Service " + WORDS_IN_BRACKETS + r", and its "
@@ -676,7 +676,7 @@ def test_the_hbar_row_says_not_checked_and_its_mark_says_why(site) -> None:  # n
     page = client.get("/", params={"open": pebble}).text
     row = re.search(r'<th scope="row">Accounts and HBAR transfers</th>(.*?)</tr>', page, re.DOTALL)
     assert row and '<span class="text-secondary">not checked</span>' in row.group(1)
-    assert 'popovertarget="tip-hbar"' in row.group(1) and ">2</td>" in row.group(1)
+    assert 'popovertarget="tip-hbar"' in row.group(1) and ">2</button>" in row.group(1)
     # the old words of the HBAR cell are gone from its table (the timeline's note uses them)
     table = page[page.rindex("<table", 0, row.start()) : page.index("</table>", row.end())]
     assert "not compared" not in table
@@ -900,6 +900,33 @@ def test_the_card_counts_the_calls_of_its_contracts_for_the_service_they_reached
     assert '<span class="hm-from-contracts">+ 34 from its contracts</span>' in table
     assert ("Its contracts also reached random numbers in 2 calls in that time. Of a contract "
             "with more calls in that time, the first 100 were read.") in after  # fmt: skip
+
+
+def test_a_number_of_the_table_opens_what_it_holds(site) -> None:  # noqa: ANN001
+    """The Consensus Service counts the transaction that made the topic beside its messages, so
+    its number is one more than the messages to a topic; the number opens a note that says what
+    it holds, and the parts add up to it (3 November 2026)."""
+    from hackathon_memory.check.history import CONSENSUS, Act, History
+    from hackathon_memory.db.history import HistoryStore
+
+    client, _, ids, database = site
+    pebble, team = ids["Pebble Pay"], "0.0.4512"
+    a_card_with_days(database, pebble)  # an own topic with two messages on 7 March 2026
+    own_id(database, pebble, team, "account")
+    made = stamp(datetime(2026, 3, 6, 12, tzinfo=UTC), 3)
+    HistoryStore(database).save(team, "testnet", "account",
+                                History({made: CONSENSUS}, False,
+                                        {made: Act("CONSENSUSCREATETOPIC", True, team, (team,))}),
+                                datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
+    part = client.get(f"/project/{pebble}/panel").text
+    table = part.split('class="card project-section story-section"', 1)[1].split("</table>", 1)[0]
+    note = f"held-{pebble}-consensus"
+    assert (f'<button type="button" class="hm-count" popovertarget="{note}" data-tip="{note}" '
+            f'aria-describedby="{note}">3</button>') in table  # fmt: skip
+    assert (f'<div class="tip hm-held" id="{note}" popover role="tooltip" data-stay>2 messages '
+            "to a topic and 1 topic made.</div>") in table  # fmt: skip
+    depth = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
+    assert "2 messages to a topic, 1 topic made" in depth
 
 
 def test_a_team_that_put_an_own_id_on_the_main_network_has_the_tag_mainnet(site) -> None:  # noqa: ANN001
@@ -3274,6 +3301,35 @@ def test_an_info_mark_explains_its_term(site, chromium) -> None:  # noqa: ANN001
     assert box and box["y"] + box["height"] > 700  # a card at the bottom, where the thumb is
     page.context.close()
     phone.context.close()
+
+
+@pytest.mark.browser
+def test_a_number_of_the_table_opens_its_note_like_an_info_mark(site, chromium) -> None:  # noqa: ANN001
+    """The number of a service opens what it holds as an (i) opens its text: on pointing, and
+    with the keyboard. The note stays in the window of the card, where a shared text moves, and
+    axe finds nothing (3 November 2026)."""
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    a_card_with_days(database, pebble)  # an own topic with two messages on 7 March 2026
+    note = f"#held-{pebble}-consensus"
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(f"http://site.test/?open={pebble}")
+    number = page.locator("#viewer .story-section .hm-count")
+    number.hover()
+    page.wait_for_selector(f"{note}:popover-open")
+    assert page.locator(note).inner_text() == "2 messages to a topic."
+    assert page.locator(f"#viewer {note}").count() == 1  # in the window, not moved out of it
+    wraps = page.locator(note).evaluate("n => getComputedStyle(n).whiteSpace")
+    assert wraps == "normal"  # a long note wraps: its cell keeps a number on one line
+    page.mouse.move(4, 4)
+    page.wait_for_selector(f"{note}:not(:popover-open)", state="attached")
+    number.focus()
+    page.keyboard.press("Enter")
+    page.wait_for_selector(f"{note}:popover-open")
+    assert problems(page) == []
+    page.keyboard.press("Escape")
+    page.wait_for_selector(f"{note}:not(:popover-open)", state="attached")
+    page.context.close()
 
 
 STRIP_STATE = """() => {

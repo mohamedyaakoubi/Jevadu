@@ -159,7 +159,8 @@
           <th scope="row">{{ SERVICE_NAMES[line.service] }}</th>
           <td>{% if not line.compared %}<span class="text-secondary">not checked</span>{{ info("hbar", "“not checked”") }}{% elif line.words %}{{ said_words(line, listed=true, source=source) }}{% else %}<span class="text-secondary">no</span>{% endif %}</td>
           {% if story.code_read %}<td>{% if line.in_code %}yes{% elif line.set_up %}EVM setup{% else %}<span class="text-secondary">no</span>{% endif %}</td>{% endif %}
-          <td class="text-end">{{ "{:,}".format(line.count) }}{% if line.from_contracts %}<span class="hm-from-contracts">+ {{ "{:,}".format(line.from_contracts) }} from its contracts</span>{% endif %}</td>
+          {% set held = depth.held_in(line.service) if depth else none %}
+          <td class="text-end">{% if held %}{% set note = "held-" ~ pid ~ "-" ~ line.service %}<button type="button" class="hm-count" popovertarget="{{ note }}" data-tip="{{ note }}" aria-describedby="{{ note }}">{{ "{:,}".format(line.count) }}</button><div class="tip hm-held" id="{{ note }}" popover role="tooltip" data-stay>{{ held }}.</div>{% else %}{{ "{:,}".format(line.count) }}{% endif %}{% if line.from_contracts %}<span class="hm-from-contracts">+ {{ "{:,}".format(line.from_contracts) }} from its contracts</span>{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>

@@ -300,7 +300,10 @@
   });
 
   // ---------------------------------------------------------------- the (i) and its text
+  // A number of the table of the Hedera services opens what it holds in the same way (design
+  // 7.5, 3 November 2026); its note stays in its card, where the shared texts move.
   var home = null; // where the texts live when no window is open
+  var OPENER = ".info, .hm-count";
   var openTimer = 0, closeTimer = 0, current = null;
   function place(tip, button) {
     var rect = button.getBoundingClientRect();
@@ -321,7 +324,7 @@
     if (!tip || !tip.showPopover) return;
     home = home || document.querySelector(".tips");
     var host = button.closest("dialog[open]") || home;
-    if (tip.parentElement !== host) {
+    if (!tip.hasAttribute("data-stay") && tip.parentElement !== host) {
       if (tip.matches(":popover-open")) tip.hidePopover();
       host.appendChild(tip);
     }
@@ -334,7 +337,7 @@
     current = null;
   }
   document.addEventListener("click", function (event) {
-    var button = event.target.closest(".info");
+    var button = event.target.closest(OPENER);
     if (!button) return;
     event.preventDefault();
     window.clearTimeout(openTimer);
@@ -343,7 +346,7 @@
   });
   document.addEventListener("pointerover", function (event) {
     if (!HOVER.matches) return;
-    var button = event.target.closest(".info");
+    var button = event.target.closest(OPENER);
     if (button) {
       window.clearTimeout(closeTimer);
       window.clearTimeout(openTimer);
@@ -354,10 +357,10 @@
   });
   document.addEventListener("pointerout", function (event) {
     if (!HOVER.matches) return;
-    var from = event.target.closest(".info, .tip");
+    var from = event.target.closest(OPENER + ", .tip");
     if (!from) return;
     var to = event.relatedTarget && event.relatedTarget.closest
-      ? event.relatedTarget.closest(".info, .tip") : null;
+      ? event.relatedTarget.closest(OPENER + ", .tip") : null;
     if (to) return; // from the (i) to its text, or back: it stays, so it can be read (WCAG 1.4.13)
     window.clearTimeout(openTimer);
     window.clearTimeout(closeTimer);
