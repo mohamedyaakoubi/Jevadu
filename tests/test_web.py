@@ -598,6 +598,13 @@ def test_an_id_of_the_code_shows_its_file_and_says_where_the_proof_comes_from(si
     assert "Proof: found in the code" in card[: card.index("</li>")]
 
 
+def linked(network: str, kind: str, entity: str, shown: str = "") -> str:
+    """An ID as the site links it to its page on HashScan (3 November 2026), shown as `shown`."""
+    return (f'<a class="id" href="https://hashscan.io/{network}/{kind}/{entity}" rel="noopener" '
+            f'target="_blank">{shown or entity}<span class="visually-hidden"> on HashScan (opens '
+            "in a new tab)</span></a>")  # fmt: skip
+
+
 def stamp(moment: datetime, number: int) -> str:
     """A moment of consensus as the mirror node writes it: seconds.nanoseconds."""
     return f"{int(moment.timestamp())}.{number:09d}"
@@ -820,8 +827,9 @@ def test_the_card_says_who_made_its_own_ids(site) -> None:  # noqa: ANN001
                                 datetime(2026, 10, 23, 2, tzinfo=UTC))  # fmt: skip
     part = client.get(f"/project/{pebble}/panel").text
     block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
-    assert ("<dt>Who made its IDs</dt>\n    <dd><span class=\"d-block\">Its topic 0.0.4511, on 6 "
-            "March 2026: made by 0.0.8001, an account that the project does not "
+    topic, maker = linked("testnet", "topic", "0.0.4511"), linked("testnet", "account", "0.0.8001")
+    assert (f"<dt>Who made its IDs</dt>\n    <dd><span class=\"d-block\">Its topic {topic}, on 6 "
+            f"March 2026: made by {maker}, an account that the project does not "
             "list.</span></dd>") in block  # fmt: skip
 
 
@@ -846,7 +854,8 @@ def test_a_public_service_that_the_page_names_is_said_and_not_owned(site) -> Non
         conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
                      "VALUES (%s, 'testnet', 'proof_found')", (hedera_id,))  # fmt: skip
     part = client.get(f"/project/{pebble}/panel").text
-    assert (f'It also names <span class="id">{pyth}</span>, the price oracle of Pyth: a public '
+    named = linked("testnet", "contract", "0.0.3042133", shown=pyth)  # its page on HashScan
+    assert (f"It also names {named}, the price oracle of Pyth: a public "
             "service that many projects use, so its transactions are not counted as the "
             "project's here.") in part  # fmt: skip
     assert 'href="https://github.com/pyth-network/pyth-crosschain/' in part
@@ -866,7 +875,8 @@ def test_the_card_says_how_its_own_ids_are_set_up(site) -> None:  # noqa: ANN001
     part = client.get(f"/project/{pebble}/panel").text
     block = part.split(f'id="depth-{pebble}"', 1)[1].split("</section>", 1)[0]
     assert '<p class="hm-depth-title">How they are set up, read on 22 October 2026</p>' in block
-    assert ("Its token 0.0.4515: an NFT collection with no supply limit; a royalty of 5% on each "
+    token = linked("testnet", "token", "0.0.4515")
+    assert (f"Its token {token}: an NFT collection with no supply limit; a royalty of 5% on each "
             "sale; keys for admin and supply.") in block  # fmt: skip
 
 
@@ -1084,7 +1094,8 @@ def test_the_path_on_the_main_network_opens_from_the_view_and_from_the_card(site
     assert window.status_code == 200
     text = window.text
     assert 'id="sheet-title"' in text and "Pebble Pay on Hedera's main network" in text
-    assert "Made the topic" in text and "&ldquo;shop receipts&rdquo;, by 0.0.7001." in text
+    maker = linked("mainnet", "account", "0.0.7001")
+    assert "Made the topic" in text and f"&ldquo;shop receipts&rdquo;, by {maker}." in text
     assert 'class="hm-path-word">paid</span>' in text  # the kind that the message gives itself
     assert "Base</span>" not in text and "Base <span" in text and "(eip155:8453)" in text
     assert "No transaction of its own IDs on the main network" in text
@@ -1097,6 +1108,67 @@ def test_the_path_on_the_main_network_opens_from_the_view_and_from_the_card(site
     assert nothing.status_code == 404
     assert "put no own ID on Hedera" in nothing.text
     assert 'id="tip-mainnet-path"' in client.get("/").text  # its (i) explains it
+
+
+def test_a_moved_token_is_named_by_its_id_and_a_public_one_by_its_owner(site) -> None:  # noqa: ANN001
+    """A token that a transaction moved is named by its symbol and its ID, linked to HashScan as
+    every ID of the window, since a symbol is only a name that a maker chose; a token that its
+    owner runs for everyone, SAUCE here, is said with its owner's page (migration 0030, 3
+    November 2026). The account and the transfer are invented; SAUCE's ID is SaucerSwap's."""
+    from hackathon_memory.check.history import TOKENS, History
+    from hackathon_memory.check.ledger import LedgerFacts
+    from hackathon_memory.check.mainnet import Detail, Rate
+    from hackathon_memory.db.history import HistoryStore
+    from hackathon_memory.db.ledger import LedgerStore
+    from hackathon_memory.db.mainnet import MainnetStore
+
+    client, _, ids, database = site
+    pebble, account = ids["Pebble Pay"], "0.0.4518"
+    LedgerStore(database).save_facts(LedgerFacts(
+        account, "mainnet", MAINNET_ASKED, found=True, kind="account", ledger_id=account,
+        created_at=datetime(2026, 3, 7, tzinfo=UTC)))  # fmt: skip
+    with psycopg.connect(database) as conn:
+        (hedera_id,) = conn.execute(
+            "INSERT INTO hedera_ids (project_id, entity_id, network, said_kind, found_in, "
+            "words_around, in_hashscan_link) VALUES (%s, %s, 'mainnet', 'account', 'page', "
+            "'invented', false) RETURNING id", (pebble, account)).fetchone()  # fmt: skip
+        conn.execute("INSERT INTO id_checks (hedera_id, network, status) "
+                      "VALUES (%s, 'mainnet', 'proof_found')", (hedera_id,))  # fmt: skip
+    moment = f"{int(datetime(2026, 3, 7, 11, tzinfo=UTC).timestamp())}.000000003"
+    HistoryStore(database).save(account, "mainnet", "account", History({moment: TOKENS}, False),
+                                MAINNET_ASKED)  # fmt: skip
+    store = MainnetStore(database)
+    store.save(Detail(moment, "CRYPTOTRANSFER", True, 100_000, 0, (account,), 1),
+               Rate(637_060, 30_000), MAINNET_ASKED)  # fmt: skip
+    store.explain(moment, "moved SAUCE (0.0.731861)", (), MAINNET_ASKED)
+    text = client.get(f"/project/{pebble}/mainnet", headers={"HX-Request": "true"}).text
+    assert f"1 transaction that moved SAUCE ({linked('mainnet', 'token', '0.0.731861')})." in text
+    said = (
+        "0.0.731861 is SAUCE, the token of SaucerSwap: a public service that many projects "
+        'use. Source: <a href="https://docs.saucerswap.finance/tokenomics/overview"'
+    )
+    assert said in text
+    assert "read on 3 November 2026." in text
+
+
+def test_an_id_in_a_sentence_links_to_its_page_on_hashscan() -> None:
+    """The IDs of a sentence of the card or of the window link to HashScan: an own ID with its
+    network and kind, another with the network of the ID before it and the kind that the word
+    before it names, else the kind given; an ID of no known network stays as it is, and the
+    rest of the sentence is escaped (3 November 2026)."""
+    from hackathon_memory.web.data import id_links, ids_in
+
+    own = {"0.0.4511": ("testnet", "topic")}
+    said = str(id_links("Its topic 0.0.4511, on 6 March: made by 0.0.8001 <b>.", own))
+    assert said == (f"Its topic {linked('testnet', 'topic', '0.0.4511')}, on 6 March: made by "
+                    f"{linked('testnet', 'account', '0.0.8001')} &lt;b&gt;.")  # fmt: skip
+    assert str(id_links("No account holds its token 0.0.9 now.", network="mainnet")) == (
+        f"No account holds its token {linked('mainnet', 'token', '0.0.9')} now.")  # fmt: skip
+    assert str(id_links("moved SAUCE (0.0.731861)", network="mainnet", kind="token")) == (
+        f"moved SAUCE ({linked('mainnet', 'token', '0.0.731861')})")  # fmt: skip
+    assert str(id_links("made by 0.0.9", {})) == "made by 0.0.9"  # no network: no link
+    found = ids_in("0.0.5 and 10.0.3, version 0.0.12a, then (0.0.731861).")
+    assert found == ["0.0.5", "0.0.731861"]
 
 
 def test_the_sites_own_files_are_never_run_old(site) -> None:  # noqa: ANN001

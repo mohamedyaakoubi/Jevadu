@@ -11,7 +11,8 @@ fees and the HBAR of a list (S10). Nothing ranks or scores a project (design rul
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 
 import psycopg
@@ -19,6 +20,7 @@ import psycopg
 from hackathon_memory.check.mainnet_what import DEPLOYED
 from hackathon_memory.check.story import WINDOW_BEFORE
 from hackathon_memory.db.mainnet import mainnet_ids
+from hackathon_memory.db.public_services import NamedService
 from hackathon_memory.parse.hedera_ids import (
     ACCOUNT,
     CONTRACT,
@@ -94,6 +96,13 @@ class Made:
     more_kind: str | None = None  # their kind, when they are all of one kind
 
 
+MAINNET = "mainnet"
+_SERVICES = (
+    "SELECT ledger_id, name, source, read_on FROM public_services "
+    "WHERE network = 'mainnet' ORDER BY ledger_id"
+)
+
+
 @dataclass(frozen=True)
 class Path:
     project_id: int
@@ -108,6 +117,9 @@ class Path:
     made: tuple[Made, ...]
     last: datetime | None  # its last transaction
     read_on: datetime | None  # when its transactions were last explained
+    # the public services of the main network by their ID, for a token that a step moved, such
+    # as SAUCE: named with their owner's page (3 November 2026)
+    services: Mapping[str, NamedService] = field(default_factory=dict)
 
     def when(self, moment: datetime) -> str:
         """A moment against the event: "before" its first day, "during" it, "after" its last
@@ -176,6 +188,8 @@ def path_of(conninfo: str, project_id: int) -> Path | None:
         followed = dict(conn.execute(
             "SELECT entity_id, followed FROM mainnet_things WHERE entity_id = ANY(%s)", (makers,)
         ).fetchall())  # fmt: skip
+        services = {ledger_id: NamedService(ledger_id, name, source, read_on, MAINNET, ledger_id)
+                    for ledger_id, name, source, read_on in conn.execute(_SERVICES)}  # fmt: skip
     by_named = {one.named: one for one in own}
     steps, networks, messages, last, read_on = _steps(moments, by_named)
     made = tuple(_made(account, own, followed.get(account),
@@ -183,7 +197,7 @@ def path_of(conninfo: str, project_id: int) -> Path | None:
                  for account in makers)  # fmt: skip
     return Path(project_id, about[0], about[1], about[2], about[3],
                 tuple(sorted(own, key=lambda one: (one.made_at is None, one.made_at or 0))),
-                steps, networks, messages, made, last, read_on)  # fmt: skip
+                steps, networks, messages, made, last, read_on, services)  # fmt: skip
 
 
 def _steps(moments: list[tuple], own: dict[str, Own]) -> tuple:

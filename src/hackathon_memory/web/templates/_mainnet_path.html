@@ -12,7 +12,7 @@
 <span class="hm-path-rel hm-path-{{ at }}">{% if at == "before" %}before its event{% elif at == "during" and later %}during its event, until {{ later }} day{{ "s" if later != 1 }} after it{% elif at == "during" %}during its event{% elif at == "after" %}{{ path.days_after(line.first) }} day{{ "s" if path.days_after(line.first) != 1 }} after its event{% endif %}</span>
 {%- endmacro %}
 {% macro by(one, step, verb) -%}
-{% if step.count > 1 and step.by_maker %}, all {{ verb }} by {{ one.made_by }}, the account that made {{ "it" }}{% endif %}{% if step.failed %}; {{ step.failed }} failed{% endif %}
+{% if step.count > 1 and step.by_maker %}, all {{ verb }} by {{ id_link("account", one.made_by) }}, the account that made {{ "it" }}{% endif %}{% if step.failed %}; {{ step.failed }} failed{% endif %}
 {%- endmacro %}
 <article class="hm-path-sheet" aria-labelledby="sheet-title">
   <h2 id="sheet-title" class="about-title" tabindex="-1">{{ path.name }} on Hedera's main network</h2>
@@ -27,19 +27,22 @@
         {%- if one.kind == "contract" -%}Deployed the contract {{ id_link("contract", one.ledger_id) }}
         {%- elif one.kind == "topic" -%}Made the topic {{ id_link("topic", one.ledger_id) }}{% if one.name %}, &ldquo;{{ one.name }}&rdquo;{% endif %}
         {%- elif one.kind == "token" -%}Made the token {{ id_link("token", one.ledger_id) }}{% if one.name %}, {{ one.name }}{% endif %}
-        {%- elif one.kind == "schedule" -%}Scheduled {{ one.scheduled or "a transaction" }} ({{ id_link("schedule", one.ledger_id) }}{% if one.name %}, &ldquo;{{ one.name }}&rdquo;{% endif %}){% if not one.executed_at %}; it never ran{% endif %}
+        {%- elif one.kind == "schedule" -%}Scheduled {{ (one.scheduled or "a transaction") | id_links(network="mainnet") }} ({{ id_link("schedule", one.ledger_id) }}{% if one.name %}, &ldquo;{{ one.name }}&rdquo;{% endif %}){% if not one.executed_at %}; it never ran{% endif %}
         {%- elif one.kind == "account" -%}Made the account {{ id_link("account", one.ledger_id) }}
         {%- else -%}A {{ (step.what or ACTION_WORDS.get(step.name, step.name or "transaction")) if step else "transaction" }}, the transaction {{ id_link("transaction", one.ledger_id) }}
         {%- endif -%}
-        {%- if one.made_by %}, by {{ one.made_by }}{% endif %}{% if step and step.failed %}; it failed{% endif %}.
+        {%- if one.made_by %}, by {{ id_link("account", one.made_by) }}{% endif %}{% if step and step.failed %}; it failed{% endif %}.
       {%- elif step.what == SCHEDULE_RAN -%}
-        {% set ran = path.own | selectattr("executed_at", "equalto", step.first) | first %}The scheduled transaction ran{% if ran %}: {{ ran.scheduled }}{% if ran.name %}, &ldquo;{{ ran.name }}&rdquo;{% endif %}{% endif %}.
+        {% set ran = path.own | selectattr("executed_at", "equalto", step.first) | first %}The scheduled transaction ran{% if ran %}: {{ ran.scheduled | id_links(network="mainnet") }}{% if ran.name %}, &ldquo;{{ ran.name }}&rdquo;{% endif %}{% endif %}.
       {%- elif one.kind == "topic" and step.what -%}
         {{ "{:,}".format(step.count) }} message{{ "s" if step.count != 1 }} of the kind &ldquo;<span class="hm-path-word">{{ step.what }}</span>&rdquo;{{ by(one, step, "paid") }}.
       {%- elif one.kind == "contract" and step.what -%}
         {{ "{:,}".format(step.count) }} call{{ "s" if step.count != 1 }} of <span class="hm-path-word">{{ step.what }}</span>{{ by(one, step, "sent") }}.
       {%- elif step.what -%}
-        {{ "{:,}".format(step.count) }} transaction{{ "s" if step.count != 1 }} that {{ step.what }}{{ by(one, step, "sent") }}.
+        {{ "{:,}".format(step.count) }} transaction{{ "s" if step.count != 1 }} that {{ step.what | id_links(network="mainnet", kind="token") }}{{ by(one, step, "sent") }}.
+        {%- for entity in ids_in(step.what) if entity in path.services %}{% set service = path.services[entity] %}
+        <span class="d-block hm-small">{{ entity }} is {{ service.name }}: a public service that many projects use. Source: <a href="{{ service.source }}" rel="noopener" target="_blank">its owner's own page<span class="visually-hidden"> (opens in a new tab)</span></a>, read on {{ service.read_on | day }}.</span>
+        {%- endfor %}
       {%- else -%}
         {{ "{:,}".format(step.count) }} &times; {{ ACTION_WORDS.get(step.name, step.name or "transaction") }}{% if one.kind != "transaction" %}, with the {{ KIND_WORDS.get(one.kind, one.kind) }} {{ id_link(one.kind, one.ledger_id) }}{% endif %}{{ by(one, step, "sent") }}.
       {%- endif -%}
@@ -65,11 +68,10 @@
   <p class="hm-small">What the accounts that made its own IDs also made on the main network, from 30 days before its event on, that the project does not name.</p>
   <ul class="hm-path-made">
   {% for made in path.made %}
-    {% set of = [] %}{% for kind, entity in made.of %}{% set _ = of.append("its " ~ KIND_WORDS.get(kind, kind) ~ " " ~ entity) %}{% endfor %}
-    <li><b>{{ made.account }}</b>, which made {{ of | join(" and ") }}{% if made.followed == "service" %}, made more than 50 accounts in that time: a service that makes accounts for many people, so what else it made is not followed.{% elif made.followed is none %}: not read yet.{% elif not made.counts %}: nothing else.{% else %}, also made:
+    <li><b>{{ id_link("account", made.account) }}</b>, which made {% for kind, entity in made.of %}its {{ KIND_WORDS.get(kind, kind) }} {{ id_link(kind, entity) }}{{ " and " if not loop.last }}{% endfor %}{% if made.followed == "service" %}, made more than 50 accounts in that time: a service that makes accounts for many people, so what else it made is not followed.{% elif made.followed is none %}: not read yet.{% elif not made.counts %}: nothing else.{% else %}, also made:
       <ul>
       {% for entity, kind, made_at, name, others, messages, scheduled in made.things %}
-        <li>{% if kind == "token" %}the token {{ id_link("token", entity) }}{% if name %}, {{ name }}{% endif %}{% elif kind == "topic" %}the topic {{ id_link("topic", entity) }}{% if name %}, &ldquo;{{ name }}&rdquo;{% endif %}{% elif kind == "schedule" %}the scheduled transaction {{ id_link("schedule", entity) }}{% if name %}, &ldquo;{{ name }}&rdquo;{% endif %}{% if scheduled %}: {{ scheduled }}{% endif %}{% else %}the {{ kind }} {{ id_link(kind, entity) }}{% endif %}{% if made_at %}, {{ made_at | day }}{% endif %}{% if kind == "token" and others is not none %}; {% if others == 0 %}no other account holds it now{% else %}{{ "{:,}".format(others) }} other account{{ "s" if others != 1 }} hold{{ "s" if others == 1 }} it now{% endif %}{% elif kind == "topic" and messages is not none %}; {{ "{:,}".format(messages) }} message{{ "s" if messages != 1 }}{% endif %}</li>
+        <li>{% if kind == "token" %}the token {{ id_link("token", entity) }}{% if name %}, {{ name }}{% endif %}{% elif kind == "topic" %}the topic {{ id_link("topic", entity) }}{% if name %}, &ldquo;{{ name }}&rdquo;{% endif %}{% elif kind == "schedule" %}the scheduled transaction {{ id_link("schedule", entity) }}{% if name %}, &ldquo;{{ name }}&rdquo;{% endif %}{% if scheduled %}: {{ scheduled | id_links(network="mainnet") }}{% endif %}{% else %}the {{ kind }} {{ id_link(kind, entity) }}{% endif %}{% if made_at %}, {{ made_at | day }}{% endif %}{% if kind == "token" and others is not none %}; {% if others == 0 %}no other account holds it now{% else %}{{ "{:,}".format(others) }} other account{{ "s" if others != 1 }} hold{{ "s" if others == 1 }} it now{% endif %}{% elif kind == "topic" and messages is not none %}; {{ "{:,}".format(messages) }} message{{ "s" if messages != 1 }}{% endif %}</li>
       {% endfor %}
       {% if made.more %}<li>{{ "{:,}".format(made.more) }} {% if made.more_kind %}{{ KIND_WORDS.get(made.more_kind, made.more_kind) }}{{ "s" if made.more != 1 }}{% else %}more things{% endif %}{% if made.things %} more{% endif %}, {{ days_between(made.first, made.last) }}</li>{% endif %}
       </ul>

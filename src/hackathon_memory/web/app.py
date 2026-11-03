@@ -2005,6 +2005,7 @@ def create_app(
 
     templates.env.filters["day"] = day
     templates.env.filters["moment"] = moment
+    templates.env.filters["id_links"] = data.id_links
     templates.env.filters["iso_day"] = iso_day
     templates.env.filters["said"] = data.said
     templates.env.filters["casefold"] = str.casefold
@@ -2042,6 +2043,9 @@ def create_app(
         "REF_NUMBER": references.NUMBER,
         "REFERENCES": references.REFERENCES,
         "hashscan": data.hashscan,
+        "ids_in": data.ids_in,
+        "ledger_ids": data.ledger_ids,
+        "one_network": data.one_network,
         "days_between": on_mainnet.days_between,
         "file_link": code_reading.file_link,
         "judged_of": data.judged_of,
