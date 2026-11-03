@@ -140,9 +140,9 @@ def merged(done: Sequence[Done]) -> list[Done]:
     return sorted(by_stamp.values(), key=lambda one: one.at)
 
 
-def kinds_in_words(inside: Sequence[Done]) -> tuple[tuple[tuple[str, int], ...], int, int]:
-    """What the transactions were, in plain words, the most first; the number of kinds left out;
-    and how many failed."""
+def kinds_counted(inside: Sequence[Done]) -> tuple[tuple[tuple[str, int], ...], int]:
+    """Every kind of the transactions that did not fail, in plain words with their numbers, the
+    most first and the kinds with no words of their own last; and how many failed."""
     failed = sum(one.act.ok is False for one in inside)
     counted: Counter[tuple[str, str]] = Counter(
         KIND_WORDS.get(one.act.name, OTHER) if one.act.name else UNREAD
@@ -151,9 +151,15 @@ def kinds_in_words(inside: Sequence[Done]) -> tuple[tuple[tuple[str, int], ...],
     )
     last = (OTHER, UNREAD)  # the kinds that are not named come after the named ones
     ordered = sorted(counted.items(), key=lambda item: (item[0] in last, -item[1], item[0][1]))
-    did = tuple((words[0] if count == 1 else words[1], count)
-                for words, count in ordered[:MOST_KINDS])  # fmt: skip
-    return did, max(0, len(ordered) - MOST_KINDS), failed
+    kinds = tuple((words[0] if count == 1 else words[1], count) for words, count in ordered)
+    return kinds, failed
+
+
+def kinds_in_words(inside: Sequence[Done]) -> tuple[tuple[tuple[str, int], ...], int, int]:
+    """What the transactions were, in plain words, the most first; the number of kinds left out;
+    and how many failed."""
+    kinds, failed = kinds_counted(inside)
+    return kinds[:MOST_KINDS], max(0, len(kinds) - MOST_KINDS), failed
 
 
 def on_paper(
