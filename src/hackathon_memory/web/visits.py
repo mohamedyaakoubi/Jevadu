@@ -3,7 +3,10 @@
 To learn what interests the visitors of the public copy, the jury of a hackathon above all, each
 action of a visitor is one row: a search and its words, the filters, a card opened, the graph or
 the charts, a check of a repository, a registration, a comparison by Gemini, a note read, the pitch
-deck opened (its link goes through the copy, which then sends the visitor on to the file). A row
+deck opened (its link goes through the copy, which then sends the visitor on to the file). An
+action that failed keeps what went wrong (3 November 2026): the words that the page showed the
+visitor, such as a refusal, a fall back to the keyword search or a Gemini that did not answer, or
+the kind of an error that no page answers, never its message. A row
 keeps the visitor's salted code (web/public.py), never an address or a name; the place that
 Vercel finds for the address (its headers x-vercel-ip-country, -country-region and -city); the
 other site that the visitor came from, without its query; and the browser and the system, in two
@@ -22,6 +25,7 @@ import argparse
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from urllib.parse import unquote, urlsplit
@@ -36,6 +40,10 @@ NOT_ACTIONS = ("/static/", "/_vercel/", "/owner", "/github/", "/health", "/robot
 PITCH_DECK = "/jevadu-pitch.pdf"  # the link of the pitch deck's PDF that the submission form gives
 TYPING = timedelta(seconds=20)  # searches typed one after another count as the last one
 LONGEST = 300  # the characters kept of an address, a site, or the words of a search
+FAILURES_KEPT = 5  # the failures kept with one action
+# What went wrong for the visitor of one request: the middleware gives each noted request a list
+# of its own, which the code that serves the request fills with failed().
+failures: ContextVar[list[str] | None] = ContextVar("failures", default=None)
 _BROWSERS = (("edg/", "Edge"), ("opr/", "Opera"), ("firefox/", "Firefox"), ("chrome/", "Chrome"),
              ("safari/", "Safari"))  # fmt: skip
 _SYSTEMS = (("android", "Android"), ("iphone", "iOS"), ("ipad", "iOS"), ("windows", "Windows"),
@@ -110,6 +118,21 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
     if path == "/method":
         return "about", {"note": "method"}
     return None
+
+
+def failed(words: object) -> None:
+    """Note that what the visitor of this request asked for failed, in the words that the page
+    showed them, once; nothing outside a request that is noted."""
+    kept = failures.get()
+    text = " ".join(str(words or "").split())[:LONGEST]
+    if kept is not None and text and text not in kept:
+        kept.append(text)
+
+
+def unexpected(error: BaseException) -> str:
+    """An error that no page answers, by its kind only: its message can hold an address or a
+    secret, its kind cannot."""
+    return f"The site failed on an error that it did not expect ({type(error).__name__})."
 
 
 def place_of(headers: Mapping[str, str]) -> tuple[str | None, str | None, str | None]:
@@ -193,6 +216,7 @@ def summary(found: Sequence[Visit]) -> dict[str, list[tuple[object, int]]]:
         "checks": Counter(one.detail["repo"] for one in actions
                           if one.action == "check" and one.detail.get("repo")),
         "actions": Counter(one.action for one in actions),
+        "failures": Counter(words for one in actions for words in one.detail.get("failed") or ()),
     }  # fmt: skip
     return {name: counter.most_common(15) for name, counter in counted.items()}
 
@@ -237,6 +261,8 @@ def described(one: Action, projects: Mapping[int, str], events: Mapping[str, str
         words += f" ({chosen})"
     if detail.get("status"):
         words += f", answered {detail['status']}"
+    if detail.get("failed"):
+        words += ", and failed: " + " ".join(detail["failed"])
     return words
 
 

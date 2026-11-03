@@ -18,7 +18,7 @@
   <section class="card mb-3" aria-labelledby="all-title"><div class="card-body">
     <h2 id="all-title" class="h3">In all</h2>
     <p>{{ visits | length }} visitor{{ "s" if visits | length != 1 }}, {{ actions_count }} action{{ "s" if actions_count != 1 }}.</p>
-    {% for title, key in (("Places", "places"), ("Came from", "sources"), ("Projects opened", "projects"), ("Searches", "ideas"), ("Checks", "checks"), ("Actions", "actions")) %}
+    {% for title, key in (("Places", "places"), ("Came from", "sources"), ("Projects opened", "projects"), ("Searches", "ideas"), ("Checks", "checks"), ("Actions", "actions"), ("What failed", "failures")) %}
     {% if summary[key] %}<h3 class="h4">{{ title }}</h3>
     <ul>{% for value, count in summary[key] %}<li>{% if key == "projects" %}<a href="/project/{{ value }}">{{ projects.get(value, value) }}</a>{% else %}{{ value }}{% endif %}: {{ count }}</li>{% endfor %}</ul>{% endif %}
     {% endfor %}
