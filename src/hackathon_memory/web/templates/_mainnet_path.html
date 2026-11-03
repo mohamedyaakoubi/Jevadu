@@ -78,5 +78,5 @@
   </ul>
   {% endif %}
 
-  <p class="hm-small hm-path-source">Read from the mirror node{% if path.read_on %} on {{ path.read_on | day }}{% endif %}.{% set named_from = path.own | selectattr("names_from") | map(attribute="names_from") | list %}{% if named_from %} The names of the functions come from {{ named_from | join("; ") }}.{% endif %}{% if path.messages %} The kind of a message is the value of its own field, such as &ldquo;event&rdquo; or &ldquo;kind&rdquo;.{% endif %} No model wrote any of it.</p>
+  <p class="hm-small hm-path-source">Read from the mirror node{% if path.read_on %} on {{ path.read_on | day }}{% endif %}.{% set named_from = path.own | selectattr("names_from") | map(attribute="names_from") | list %}{% if named_from %} The names of the functions come from {{ named_from | join("; ") }}.{% endif %}{% if path.messages %} The kind of a message is the value of its own field, such as &ldquo;event&rdquo; or &ldquo;kind&rdquo;.{% endif %}</p>
 </article>
