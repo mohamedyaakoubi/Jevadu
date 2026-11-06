@@ -92,6 +92,8 @@
       {% for one in result.problems %}<div class="alert alert-warning mt-3 mb-0" role="status">{{ one }}</div>{% endfor %}
       <p class="project-links">
         <a class="btn btn-sm" href="{{ result.repository }}" rel="noopener" target="_blank">Code on GitHub<span aria-hidden="true">&nbsp;&#8599;</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+        {% set read_again = {"repo": result.repository, "event": asked.event, "starts": asked.starts, "ends": asked.ends, "again": "1"} | urlencode %}
+        <a class="btn btn-sm btn-outline-primary" href="/check?{{ read_again }}" hx-get="/check?{{ read_again }}&amp;progress=1" hx-target="#viewer-body" hx-swap="innerHTML" data-check-again>Read again now</a>{{ parts.info("check-again", "reading a check again") }}
       </p>
     </header>
     {# On a page of its own the title is a level 1 heading, so the sections need a level 2 above them. #}

@@ -1345,9 +1345,11 @@ def create_app(
         days: submission.EventDays | None,
         asked: dict[str, str],
         progress: checks.Progress = lambda step, state: None,
+        again: bool = False,
     ) -> tuple[int, dict[str, Any]]:
         """What the page of a check shows: its status, and the values of its template.
-        `progress` hears each step start and end (web/checks.py)."""
+        `progress` hears each step start and end (web/checks.py); `again` asks GitHub and the
+        ledger at once (the button "Read again now")."""
         try:
             asker, why = github_or_why()
             result = submission.check_submission(
@@ -1355,6 +1357,7 @@ def create_app(
                 store=answers,
                 collector=f"{settings.collector_name.strip()}/{__version__}",
                 mirrors=mirror_nodes(), problems=[why] if why else [], progress=progress,
+                again=again,
             )  # fmt: skip
             if result.code is not None and result.code.status == CODE_GONE and not result.seen:
                 return 404, {"problem": submission.NO_SUCH_CODE}
@@ -1404,13 +1407,15 @@ def create_app(
         progress: str = "",
         line: str = "",
         commit: str = "",
+        again: str = "",
     ) -> HTMLResponse:
         """S3: the check of one submission (design 12.1), in the window over the page, or as a
         page of its own without JavaScript. Programs read every fact; no model writes. Asked by
         the page's script with progress=1, it runs in a thread of its own, and the window shows
         its steps until the answer is there (/check/progress). Back from Jevadu's GitHub App,
         `line` says whether the line was added to the README or was there, and `commit` names
-        the commit that added it; both serve the words of the page only."""
+        the commit that added it; both serve the words of the page only. With again=1, GitHub
+        and the ledger are asked at once (the button "Read again now")."""
         name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
         repository = submission.repository_link(repo[:300])
         if repository is None:
@@ -1428,11 +1433,12 @@ def create_app(
             return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
         if name == "_check.html" and progress == "1" and not serverless:
-            job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report))
+            job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report,
+                                                         again == "1"))  # fmt: skip
             return render(request, "_check_progress.html", view=jobs.view(job, announce=False),
                           repository=repository, event_name=days.name if days else None,
                           step_notes=evidence.check_notes())  # fmt: skip
-        status, shown = check_answer(conninfo, repository, days, asked)
+        status, shown = check_answer(conninfo, repository, days, asked, again=again == "1")
         added = None
         if line in ("added", "there"):
             named = commit if re.fullmatch(r"[0-9a-f]{7,40}", commit) else ""

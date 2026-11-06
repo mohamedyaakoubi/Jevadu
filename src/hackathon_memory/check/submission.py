@@ -108,6 +108,7 @@ MAX_CODE_IDS = 10
 NETWORKS_WHEN_OPEN = ("testnet", "mainnet")  # as the step of the pipeline asks
 MAX_AGE = timedelta(days=7)  # an answer of the node younger than this is taken from the table
 CHECK_AGE = timedelta(hours=1)  # an answer of GitHub older than this is asked again (design 7.3)
+AT_ONCE = timedelta(0)  # the button "Read again now": no answer is young enough
 NOT_ASKED = "not_asked"  # no network could be asked about the ID just now
 # The steps of a check, as it reports them while it runs (web/checks.py), and their states:
 # SAVED is done at once from what the tool kept, SKIPPED is a step with nothing to read.
@@ -330,6 +331,7 @@ def judge_ids(
     *,
     now: Callable[[], datetime],
     counts: Counter[str] | None = None,
+    max_age: timedelta = MAX_AGE,
 ) -> list[IdResult]:
     """The status of each ID by the proof rule, on the network that its text names, or the best
     of both networks. An ID that no network could be asked about is NOT_ASKED."""
@@ -343,8 +345,9 @@ def judge_ids(
                 continue
             try:
                 facts = asking.facts_of(ledger, mirror, item.entity_id, item.said_kind,
-                                        max_age=MAX_AGE, now=now, counts=counts)  # fmt: skip
-                used = asking.used_inside(ledger, mirror, facts, window, now=now, counts=counts)
+                                        max_age=max_age, now=now, counts=counts)  # fmt: skip
+                used = asking.used_inside(ledger, mirror, facts, window, now=now, counts=counts,
+                                          again=max_age == AT_ONCE)  # fmt: skip
             except MirrorError:
                 counts["errors_of_the_node"] += 1
                 continue
@@ -385,6 +388,7 @@ def judge_code_ids(
     *,
     now: Callable[[], datetime],
     counts: Counter[str] | None = None,
+    max_age: timedelta = MAX_AGE,
 ) -> tuple[list[IdResult], int]:
     """The IDs of the code that count for the submission (design 7.3): its own (no page or README
     of the collection names one, nor the code of another repository, nor its own README, in any of
@@ -410,7 +414,7 @@ def judge_code_ids(
                 continue
             try:
                 # an account first: most IDs of the code are accounts (pipeline/code_ids.py)
-                facts = asking.facts_of(ledger, mirror, one.entity_id, ACCOUNT, max_age=MAX_AGE,
+                facts = asking.facts_of(ledger, mirror, one.entity_id, ACCOUNT, max_age=max_age,
                                         now=now, counts=counts)  # fmt: skip
             except MirrorError:
                 counts["errors_of_the_node"] += 1
@@ -435,9 +439,10 @@ def histories(
     *,
     now: Callable[[], datetime],
     counts: Counter[str] | None = None,
+    max_age: timedelta = MAX_AGE,
 ) -> Read:
     """The own IDs of a README whose kind fits, each on the network of its status, and the
-    events of their histories: kept ones younger than MAX_AGE, or read now and kept. An ID that
+    events of their histories: kept ones younger than `max_age`, or read now and kept. An ID that
     a project with other code names, or a shared service, is not the team's own (design 8.4)."""
     counts = Counter() if counts is None else counts
     own: list[OwnId] = []
@@ -450,7 +455,7 @@ def histories(
                 or one.shared or one.named_elsewhere):  # fmt: skip
             continue
         entity, network, kind = one.found.entity_id, one.network, one.facts.kind
-        kept = store.saved(entity, network, since=now() - MAX_AGE)
+        kept = store.saved(entity, network, since=now() - max_age) if max_age else None
         if kept is None:
             mirror = mirrors.get(network)
             try:
@@ -599,17 +604,22 @@ def check_submission(
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     problems: list[str] | None = None,
     progress: Callable[[str, str], None] = lambda step, state: None,
+    again: bool = False,
 ) -> SubmissionCheck:
     """Check the repository, for the hackathon when one is given: without one, the dates of the
     IDs and of the code are shown and not judged. `problems` holds what the caller already knows
     went wrong, such as a GitHub that may not be asked now. `progress` hears each step start and
-    end, with its state."""
+    end, with its state. `again` asks GitHub and the ledger at once, instead of taking their
+    answers from the tables: the button "Read again now", which shows what a team did a moment
+    ago, such as its registration (5 November 2026)."""
     check = SubmissionCheck(repository, event, problems=list(problems or []))
+    max_age = AT_ONCE if again else MAX_AGE
     progress(GITHUB, RUNNING)
     sent = client.requests_made if client is not None else 0
     check.code, check.readme, check.version, asked = read_code(
-        client, store, repository, collector=collector, older_than=CHECK_AGE, now=now
-    )
+        client, store, repository, collector=collector,
+        older_than=AT_ONCE if again else CHECK_AGE, now=now,
+    )  # fmt: skip
     progress(GITHUB, DONE if client is not None and client.requests_made > sent else SAVED)
     check.problems.extend(asked)
     if check.code is not None and check.code.status != CODE_FOUND:
@@ -632,11 +642,11 @@ def check_submission(
     progress(LEDGER, RUNNING if found or (scan and scan.ids) else SKIPPED)
     asked_node: Counter[str] = Counter()
     judged = judge_ids(found[:MAX_IDS], window, mirrors, LedgerStore(conninfo), now=now,
-                       counts=asked_node)  # fmt: skip
+                       counts=asked_node, max_age=max_age)  # fmt: skip
     in_the_readme = {one.entity_id for one in found} | {thing_of(one) for one in judged}
     from_code, check.code_ids_not_judged = judge_code_ids(
         scan, in_the_readme, window, mirrors, LedgerStore(conninfo), CodeIdStore(conninfo),
-        repository, now=now, counts=asked_node,
+        repository, now=now, counts=asked_node, max_age=max_age,
     )  # fmt: skip
     if found or (scan and scan.ids):
         progress(LEDGER, DONE if asked_node["answers_from_the_node"] else SAVED)
@@ -671,7 +681,8 @@ def check_submission(
                 check.seen.append(SeenBefore(pid, key))
     progress(HISTORY, RUNNING)
     read: Counter[str] = Counter()
-    found = histories(check.ids, mirrors, HistoryStore(conninfo), now=now, counts=read)
+    found = histories(check.ids, mirrors, HistoryStore(conninfo), now=now, counts=read,
+                      max_age=max_age)  # fmt: skip
     progress(HISTORY, SKIPPED if not found.own else DONE if read["histories_read_now"] else SAVED)
     check.story = story_of_check(check, found.own, found.events)
     check.depth = depth_of_check(check, found)

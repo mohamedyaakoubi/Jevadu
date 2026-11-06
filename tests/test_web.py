@@ -1867,6 +1867,39 @@ def test_a_check_tells_the_ledger_story_of_its_readme_and_keeps_the_histories(si
     assert "Ledger: every transaction of its own IDs. No hackathon was chosen." in none
 
 
+def test_read_again_now_of_a_check_shows_what_the_ledger_did_since(site) -> None:  # noqa: ANN001
+    """His scene of 5 November 2026: register, read again, and the new action is on the days of
+    the IDs. A plain second check still takes the ledger's answers from the table."""
+    from checkfakes import TOPIC
+
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": REPO, "event": event}
+    part = client.get("/check", params=asked, headers=HX).text
+    assert "data-check-again" in part and "Read again now" in part
+    button = re.search(r'hx-get="(/check\?[^"]*again=1[^"]*)"', part)
+    assert button is not None and "progress=1" in button.group(1)
+    assert 'data-tip="tip-check-again"' in part
+    depth = part.split('id="depth-check"', 1)[1].split("</section>", 1)[0]
+    assert "1 message to a topic." in depth
+    with psycopg.connect(database) as conn:
+        first = conn.execute("SELECT asked_at FROM ledger_histories WHERE entity_id = %s",
+                             (TOPIC,)).fetchall()  # fmt: skip
+    assert len(first) == 1
+    client.mirrors["testnet"].lists[("messages", TOPIC)].append(  # a new message, after the check
+        {"sequence_number": 8, "consensus_timestamp": "1772884801.000000001"}
+    )
+    plain = client.get("/check", params=asked, headers=HX).text
+    assert "2 messages to a topic." not in plain
+    again = client.get("/check", params={**asked, "again": "1"}, headers=HX).text
+    with psycopg.connect(database) as conn:
+        later = conn.execute("SELECT asked_at FROM ledger_histories WHERE entity_id = %s",
+                             (TOPIC,)).fetchall()  # fmt: skip
+    assert later != first  # read again now, not taken from the table
+    shown = again.split('id="depth-check"', 1)[1].split("</section>", 1)[0]
+    assert "2 messages to a topic." in shown
+
+
 def test_a_check_asked_by_the_script_shows_its_steps_until_the_answer(site) -> None:  # noqa: ANN001
     """The page's script asks with progress=1: the check runs in a thread of its own, the window
     shows its steps, and the next ask gives the answer in place of the whole window (design 12.1,
