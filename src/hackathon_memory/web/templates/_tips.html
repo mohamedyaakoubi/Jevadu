@@ -157,7 +157,11 @@
 
 {% call tip("fresh", "Read again") %}
 <p>A repository and its Hedera IDs change after the event: a team pushes code, rewrites its README, or makes its repository private, and its IDs take new transactions. So GitHub and the mirror node are asked again once their answers are a day old{% if REFRESH_IN_BACKGROUND %}, while the website runs{% else %}, when the collection is read again{% endif %}: the code, the IDs on the ledger and how they are set up, their new transactions, and what the calls of its contracts reached.</p>
-<p><b>Read again now</b> asks them at once for this project. GitHub answers "not modified" when nothing changed, which costs it nothing. The pages of the hackathon sites are never read again: a submission does not change after its event.</p>
+<p><b>Read again now</b> asks them at once for this project, once every 3 hours; a reading that fails does not count. GitHub answers "not modified" when nothing changed, which costs it nothing. The pages of the hackathon sites are never read again: a submission does not change after its event.</p>
+{% endcall %}
+
+{% call tip("check-again", "Read again now") %}
+<p>So that a second check of the same code is fast, a check keeps the answers of GitHub for an hour and those of the mirror node for 7 days. <b>Read again now</b> asks both at once, once every 3 hours for each repository; a reading that fails does not count. After a transaction of the project, or after a registration on Hedera, it shows the new action in these facts and on the days of its IDs.</p>
 {% endcall %}
 
 {% call tip("life", "Activity after the event") %}

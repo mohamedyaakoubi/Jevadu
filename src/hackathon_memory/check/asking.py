@@ -29,9 +29,10 @@ def facts_of(
     now: Callable[[], datetime],
     counts: Counter[str],
 ) -> LedgerFacts:
-    """The facts of an id on the network of `mirror`: from the table when young enough."""
+    """The facts of an id on the network of `mirror`: from the table when young enough. With a
+    `max_age` of nothing, no answer is young enough, whatever the clock says."""
     kept = ledger.facts(entity_id, mirror.network)
-    if kept is not None and now() - kept.asked_at <= max_age:
+    if kept is not None and max_age and now() - kept.asked_at <= max_age:
         counts["answers_from_the_table"] += 1
         return kept
     facts = read_facts(mirror, entity_id, said_kind, now=now)
@@ -48,11 +49,13 @@ def used_inside(
     *,
     now: Callable[[], datetime],
     counts: Counter[str],
+    again: bool = False,
 ) -> bool | None:
-    """The answer to the one more question of the proof rule, when the rule needs it."""
+    """The answer to the one more question of the proof rule, when the rule needs it: the kept
+    one, unless it must be asked `again`."""
     if window is None or not needs_a_look_inside(facts, window):
         return None
-    used = ledger.use(facts.entity_id, facts.network, window.start, window.end)
+    used = None if again else ledger.use(facts.entity_id, facts.network, window.start, window.end)
     if used is None:
         used = was_used_inside(mirror, facts, window.start, window.end)
         ledger.save_use(facts.entity_id, facts.network, window.start, window.end, used, now())

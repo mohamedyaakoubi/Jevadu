@@ -182,6 +182,50 @@ def test_the_check_asks_github_once_and_judges_the_ids_of_the_readme(
     assert len(mirrors["testnet"].asked) == asked_before  # the ledger's answer is in the table
 
 
+@pytest.mark.integration
+def test_reading_again_asks_the_ledger_at_once_and_a_plain_second_check_does_not(
+    database: str, tmp_path: Path
+) -> None:
+    """A message sent a moment ago, such as a registration, shows only when the ledger is asked
+    again: a second check takes its answers from the table for 7 days."""
+    client, _ = found_code(tmp_path)
+    mirrors = nodes()
+    run(database, tmp_path, client, mirrors)
+    asked_before = len(mirrors["testnet"].asked)
+    run(database, tmp_path, client, mirrors)
+    assert len(mirrors["testnet"].asked) == asked_before
+    run(database, tmp_path, client, mirrors, again=True)
+    assert len(mirrors["testnet"].asked) > asked_before
+
+
+def test_a_check_read_again_asks_github_at_once_though_its_answers_are_young(
+    database: str, tmp_path: Path
+) -> None:
+    """With the answers asked again (design 7.3): younger than an hour, a plain check asks nobody;
+    "Read again now" asks, and GitHub's new README shows."""
+    pages = {
+        facts_address(REPO): Reply(200, facts_answer()),
+        readme_address(REPO): [Reply(200, readme_answer("# Pebble Pay\n\nThe first words.\n")),
+                               Reply(200, readme_answer("# Pebble Pay\n\nThe new words.\n"))],
+        commits_address(REPO): Reply(200, commits_answer(ARCHIVE_COMMIT)),
+        archive_address(REPO): Reply(302, b"", {"Location": DOWNLOAD}),
+        DOWNLOAD: Reply(200, archive(CODE_FILES)),
+    }  # fmt: skip
+    client, site = github(tmp_path, pages)
+    answers = Answers(tmp_path / "raw")
+
+    def check(**options: bool) -> submission.SubmissionCheck:
+        client.now = lambda: NOW
+        return submission.check_submission(database, REPO, EVENT, client=client, store=answers,
+                                           collector=COLLECTOR, mirrors=nodes(), now=lambda: NOW,
+                                           **options)  # fmt: skip
+
+    assert "first words" in check().readme_text
+    asked = len(site.seen)
+    assert "first words" in check().readme_text and len(site.seen) == asked
+    assert "new words" in check(again=True).readme_text and len(site.seen) > asked
+
+
 def test_a_check_asks_github_again_after_an_hour_and_finds_a_repository_made_public(
     database: str, tmp_path: Path
 ) -> None:
