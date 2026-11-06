@@ -67,6 +67,7 @@ from hackathon_memory.collect.polite import CollectorRefused
 from hackathon_memory.db import readings
 from hackathon_memory.db.embeddings import EmbeddingStore, idea_fingerprint
 from hackathon_memory.db.idea_answers import AnswerStore, scope_of
+from hackathon_memory.db.read_again import ReadAgainStore, of_project
 from hackathon_memory.db.runs import recorded_run
 from hackathon_memory.example_ideas import EXAMPLE_IDEAS
 from hackathon_memory.finops.budget import BudgetExceeded
@@ -418,6 +419,12 @@ def day(value: date) -> str:
 def moment(value: datetime) -> str:
     """A moment with its time, in UTC: 16 October 2026, 18:42:07 UTC."""
     return f"{day(value)}, {value:%H:%M:%S} UTC"
+
+
+def minute(value: datetime) -> str:
+    """A time to wait for, to the minute that follows it, in UTC: 16 October 2026, 18:43 UTC."""
+    later = value + timedelta(seconds=59)
+    return f"{day(later)}, {later:%H:%M} UTC"
 
 
 @dataclass
@@ -1349,7 +1356,8 @@ def create_app(
     ) -> tuple[int, dict[str, Any]]:
         """What the page of a check shows: its status, and the values of its template.
         `progress` hears each step start and end (web/checks.py); `again` asks GitHub and the
-        ledger at once (the button "Read again now")."""
+        ledger at once (the button "Read again now"), and a reading that failed gives its press
+        back (db/read_again.py)."""
         try:
             asker, why = github_or_why()
             result = submission.check_submission(
@@ -1359,6 +1367,10 @@ def create_app(
                 mirrors=mirror_nodes(), problems=[why] if why else [], progress=progress,
                 again=again,
             )  # fmt: skip
+            presses = ReadAgainStore(conninfo)
+            if again and result.problems:
+                presses.give_back(repository)
+            read_again_from = presses.free_from(repository)
             if result.code is not None and result.code.status == CODE_GONE and not result.seen:
                 return 404, {"problem": submission.NO_SUCH_CODE}
             progress(checks.COLLECTION, checks.RUNNING)
@@ -1394,7 +1406,7 @@ def create_app(
             "hedera_code": code_reading.view_of_read(repository, result.hedera_code),
             "readme_lines": (data.said_lines(submission.readme_prose(result.readme_text))
                              if result.story else []),  # fmt: skip
-            "asked": asked,
+            "asked": asked, "read_again_from": read_again_from,
         }  # fmt: skip
 
     @app.get("/check", response_class=HTMLResponse)
@@ -1415,7 +1427,8 @@ def create_app(
         its steps until the answer is there (/check/progress). Back from Jevadu's GitHub App,
         `line` says whether the line was added to the README or was there, and `commit` names
         the commit that added it; both serve the words of the page only. With again=1, GitHub
-        and the ledger are asked at once (the button "Read again now")."""
+        and the ledger are asked at once (the button "Read again now"), if this repository was not
+        read that way in the last 3 hours; else it is a plain check, whose button says when."""
         name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
         repository = submission.repository_link(repo[:300])
         if repository is None:
@@ -1432,13 +1445,17 @@ def create_app(
         if not allowed(public_copy.CHECK):
             return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
+        try:
+            read_now = again == "1" and ReadAgainStore(conninfo).take(repository)
+        except psycopg.OperationalError:
+            return render(request, name, 503, problem=DATABASE_DOWN)
         if name == "_check.html" and progress == "1" and not serverless:
             job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report,
-                                                         again == "1"))  # fmt: skip
+                                                         read_now))  # fmt: skip
             return render(request, "_check_progress.html", view=jobs.view(job, announce=False),
                           repository=repository, event_name=days.name if days else None,
                           step_notes=evidence.check_notes())  # fmt: skip
-        status, shown = check_answer(conninfo, repository, days, asked, again=again == "1")
+        status, shown = check_answer(conninfo, repository, days, asked, again=read_now)
         added = None
         if line in ("added", "there"):
             named = commit if re.fullmatch(r"[0-9a-f]{7,40}", commit) else ""
@@ -1875,19 +1892,35 @@ def create_app(
         if state is not None and state.status == refreshing.FAILED:  # in the page's words (S9)
             words = READING_PROBLEMS.get(state.problem or "", READING_FAILED)
             visits.failed(f"{words} ({state.problem})" if state.problem else words)
+            try:  # a reading that failed does not count: "Try again" can be pressed at once
+                ReadAgainStore(database()).give_back(of_project(project_id), state.since)
+            except (SettingsError, psycopg.OperationalError):
+                pass  # the database is down: the page says what failed, the press stays counted
         return render(request, "_read_again.html", project_id=project_id, state=state,
                       query=query, page=request.query_params.get("page") == "1")  # fmt: skip
 
     @app.post("/project/{project_id}/read-again", response_class=HTMLResponse)
     def read_again_now(request: Request, project_id: int) -> HTMLResponse:
-        """S2: read GitHub and the mirror node again for one project, before the next round."""
+        """S2: read GitHub and the mirror node again for one project, before the next round, at
+        most once every 3 hours (db/read_again.py). A press too soon asks nothing and uses nothing
+        of the visitor's allowance: the card comes back, and its button says when."""
         if not person():
             visits.failed(PERSON_FIRST)
             return HTMLResponse(f'<p class="hm-small">{escape(PERSON_FIRST)}</p>', 403)
-        if not allowed(public_copy.REFRESH):
-            words = used(public_copy.REFRESH)
-            visits.failed(words)
-            return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 429)
+        too_soon = refreshing.State(refreshing.DONE, datetime.now(UTC))
+        what = of_project(project_id)
+        try:
+            presses = ReadAgainStore(database())
+            if presses.free_from(what) is not None:
+                return read_again_shown(request, project_id, too_soon)
+            if not allowed(public_copy.REFRESH):
+                words = used(public_copy.REFRESH)
+                visits.failed(words)
+                return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 429)
+            if not presses.take(what):  # pressed by someone else, a moment ago
+                return read_again_shown(request, project_id, too_soon)
+        except (SettingsError, psycopg.OperationalError):
+            return render(request, "_problem.html", 503, problem=DATABASE_DOWN)
         return read_again_shown(request, project_id, reader.ask(project_id))
 
     @app.get("/project/{project_id}/read-again", response_class=HTMLResponse)
@@ -2011,6 +2044,7 @@ def create_app(
 
     templates.env.filters["day"] = day
     templates.env.filters["moment"] = moment
+    templates.env.filters["minute"] = minute
     templates.env.filters["id_links"] = data.id_links
     templates.env.filters["iso_day"] = iso_day
     templates.env.filters["said"] = data.said

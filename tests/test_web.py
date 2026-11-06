@@ -1900,6 +1900,106 @@ def test_read_again_now_of_a_check_shows_what_the_ledger_did_since(site) -> None
     assert "2 messages to a topic." in shown
 
 
+def a_press_ago(database: str, hours: float) -> None:
+    """The last presses of "Read again now" were made `hours` earlier than they were."""
+    with psycopg.connect(database) as conn:
+        conn.execute("UPDATE read_again_uses SET used_at = used_at - make_interval(secs => %s)",
+                     (hours * 3600,))  # fmt: skip
+
+
+def presses_of(database: str) -> list[tuple]:
+    with psycopg.connect(database) as conn:
+        return conn.execute("SELECT what, used_at FROM read_again_uses").fetchall()
+
+
+def test_a_check_is_read_again_once_in_3_hours(site) -> None:  # noqa: ANN001
+    """His word of 6 November 2026: one press every 3 hours for a repository. A press too soon
+    asks nothing and the check is a plain one; the button is greyed out and says from when."""
+    from checkfakes import TOPIC
+
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": REPO, "event": event}
+    client.get("/check", params=asked, headers=HX)  # a plain check uses no press
+    assert "data-check-again>Read again now" in client.get("/check", params=asked, headers=HX).text
+    first = client.get("/check", params={**asked, "again": "1"}, headers=HX).text
+    assert re.search(r"<button[^>]*disabled>Read again now</button>", first)
+    assert "again=1" not in first and "You can read it again from " in first
+    stamp = presses_of(database)
+    assert [what for what, _ in stamp] == [REPO]
+    client.mirrors["testnet"].lists[("messages", TOPIC)].append(  # a new message, after the press
+        {"sequence_number": 8, "consensus_timestamp": "1772884801.000000001"}
+    )
+    soon = client.get("/check", params={**asked, "again": "1"}, headers=HX)
+    assert soon.status_code == 200 and "You can read it again from " in soon.text
+    assert "2 messages to a topic." not in soon.text  # nothing was asked
+    assert presses_of(database) == stamp  # a press too soon does not put the next one further off
+    a_press_ago(database, 2.9)
+    assert "You can read it again from " in client.get("/check", params=asked, headers=HX).text
+    a_press_ago(database, 0.2)  # now 3.1 hours ago
+    plain = client.get("/check", params=asked, headers=HX).text
+    assert "You can read it again from " not in plain and "data-check-again>Read again now" in plain
+    again = client.get("/check", params={**asked, "again": "1"}, headers=HX).text
+    shown = again.split('id="depth-check"', 1)[1].split("</section>", 1)[0]
+    assert "2 messages to a topic." in shown and "You can read it again from " in again
+
+
+def test_a_reading_of_a_check_that_failed_does_not_count(site, monkeypatch) -> None:  # noqa: ANN001
+    """The mirror node did not answer: the team can press again at once."""
+    from checkfakes import TOPIC
+    from hackathon_memory.hedera.mirror import MirrorError
+
+    client, _, _, database = site
+    event = checkable(database)
+    asked = {"repo": REPO, "event": event, "again": "1"}
+
+    def away(*_args: object, **_more: object) -> None:
+        raise MirrorError("down")
+
+    mirror = client.mirrors["testnet"]
+    monkeypatch.setattr(mirror, "topic", away)
+    failed = client.get("/check", params=asked, headers=HX).text
+    assert "The mirror node of Hedera did not answer" in failed
+    assert "You can read it again from " not in failed and "again=1" in failed
+    assert presses_of(database) == []
+    monkeypatch.undo()
+    assert TOPIC in mirror.things["topic"]
+    assert "You can read it again from " in client.get("/check", params=asked, headers=HX).text
+
+
+def test_a_card_is_read_again_once_in_3_hours(site) -> None:  # noqa: ANN001
+    """The button of a card has the same limit (6 November 2026). A press too soon asks nothing
+    and brings the card back, whose button says from when; a failed reading does not count."""
+    from hackathon_memory.web.refresher import FAILED, State
+
+    client, _, ids, database = site
+    pebble = ids["Pebble Pay"]
+    checkable(database)  # Pebble Pay keeps the code of REPO
+    own_id(database, pebble, "0.0.4870201", "topic")
+    press = f"/project/{pebble}/read-again"
+    assert f'hx-post="{press}' in client.get(f"/project/{pebble}/panel").text
+    first = client.post(press, headers=HX)
+    assert first.status_code == 200 and f'hx-post="{press}' not in first.text
+    assert re.search(r"<button[^>]*disabled>Read again now</button>", first.text)
+    assert "You can read it again from " in first.text
+    asked = len(client.github_site.seen)
+    soon = client.post(press, headers=HX)
+    assert soon.headers["HX-Retarget"] == "#viewer-body"
+    assert "You can read it again from " in soon.text
+    assert len(client.github_site.seen) == asked  # nothing was asked
+    assert "You can read it again from " in client.get(f"/project/{pebble}").text  # on its page too
+    a_press_ago(database, 3.1)
+    assert f'hx-post="{press}' in client.get(f"/project/{pebble}/panel").text
+    reader = client.app.state.refresher
+    real = reader.ask
+    reader.ask = lambda _pid: State(FAILED, datetime.now(UTC), "MirrorError")
+    assert "The mirror node did not answer" in client.post(press, headers=HX).text
+    assert presses_of(database) == []  # given back: "Try again" can be pressed at once
+    reader.ask = real
+    assert client.post(press, headers=HX).status_code == 200
+    assert len(client.github_site.seen) > asked
+
+
 def test_a_check_asked_by_the_script_shows_its_steps_until_the_answer(site) -> None:  # noqa: ANN001
     """The page's script asks with progress=1: the check runs in a thread of its own, the window
     shows its steps, and the next ask gives the answer in place of the whole window (design 12.1,
