@@ -443,6 +443,13 @@ class RegisterView:
     line_found: bool = False  # the README that the check read carries it already
 
 
+def listed_days(one: listed.Listed) -> submission.EventDays:
+    """The days of a hackathon of the list, as a check judges them: from the start of its first
+    day, in UTC, to its last day."""
+    first = datetime(*one.first.timetuple()[:3], tzinfo=UTC) if one.first else None
+    return submission.EventDays(one.name, first, one.last, key=one.key)
+
+
 def iso_day(value: str) -> str:
     """A date written 2026-10-14 in a result file, as the pages write it: 14 October 2026."""
     try:
@@ -1262,8 +1269,7 @@ def create_app(
             return (submission.event_of_days(*days), None) if days else (None, NO_DAYS)
         one = listed.listed(event)
         if one is not None:
-            first = datetime(*one.first.timetuple()[:3], tzinfo=UTC) if one.first else None
-            return submission.EventDays(one.name, first, one.last, key=one.key), None
+            return listed_days(one), None
         if not event.isdigit():
             return None, NO_EVENT
         with psycopg.connect(conninfo) as conn:
