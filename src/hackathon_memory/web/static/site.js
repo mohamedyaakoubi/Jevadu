@@ -136,15 +136,15 @@
 
   // The box above the list of hackathons (design 12.1, S3): it keeps the hackathons whose name
   // holds its words and opens the list to show them; Enter picks the first, Escape empties the
-  // box, and the down arrow goes into the list. "None" and "Other hackathon" always stay
-  // (1 November 2026).
+  // box, and the down arrow goes into the list. "Find it in Jevadu's register", "None" and "Other
+  // hackathon" always stay (1 November 2026; the first since 6 November).
   function searchHackathons(box) {
     var list = $("check-event");
     if (!list) return [];
     var words = box.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     var kept = [];
     list.querySelectorAll("option").forEach(function (option) {
-      if (option.value === "" || option.value === "other") return;
+      if (option.value === "" || option.value === "none" || option.value === "other") return;
       var name = option.textContent.toLowerCase();
       var keep = words.every(function (word) { return name.indexOf(word) !== -1; });
       option.hidden = !keep;

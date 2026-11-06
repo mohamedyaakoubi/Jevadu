@@ -2155,12 +2155,14 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     client, _, _, database = site
     alone = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
     assert "Registering needs a hackathon." in alone.text  # no project keeps this code yet
+    assert "no hackathon: none found in Jevadu's register" in alone.text  # it was looked for
     checkable(database)
     start = client.get("/")
-    assert '<option value="">None: show the facts, without judging dates</option>' in start.text
+    assert '<option value="">Find it in Jevadu\'s register on Hedera</option>' in start.text
+    assert '<option value="none">None: show the facts, without judging dates</option>' in start.text
     assert '<optgroup label="2026"><option value="' in start.text  # a group for each year
     assert "ETHGlobal Sample Event (6 to 8 March)</option>" in start.text  # a dated one
-    part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
+    part = client.get("/check", params={"repo": REPO, "event": "none"}, headers=HX)
     assert part.status_code == 200 and "no hackathon selected" in part.text
     # "found, dates not judged", in grey, was not understood (24 October 2026)
     mark = 'status-azure hm-status"><span class="status-dot"></span>Proof: IDs found, no hackathon'
@@ -2176,6 +2178,63 @@ def test_the_hackathon_of_a_check_is_optional(site) -> None:  # noqa: ANN001
     refused = client.post("/register", data=form, headers=HX)
     assert refused.status_code == 400 and "Registering needs a hackathon" in refused.text
     assert client.writes.written == []
+
+
+def register(client, event: str) -> None:  # noqa: ANN001
+    """The team checks its code for `event`, adds the line to its README, and registers."""
+    asked = {"repo": REPO, "event": event}
+    with_line(client, client.get("/check", params=asked, headers=HX).text)
+    done = client.post("/register", data={**asked, "starts": "", "ends": ""}, headers=HX)
+    assert "Registered on Hedera" in done.text
+
+
+def test_a_hackathon_left_to_the_tool_is_found_in_the_register(site) -> None:  # noqa: ANN001
+    """His words of 6 November 2026: "Can't our tool be proactive and locate which hackathon since
+    it was registered on our register?" A check that leaves the hackathon to the tool reads the
+    register: the one hackathon that the records of the code name is used, and said (S3)."""
+    client, _, _, database = site
+    register(client, checkable(database))
+    part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
+    head = part.text.split("</header>")[0]
+    assert "ETHGlobal Sample Event, from its registration on Hedera" in head
+    assert 'popovertarget="tip-hackathon-found"' in head  # its (i) says where it comes from
+    assert "no hackathon" not in head and "Activity:" in head  # its dates are judged
+    assert "It is already registered for this hackathon" in part.text  # nothing written twice
+    assert "Register on Hedera testnet" not in part.text
+    plain = client.get("/check", params={"repo": REPO, "event": "none"}, headers=HX)
+    assert "no hackathon selected" in plain.text and "from its registration" not in plain.text
+
+
+def test_a_code_registered_for_several_hackathons_names_them_all(site) -> None:  # noqa: ANN001
+    """Several hackathons in the register: the check uses none, names them, and offers to check
+    the code again for each (S3)."""
+    from hackathon_memory.hedera.listed import LISTED
+
+    client, _, _, database = site
+    register(client, checkable(database))
+    register(client, LISTED[0].key)
+    part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
+    assert "no hackathon: registered for several" in part.text
+    names = f"ETHGlobal Sample Event, {LISTED[0].name}"
+    said = f"This repository is registered on Hedera for {names}. Check it for one of them?"
+    assert said in part.text
+    assert f"Check it for {LISTED[0].name}</button>" in part.text
+    assert f"event={LISTED[0].key}&amp;progress=1" in part.text
+
+
+def test_a_register_that_cannot_be_read_leaves_the_check_without_a_hackathon(site) -> None:  # noqa: ANN001
+    from hackathon_memory.hedera.mirror import MirrorError
+
+    client, _, _, database = site
+    checkable(database)
+
+    def away(*_: object, **__: object) -> list:
+        raise MirrorError("The mirror node does not answer.")
+
+    client.mirrors["testnet"].topic_messages_from = away
+    part = client.get("/check", params={"repo": REPO, "event": ""}, headers=HX)
+    assert part.status_code == 200 and "no hackathon: the register could not be read" in part.text
+    assert "Register it for that hackathon?" in part.text  # the collection still names its own
 
 
 @pytest.mark.browser
@@ -2201,7 +2260,8 @@ def test_the_window_shows_the_steps_of_a_check_and_then_its_answer(site, chromiu
 @pytest.mark.browser
 def test_the_hackathons_of_a_check_can_be_searched(site, chromium) -> None:  # noqa: ANN001
     """The box above the list of hackathons keeps those whose name holds its words, and Enter
-    picks the first; "None" and "Other hackathon" always stay (1 November 2026)."""
+    picks the first; "Find it in Jevadu's register", "None" and "Other hackathon" always stay
+    (1 November 2026; the first since 6 November)."""
     client, _, _, database = site
     event = checkable(database)
     with psycopg.connect(database) as conn:
@@ -2217,7 +2277,8 @@ def test_the_hackathons_of_a_check_can_be_searched(site, chromium) -> None:  # n
     page.fill("#check-event-search", "sample")
     kept = page.evaluate(shown)
     assert not any("Later Summit" in name for name in kept)
-    assert kept[0].startswith("None") and kept[-1].startswith("Other hackathon")
+    assert kept[0].startswith("Find it in Jevadu") and kept[1].startswith("None")
+    assert kept[-1].startswith("Other hackathon")
     page.press("#check-event-search", "Enter")
     assert page.input_value("#check-event") == event
     assert page.input_value("#check-event-search") == ""  # the whole list is back

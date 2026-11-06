@@ -285,10 +285,16 @@
 <p>This site is a memory of past hackathons, not a live view: it cannot see the other submissions of a hackathon that is running now.</p>
 <ul>
   <li><b>Search:</b> type in the box above the list to keep the hackathons whose name holds your words; Enter picks the first.</li>
+  <li><b>Find it in Jevadu's register on Hedera:</b> if this repository was registered for a hackathon, the check uses that hackathon and says so. If it was registered for several, the check names them so that you can pick one. If it was never registered, the check works as with None.</li>
   <li><b>None:</b> the check shows each fact with its own date, for example "token created 7 March 2026".</li>
   <li><b>A hackathon, or its dates:</b> the check also says whether each Hedera ID was created or used during the event, and whether the code changed after it.</li>
 </ul>
 <p>The list shows the hackathons running now first, then past ones by the year they ended. Registering on Hedera needs a hackathon from the list.</p>
+{% endcall %}
+
+{% call tip("hackathon-found", "Hackathon from the register") %}
+<p>No hackathon was chosen, so the check looked in Jevadu's public register on Hedera{{ parts.ref("topic") }}. The record of this repository there names this hackathon, so the check judges the dates against it. The record is listed under "Register on Hedera", with its link to HashScan.</p>
+<p>To see every fact without judging dates, choose None in the check form.</p>
 {% endcall %}
 
 {% call tip("check-compare", "Compare with Gemini") %}

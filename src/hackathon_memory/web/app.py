@@ -279,6 +279,9 @@ CHECK_LOST = (
     "submission again."
 )
 NO_EVENT = "That hackathon is not in the list. Pick one from the list, or none, and try again."
+# The check form's choice "None: show the facts, without judging dates". Its first choice, with no
+# value, leaves the hackathon to the tool, which looks for it in the register (design 12.1, S3).
+NO_HACKATHON = "none"
 NO_DAYS = (
     "Enter the start and end dates of the hackathon; the end cannot come before the start. "
     "Or choose no hackathon to see the dates without judging them."
@@ -441,6 +444,44 @@ class RegisterView:
     problem: str | None = None
     line: str = ""  # the line that the team adds to its README before the registration
     line_found: bool = False  # the README that the check read carries it already
+
+
+# What the register said about the hackathon of a check that left it to the tool (design 12.1, S3,
+# 6 November 2026): its records of the code name one hackathon, which the check uses; several,
+# which it names; none; or it could not be read.
+FOUND, SEVERAL, NONE_FOUND, UNREAD = "found", "several", "none", "unread"
+
+
+@dataclass(frozen=True)
+class FromRegister:
+    state: str  # FOUND, SEVERAL, NONE_FOUND or UNREAD
+    choices: tuple[tuple[str, str], ...] = ()  # each hackathon named: its form value, its name
+
+
+def listed_days(one: listed.Listed) -> submission.EventDays:
+    """The days of a hackathon of the list, as a check judges them: from the start of its first
+    day, in UTC, to its last day."""
+    first = datetime(*one.first.timetuple()[:3], tzinfo=UTC) if one.first else None
+    return submission.EventDays(one.name, first, one.last, key=one.key)
+
+
+def event_of_key(conninfo: str, key: str) -> tuple[str, submission.EventDays] | None:
+    """The hackathon that a record of the register names, with its value in the check form, when
+    it is a hackathon of the list or of the collection. A record of typed days names none of them:
+    only a hackathon of the list can be registered (design 9.2)."""
+    one = listed.listed(key)
+    if one is not None:
+        return one.key, listed_days(one)
+    site, _, slug = key.partition("/")
+    if site == "days" or not slug:
+        return None
+    with psycopg.connect(conninfo) as conn:
+        row = conn.execute("SELECT id, name, starts_at, ends_on FROM events "
+                           "WHERE site = %s AND slug = %s", (site, slug)).fetchone()  # fmt: skip
+    if row is None:
+        return None
+    event_id, name, starts_at, ends_on = row
+    return str(event_id), submission.EventDays(name, starts_at, ends_on, key=key)
 
 
 def iso_day(value: str) -> str:
@@ -1253,17 +1294,17 @@ def create_app(
 
     def event_days(conninfo: str, event: str, starts: str, ends: str) -> tuple[Any, str | None]:
         """The hackathon that a submission was sent to, with what went wrong in plain words.
-        (None, None) when none is given: it is optional, since the tool is a memory of past
-        hackathons and not a live view (design 12.1, S3)."""
-        if not event:
+        (None, None) when none is given, or None is chosen: it is optional, since the tool is a
+        memory of past hackathons and not a live view (design 12.1, S3). With none given, the
+        check may still find it in the register (hackathon_from_register)."""
+        if not event or event == NO_HACKATHON:
             return None, None
         if event == "other":
             days = submission.typed_days(starts, ends)
             return (submission.event_of_days(*days), None) if days else (None, NO_DAYS)
         one = listed.listed(event)
         if one is not None:
-            first = datetime(*one.first.timetuple()[:3], tzinfo=UTC) if one.first else None
-            return submission.EventDays(one.name, first, one.last, key=one.key), None
+            return listed_days(one), None
         if not event.isdigit():
             return None, NO_EVENT
         with psycopg.connect(conninfo) as conn:
@@ -1275,22 +1316,50 @@ def create_app(
         return submission.EventDays(name, starts_at, ends_on,
                                     key=registry.event_key(site, slug)), None  # fmt: skip
 
-    def register_view(repository: str, days: submission.EventDays) -> RegisterView:
-        """The register's records of this code, read from the mirror node (design 9.2)."""
+    def register_view(
+        repository: str, days: submission.EventDays, found: list | None = None
+    ) -> RegisterView:
+        """The register's records of this code, read from the mirror node (design 9.2), unless
+        the check has read them already (`found`)."""
         topic = settings.hedera_topic_id.strip()
         if not topic or settings.hedera_network != "testnet":
             return RegisterView(open=False)
         view = RegisterView(True, settings.hedera_network, topic,
                             registry.code_fingerprint(repository), days.key)  # fmt: skip
         view.line = registry.readme_line(view.event, view.code)
-        try:
-            found = registry.registrations(mirror_nodes()[view.network], topic)
-        except MirrorError:
-            view.problem = REGISTER_UNREAD
-            return view
+        if found is None:
+            try:
+                found = registry.registrations(mirror_nodes()[view.network], topic)
+            except MirrorError:
+                view.problem = REGISTER_UNREAD
+                return view
         view.earlier = [one for one in found if one.code == view.code]
         view.same_event = next((one for one in view.earlier if one.event == view.event), None)
         return view
+
+    def hackathon_from_register(
+        conninfo: str, repository: str
+    ) -> tuple[submission.EventDays | None, FromRegister | None, list | None]:
+        """For a check that left the hackathon to the tool: the hackathon that the register's
+        records of this code name, when they name one hackathon of the list or of the collection
+        (design 12.1, S3; his words of 6 November 2026: "Can't our tool be proactive and locate
+        which hackathon since it was registered on our register?"). Several are named, and none
+        is used. The records come back too, so that the box of the register does not read them
+        again. Nothing is looked up while the register is closed."""
+        topic = settings.hedera_topic_id.strip()
+        if not topic or settings.hedera_network != "testnet":
+            return None, None, None
+        try:
+            found = registry.registrations(mirror_nodes()[settings.hedera_network], topic)
+        except MirrorError:
+            return None, FromRegister(UNREAD), None
+        code = registry.code_fingerprint(repository)
+        keys = dict.fromkeys(one.event for one in found if one.code == code)  # in order, once each
+        named = [one for one in (event_of_key(conninfo, key) for key in keys) if one is not None]
+        choices = tuple((value, days.name) for value, days in named)
+        if len(named) == 1:
+            return named[0][1], FromRegister(FOUND, choices), found
+        return None, FromRegister(SEVERAL if named else NONE_FOUND, choices), found
 
     def refresh_work(
         projects: set[int] | None,
@@ -1357,8 +1426,11 @@ def create_app(
         """What the page of a check shows: its status, and the values of its template.
         `progress` hears each step start and end (web/checks.py); `again` asks GitHub and the
         ledger at once (the button "Read again now"), and a reading that failed gives its press
-        back (db/read_again.py)."""
+        back (db/read_again.py). A hackathon left to the tool is looked for in the register."""
         try:
+            from_register, records = None, None
+            if days is None and not asked.get("event"):
+                days, from_register, records = hackathon_from_register(conninfo, repository)
             asker, why = github_or_why()
             result = submission.check_submission(
                 conninfo, repository, days, client=asker,
@@ -1386,7 +1458,7 @@ def create_app(
             visits.failed(note)
         found = result.code is not None and result.code.status == CODE_FOUND
         listed_one = days is not None and not days.typed
-        view = register_view(repository, days) if found and listed_one else None
+        view = register_view(repository, days, records) if found and listed_one else None
         if view is not None and view.open:
             view.line_found = registry.carries_line(result.readme_text or "", view.line)
         seen_before = list(zip(result.seen, members, strict=True))
@@ -1406,7 +1478,7 @@ def create_app(
             "hedera_code": code_reading.view_of_read(repository, result.hedera_code),
             "readme_lines": (data.said_lines(submission.readme_prose(result.readme_text))
                              if result.story else []),  # fmt: skip
-            "asked": asked, "read_again_from": read_again_from,
+            "asked": asked, "read_again_from": read_again_from, "from_register": from_register,
         }  # fmt: skip
 
     @app.get("/check", response_class=HTMLResponse)
