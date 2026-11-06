@@ -1712,7 +1712,7 @@ def test_a_rehearsal_says_so_at_the_top_of_every_page(site) -> None:  # noqa: AN
     rehearsal = client.make({"rehearsal": True})
     for page in ("/", f"/project/{ids['Pebble Pay']}"):
         band = rehearsal.get(page).text.split('class="hm-rehearsal"', 1)[1].split("</p>")[0]
-        assert f"goes to the practice topic {REGISTER} on Hedera testnet" in band
+        assert "Rehearsal mode" in band  # the box of the register names the topic
 
 
 def test_a_rehearsal_names_the_practice_topic_above_the_button_and_on_the_receipt(site) -> None:  # noqa: ANN001
