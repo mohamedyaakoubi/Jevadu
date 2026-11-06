@@ -22,7 +22,10 @@
       <section class="card project-section check-register-section" aria-labelledby="register-title">
         <div class="card-body">
           <h3 id="register-title">Register on Hedera{{ parts.info("register", "the public register") }}</h3>
-          {% if no_dates and register_offers %}
+          {% if no_dates and from_register and from_register.state == "several" %}
+          <p>This repository is registered on Hedera for {% for _, event_name in from_register.choices %}{{ event_name }}{% if not loop.last %}, {% endif %}{% endfor %}. Check it for one of them?</p>
+          <div class="hm-offers">{% for value, event_name in from_register.choices %}<button type="button" class="btn btn-sm btn-primary" data-check-again hx-get="/check?repo={{ result.repository | urlencode }}&amp;event={{ value | urlencode }}&amp;progress=1" hx-target="#viewer-body" hx-swap="innerHTML">Check it for {{ event_name }}</button>{% endfor %}</div>
+          {% elif no_dates and register_offers %}
           <p>This repository is already in the collection for {% for _, event_name in register_offers %}{{ event_name }}{% if not loop.last %}, {% endif %}{% endfor %}. Register it for that hackathon?</p>
           <div class="hm-offers">{% for event_id, event_name in register_offers %}<button type="button" class="btn btn-sm btn-primary" data-check-again hx-get="/check?repo={{ result.repository | urlencode }}&amp;event={{ event_id }}&amp;progress=1" hx-target="#viewer-body" hx-swap="innerHTML">Yes, check it for {{ event_name }}</button>{% endfor %}</div>
           <p class="hm-small mt-2">For another hackathon, pick it in the check form.</p>
@@ -82,7 +85,8 @@
 
     <div class="project-col project-reading">
     <header class="project-head">
-      <p class="project-meta">Submission check &middot; {% if no_dates %}no hackathon selected{% elif event.typed %}{{ event.starts_at | day }} to {{ event.ends_on | day }}{% else %}{{ event.name }}{% endif %}</p>
+      {# A hackathon left to the tool is looked for in the register (design 12.1, S3, 6 November 2026). #}
+      <p class="project-meta">Submission check &middot; {% if no_dates %}{% if not from_register %}no hackathon selected{% elif from_register.state == "several" %}no hackathon: registered for several{% elif from_register.state == "unread" %}no hackathon: the register could not be read{% else %}no hackathon: none found in Jevadu's register{% endif %}{% elif event.typed %}{{ event.starts_at | day }} to {{ event.ends_on | day }}{% else %}{{ event.name }}{% if from_register %}, from its registration on Hedera{{ parts.info("hackathon-found", "the hackathon found in the register") }}{% endif %}{% endif %}</p>
       <{{ level }} id="viewer-title" class="project-title" tabindex="-1">{{ short }}</{{ level }}>
       <p class="project-lede">Facts from GitHub, the Hedera ledger and the collection.</p>
       <div class="project-marks">
