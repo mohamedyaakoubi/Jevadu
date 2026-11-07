@@ -250,6 +250,19 @@ def test_the_ways_to_search(site) -> None:  # noqa: ANN001
     assert "closest by keyword" in words.text
 
 
+def test_the_button_of_gemini_works_with_the_keyword_search_chosen(site) -> None:  # noqa: ANN001
+    """The button orders the semantic results, whichever search the form is on. With Keyword
+    chosen it sent mode=words, and the keyword results came back with no word about it (7
+    November 2026)."""
+    client, fake, _, _ = site
+    fake.answer_queue = [json.dumps({"closest": [2, 1]})]
+    before = len(fake.requests)
+    page = client.get("/", params={"idea": VENDOR, "mode": "words", "ai": "1"})
+    assert model_calls(fake, before) == 1
+    assert "Sorted by Gemini" in page.text and 'data-mode="meaning"' in page.text
+    assert 'id="mode-meaning" checked' in page.text
+
+
 def test_the_button_orders_with_gemini_and_the_same_search_asks_nothing_again(site) -> None:  # noqa: ANN001
     client, fake, _, _ = site
     by_meaning = order_of(client.get("/", params={"idea": VENDOR, "mode": "meaning"}).text)
@@ -3345,6 +3358,20 @@ def test_each_comparison_takes_its_place(site, chromium) -> None:  # noqa: ANN00
     assert "Same 1." in results.nth(0).inner_text() and "Differs 1." in results.nth(0).inner_text()
     assert "Same 2." in results.nth(1).inner_text()
     assert "No comparison for this project." in results.nth(2).inner_text()
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_the_button_of_gemini_moves_the_form_to_the_semantic_search(site, chromium) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    fake.answer_queue = [json.dumps({"closest": [1, 2, 3]})]
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(SEARCH.replace("mode=meaning", "mode=words"))
+    assert page.locator("#mode-words").is_checked()
+    page.locator("#ai-button").click()
+    page.wait_for_selector("#results-title:has-text('Sorted by Gemini')")
+    assert page.locator("#mode-meaning").is_checked()  # the box says what was searched
     page.context.close()
 
 

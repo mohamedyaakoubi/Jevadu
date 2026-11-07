@@ -1275,6 +1275,12 @@
     drawCharts(document); // an outerHTML swap leaves the old element in the event
     if (target.id !== "workspace" && target.id !== "main") return;
     showCount();
+    // The boxes of the search stand outside the part that comes back, so they follow what was
+    // searched: Gemini's button orders the semantic results, and a used allowance falls back to
+    // the keywords (7 November 2026).
+    var workspace = $("workspace");
+    var searched = workspace ? $("mode-" + workspace.getAttribute("data-mode")) : null;
+    if (searched) searched.checked = true;
     if (bringResults && NARROW.matches) {
       var results = $("results");
       if (results) { results.scrollIntoView({ block: "start" }); results.focus({ preventScroll: true }); }

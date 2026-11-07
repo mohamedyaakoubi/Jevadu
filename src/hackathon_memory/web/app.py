@@ -1129,9 +1129,11 @@ def create_app(
         cut = len(idea) > LONGEST_IDEA
         idea = idea[:LONGEST_IDEA]
         if mode == "ai":  # the address of the second version of the page
-            mode, ai = MEANING, "1"
-        if not mode and ai == "1":  # Gemini orders the semantic results; an address of before
-            mode = MEANING  # 28 October 2026 asked for its order with no mode
+            ai = "1"
+        # Gemini orders the semantic results, whichever search the form is on: with Keyword chosen,
+        # its button did nothing and said so nowhere (7 November 2026).
+        if ai == "1":
+            mode = MEANING
         mode = mode if mode in MODES else DEFAULT_MODE
         with_ai = ai == "1" and mode == MEANING and bool(idea)
         # The public copy with its AI off searches by keyword, and says so (design 12.5). So does a

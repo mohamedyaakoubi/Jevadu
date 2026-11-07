@@ -46,7 +46,7 @@
     </div>
   </section>
 
-  <div id="workspace" class="hm-workspace">
+  <div id="workspace" class="hm-workspace" data-mode="{{ mode }}">
     {# The view beside the cards stays when the idea changes, a filter is chosen or the search is
        cleared (design 12.1, S1): every request of the form, and "Clear", carry it. #}
     {% if view %}<input type="hidden" name="view" value="{{ view }}" id="view-kept">{% endif %}
