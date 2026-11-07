@@ -118,10 +118,13 @@ RUNNING, DONE, SAVED, SKIPPED = "running", "done", "saved", "skipped"
 # ID are not judged, and its kind may still fit.
 STORY_STATUSES = (*KINDS_THAT_FIT, WINDOW_NOT_KNOWN)
 LONGEST_TEXT = 4000  # the characters of the README that the search by meaning reads, as an idea
-# The characters of the README that the comparison with its closest projects reads: 10,000 since 7
-# November 2026, his word; the idea box's 4,000 had been used for it. For a long README, about 1,500
-# input tokens more, about a tenth of a cent more for each comparison (finops/prices.py).
-LONGEST_COMPARED = 10_000
+# The characters of the README that the comparison with its closest projects reads: 30,000 since the
+# night of 7 November 2026, his word, so that 95.8% of the collection's READMEs (611 of 638) are
+# read whole; the idea box's 4,000 had been used for it, then 10,000 (71%). Measured on the public
+# copy: 10,000 characters sent 3,626 tokens, in 4.5 s, for $0.0046; 30,000 should send about 8,600,
+# about 0.8 cent (finops/prices.py). Gemini 3.8 Flash takes 1,048,576 tokens (Google's page, read
+# that night).
+LONGEST_COMPARED = 30_000
 
 GITHUB_AWAY = "GitHub did not answer. Try again in a moment."
 NO_SUCH_CODE = (
