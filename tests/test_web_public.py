@@ -508,6 +508,51 @@ def test_without_cloudflare_the_page_says_so_and_the_search_works(site, chromium
 
 
 @pytest.mark.browser
+def test_a_pass_that_ended_on_an_open_page_is_asked_again_and_says_so(site, chromium) -> None:  # noqa: ANN001, F811
+    """A page holds the box of Turnstile only if the visitor had no pass when it was made. A pass
+    ends after a day, or with the address, while a page stays open: it said to try again, and
+    nothing could change until a reload (7 November 2026). A refusal now runs the check, and the
+    page says when to try again, over the window too."""
+    client, fake, ids, database = site
+    public.turn(database, public.AI, True)
+    cloudflare = Cloudflare()
+    page = served(chromium, guarded_site(client, cloudflare),
+                  viewport={"width": 1440, "height": 900})  # fmt: skip
+    played(page, GIVES_TOKENS)
+    page.goto(SEARCH)
+    page.wait_for_selector("#person-check", state="detached")
+    with psycopg.connect(database) as conn:
+        conn.execute("DELETE FROM visitor_passes")
+    pebble = ids["Pebble Pay"]
+    page.locator(f"#result-{pebble} .result-link").click()
+    page.locator(f"#one-compare-{pebble} button").click()
+    page.wait_for_selector(f"#one-compare-{pebble}:has-text('{CONFIRM}')")
+    page.wait_for_selector(".hm-person-note:has-text('You can try again now')")
+    assert len(cloudflare.asked) == 2
+    with psycopg.connect(database) as conn:
+        assert conn.execute("SELECT count(*) FROM visitor_passes").fetchone()[0] == 1
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    page.locator(f"#one-compare-{pebble} button").click()
+    page.wait_for_selector(f"#one-compare-{pebble} .hm-compare-text")
+    page.context.close()
+
+
+def test_a_database_that_cannot_say_is_not_blamed_on_cloudflare(site, monkeypatch) -> None:  # noqa: ANN001, F811
+    """With no answer from the database, no pass can be seen: the visitor is told that, and not
+    to wait for Cloudflare (7 November 2026)."""
+    client, _, ids, database = site
+    assert public.Limits(lambda: database, 1).answers() is True
+    assert public.Limits(lambda: "no_such_option=1", 1).answers() is False
+    open_copy = guarded_site(client, Cloudflare())
+    asked = {"idea": "a coin", "ids": str(ids["Pebble Pay"]), "one": "1"}
+    assert CONFIRM in open_copy.get("/compare", params=asked).text
+    monkeypatch.setattr(public.Limits, "answers", lambda self: False)
+    part = open_copy.get("/compare", params=asked)
+    assert part.status_code == 403 and "database of this site is not answering" in part.text
+    assert CONFIRM not in part.text
+
+
+@pytest.mark.browser
 def test_a_browser_check_of_vercel_asks_the_whole_page_again_once(site, chromium) -> None:  # noqa: ANN001, F811
     """Vercel's firewall may answer a request of the page with its own check that the visitor
     uses a browser: an answer of 429 with X-Vercel-Mitigated: challenge (seen on 30 October 2026).

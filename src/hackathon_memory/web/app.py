@@ -768,6 +768,11 @@ def create_app(
         (web/turnstile.py); always on the laptop's own site."""
         return limits is None or limits.passed(public_copy.visitor.get())
 
+    def person_first() -> str:
+        """Why a visitor with no pass is stopped: Cloudflare's check, or a database that could not
+        say whether they have one, which is not the visitor's to solve."""
+        return PERSON_FIRST if limits is None or limits.answers() else DATABASE_DOWN
+
     def gemini_closed(idea: str) -> bool:
         """On the public copy, whether the visitor may no longer ask Gemini's order for `idea`: an
         ask counted before stays open, since its answers cost nothing more."""
@@ -916,6 +921,8 @@ def create_app(
         if asks_person and limits is not None and not name.startswith("_"):  # a whole page
             # the box of Cloudflare's Turnstile, until the visitor is found to be a person
             values.setdefault("person_check", None if person() else settings.turnstile_site_key)
+            # for the script: a pass may end while the page stays open
+            values.setdefault("person_key", settings.turnstile_site_key)
         if status >= 400:  # what stopped the visitor, in the page's words (S9)
             visits.failed(values.get("problem") or values.get("refused"))
         return templates.TemplateResponse(request, name, values, status_code=status)
@@ -1162,7 +1169,7 @@ def create_app(
                 public_note = used(public_copy.EMBED, "these are keyword results")
             elif with_ai and not person():  # the search by meaning needs no pass; Gemini does
                 with_ai = False
-                public_note = PERSON_FIRST
+                public_note = person_first()
             elif with_ai and gemini_closed(idea):
                 with_ai = False
                 public_note = used(public_copy.AI, "these results are in the search order")
@@ -1173,7 +1180,8 @@ def create_app(
         asked = filtering.Filters(**{name: filtering.joined(request.query_params.getlist(name))
                                      for name in FILTERS})  # fmt: skip
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
-                "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
+                "elapsed": None, "compare_ids": [], "notes": [],
+                "person_needed": public_note == PERSON_FIRST}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,
                 "panel_card": None, "panel_problem": None, "search_query": ""}  # fmt: skip
         try:
@@ -1537,7 +1545,7 @@ def create_app(
         if wrong:
             return render(request, name, 400, problem=wrong)
         if not person():
-            return render(request, name, 403, problem=PERSON_FIRST)
+            return render(request, name, 403, problem=person_first())
         if not allowed(public_copy.CHECK):
             return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
@@ -1812,7 +1820,7 @@ def create_app(
         if limits is not None and not limits.on(public_copy.REGISTER):
             return refused(503, PUBLIC_REGISTER_OFF)
         if not person():
-            return refused(403, PERSON_FIRST)
+            return refused(403, person_first())
         if not allowed(public_copy.REGISTER):
             return refused(429, used(public_copy.REGISTER))
         repository = submission.repository_link(form.get("repo", "")[:300])
@@ -2001,8 +2009,9 @@ def create_app(
         most once every 3 hours (db/read_again.py). A press too soon asks nothing and uses nothing
         of the visitor's allowance: the card comes back, and its button says when."""
         if not person():
-            visits.failed(PERSON_FIRST)
-            return HTMLResponse(f'<p class="hm-small">{escape(PERSON_FIRST)}</p>', 403)
+            words = person_first()
+            visits.failed(words)
+            return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 403)
         too_soon = refreshing.State(refreshing.DONE, datetime.now(UTC))
         what = of_project(project_id)
         try:
@@ -2056,7 +2065,7 @@ def create_app(
         if not project_ids or not (idea or from_readme):
             return not_compared(400, retry=False)
         if not person():
-            return not_compared(403, PERSON_FIRST)
+            return not_compared(403, person_first())
         if from_readme:  # only now: the README may have to be asked of GitHub
             idea = " ".join(readme_idea(repo).split())[:LONGEST_IDEA]
             if not idea:

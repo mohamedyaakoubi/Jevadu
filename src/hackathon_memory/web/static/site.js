@@ -1288,6 +1288,7 @@
       event.detail.shouldSwap = true;
       event.detail.isError = false;
     }
+    if (status === 403) checkPerson(true);
   });
   // A request with no answer, or with an answer that cannot be shown, leaves no waiting state on
   // the screen: the place says what happened and what to do (design 12.3). In htmx 2.0.11 these
@@ -1376,6 +1377,7 @@
     var workspace = $("workspace");
     var searched = workspace ? $("mode-" + workspace.getAttribute("data-mode")) : null;
     if (searched) searched.checked = true;
+    if (workspace && workspace.querySelector("[data-needs-person]")) checkPerson(true);
     if (bringResults && NARROW.matches) {
       var results = $("results");
       if (results) { results.scrollIntoView({ block: "start" }); results.focus({ preventScroll: true }); }
@@ -1416,16 +1418,52 @@
   var PERSON_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js" +
     "?render=explicit&onload=jevaduPerson";
 
-  function checkPerson() {
+  var PERSON_DONE = "Cloudflare has confirmed that you are a person. You can try again now.";
+  var personRunning = false;
+  // A page holds the box only if the visitor had no pass when it was made. A pass ends after a day,
+  // or when the address changes, while a page stays open (7 November 2026: the page said to try
+  // again, and nothing could change until a reload): so a refusal makes the box and runs the check.
+  function personBox() {
+    var key = document.body.getAttribute("data-person-key");
     var box = $("person-check");
-    if (!box) return;
+    if (box || !key) return box;
+    box = document.createElement("aside");
+    box.className = "hm-person";
+    box.id = "person-check";
+    box.setAttribute("data-sitekey", key);
+    box.setAttribute("aria-live", "polite");
+    box.innerHTML = '<p class="hm-person-words"></p><div class="hm-person-widget"></div>' +
+      '<button type="button" class="btn btn-sm btn-icon hm-person-close" aria-label="Close this ' +
+      'note" hidden>&times;</button>';
+    document.body.appendChild(box);
+    return box;
+  }
+  function personNote(words) { // over a window that is open, which a box of the page is not
+    var note = document.createElement("div");
+    note.className = "hm-person-note";
+    note.setAttribute("role", "status");
+    note.setAttribute("popover", "manual");
+    note.textContent = words;
+    (document.querySelector("dialog[open]") || document.body).appendChild(note);
+    try { note.showPopover(); } catch (error) { note.remove(); return; }
+    window.setTimeout(function () { note.remove(); }, 8000);
+  }
+  function checkPerson(refused) {
+    var box = refused ? personBox() : $("person-check");
+    if (!box || personRunning) return;
+    personRunning = true;
     var widget = null;
     var tries = 0;
+    box.querySelector(".hm-person-widget").textContent = "";
     function say(words, closable) {
       box.querySelector(".hm-person-words").textContent = words;
       box.querySelector(".hm-person-close").hidden = !closable;
       box.hidden = false;
       box.classList.add("shown");
+    }
+    function failed(words) {
+      personRunning = false;
+      say(words, true);
     }
     function sent(token) {
       tries += 1;
@@ -1434,9 +1472,11 @@
           if (answer.status !== 204) throw new Error("refused: " + answer.status);
           window.turnstile.remove(widget);
           box.remove();
+          personRunning = false;
+          if (refused) personNote(PERSON_DONE);
         })
         .catch(function () {
-          if (tries >= PERSON_TRIES) { say(PERSON_FAILED, true); return; }
+          if (tries >= PERSON_TRIES) { failed(PERSON_FAILED); return; }
           window.turnstile.reset(widget); // a spent token is never sent again: a new one comes
         });
     }
@@ -1455,20 +1495,21 @@
             if (sheet && sheet.open) sheet.close();
             say(PERSON_ASKS, false);
           },
-          "error-callback": function () { say(PERSON_FAILED, true); },
-          "unsupported-callback": function () { say(PERSON_UNSUPPORTED, true); }
+          "error-callback": function () { failed(PERSON_FAILED); },
+          "unsupported-callback": function () { failed(PERSON_UNSUPPORTED); }
         });
       } catch (error) {
-        say(PERSON_FAILED, true);
+        failed(PERSON_FAILED);
       }
     };
     box.querySelector(".hm-person-close").addEventListener("click", function () {
       box.hidden = true;
     });
+    if (window.turnstile) { window.jevaduPerson(); return; } // loaded for an earlier check
     var script = document.createElement("script");
     script.src = PERSON_SCRIPT;
     script.async = true;
-    script.onerror = function () { say(PERSON_BLOCKED, true); };
+    script.onerror = function () { failed(PERSON_BLOCKED); };
     document.head.appendChild(script);
   }
 

@@ -71,6 +71,7 @@
     <div class="hm-notices">
       {% if problem %}<div class="alert alert-danger" role="alert">{{ problem }}</div>{% endif %}
       {% for note in notes or [] %}<div class="alert alert-warning">{{ note }}</div>{% endfor %}
+      {% if person_needed %}<span data-needs-person hidden></span>{% endif %}
     </div>
     {% endif %}
 
