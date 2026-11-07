@@ -13,10 +13,10 @@ NOW = datetime(2026, 11, 6, 1, 0, tzinfo=UTC)
 REPOSITORY = "https://github.com/sample-org/pebble-pay"
 
 
-def test_one_press_every_3_hours_for_each_thing(empty_database: str) -> None:
+def test_one_press_every_15_minutes_for_each_thing(empty_database: str) -> None:
     migrate(empty_database)
     store = ReadAgainStore(empty_database)
-    assert EVERY == timedelta(hours=3)
+    assert EVERY == timedelta(minutes=15)  # 3 hours until 8 November 2026
     assert store.free_from(REPOSITORY, NOW) is None
     assert store.take(REPOSITORY, NOW) is True
     assert store.free_from(REPOSITORY, NOW) == NOW + EVERY

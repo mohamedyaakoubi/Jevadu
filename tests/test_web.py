@@ -1925,9 +1925,10 @@ def presses_of(database: str) -> list[tuple]:
         return conn.execute("SELECT what, used_at FROM read_again_uses").fetchall()
 
 
-def test_a_check_is_read_again_once_in_3_hours(site) -> None:  # noqa: ANN001
-    """His word of 6 November 2026: one press every 3 hours for a repository. A press too soon
-    asks nothing and the check is a plain one; the button is greyed out and says from when."""
+def test_a_check_is_read_again_once_in_15_minutes(site) -> None:  # noqa: ANN001
+    """One press every 15 minutes for a repository (3 hours from 6 November 2026, 15 minutes
+    since the 8th, when a check became kept for good). A press too soon asks nothing and the check
+    is a plain one; the button is greyed out and says from when."""
     from checkfakes import TOPIC
 
     client, _, _, database = site
@@ -1947,9 +1948,9 @@ def test_a_check_is_read_again_once_in_3_hours(site) -> None:  # noqa: ANN001
     assert soon.status_code == 200 and "You can read it again from " in soon.text
     assert "2 messages to a topic." not in soon.text  # nothing was asked
     assert presses_of(database) == stamp  # a press too soon does not put the next one further off
-    a_press_ago(database, 2.9)
+    a_press_ago(database, 14 / 60)
     assert "You can read it again from " in client.get("/check", params=asked, headers=HX).text
-    a_press_ago(database, 0.2)  # now 3.1 hours ago
+    a_press_ago(database, 2 / 60)  # now 16 minutes ago
     plain = client.get("/check", params=asked, headers=HX).text
     assert "You can read it again from " not in plain and "data-check-again>Read again now" in plain
     again = client.get("/check", params={**asked, "again": "1"}, headers=HX).text
@@ -2001,7 +2002,7 @@ def test_a_card_is_read_again_once_in_3_hours(site) -> None:  # noqa: ANN001
     assert "You can read it again from " in soon.text
     assert len(client.github_site.seen) == asked  # nothing was asked
     assert "You can read it again from " in client.get(f"/project/{pebble}").text  # on its page too
-    a_press_ago(database, 3.1)
+    a_press_ago(database, 16 / 60)  # more than 15 minutes ago
     assert f'hx-post="{press}' in client.get(f"/project/{pebble}/panel").text
     reader = client.app.state.refresher
     real = reader.ask
