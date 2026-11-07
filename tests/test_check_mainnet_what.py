@@ -72,6 +72,8 @@ def test_a_message_keeps_no_free_text_and_no_personal_data() -> None:
     assert message_of(message({"event": "Ana Silva"})).what is None  # two words: maybe a name
     assert network_of(True) is None and network_of(0) is None and network_of("base") is None
     assert network_of("296") == "eip155:296" and network_of("eip155:84532") == "eip155:84532"
+    # Anyone can write on a topic: "²" passes str.isdigit(), and int() refuses it (7 November).
+    assert message_of(message({"chainId": "²", "network": "1" * 5000})).networks == ()
 
 
 def test_the_functions_of_a_contract_come_from_its_own_code_then_from_a_library() -> None:
