@@ -2105,10 +2105,12 @@ def test_a_comparison_says_so_when_github_cannot_give_the_readme(site, tmp_path)
 
 
 def test_a_long_readme_is_compared_by_its_start_and_says_so(site) -> None:  # noqa: ANN001
-    """Gemini reads at most LONGEST_IDEA characters of a README, so a long one can neither break
-    the call nor cost more, and the line under the button says what was read (7 November 2026)."""
+    """Gemini reads at most LONGEST_COMPARED characters of a README, more than the 4,000 of an
+    idea typed in the box, so a long one can neither break the call nor cost more, and the line
+    under the button says what was read (7 November 2026)."""
     from checkfakes import readme_answer
     from fakes import Reply
+    from hackathon_memory.check.submission import LONGEST_COMPARED
     from hackathon_memory.collect.github import readme_address
     from hackathon_memory.web.app import LONGEST_IDEA
 
@@ -2121,9 +2123,10 @@ def test_a_long_readme_is_compared_by_its_start_and_says_so(site) -> None:  # no
     params = {"repo": REPO, "ids": str(ids["Pebble Pay"]), "place": "check"}
     done = client.get("/compare", params=params, headers=HX)
     assert done.status_code == 200 and model_calls(fake, before) == 1
-    assert f"the first {LONGEST_IDEA:,} characters of this README" in done.text
-    asked = str(fake.requests[-1])
-    assert "A long README" in asked and asked.count("A long README") <= LONGEST_IDEA // 30
+    assert f"the first {LONGEST_COMPARED:,} characters of this README" in done.text
+    sentence = len("A long README about a coin on Hedera. ")
+    read = str(fake.requests[-1]).count("A long README") * sentence
+    assert LONGEST_IDEA < read <= LONGEST_COMPARED + sentence  # 10,000, not the idea's 4,000
 
 
 def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -> None:  # noqa: ANN001

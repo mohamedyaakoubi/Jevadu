@@ -22,7 +22,7 @@
 {% endfor %}
 {% if check_place %}
 <div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">
-{% if not failed %}<p class="hm-small">Compared by {{ compared_by or "Gemini" }} with {% if readme_cut %}the first {{ "{:,}".format(LONGEST_IDEA) }} characters of {% endif %}this README. Not a judgment of the projects.</p>
+{% if not failed %}<p class="hm-small">Compared by {{ compared_by or "Gemini" }} with {% if readme_cut %}the first {{ "{:,}".format(LONGEST_COMPARED) }} characters of {% endif %}this README. Not a judgment of the projects.</p>
 {% else %}{% if retry and asked_ids %}{{ parts.check_compare_button(repo, asked_ids | join(","), asked_ids | length) }}{% endif %}
 <p class="hm-small hm-compare-said" role="alert">{{ refused or "The comparison with this README could not be generated just now. Everything else on this page is complete." }}</p>{% endif %}
 </div>

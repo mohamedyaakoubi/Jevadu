@@ -298,7 +298,7 @@
 {% endcall %}
 
 {% call tip("check-compare", "Compare with Gemini") %}
-<p>Gemini 3.8 Flash{{ parts.ref("gemini") }} reads the first {{ "{:,}".format(LONGEST_IDEA) }} characters of this README's text and the summaries of the most similar past projects, and writes what each one shares with it and how it differs. It does not judge projects.</p>
+<p>Gemini 3.8 Flash{{ parts.ref("gemini") }} reads the first {{ "{:,}".format(LONGEST_COMPARED) }} characters of this README's text and the summaries of the most similar past projects, and writes what each one shares with it and how it differs. It does not judge projects.</p>
 <p>It costs less than one cent, and the answer is cached for one day, so the same check does not call Gemini again.</p>
 {% endcall %}
 

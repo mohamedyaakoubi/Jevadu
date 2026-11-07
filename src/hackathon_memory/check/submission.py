@@ -118,6 +118,10 @@ RUNNING, DONE, SAVED, SKIPPED = "running", "done", "saved", "skipped"
 # ID are not judged, and its kind may still fit.
 STORY_STATUSES = (*KINDS_THAT_FIT, WINDOW_NOT_KNOWN)
 LONGEST_TEXT = 4000  # the characters of the README that the search by meaning reads, as an idea
+# The characters of the README that the comparison with its closest projects reads: 10,000 since 7
+# November 2026, his word; the idea box's 4,000 had been used for it. For a long README, about 1,500
+# input tokens more, about a tenth of a cent more for each comparison (finops/prices.py).
+LONGEST_COMPARED = 10_000
 
 GITHUB_AWAY = "GitHub did not answer. Try again in a moment."
 NO_SUCH_CODE = (
@@ -597,14 +601,14 @@ def readme_prose(text: str) -> str:
     return "\n".join(lines)
 
 
-def readme_words(text: str) -> str:
-    """The words of a README for the search by meaning: no code, no images, no addresses, no
-    HTML, and at most LONGEST_TEXT characters."""
+def readme_words(text: str, longest: int = LONGEST_TEXT) -> str:
+    """The words of a README: no code, no images, no addresses, no HTML, and at most `longest`
+    characters: LONGEST_TEXT for the search by meaning, LONGEST_COMPARED for the comparison."""
     text = _FENCE.sub(" ", text)
     text = _IMAGE.sub(" ", text)
     text = _LINK.sub(r"\1", text)
     text = _ADDRESS.sub(" ", _TAG.sub(" ", text))
-    return " ".join(text.split())[:LONGEST_TEXT]
+    return " ".join(text.split())[:longest]
 
 
 def check_submission(

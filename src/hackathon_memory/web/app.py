@@ -871,7 +871,7 @@ def create_app(
             )  # fmt: skip
         if readme is None or readme.status != README_FOUND:
             return ""
-        return submission.readme_words(readme.text)
+        return submission.readme_words(readme.text, longest=submission.LONGEST_COMPARED)
 
     def linked_to(conninfo: str, project_id: int) -> list[tuple[str, Any]]:
         """The projects linked to one project (design 8.4): each with why, and its name."""
@@ -2067,7 +2067,7 @@ def create_app(
         if not person():
             return not_compared(403, person_first())
         if from_readme:  # only now: the README may have to be asked of GitHub
-            idea = " ".join(readme_idea(repo).split())[:LONGEST_IDEA]
+            idea = readme_idea(repo)  # its words, at most LONGEST_COMPARED characters
             if not idea:
                 return not_compared(400, README_GONE)
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
@@ -2113,7 +2113,7 @@ def create_app(
             visits.failed(f"The comparison could not be generated ({type(error).__name__}).")
             return not_compared(503)
         return render(request, "_compare.html", found=found, failed=False,
-                      readme_cut=from_readme and len(idea) >= LONGEST_IDEA,
+                      readme_cut=from_readme and len(idea) >= submission.LONGEST_COMPARED,
                       compared_by=stand_in.NAME if by_stand_in else "Gemini", **place)  # fmt: skip
 
     def about(request: Request, name: str) -> HTMLResponse:
@@ -2191,6 +2191,7 @@ def create_app(
         # the model that orders the closest now: Gemini, or its stand-in (search/stand_in.py)
         "ordering_model": lambda: stand_in.NAME if breaker.standing_in() else "Gemini",
         "LONGEST_IDEA": LONGEST_IDEA,
+        "LONGEST_COMPARED": submission.LONGEST_COMPARED,
         "EXAMPLES": EXAMPLES,
         "REFS": references.BY_KEY,
         "REF_NUMBER": references.NUMBER,
