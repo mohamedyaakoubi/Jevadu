@@ -1395,6 +1395,15 @@
     script.onload = then;
     document.head.appendChild(script);
   }
+  // What the visitor does with the tour goes to the copy: the public copy notes it for its owner
+  // (S9), the laptop's answers and notes nothing. The tour runs in the browser, so no request of
+  // a page tells it (7 November 2026). A note that fails never stops the tour.
+  function noteTour(what, details) {
+    var address = "/tour/" + what + (details ? "?" + new URLSearchParams(details).toString() : "");
+    try {
+      window.fetch(address, { method: "POST", keepalive: true }).catch(function () {});
+    } catch (error) { /* a browser with no fetch: nothing is noted */ }
+  }
   function tourSteps() {
     var holder = $("tour-steps");
     if (!holder) return [];
@@ -1409,7 +1418,7 @@
     });
     return steps;
   }
-  function startTour() {
+  function startTour(from) {
     var offer = $("tour-offer");
     if (offer) offer.hidden = true;
     var steps = tourSteps();
@@ -1421,18 +1430,36 @@
     // in the dark theme the lit part hardly stood out); the ring of style.css marks it in both.
     var dark = document.documentElement.getAttribute("data-bs-theme") === "dark";
     withDriver(function () {
+      var told = false; // each tour ends once
+      function ended(how) {
+        if (told) return;
+        told = true;
+        if (how === "done") { noteTour("done", { of: steps.length }); return; }
+        var at = tour.getActiveIndex();
+        var details = { step: typeof at === "number" ? at + 1 : 1, of: steps.length };
+        if (how) details.how = how;
+        noteTour("skip", details);
+      }
       var tour = window.driver.js.driver({
         steps: steps, showProgress: true, progressText: "{{current}} of {{total}}",
         nextBtnText: "Next", prevBtnText: "Back", doneBtnText: "Done", popoverClass: "hm-tour",
         overlayOpacity: dark ? 0.72 : 0.45, stagePadding: 6, stageRadius: 6,
         disableActiveInteraction: true,
         animate: !LESS_MOTION.matches, smoothScroll: !LESS_MOTION.matches,
+        // Driver.js asks this before it ends a tour by itself, with the reason (driver.js 1.10.1,
+        // y()): "done" after the last step, "escape", "close" (its x) or "overlay"; then
+        // tour.destroy() ends it. Our own ends ("Skip the tour", a click outside) skip this hook.
+        onDestroyStarted: function (element, step, options) {
+          var reason = options && options.reason;
+          var ways = { escape: "escape", close: "close", overlay: "click" };
+          try { ended(reason === "done" ? "done" : ways[reason] || ""); } finally { tour.destroy(); }
+        },
         onPopoverRender: function (popover) {
           var skip = document.createElement("button");
           skip.type = "button";
           skip.className = "hm-tour-skip";
           skip.textContent = "Skip the tour";
-          skip.addEventListener("click", function () { tour.destroy(); });
+          skip.addEventListener("click", function () { ended("button"); tour.destroy(); });
           popover.footer.insertBefore(skip, popover.footer.firstChild);
         }
       });
@@ -1443,8 +1470,10 @@
         if (!tour.isActive()) { document.removeEventListener("click", outside, true); return; }
         if (event.target.closest && event.target.closest(".driver-popover")) return;
         document.removeEventListener("click", outside, true);
+        ended("click");
         tour.destroy();
       }
+      noteTour("start", { from: from || "link" });
       tour.drive();
       setTimeout(function () { document.addEventListener("click", outside, true); }, 0);
     });
@@ -1456,7 +1485,7 @@
     if (address.searchParams.get("tour") === "1") {
       address.searchParams.delete("tour"); // a reload does not start it again
       history.replaceState(history.state, "", address.pathname + address.search + address.hash);
-      startTour();
+      startTour("link");
       return;
     }
     if (tourChoice() || address.searchParams.get("idea")) return;
@@ -1468,16 +1497,17 @@
     }, 200);
   }
   document.addEventListener("click", function (event) {
-    if (event.target.closest("[data-tour-start]")) { startTour(); return; }
+    if (event.target.closest("[data-tour-start]")) { startTour("offer"); return; }
     if (event.target.closest("[data-tour-decline]")) {
       tourChoice("declined");
+      noteTour("decline");
       var offer = $("tour-offer");
       if (offer) offer.hidden = true;
       return;
     }
     if (event.target.closest("[data-tour-again]") && $("tour-steps")) {
       event.preventDefault();
-      startTour();
+      startTour("link");
     }
   });
 

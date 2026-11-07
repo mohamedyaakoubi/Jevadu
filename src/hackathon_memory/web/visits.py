@@ -3,7 +3,9 @@
 To learn what interests the visitors of the public copy, the jury of a hackathon above all, each
 action of a visitor is one row: a search and its words, the filters, a card opened, the graph or
 the charts, a check of a repository, a registration, a comparison by Gemini, a note read, the pitch
-deck opened (its link goes through the copy, which then sends the visitor on to the file). An
+deck opened (its link goes through the copy, which then sends the visitor on to the file), and the
+tour of the page started, declined, skipped at one of its steps, or finished (7 November 2026: the
+tour runs in the browser, so its script tells the copy, POST /tour/<what>). An
 action that failed keeps what went wrong (3 November 2026): the words that the page showed the
 visitor, such as a refusal, a fall back to the keyword search or a Gemini that did not answer, or
 the kind of an error that no page answers, never its message. A row
@@ -38,6 +40,11 @@ FILTERS = ("event", "year", "category", "proof", "life", "winner", "organiser", 
 NOT_ACTIONS = ("/static/", "/_vercel/", "/owner", "/github/", "/health", "/robots.txt",
                "/person-check", "/check/progress")  # fmt: skip
 PITCH_DECK = "/jevadu-pitch.pdf"  # the link of the pitch deck's PDF that the submission form gives
+# What a visitor did with the tour of the page (design 12.1, S8), as its script tells it.
+TOUR = ("start", "decline", "skip", "done")
+TOUR_FROM = ("offer", "link")  # started from the offer of a first visit, or "Take the tour"
+TOUR_HOW = {"button": "with “Skip the tour”", "escape": "with the Escape key",
+            "close": "with its close button", "click": "with a click outside its note"}  # fmt: skip
 TYPING = timedelta(seconds=20)  # searches typed one after another count as the last one
 LONGEST = 300  # the characters kept of an address, a site, or the words of a search
 FAILURES_KEPT = 5  # the failures kept with one action
@@ -121,6 +128,8 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
                          if params.get(k)}  # fmt: skip
     if path == "/compare":
         return "compare", {k: v[:LONGEST] for k, v in params.items()}
+    if len(parts) == 2 and parts[0] == "tour":
+        return tour_of(parts[1], params)
     if parts and parts[0] == "register":
         return "register", {"step": parts[1] if len(parts) > 1 else "send"}
     if len(parts) == 2 and parts[0] == "about":
@@ -128,6 +137,39 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
     if path == "/method":
         return "about", {"note": "method"}
     return None
+
+
+def tour_of(what: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
+    """What a visitor did with the tour, from its script's request: only the values that the
+    script sends are kept, so a request made up by hand notes nothing more."""
+    if what not in TOUR:
+        return None
+    detail: dict = {}
+    for name in ("step", "of"):
+        number = whole_number(params.get(name, ""), digits=3)
+        if number is not None:
+            detail[name] = number
+    if params.get("from") in TOUR_FROM:
+        detail["from"] = params["from"]
+    if params.get("how") in TOUR_HOW:
+        detail["how"] = params["how"]
+    return f"tour-{what}", detail
+
+
+def tour_words(action: str, detail: Mapping) -> str:
+    """What a visitor did with the tour, in words, for the copy's owner."""
+    if action == "tour-start":
+        where = {"offer": ", from the offer of a first visit",
+                 "link": ", from the link “Take the tour”"}.get(detail.get("from"), "")  # fmt: skip
+        return "started the tour" + where
+    if action == "tour-decline":
+        return "said “No thanks” to the tour"
+    if action == "tour-done":
+        return "finished the tour" + (f", all {detail['of']} steps" if detail.get("of") else "")
+    words = "skipped the tour"
+    if detail.get("step"):
+        words += f" at step {detail['step']}" + (f" of {detail['of']}" if detail.get("of") else "")
+    return words + (f", {TOUR_HOW[detail['how']]}" if detail.get("how") in TOUR_HOW else "")
 
 
 def failed(words: object) -> None:
@@ -254,6 +296,8 @@ def described(one: Action, projects: Mapping[int, str], events: Mapping[str, str
         "mainnet-path": f"opened the path of {named} on the main network",
         "deck": "opened the pitch deck",
     }.get(one.action, one.action)
+    if one.action in (f"tour-{what}" for what in TOUR):
+        words = tour_words(one.action, detail)
     if one.action == "check":
         event = detail.get("event", "")
         words = f"checked {detail.get('repo')}"

@@ -667,6 +667,25 @@ def test_the_pitch_deck_link_is_noted_then_sends_on_to_the_file(site) -> None:  
     assert noted == [("deck",), ("deck",)]
 
 
+def test_the_tour_tells_the_copy_what_a_visitor_did_with_it(site) -> None:  # noqa: ANN001, F811
+    """The tour runs in the browser, so its script tells the copy: started, declined, skipped at
+    a step, finished. The public copy notes it; the laptop's answers and notes nothing; a request
+    for no outcome of the tour is refused and noted nowhere (7 November 2026)."""
+    client, _, _, database = site
+    assert client.post("/tour/start", params={"from": "offer"}).status_code == 204
+    copy = public_site(client)
+    told = (("start", {"from": "offer"}), ("skip", {"step": "3", "of": "10", "how": "escape"}),
+            ("decline", {}), ("done", {"of": "10"}))  # fmt: skip
+    for what, params in told:
+        assert copy.post(f"/tour/{what}", params=params).status_code == 204
+    assert copy.post("/tour/nonsense").status_code == 404
+    with psycopg.connect(database) as conn:
+        noted = conn.execute("SELECT action, detail FROM visit_actions ORDER BY id").fetchall()
+    assert noted == [("tour-start", {"from": "offer"}),
+                     ("tour-skip", {"step": 3, "of": 10, "how": "escape"}),
+                     ("tour-decline", {}), ("tour-done", {"of": 10})]  # fmt: skip
+
+
 def test_a_number_that_the_site_never_writes_breaks_no_page(site) -> None:  # noqa: ANN001, F811
     """A sign such as "²" passes str.isdigit() and int() refuses it: the search page failed on
     it, and on the public copy so did the note of the visit (7 November 2026)."""

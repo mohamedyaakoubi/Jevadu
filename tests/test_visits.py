@@ -53,6 +53,39 @@ def test_a_number_that_the_site_never_writes_is_no_number() -> None:
     assert action_of("/project/²/panel", {}) is None
 
 
+def test_what_a_visitor_does_with_the_tour_is_an_action_in_words() -> None:
+    """The tour runs in the browser, so its script tells the copy what the visitor did with it;
+    only the values that the script sends are kept (7 November 2026)."""
+    assert action_of("/tour/start", {"from": "offer"}) == ("tour-start", {"from": "offer"})
+    assert action_of("/tour/decline", {}) == ("tour-decline", {})
+    assert action_of("/tour/skip", {"step": "3", "of": "10", "how": "escape"}) == (
+        "tour-skip", {"step": 3, "of": 10, "how": "escape"})  # fmt: skip
+    assert action_of("/tour/done", {"of": "10"}) == ("tour-done", {"of": 10})
+    made_up = {"step": "²", "of": "1000", "how": "<b>", "from": "x", "words": "free text"}
+    assert action_of("/tour/skip", made_up) == ("tour-skip", {})
+    assert action_of("/tour/nonsense", {}) is None and action_of("/tour", {}) is None
+    at = datetime(2026, 11, 7, 10, tzinfo=UTC)
+
+    def words(action: str, detail: dict) -> str:
+        return described(Action(at, action, detail), {}, {})
+
+    assert words("tour-start", {"from": "offer"}) == (
+        "started the tour, from the offer of a first visit")  # fmt: skip
+    assert words("tour-start", {"from": "link"}) == (
+        "started the tour, from the link “Take the tour”")  # fmt: skip
+    assert words("tour-start", {}) == "started the tour"  # where from is not said: not guessed
+    assert words("tour-decline", {}) == "said “No thanks” to the tour"
+    assert words("tour-skip", {"step": 3, "of": 10, "how": "escape"}) == (
+        "skipped the tour at step 3 of 10, with the Escape key")  # fmt: skip
+    assert words("tour-skip", {"step": 2, "of": 10, "how": "button"}) == (
+        "skipped the tour at step 2 of 10, with “Skip the tour”")  # fmt: skip
+    assert words("tour-skip", {}) == "skipped the tour"
+    assert words("tour-done", {"of": 10}) == "finished the tour, all 10 steps"
+    visit = Visit("a1b2", "Tunis, TN", None, "Chrome on Windows",
+                  [Action(at, "tour-start", {}), Action(at, "tour-skip", {"step": 2})])  # fmt: skip
+    assert dict(summary([visit])["actions"]) == {"tour-start": 1, "tour-skip": 1}
+
+
 def test_the_place_the_site_and_the_browser_stay_short() -> None:
     city = {"x-vercel-ip-country": "BR", "x-vercel-ip-country-region": "SP",
             "x-vercel-ip-city": "S%C3%A3o%20Paulo"}  # fmt: skip

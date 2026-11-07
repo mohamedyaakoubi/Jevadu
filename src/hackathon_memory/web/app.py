@@ -704,6 +704,15 @@ def create_app(
         opening is noted (2 November 2026)."""
         return RedirectResponse(PITCH_FILE, 302)
 
+    @app.post("/tour/{what}")
+    def tour(what: str) -> Response:
+        """What a visitor did with the tour of the page (S8), which runs in the browser, so no
+        page request tells it: its script says so here, and on the public copy the middleware
+        notes it for the copy's owner (S9). Nothing else happens (7 November 2026)."""
+        if what not in visits.TOUR:
+            raise StarletteHTTPException(404)
+        return Response(status_code=204)
+
     @app.post("/person-check")
     async def person_check(request: Request) -> Response:
         """On the public copy with Turnstile: the token that its widget gave the page, spent here
