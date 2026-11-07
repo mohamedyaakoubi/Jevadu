@@ -939,7 +939,21 @@
   // ---------------------------------------------------------------- the window of a project
   var viewer = function () { return $("viewer"); };
   var pushed = false; // the window added an entry to the history, so "back" closes it
-  var checkSaved = null; // the result of a check, while one of its projects is open over it
+  // The result of a check, while one of its projects is open over it: its elements wait in a
+  // hidden box beside the window's body, and not as text, so that a comparison asked there goes on
+  // and shows when the visitor comes back (7 November 2026: as text, its places kept waiting).
+  function dropCheck() {
+    var kept = $("check-kept");
+    if (kept) kept.remove();
+  }
+  function keepCheck(body) {
+    dropCheck();
+    var kept = document.createElement("div");
+    kept.id = "check-kept";
+    kept.hidden = true;
+    while (body.firstChild) kept.appendChild(body.firstChild);
+    body.parentNode.insertBefore(kept, body.nextSibling);
+  }
   function openParam(id) {
     var url = new URL(window.location.href);
     if (id) url.searchParams.set("open", id); else url.searchParams.delete("open");
@@ -983,17 +997,18 @@
   }
   // "Back to the check": the result of the check comes back as it was, with no new request.
   document.addEventListener("click", function (event) {
-    if (!event.target.closest("[data-back-to-check]") || checkSaved === null) return;
+    var kept = $("check-kept");
+    if (!event.target.closest("[data-back-to-check]") || !kept) return;
     var body = $("viewer-body");
-    body.innerHTML = checkSaved;
-    checkSaved = null;
-    if (window.htmx) window.htmx.process(body);
+    body.textContent = "";
+    while (kept.firstChild) body.appendChild(kept.firstChild);
+    kept.remove();
     steps();
     var title = $("viewer-title");
     if (title) title.focus({ preventScroll: true });
   });
   function closed() {
-    checkSaved = null;
+    dropCheck();
     var row = document.querySelector(".result[aria-current] .result-link");
     if (!pushed && new URL(window.location.href).searchParams.has("open")) {
       history.replaceState(history.state, "", openParam(null));
@@ -1006,7 +1021,7 @@
     if (target && target.id === "viewer-body") {
       var link = event.detail.elt.closest("[data-open-viewer]");
       var fromCheck = !!(link && link.hasAttribute("data-from-check"));
-      checkSaved = fromCheck ? target.innerHTML : null; // a project of a check keeps the check
+      if (fromCheck) keepCheck(target); else dropCheck(); // a project of a check keeps the check
       var asking = event.detail.elt;
       var aCheck = asking.id === "check" || asking.hasAttribute("data-check-again");
       target.innerHTML = aCheck ? checking() : skeleton();
@@ -1023,20 +1038,102 @@
       if (space) space.classList.add("asking-ai");
     }
     if (elt && elt.hasAttribute("data-check-compare")) {
+      var said = document.querySelector("#check-compare-ask .hm-compare-said");
+      if (said) said.remove(); // what the last try said
       document.querySelectorAll("[id^='check-compare-'].compare").forEach(function (place) {
         place.classList.add("waiting");
         place.setAttribute("aria-busy", "true");
-        place.textContent = "Gemini is comparing this project with the README.";
+        place.innerHTML = '<span class="visually-hidden">' + waitingModel() + ' is comparing this ' +
+          'project with the README.</span><span class="placeholder col-11"></span>' +
+          '<span class="placeholder col-8"></span>';
       });
     }
-    if (elt && elt.id === "compare-loader") {
-      window.setTimeout(function () {
-        document.querySelectorAll(".compare.waiting").forEach(function (place) {
-          place.textContent = "Still writing: Gemini is slower than usual just now. It stops " +
-            "after 30 seconds, and the rest of the page is complete.";
-        });
-      }, 12000);
+    if (elt && elt.hasAttribute && elt.hasAttribute("data-gemini-wait")) startWait(elt);
+  });
+  // ------------------------------------------------------------------- a wait for Gemini
+  // What asks Gemini carries data-gemini-wait: while it waits, a line says what it does and for how
+  // long, and that the page stops waiting by itself ("timeout" in the htmx-config of the page's
+  // head), so that a wait always has an end in sight (7 November 2026).
+  var WAIT_WORDS = {
+    sorting: " is sorting the closest projects",
+    idea: " is comparing these projects with your idea",
+    readme: " is comparing these projects with the README",
+    one: " is comparing this project with your idea"
+  };
+  function waitingModel() { // Gemini, or its stand-in while that one answers (design 8.2)
+    var asking = document.querySelector(".hm-asking[data-model]");
+    return asking ? asking.getAttribute("data-model") : "Gemini";
+  }
+  function waitAnchor(elt, kind) {
+    var near = kind === "readme" ? elt.closest(".hm-section-head") :
+      kind === "one" ? elt.closest(".compare-ask") : null;
+    if (near) return { parent: near.parentNode, before: near.nextSibling };
+    var list = kind === "idea" ? $("result-list") : null;
+    if (list) return { parent: list.parentNode, before: list };
+    var results = $("results");
+    return results ? { parent: results, before: results.firstChild } : null;
+  }
+  function startWait(elt) {
+    var kind = elt.getAttribute("data-gemini-wait");
+    var anchor = waitAnchor(elt, kind);
+    if (!anchor) return;
+    var line = document.createElement("div");
+    line.className = "hm-wait";
+    line.setAttribute("role", "status");
+    line.innerHTML = '<p class="hm-wait-what"><span class="hm-wait-words"></span>: ' +
+      '<span class="hm-wait-time" aria-hidden="true">0 s</span></p><p class="hm-wait-note"></p>';
+    line.querySelector(".hm-wait-words").textContent = waitingModel() + WAIT_WORDS[kind];
+    line.querySelector(".hm-wait-note").textContent = "This usually takes a few seconds. If no " +
+      "answer comes, the page stops waiting by itself after " +
+      Math.round(window.htmx.config.timeout / 1000) + " seconds and tells you.";
+    anchor.parent.insertBefore(line, anchor.before);
+    var began = Date.now();
+    var time = line.querySelector(".hm-wait-time");
+    var timer = window.setInterval(function () {
+      if (!document.body.contains(line)) { window.clearInterval(timer); return; }
+      time.textContent = Math.round((Date.now() - began) / 1000) + " s";
+    }, 1000);
+    elt.hmWait = { line: line, timer: timer };
+  }
+  // The places of a request that no answer filled: an answer always should, so this is the last
+  // word, for an answer that the host or the browser changed.
+  function waitingPlaces(elt) {
+    var kind = elt.getAttribute("data-gemini-wait");
+    var prefix = kind === "readme" ? "check-compare-" : kind === "idea" ? "compare-" : null;
+    return prefix ? document.querySelectorAll("[id^='" + prefix + "'].compare.waiting") : [];
+  }
+  function compareFailed(elt, words) {
+    var inCheck = elt.getAttribute("data-gemini-wait") === "readme";
+    waitingPlaces(elt).forEach(function (place) {
+      place.classList.remove("waiting");
+      place.removeAttribute("aria-busy");
+      place.textContent = inCheck ? "" : words; // a check says it once, beside its button
+    });
+    var ask = inCheck ? $("check-compare-ask") : null;
+    if (ask && !ask.querySelector(".hm-compare-said")) {
+      var said = document.createElement("p");
+      said.className = "hm-small hm-compare-said";
+      said.setAttribute("role", "alert");
+      said.textContent = words;
+      ask.appendChild(said);
     }
+  }
+  document.addEventListener("htmx:afterRequest", function (event) {
+    // the element that asked is in the request's config: an answer may have replaced it, and then
+    // this event comes from its parent (htmx 2.0.11)
+    var config = event.detail.requestConfig;
+    var elt = (config && config.elt) || event.detail.elt;
+    if (!elt || !elt.hmWait) return;
+    var wait = elt.hmWait;
+    elt.hmWait = null;
+    window.clearInterval(wait.timer);
+    wait.line.remove();
+    // Later than the handlers of a failure, which know its reason, and than htmx's settling: for
+    // 20 ms a new part still wears the classes of the one it replaced (htmx 2.0.11, "settleDelay"),
+    // so a filled place still looks as if it waits.
+    window.setTimeout(function () {
+      if (waitingPlaces(elt).length) compareFailed(elt, FAILED_NOTHING);
+    }, 300);
   });
   // A comparison asked in a project's window shows on the project's card in the list too, at
   // once (30 October 2026: the card kept no trace of it until the list was asked again).
@@ -1068,7 +1165,7 @@
       if (title) title.focus({ preventScroll: true });
       target.scrollTop = 0;
       steps();
-      if (checkSaved !== null && target.querySelector(".project[data-project]")) {
+      if ($("check-kept") && target.querySelector(".project[data-project]")) {
         var back = document.createElement("p");
         back.className = "viewer-back";
         back.innerHTML = '<button type="button" class="btn btn-sm hm-back" data-back-to-check>&lsaquo; Back to the check</button>';
@@ -1203,20 +1300,18 @@
   // seconds: "timeout" in the htmx-config of the page's head.
   var TOO_SLOW = "The server did not answer within 90 seconds, so the page stopped waiting. " +
     "Try again in a minute.";
-  var CHECK_FAILED = "The comparison with the README could not be generated just now. " +
-    "Everything else on this page is complete.";
+  var FAILED_NOTHING = "The comparison could not be generated just now. Everything else on this " +
+    "page is complete.";
+  var TOO_SLOW_GEMINI = "No answer came within 90 seconds, so the page stopped waiting. Everything " +
+    "else on this page is complete. Try again in a minute.";
   function requestFailed(event) {
     var elt = event.detail.elt, target = event.detail.target;
     var words = event.type === "htmx:responseError" ? WENT_WRONG :
       event.type === "htmx:timeout" ? TOO_SLOW : NO_ANSWER;
     if (!elt) return;
     if (elt.id === "compare-loader" || elt.hasAttribute("data-check-compare")) {
-      var failed = elt.id === "compare-loader" ? FAILED : CHECK_FAILED;
-      document.querySelectorAll(".compare.waiting").forEach(function (place) {
-        place.classList.remove("waiting");
-        place.removeAttribute("aria-busy");
-        place.textContent = failed;
-      });
+      compareFailed(elt, event.type === "htmx:timeout" ? TOO_SLOW_GEMINI :
+        elt.id === "compare-loader" ? FAILED : words + " Everything else on this page is complete.");
       return;
     }
     if (target && target.id === "check-steps") target = $("viewer-body"); // a check that runs
@@ -1228,7 +1323,7 @@
       target.querySelector(".alert").textContent = words;
       if (target.id === "viewer-body") {
         steps();
-        if (checkSaved !== null) { // the check that was open stays one click away
+        if ($("check-kept")) { // the check that was open stays one click away
           var back = document.createElement("p");
           back.className = "viewer-back";
           back.innerHTML = '<button type="button" class="btn btn-sm hm-back" data-back-to-check>&lsaquo; Back to the check</button>';

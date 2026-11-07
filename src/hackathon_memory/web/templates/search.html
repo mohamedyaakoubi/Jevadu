@@ -31,7 +31,7 @@
         <div class="hm-actions">
           <a class="btn btn-ghost-secondary" href="/?clear=1{% if view %}&amp;view={{ view }}{% endif %}" data-clear-search hx-get="/" hx-include="#view-kept" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Clear</a>
           <span class="hm-ai-group">
-            <button type="submit" class="btn btn-primary" name="ai" value="1" id="ai-button"
+            <button type="submit" class="btn btn-primary" name="ai" value="1" id="ai-button" data-gemini-wait="sorting"
               hx-get="/" hx-include="#ask" hx-target="#workspace" hx-select="#workspace" hx-swap="outerHTML"
               hx-push-url="true" hx-sync="#ask:replace" hx-indicator="#workspace"{% if not idea %} disabled{% endif %}>Sort and compare with Gemini</button>{{ parts.info("ai", "sorting and comparing with Gemini") }}
           </span>
@@ -125,7 +125,7 @@
         {% if asked %}<p class="hm-come-back">Building this? Before you submit, <a href="#check-repo" data-focus-check>check your GitHub link here</a>.</p>{% endif %}
         {% if compare_ids %}
         <div id="compare-loader" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ compare_ids | join(',') }}"
-             hx-trigger="load" hx-swap="none" hx-target="this"></div>
+             hx-trigger="load" hx-swap="none" hx-target="this" data-gemini-wait="idea"></div>
         {% endif %}
       {% elif page > 1 %}
         <div class="empty"><p class="empty-title">No more projects in this list.</p><p class="empty-subtitle"><a href="/{{ '?' ~ search_query if search_query }}">Back to the first page</a></p></div>

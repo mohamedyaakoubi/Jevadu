@@ -3437,7 +3437,7 @@ def test_the_button_of_gemini_moves_the_form_to_the_semantic_search(site, chromi
     assert page.locator("#mode-words").is_checked()
     page.locator("#ai-button").click()
     page.wait_for_selector("#results-title:has-text('Sorted by Gemini')")
-    assert page.locator("#mode-meaning").is_checked()  # the box says what was searched
+    page.wait_for_function("document.getElementById('mode-meaning').checked")  # what was searched
     page.context.close()
 
 
@@ -4307,6 +4307,160 @@ def test_an_address_with_no_account_is_shown_how_to_make_one(site, chromium) -> 
     page.wait_for_selector(".hm-sign-status[data-state=done]")
     assert page.locator(".hm-wallet-new").is_hidden()
     assert page.locator("[name=signer]").input_value() == account
+    page.context.close()
+
+
+# --------------------------------------------------------- a wait for Gemini (7 November 2026)
+
+
+def checked_page(chromium, client, database, **context):  # noqa: ANN001, ANN003, ANN201
+    """A page with the result of a check in its window, and the button of Gemini ready."""
+    event = checkable(database)  # before the page, which lists the hackathons
+    page = served(chromium, client, viewport={"width": 1440, "height": 900}, **context)
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.select_option("#check-event", event)
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] .check-result")
+    return page
+
+
+def answers_each_place(page, fake) -> None:  # noqa: ANN001
+    """The model's answer has a comparison for each project of the check on the page."""
+    places = page.locator(".check-result .hm-compare").count()
+    fake.answer_text = compare_answer(*[(n, ["what_it_does"]) for n in range(1, places + 1)])
+
+
+def is_comparison(url: str) -> bool:
+    return "/compare?" in url
+
+
+def holds_comparisons(page) -> list:  # noqa: ANN001
+    """The requests of a comparison wait here: `fallback()` on one lets the site answer it."""
+    held: list = []
+    page.route(is_comparison, lambda route: held.append(route))
+    return held
+
+
+@pytest.mark.browser
+def test_a_wait_for_gemini_shows_its_time_and_when_it_ends(site, chromium) -> None:  # noqa: ANN001
+    """A line says what Gemini does, for how long, and that the page stops waiting by itself. No
+    button cancels: a wait has an end anyway, his word of 7 November 2026."""
+    client, fake, _, database = site
+    page = checked_page(chromium, client, database)
+    answers_each_place(page, fake)
+    held = holds_comparisons(page)
+    page.locator("[data-check-compare]").click()
+    line = page.locator(".hm-wait")
+    line.wait_for()
+    assert "Gemini is comparing these projects with the README" in line.inner_text()
+    assert "stops waiting by itself after 90 seconds" in line.inner_text()
+    assert line.locator("button").count() == 0
+    page.wait_for_function("parseInt(document.querySelector('.hm-wait-time').textContent) >= 2")
+    assert page.locator("[data-check-compare]").is_disabled()
+    held[0].fallback()
+    page.wait_for_selector(".check-result .hm-compare-text")
+    assert page.locator(".hm-wait").count() == 0
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_no_answer_leaves_a_comparison_waiting(site, chromium) -> None:  # noqa: ANN001
+    """An answer with none of the places, an error of the host, or no answer at all: the wait
+    ends, the page says so once, and the button can be pressed again. An answer with none of the
+    places left them waiting for ever on the public copy (7 November 2026)."""
+    client, _, _, database = site
+    page = checked_page(chromium, client, database)
+    endings = {
+        "could not be generated": lambda route: route.fulfill(
+            status=200, body="", headers={"content-type": "text/html"}),
+        "went wrong on the server": lambda route: route.fulfill(status=504, body="timed out"),
+        "did not answer": lambda route: route.abort(),
+    }  # fmt: skip
+    for words, ending in endings.items():
+        page.route(is_comparison, ending)
+        page.locator("[data-check-compare]").click()
+        page.wait_for_selector(f".hm-compare-said:has-text('{words}')")
+        page.wait_for_function("!document.querySelector('.compare.waiting')")
+        assert page.locator(".hm-wait").count() == 0
+        assert page.locator(".hm-compare-said").count() == 1  # said once, not for each project
+        page.wait_for_function("!document.querySelector('[data-check-compare]').disabled")
+        page.unroute(is_comparison, ending)
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_comparison_goes_on_while_a_project_of_the_check_is_open(site, chromium) -> None:  # noqa: ANN001
+    """The check waits with its elements alive, not as text: its wait goes on, and an answer that
+    comes while a project is open shows on the way back. As text, its places kept waiting for
+    ever (7 November 2026)."""
+    client, fake, _, database = site
+    page = checked_page(chromium, client, database)
+    answers_each_place(page, fake)
+    held = holds_comparisons(page)
+    page.locator("[data-check-compare]").click()
+    page.locator(".hm-wait").wait_for()
+    project = page.locator(".check-result .hm-close-name a").first
+
+    def to_the_project() -> None:
+        project.click()
+        page.wait_for_selector("#viewer[open] .project[data-project]")
+
+    def back() -> None:
+        page.locator("[data-back-to-check]").click()
+        page.wait_for_selector("#viewer[open] .check-result")
+
+    to_the_project()
+    assert page.locator(".hm-wait").is_hidden()
+    back()
+    page.locator(".hm-wait").wait_for()  # still waiting, and still counting
+    page.wait_for_function("parseInt(document.querySelector('.hm-wait-time').textContent) >= 1")
+    to_the_project()
+    held[0].fallback()
+    page.wait_for_selector("#check-kept .hm-compare-text", state="attached")
+    back()
+    page.wait_for_selector(".check-result .hm-compare-text")
+    assert page.locator(".compare.waiting").count() == 0
+    assert page.locator("#check-kept").count() == 0 and page.locator("#register-form").count() == 1
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_the_search_shows_the_wait_of_each_step_of_gemini(site, chromium) -> None:  # noqa: ANN001
+    client, fake, _, _ = site
+    fake.answer_queue = [json.dumps({"closest": [1, 2, 3]})]
+    fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["what_it_does"]))
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(SEARCH)
+    sorting: list = []
+    page.route(lambda url: "ai=1" in url, lambda route: sorting.append(route))
+    held = holds_comparisons(page)
+    page.locator("#ai-button").click()
+    page.wait_for_selector(".hm-wait:has-text('Gemini is sorting the closest projects')")
+    assert page.locator(".hm-asking").is_hidden()  # the line says it, with the time
+    sorting[0].fallback()
+    page.wait_for_selector(".hm-wait:has-text('comparing these projects with your idea')")
+    held[0].fallback()
+    page.wait_for_function("!document.querySelector('.compare.waiting')")
+    assert page.locator(".hm-wait").count() == 0
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_comparison_in_a_window_can_be_asked_again_after_a_failure(site, chromium) -> None:  # noqa: ANN001
+    client, fake, ids, _ = site
+    fake.fail_with = (503, "unavailable")
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(SEARCH)
+    pebble = ids["Pebble Pay"]
+    page.locator(f"#result-{pebble} .result-link").click()
+    page.locator(f"#one-compare-{pebble} button").click()
+    page.wait_for_selector(f"#one-compare-{pebble}:has-text('could not be generated')")
+    fake.fail_with = None
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    page.locator(f"#one-compare-{pebble} button").click()
+    page.wait_for_selector(f"#one-compare-{pebble} .hm-compare-text")
+    assert page.locator(".hm-wait").count() == 0
     page.context.close()
 
 
