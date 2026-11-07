@@ -2057,7 +2057,73 @@ def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) ->
     assert "Same 1." in again.text and model_calls(fake, before) == 1  # kept for one day
     never = {"repo": "github.com/nobody/never-checked", "ids": places[0], "place": "check"}
     unknown = client.get("/compare", params=never, headers=HX)
-    assert unknown.status_code == 400 and model_calls(fake, before) == 1  # no README was saved
+    assert unknown.status_code == 400 and model_calls(fake, before) == 1  # GitHub has no README
+    assert f'id="check-compare-{places[0]}" hx-swap-oob="true"' in unknown.text  # nothing waits
+    assert "could not be read from GitHub" in unknown.text
+    assert "Compare these 1 with Gemini</button>" in unknown.text  # the button comes back
+
+
+def test_a_comparison_reads_the_readme_on_a_copy_that_lost_it(site, tmp_path) -> None:  # noqa: ANN001
+    """On a host, a request may land on a copy of the site with files of its own, without the
+    README that the check saved. It answered 400 with none of the places, and on the page they
+    kept waiting for ever (7 November 2026). GitHub is now asked again."""
+    client, fake, _, database = site
+    event = checkable(database)
+    part = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    asked = re.search(r'hx-get="(/compare\?repo=[^"]+&amp;place=check)"', part.text).group(1)
+    places = re.findall(r'id="check-compare-(\d+)"', part.text)
+    another_copy = client.make(data_dir=str(tmp_path / "another-copy"))
+    fake.answer_text = compare_answer(*[(n, ["what_it_does"]) for n in range(1, len(places) + 1)])
+    before = len(fake.requests)
+    done = another_copy.get(asked.replace("&amp;", "&"), headers=HX)
+    assert done.status_code == 200 and model_calls(fake, before) == 1  # read again, then compared
+    assert "Same 1." in done.text and "Compared by Gemini with this README" in done.text
+
+
+def test_a_comparison_says_so_when_github_cannot_give_the_readme(site, tmp_path) -> None:  # noqa: ANN001
+    """GitHub away, or answering with an error: the visitor is told, nothing waits, Gemini is not
+    asked, and the button comes back."""
+    import requests
+
+    from fakes import Reply
+    from hackathon_memory.collect.github import readme_address
+
+    client, fake, ids, _ = site
+    params = {"repo": REPO, "ids": str(ids["Pebble Pay"]), "place": "check"}
+    answers = {"away": requests.ConnectionError("no route to GitHub"),
+               "failing": Reply(500, b"{}"), "refusing": Reply(403, b"{}")}  # fmt: skip
+    for name, answer in answers.items():
+        client.github_site.pages[readme_address(REPO)] = [answer] * 10
+        another_copy = client.make(data_dir=str(tmp_path / name))
+        before = len(fake.requests)
+        part = another_copy.get("/compare", params=params, headers=HX)
+        assert part.status_code == 400, name
+        assert model_calls(fake, before) == 0
+        assert "could not be read from GitHub" in part.text
+        assert f'id="check-compare-{ids["Pebble Pay"]}" hx-swap-oob="true"' in part.text
+        assert "Compare these 1 with Gemini</button>" in part.text
+
+
+def test_a_long_readme_is_compared_by_its_start_and_says_so(site) -> None:  # noqa: ANN001
+    """Gemini reads at most LONGEST_IDEA characters of a README, so a long one can neither break
+    the call nor cost more, and the line under the button says what was read (7 November 2026)."""
+    from checkfakes import readme_answer
+    from fakes import Reply
+    from hackathon_memory.collect.github import readme_address
+    from hackathon_memory.web.app import LONGEST_IDEA
+
+    client, fake, ids, _ = site
+    long_readme = "A long README about a coin on Hedera. " * 3000
+    assert len(long_readme) > 100_000
+    client.github_site.pages[readme_address(REPO)] = Reply(200, readme_answer(long_readme))
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    before = len(fake.requests)
+    params = {"repo": REPO, "ids": str(ids["Pebble Pay"]), "place": "check"}
+    done = client.get("/compare", params=params, headers=HX)
+    assert done.status_code == 200 and model_calls(fake, before) == 1
+    assert f"the first {LONGEST_IDEA:,} characters of this README" in done.text
+    asked = str(fake.requests[-1])
+    assert "A long README" in asked and asked.count("A long README") <= LONGEST_IDEA // 30
 
 
 def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -> None:  # noqa: ANN001

@@ -279,6 +279,10 @@ CHECK_LOST = (
     "submission again."
 )
 NO_EVENT = "That hackathon is not in the list. Pick one from the list, or none, and try again."
+README_GONE = (
+    "The README of this repository could not be read from GitHub just now, so nothing was "
+    "compared. Try again in a moment."
+)
 # The check form's choice "None: show the facts, without judging dates". Its first choice, with no
 # value, leaves the hackathon to the tool, which looks for it in the register (design 12.1, S3).
 NO_HACKATHON = "none"
@@ -846,12 +850,20 @@ def create_app(
                                  raw_dir=data_paths(settings).raw_dir)  # fmt: skip
 
     def readme_idea(repo: str) -> str:
-        """The words of the README that the check of a repository saved, or "" when there is
-        none. Nothing is asked of GitHub here."""
+        """The words of the README of a repository, or "" when it has none or GitHub cannot say.
+        The one that the check saved; on a host, a request may land on a copy of the site that
+        does not hold it (web/vercel_app.py), and then GitHub is asked again (7 November 2026:
+        comparisons found no README there, and their places kept waiting)."""
         repository = submission.repository_link(repo[:300])
         if repository is None:
             return ""
         readme = saved_readme(answers, repository)
+        if readme is None:
+            asker, _ = github_or_why()
+            readme = submission.read_readme(
+                asker, answers, repository,
+                collector=f"{settings.collector_name.strip()}/{__version__}",
+            )  # fmt: skip
         if readme is None or readme.status != README_FOUND:
             return ""
         return submission.readme_words(readme.text)
@@ -2024,22 +2036,31 @@ def create_app(
         one project in its window (`one`), or for the closest past projects of a checked
         submission (`place=check`), whose README stands for the idea: the address names the
         repository (`repo`), and the README is the one that the check saved, so its words never
-        travel in the address. Kept from the last day, or asked now and kept."""
-        if place == "check":
-            idea = readme_idea(repo)
+        travel in the address. Kept from the last day, or asked now and kept. Each answer fills
+        the places asked about, so that none keeps waiting."""
+        from_readme = place == "check"
         idea = " ".join(idea.split())[:LONGEST_IDEA]
         try:
             project_ids = [int(part) for part in ids.split(",") if part.strip()][:PAGE_SIZE]
         except ValueError:
             project_ids = []
-        place = {"one_place": one == "1", "check_place": place == "check",
-                 "prefix": "check-compare-" if place == "check" else "compare-"}  # fmt: skip
-        if not idea or not project_ids:
-            return render(request, "_compare.html", 400, found={}, failed=True, asked_ids=[],
-                          **place)  # fmt: skip
+        place = {"one_place": one == "1", "check_place": from_readme, "repo": repo,
+                 "prefix": "check-compare-" if from_readme else "compare-",
+                 "asked_ids": project_ids}  # fmt: skip
+
+        def not_compared(status: int, words: str | None = None, retry: bool = True) -> HTMLResponse:
+            """What stopped the comparison, with the button again when asking again can help."""
+            return render(request, "_compare.html", status, found={}, failed=True, refused=words,
+                          retry=retry, idea=idea, **place)  # fmt: skip
+
+        if not project_ids or not (idea or from_readme):
+            return not_compared(400, retry=False)
         if not person():
-            return render(request, "_compare.html", 403, found={}, failed=True,
-                          asked_ids=project_ids, refused=PERSON_FIRST, **place)  # fmt: skip
+            return not_compared(403, PERSON_FIRST)
+        if from_readme:  # only now: the README may have to be asked of GitHub
+            idea = " ".join(readme_idea(repo).split())[:LONGEST_IDEA]
+            if not idea:
+                return not_compared(400, README_GONE)
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
                     BudgetExceeded, *FAILED_CALLS, *rerank.NOT_ORDERED)  # fmt: skip
         # On the public copy, the comparison of the first ten counts with Gemini's order; a
@@ -2078,13 +2099,12 @@ def create_app(
                 by_stand_in = True
                 found, _ = compared(conninfo, items, by_stand_in)
         except public_copy.Refused:
-            return render(request, "_compare.html", 429, found={}, failed=True,
-                          asked_ids=project_ids, refused=used(public_copy.AI), **place)  # fmt: skip
+            return not_compared(429, used(public_copy.AI), retry=False)
         except failures as error:
             visits.failed(f"The comparison could not be generated ({type(error).__name__}).")
-            return render(request, "_compare.html", 503, found={}, failed=True,
-                          asked_ids=project_ids, **place)  # fmt: skip
-        return render(request, "_compare.html", found=found, failed=False, asked_ids=project_ids,
+            return not_compared(503)
+        return render(request, "_compare.html", found=found, failed=False,
+                      readme_cut=from_readme and len(idea) >= LONGEST_IDEA,
                       compared_by=stand_in.NAME if by_stand_in else "Gemini", **place)  # fmt: skip
 
     def about(request: Request, name: str) -> HTMLResponse:

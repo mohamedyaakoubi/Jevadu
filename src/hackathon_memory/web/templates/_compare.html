@@ -1,27 +1,30 @@
 {# The comparison of each project with the idea (design 8.3). In the list, each part replaces the
    waiting shape of its card, by its id (an out-of-band swap of htmx); in the window of one project,
    one part replaces the button that asked for it. In the check of a submission, the README stands
-   for the idea, and the places have their own ids, so a project shown twice is filled once. #}
+   for the idea, and the places have their own ids, so a project shown twice is filled once. An
+   answer always fills the places it was asked about, so that none keeps waiting. In a check, what
+   went wrong is said once, beside the button, which comes back when asking again can help. #}
+{% import "_parts.html" as parts %}
 {% if one_place %}
 {% set pid = asked_ids[0] if asked_ids else none %}
 {% set one = found.get(pid) if pid is not none else none %}
-<div class="compare-place" id="one-compare-{{ pid }}">
+<div class="compare-place{% if failed %} compare-ask{% endif %}" id="one-compare-{{ pid }}">
 {% if one %}{% include "_compare_one.html" %}
 {% elif failed and refused %}<p class="text-secondary">{{ refused }}</p>
 {% elif failed %}<p class="text-secondary">The comparison could not be generated just now. Everything else in this window is complete; try again in a moment.</p>
 {% else %}<p class="text-secondary">No comparison for this project.</p>{% endif %}
+{% if failed and retry and pid is not none %}{{ parts.one_compare_button(idea, pid) }}{% endif %}
 </div>
 {% else %}
 {% for project_id in asked_ids %}
 {% set one = found.get(project_id) %}
-<div class="hm-compare compare" id="{{ prefix }}{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">
-{% if one %}{% include "_compare_one.html" %}
-{% elif failed and refused %}<p class="text-secondary">{{ refused }}</p>
-{% elif failed %}<p class="text-secondary">The comparison {{ "with this README" if check_place else "with your idea" }} could not be generated just now. Everything else on this page is complete.</p>
-{% else %}<p class="text-secondary">No comparison for this project.</p>{% endif %}
-</div>
+<div class="hm-compare compare" id="{{ prefix }}{{ project_id }}" hx-swap-oob="true" data-project="{{ project_id }}">{% if one %}{% include "_compare_one.html" %}{% elif failed and check_place %}{% elif failed and refused %}<p class="text-secondary">{{ refused }}</p>{% elif failed %}<p class="text-secondary">The comparison with your idea could not be generated just now. Everything else on this page is complete.</p>{% else %}<p class="text-secondary">No comparison for this project.</p>{% endif %}</div>
 {% endfor %}
 {% if check_place %}
-<div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">{% if not failed %}<p class="hm-small">Compared by {{ compared_by or "Gemini" }} with this README. Not a judgment of the projects.</p>{% endif %}</div>
+<div class="compare-ask" id="check-compare-ask" hx-swap-oob="true">
+{% if not failed %}<p class="hm-small">Compared by {{ compared_by or "Gemini" }} with {% if readme_cut %}the first {{ "{:,}".format(LONGEST_IDEA) }} characters of {% endif %}this README. Not a judgment of the projects.</p>
+{% else %}{% if retry and asked_ids %}{{ parts.check_compare_button(repo, asked_ids | join(","), asked_ids | length) }}{% endif %}
+<p class="hm-small hm-compare-said" role="alert">{{ refused or "The comparison with this README could not be generated just now. Everything else on this page is complete." }}</p>{% endif %}
+</div>
 {% endif %}
 {% endif %}

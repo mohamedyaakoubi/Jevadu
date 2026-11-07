@@ -372,6 +372,18 @@ in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ pat
 
 {# Two shares side by side (web/charts.py, Comparison): bars appear only when each group holds
    20 projects; otherwise the note says why. #}
+{# The buttons that ask Gemini for a comparison: the first time, and again after a failure. #}
+{% macro check_compare_button(repository, ids, count) -%}
+<div class="hm-ai-group"><button type="button" class="btn btn-primary btn-sm" data-check-compare
+  hx-get="/compare?repo={{ repository | urlencode }}&amp;ids={{ ids }}&amp;place=check" hx-swap="none"
+  hx-indicator="#check-compare-ask" hx-disabled-elt="this">Compare these {{ count }} with Gemini</button>{{ info("check-compare", "comparing with Gemini") }}</div>
+{%- endmacro %}
+
+{% macro one_compare_button(idea, pid) -%}
+<button type="button" class="btn btn-primary btn-sm" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ pid }}&amp;one=1"
+  hx-target="#one-compare-{{ pid }}" hx-swap="outerHTML" hx-indicator="#one-compare-{{ pid }}" hx-disabled-elt="this">Compare with my idea</button>
+{%- endmacro %}
+
 {% macro comparison(one) -%}
 <section class="card hm-chart" aria-labelledby="chart-{{ one.key }}">
   <div class="card-body">
