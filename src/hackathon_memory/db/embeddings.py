@@ -2,7 +2,9 @@
 
 The embedding of a project is made again only when its text or its model changes. The embedding
 of a typed idea is kept by the fingerprint of the idea for one day, and the idea itself nowhere.
-The embedding of an example idea of the search screen is kept for good (example_ideas.py).
+The embedding of an example idea of the search screen is kept for good (example_ideas.py), and so
+is the embedding of a README that a check of a submission made (`kept`, migration 0032, 7 November
+2026: a check is kept until someone presses "Read again now").
 """
 
 from __future__ import annotations
@@ -148,33 +150,51 @@ class EmbeddingStore:
     # ------------------------------------------------------------------ the typed ideas
 
     def idea(self, sha256: str, model: str, now: datetime | None = None) -> list[float] | None:
-        """The embedding of an idea typed less than a day ago, or of an example idea, or None."""
+        """The embedding of an idea typed less than a day ago, of an example idea, or of a README
+        that a check keeps for good, or None."""
         since = kept_since(sha256, now)
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT embedding FROM idea_embeddings "
-                "WHERE idea_sha256 = %s AND model = %s AND made_at > %s",
+                "WHERE idea_sha256 = %s AND model = %s AND (made_at > %s OR kept)",
                 (sha256, model, since),
             ).fetchone()
         return [float(value) for value in row[0].to_list()] if row else None  # a pgvector Vector
 
     def save_idea(
-        self, sha256: str, model: str, values: list[float], now: datetime | None = None
+        self,
+        sha256: str,
+        model: str,
+        values: list[float],
+        now: datetime | None = None,
+        kept: bool = False,
     ) -> None:
+        """Keep the embedding of an idea; with `kept`, for good. A row kept for good stays so."""
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO idea_embeddings (idea_sha256, model, embedding, made_at) "
-                "VALUES (%s, %s, %s, %s) ON CONFLICT (idea_sha256, model) DO UPDATE SET "
-                "embedding = EXCLUDED.embedding, made_at = EXCLUDED.made_at",
-                (sha256, model, Vector(values), now or datetime.now(UTC)),
+                "INSERT INTO idea_embeddings (idea_sha256, model, embedding, made_at, kept) "
+                "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (idea_sha256, model) DO UPDATE SET "
+                "embedding = EXCLUDED.embedding, made_at = EXCLUDED.made_at, "
+                "kept = idea_embeddings.kept OR EXCLUDED.kept",
+                (sha256, model, Vector(values), now or datetime.now(UTC), kept),
+            )
+
+    def keep_idea(self, sha256: str, model: str) -> None:
+        """Keep for good the embedding of an idea that was made for a day."""
+        with psycopg.connect(self._conninfo) as conn:
+            conn.execute(
+                "UPDATE idea_embeddings SET kept = true "
+                "WHERE idea_sha256 = %s AND model = %s AND NOT kept",
+                (sha256, model),
             )
 
     def forget_old_ideas(self, now: datetime | None = None) -> int:
         """Delete the embeddings of ideas typed a day ago or more, never those of the example
-        ideas. Returns how many."""
+        ideas, nor those kept for good. Returns how many."""
         before = (now or datetime.now(UTC)) - IDEA_LIFETIME
         with psycopg.connect(self._conninfo) as conn:
             return conn.execute(
-                "DELETE FROM idea_embeddings WHERE made_at <= %s AND NOT idea_sha256 = ANY(%s)",
+                "DELETE FROM idea_embeddings "
+                "WHERE made_at <= %s AND NOT kept AND NOT idea_sha256 = ANY(%s)",
                 (before, list(KEPT_IDEAS)),
             ).rowcount

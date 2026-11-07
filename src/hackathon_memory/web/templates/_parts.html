@@ -379,6 +379,11 @@ in the code, {% if at %}<a href="{{ at }}" rel="noopener" target="_blank">{{ pat
   hx-indicator="#check-compare-ask" hx-disabled-elt="this">Compare these {{ count }} with Gemini</button>{{ info("check-compare", "comparing with Gemini") }}</div>
 {%- endmacro %}
 
+{# What compared the README of a check with its closest projects, and how much of it was read. #}
+{% macro readme_compared(compared_by, readme_cut) -%}
+<p class="hm-small">Compared by {{ compared_by or "Gemini" }} with {% if readme_cut %}the first {{ "{:,}".format(LONGEST_COMPARED) }} characters of {% endif %}this README. Not a judgment of the projects. Kept until the check is read again.</p>
+{%- endmacro %}
+
 {% macro one_compare_button(idea, pid) -%}
 <button type="button" class="btn btn-primary btn-sm" data-gemini-wait="one" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ pid }}&amp;one=1"
   hx-target="#one-compare-{{ pid }}" hx-swap="outerHTML" hx-indicator="#one-compare-{{ pid }}" hx-disabled-elt="this">Compare with my idea</button>

@@ -205,11 +205,13 @@ def kept_or_compared(
     thinking_level: str,
     timeout_seconds: float | None = None,
     now: datetime | None = None,
+    keep: bool = False,
 ) -> tuple[dict[int, ProjectComparison], int]:
     """The comparison of each project: the one of the last day for the same idea and exactly the
     same texts when there is one, otherwise asked now, for those projects only, and kept for a
-    day. Returns the comparisons by project id and how many projects the model was asked about.
-    A failure of the model is raised, as by compare()."""
+    day, or with `keep` for good (the README of a check of a submission, 7 November 2026). Returns
+    the comparisons by project id and how many projects the model was asked about. A failure of
+    the model is raised, as by compare()."""
     store = AnswerStore(conninfo)
     store.forget_old(now)
     fingerprint = idea_fingerprint(idea)
@@ -222,6 +224,10 @@ def kept_or_compared(
         for item in items
         if item.project_id in kept
     }  # fmt: skip
+    if keep and found:  # made for a day, before it was kept for good
+        store.keep_comparisons(
+            fingerprint, list(found), model, thinking_level, INSTRUCTIONS_VERSION
+        )
     missing = [item for item in items if item.project_id not in kept]
     if missing:
         asked = compare(client, idea, missing, model=model, thinking_level=thinking_level,
@@ -230,7 +236,7 @@ def kept_or_compared(
             fingerprint,
             {pid: (inputs[pid], KeptComparison(one.same, one.differs, list(one.fields_used)))
              for pid, one in asked.items()},
-            model, thinking_level, INSTRUCTIONS_VERSION, now,
+            model, thinking_level, INSTRUCTIONS_VERSION, now, kept=keep,
         )  # fmt: skip
         found.update(asked)
     return found, len(missing)

@@ -3,7 +3,9 @@
 The key is the fingerprint of the idea, never the idea: the order of its closest projects for one
 set of filters, and its comparison with each project for the texts of that project that the model
 read. Like the embedding of the idea (db/embeddings.py), a row lives one day, and the rows of an
-example idea of the search screen are kept for good (example_ideas.py). An exact cache: an answer
+example idea of the search screen are kept for good (example_ideas.py), and so are the comparisons
+of a check of a submission, whose README stands for the idea (`kept`, migration 0032, 7 November
+2026). An exact cache: an answer
 is given back only for exactly the same idea, filters, model, level and instructions, so it can
 never speak about another idea (decided on 11 October 2026: no cache by similar meaning).
 """
@@ -74,7 +76,7 @@ class AnswerStore:
     ) -> dict[int, KeptComparison]:
         """For each project of `inputs` (its id and the fingerprint of the texts that the model
         would read), the comparison made for exactly those texts less than a day ago, or at any
-        time for an example idea."""
+        time for an example idea or when it is kept for good."""
         if not inputs:
             return {}
         since = kept_since(idea_sha256, now)
@@ -83,7 +85,7 @@ class AnswerStore:
             rows = conn.execute(
                 "SELECT project_id, input_sha256, same, differs, fields_used FROM idea_comparisons "
                 "WHERE idea_sha256 = %s AND project_id = ANY(%s) AND model = %s "
-                "AND thinking_level = %s AND version = %s AND made_at > %s",
+                "AND thinking_level = %s AND version = %s AND (made_at > %s OR kept)",
                 (idea_sha256, ids, model, level, version, since),
             ).fetchall()
         return {
@@ -93,9 +95,10 @@ class AnswerStore:
         }
 
     def save_comparisons(self, idea_sha256: str, found: Mapping[int, tuple[str, KeptComparison]],
-                         model: str, level: str, version: str,
-                         now: datetime | None = None) -> None:  # fmt: skip
-        """Keep each new comparison, by project: (the fingerprint of its texts, the comparison)."""
+                         model: str, level: str, version: str, now: datetime | None = None,
+                         kept: bool = False) -> None:  # fmt: skip
+        """Keep each new comparison, by project: (the fingerprint of its texts, the comparison);
+        with `kept`, for good. A row kept for good stays so."""
         if not found:
             return
         made_at = now or datetime.now(UTC)
@@ -103,24 +106,36 @@ class AnswerStore:
             for project_id, (input_sha256, one) in found.items():
                 conn.execute(
                     "INSERT INTO idea_comparisons (idea_sha256, project_id, model, thinking_level, "
-                    "version, input_sha256, same, differs, fields_used, made_at) "
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+                    "version, input_sha256, same, differs, fields_used, made_at, kept) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
                     "ON CONFLICT (idea_sha256, project_id, model, thinking_level, version, "
                     "input_sha256) DO UPDATE SET same = EXCLUDED.same, "
                     "differs = EXCLUDED.differs, fields_used = EXCLUDED.fields_used, "
-                    "made_at = EXCLUDED.made_at",
+                    "made_at = EXCLUDED.made_at, kept = idea_comparisons.kept OR EXCLUDED.kept",
                     (idea_sha256, project_id, model, level, version, input_sha256, one.same,
-                     one.differs, list(one.fields_used), made_at),
+                     one.differs, list(one.fields_used), made_at, kept),
                 )  # fmt: skip
+
+    def keep_comparisons(self, idea_sha256: str, project_ids: Sequence[int], model: str,
+                         level: str, version: str) -> None:  # fmt: skip
+        """Keep for good the comparisons of these projects that were made for a day."""
+        with psycopg.connect(self._conninfo) as conn:
+            conn.execute(
+                "UPDATE idea_comparisons SET kept = true WHERE idea_sha256 = %s "
+                "AND project_id = ANY(%s) AND model = %s AND thinking_level = %s "
+                "AND version = %s AND NOT kept",
+                (idea_sha256, list(project_ids), model, level, version),
+            )
 
     def forget_old(self, now: datetime | None = None) -> int:
         """Delete the answers about ideas typed a day ago or more, never those about the example
-        ideas. Returns how many rows."""
+        ideas, nor the comparisons kept for good. Returns how many rows."""
         values = ((now or datetime.now(UTC)) - IDEA_LIFETIME, list(KEPT_IDEAS))
         old = "made_at <= %s AND NOT idea_sha256 = ANY(%s)"
         with psycopg.connect(self._conninfo) as conn:
             orders = conn.execute(f"DELETE FROM idea_orders WHERE {old}", values)  # noqa: S608
-            compared = conn.execute(f"DELETE FROM idea_comparisons WHERE {old}", values)  # noqa: S608
+            forgotten = f"DELETE FROM idea_comparisons WHERE {old} AND NOT kept"  # noqa: S608
+            compared = conn.execute(forgotten, values)
             return orders.rowcount + compared.rowcount
 
 

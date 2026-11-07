@@ -226,12 +226,12 @@ def test_a_check_read_again_asks_github_at_once_though_its_answers_are_young(
     assert "new words" in check(again=True).readme_text and len(site.seen) > asked
 
 
-def test_a_check_asks_github_again_after_an_hour_and_finds_a_repository_made_public(
+def test_a_check_is_kept_but_a_repository_made_public_is_found_at_once(
     database: str, tmp_path: Path
 ) -> None:
-    """With the answers asked again (design 7.3, 25 October 2026): an answer younger than an hour
-    is used, an older one is asked again. Before, a "not found" saved while a repository was
-    private stayed for good."""
+    """What a check read is used at any age, until "Read again now" (7 November 2026). A "not
+    found" is not kept: the next check asks again, and finds a repository made public after a
+    first check, which stayed "not found" for good before 25 October 2026."""
     pages = {
         facts_address(REPO): [Reply(404, b'{"message": "Not Found"}'), Reply(200, facts_answer())],
         readme_address(REPO): Reply(200, readme_answer()),
@@ -251,11 +251,13 @@ def test_a_check_asks_github_again_after_an_hour_and_finds_a_repository_made_pub
 
     private = check(0)
     assert private.code.status == "gone" and len(site.seen) == 1
-    soon = check(30)
-    assert soon.code.status == "gone" and len(site.seen) == 1  # younger than an hour
-    public = check(120)
+    public = check(1)  # a minute later, made public
     assert public.code.status == "found" and public.hedera_code is not None
     assert public.version.sha == ARCHIVE_COMMIT and public.readme_text
+    asked = len(site.seen)
+    later = check(60 * 24 * 30)  # a month later: nothing is asked again
+    assert later.code.status == "found" and len(site.seen) == asked
+    assert later.readme_text == public.readme_text
 
 
 @pytest.mark.integration
