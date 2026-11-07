@@ -667,6 +667,17 @@ def test_the_pitch_deck_link_is_noted_then_sends_on_to_the_file(site) -> None:  
     assert noted == [("deck",), ("deck",)]
 
 
+def test_a_number_that_the_site_never_writes_breaks_no_page(site) -> None:  # noqa: ANN001, F811
+    """A sign such as "²" passes str.isdigit() and int() refuses it: the search page failed on
+    it, and on the public copy so did the note of the visit (7 November 2026)."""
+    client, _, _, database = site
+    assert client.get("/", params={"open": "²", "page": "²"}).status_code == 200
+    assert public_site(client).get("/", params={"open": "²"}).status_code == 200
+    with psycopg.connect(database) as conn:
+        noted = conn.execute("SELECT action, detail FROM visit_actions").fetchall()
+    assert noted == [("home", {})]
+
+
 def test_a_failed_action_is_noted_with_what_went_wrong(site, monkeypatch) -> None:  # noqa: ANN001, F811
     """A refused check keeps the words of its page; a search by meaning that fell back to the
     keywords keeps the note that it showed, with the kind of the error; a page that broke keeps

@@ -76,6 +76,14 @@ class Visit:
         return self.actions[-1].at
 
 
+def whole_number(text: str, digits: int = 12) -> int | None:
+    """A whole number as the site's own links write it, in at most `digits` ASCII digits; None
+    for anything else. Also for the pages: str.isdigit() takes signs such as "²", which int()
+    refuses, and int() refuses a text of more than 4,300 digits; either made a page fail, on the
+    public copy wherever a visit is noted (7 November 2026)."""
+    return int(text) if len(text) <= digits and text.isascii() and text.isdigit() else None
+
+
 def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
     """What one request of a visitor did, and about what; None for a request that is no action
     of its own. `params` holds each parameter once, its values joined by |."""
@@ -90,8 +98,9 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
         chosen = {k: params[k] for k in FILTERS if params.get(k)}
         if chosen:
             detail["filters"] = chosen
-        if params.get("open", "").isdigit():
-            return "card", {**detail, "project": int(params["open"])}
+        opened = whole_number(params.get("open", ""))
+        if opened is not None:
+            return "card", {**detail, "project": opened}
         if params.get("view") in ("graph", "charts", "overview", "mainnet"):
             view = params["view"]
             return (view if view in ("graph", "mainnet") else "charts"), detail
@@ -100,12 +109,13 @@ def action_of(path: str, params: Mapping[str, str]) -> tuple[str, dict] | None:
         if chosen:
             return "filter", detail
         return ("list" if params.get("page", "1") not in ("", "1") else "home"), detail
-    if len(parts) >= 2 and parts[0] == "project" and parts[1].isdigit():
+    project = whole_number(parts[1]) if len(parts) >= 2 and parts[0] == "project" else None
+    if project is not None:
         if parts[-1] == "read-again":
-            return "read-again", {"project": int(parts[1])}
+            return "read-again", {"project": project}
         if parts[-1] == "mainnet":
-            return "mainnet-path", {"project": int(parts[1])}
-        return "card", {"project": int(parts[1])}
+            return "mainnet-path", {"project": project}
+        return "card", {"project": project}
     if path == "/check" and params.get("repo"):
         return "check", {k: params[k][:LONGEST] for k in ("repo", "event", "starts", "ends")
                          if params.get(k)}  # fmt: skip

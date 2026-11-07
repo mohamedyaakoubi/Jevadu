@@ -16,6 +16,7 @@ from hackathon_memory.web.visits import (
     referrer_of,
     summary,
     unexpected,
+    whole_number,
 )
 
 
@@ -39,6 +40,17 @@ def test_each_request_says_what_a_visitor_did() -> None:
     for nothing in ("/static/style.css", "/owner/visits", "/check/progress", "/health",
                     "/github/callback", "/_vercel/insights/view"):  # fmt: skip
         assert action_of(nothing, {}) is None
+
+
+def test_a_number_that_the_site_never_writes_is_no_number() -> None:
+    """A sign such as "²" passes str.isdigit() and int() refuses it, as it refuses 5,000 digits:
+    either broke a page of the public copy, where each visit is noted (7 November 2026)."""
+    assert whole_number("837") == 837 and whole_number("0") == 0
+    for odd in ("²", "٣", "1" * 5000, "", "-3", " 3", "3.0"):
+        assert whole_number(odd) is None
+    assert action_of("/", {"open": "²"}) == ("home", {})
+    assert action_of("/", {"open": "1" * 5000}) == ("home", {})
+    assert action_of("/project/²/panel", {}) is None
 
 
 def test_the_place_the_site_and_the_browser_stay_short() -> None:

@@ -2055,8 +2055,9 @@ def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -
     backwards = {"repo": REPO, "event": "other", "starts": "2026-03-08", "ends": "2026-03-06"}
     late = client.get("/check", params=backwards, headers=HX)
     assert late.status_code == 400 and "Enter the start and end dates" in late.text
-    unknown = client.get("/check", params={"repo": REPO, "event": "99999"}, headers=HX)
-    assert unknown.status_code == 400 and "That hackathon is not in the list" in unknown.text
+    for odd in ("99999", "²", "1" * 5000):  # "²" passes str.isdigit(), and int() refuses it
+        unknown = client.get("/check", params={"repo": REPO, "event": odd}, headers=HX)
+        assert unknown.status_code == 400 and "That hackathon is not in the list" in unknown.text
     assert client.github_site.seen == []  # nothing was asked of GitHub
     typed = {"repo": REPO, "event": "other", "starts": "2026-03-06", "ends": "2026-03-08"}
     days = client.get("/check", params=typed, headers=HX)
