@@ -139,8 +139,7 @@
           {% else %}
           <div id="one-compare-{{ pid }}" class="compare-ask">
             <p class="text-secondary">Ask Gemini what this project shares with your idea, and how it differs.</p>
-            <button type="button" class="btn btn-primary btn-sm" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ pid }}&amp;one=1"
-                    hx-target="#one-compare-{{ pid }}" hx-swap="outerHTML" hx-indicator="#one-compare-{{ pid }}">Compare with my idea</button>
+            {{ parts.one_compare_button(idea, pid) }}
           </div>
           {% endif %}
         </div>

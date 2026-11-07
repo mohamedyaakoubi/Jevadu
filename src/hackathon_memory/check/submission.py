@@ -290,6 +290,21 @@ def _now_or_saved(
     return saved(store, repository)
 
 
+def read_readme(
+    client: PoliteClient | None,
+    store: RawStore,
+    repository: str,
+    *,
+    collector: str,
+    now: Callable[[], datetime] = lambda: datetime.now(UTC),
+) -> Readme | None:
+    """The README of a repository: the saved answer, or asked for now when there is none. On a
+    host, a request may land on another copy of the site than the one that saved it (design
+    12.5)."""
+    return _now_or_saved(client, store, repository, [], fetch_readmes, readmes_again, saved_readme,
+                         collector=collector, older_than=None, now=now)  # fmt: skip
+
+
 def read_again(
     client: PoliteClient,
     store: RawStore,

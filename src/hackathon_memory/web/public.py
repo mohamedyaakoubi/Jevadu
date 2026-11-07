@@ -185,6 +185,15 @@ class Limits:
                 return False
         return True
 
+    def answers(self) -> bool:
+        """Whether the database answers just now: when it does not, no pass can be seen."""
+        try:
+            with psycopg.connect(self._conninfo(), connect_timeout=5) as conn:
+                conn.execute("SELECT 1")
+        except psycopg.Error:
+            return False
+        return True
+
     def passed(self, who: Visitor | None) -> bool:
         """Whether the visitor may do what FOR_PEOPLE names: always when the copy asks for no
         pass; else when Turnstile found them to be a person in the last PASS_HOURS. Not when

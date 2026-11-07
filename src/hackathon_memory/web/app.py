@@ -279,6 +279,10 @@ CHECK_LOST = (
     "submission again."
 )
 NO_EVENT = "That hackathon is not in the list. Pick one from the list, or none, and try again."
+README_GONE = (
+    "The README of this repository could not be read from GitHub just now, so nothing was "
+    "compared. Try again in a moment."
+)
 # The check form's choice "None: show the facts, without judging dates". Its first choice, with no
 # value, leaves the hackathon to the tool, which looks for it in the register (design 12.1, S3).
 NO_HACKATHON = "none"
@@ -764,6 +768,11 @@ def create_app(
         (web/turnstile.py); always on the laptop's own site."""
         return limits is None or limits.passed(public_copy.visitor.get())
 
+    def person_first() -> str:
+        """Why a visitor with no pass is stopped: Cloudflare's check, or a database that could not
+        say whether they have one, which is not the visitor's to solve."""
+        return PERSON_FIRST if limits is None or limits.answers() else DATABASE_DOWN
+
     def gemini_closed(idea: str) -> bool:
         """On the public copy, whether the visitor may no longer ask Gemini's order for `idea`: an
         ask counted before stays open, since its answers cost nothing more."""
@@ -846,12 +855,20 @@ def create_app(
                                  raw_dir=data_paths(settings).raw_dir)  # fmt: skip
 
     def readme_idea(repo: str) -> str:
-        """The words of the README that the check of a repository saved, or "" when there is
-        none. Nothing is asked of GitHub here."""
+        """The words of the README of a repository, or "" when it has none or GitHub cannot say.
+        The one that the check saved; on a host, a request may land on a copy of the site that
+        does not hold it (web/vercel_app.py), and then GitHub is asked again (7 November 2026:
+        comparisons found no README there, and their places kept waiting)."""
         repository = submission.repository_link(repo[:300])
         if repository is None:
             return ""
         readme = saved_readme(answers, repository)
+        if readme is None:
+            asker, _ = github_or_why()
+            readme = submission.read_readme(
+                asker, answers, repository,
+                collector=f"{settings.collector_name.strip()}/{__version__}",
+            )  # fmt: skip
         if readme is None or readme.status != README_FOUND:
             return ""
         return submission.readme_words(readme.text)
@@ -904,6 +921,8 @@ def create_app(
         if asks_person and limits is not None and not name.startswith("_"):  # a whole page
             # the box of Cloudflare's Turnstile, until the visitor is found to be a person
             values.setdefault("person_check", None if person() else settings.turnstile_site_key)
+            # for the script: a pass may end while the page stays open
+            values.setdefault("person_key", settings.turnstile_site_key)
         if status >= 400:  # what stopped the visitor, in the page's words (S9)
             visits.failed(values.get("problem") or values.get("refused"))
         return templates.TemplateResponse(request, name, values, status_code=status)
@@ -1129,9 +1148,11 @@ def create_app(
         cut = len(idea) > LONGEST_IDEA
         idea = idea[:LONGEST_IDEA]
         if mode == "ai":  # the address of the second version of the page
-            mode, ai = MEANING, "1"
-        if not mode and ai == "1":  # Gemini orders the semantic results; an address of before
-            mode = MEANING  # 28 October 2026 asked for its order with no mode
+            ai = "1"
+        # Gemini orders the semantic results, whichever search the form is on: with Keyword chosen,
+        # its button did nothing and said so nowhere (7 November 2026).
+        if ai == "1":
+            mode = MEANING
         mode = mode if mode in MODES else DEFAULT_MODE
         with_ai = ai == "1" and mode == MEANING and bool(idea)
         # The public copy with its AI off searches by keyword, and says so (design 12.5). So does a
@@ -1148,7 +1169,7 @@ def create_app(
                 public_note = used(public_copy.EMBED, "these are keyword results")
             elif with_ai and not person():  # the search by meaning needs no pass; Gemini does
                 with_ai = False
-                public_note = PERSON_FIRST
+                public_note = person_first()
             elif with_ai and gemini_closed(idea):
                 with_ai = False
                 public_note = used(public_copy.AI, "these results are in the search order")
@@ -1159,7 +1180,8 @@ def create_app(
         asked = filtering.Filters(**{name: filtering.joined(request.query_params.getlist(name))
                                      for name in FILTERS})  # fmt: skip
         base = {"idea": idea, "mode": mode, "with_ai": with_ai, "view": view, "open_id": open_id,
-                "elapsed": None, "compare_ids": [], "notes": []}  # fmt: skip
+                "elapsed": None, "compare_ids": [], "notes": [],
+                "person_needed": public_note == PERSON_FIRST}  # fmt: skip
         down = {**base, "problem": DATABASE_DOWN, "results": [], "offer": None, "chosen": asked,
                 "panel_card": None, "panel_problem": None, "search_query": ""}  # fmt: skip
         try:
@@ -1523,7 +1545,7 @@ def create_app(
         if wrong:
             return render(request, name, 400, problem=wrong)
         if not person():
-            return render(request, name, 403, problem=PERSON_FIRST)
+            return render(request, name, 403, problem=person_first())
         if not allowed(public_copy.CHECK):
             return render(request, name, 429, problem=used(public_copy.CHECK))
         asked = {"event": event, "starts": starts, "ends": ends}
@@ -1798,7 +1820,7 @@ def create_app(
         if limits is not None and not limits.on(public_copy.REGISTER):
             return refused(503, PUBLIC_REGISTER_OFF)
         if not person():
-            return refused(403, PERSON_FIRST)
+            return refused(403, person_first())
         if not allowed(public_copy.REGISTER):
             return refused(429, used(public_copy.REGISTER))
         repository = submission.repository_link(form.get("repo", "")[:300])
@@ -1987,8 +2009,9 @@ def create_app(
         most once every 3 hours (db/read_again.py). A press too soon asks nothing and uses nothing
         of the visitor's allowance: the card comes back, and its button says when."""
         if not person():
-            visits.failed(PERSON_FIRST)
-            return HTMLResponse(f'<p class="hm-small">{escape(PERSON_FIRST)}</p>', 403)
+            words = person_first()
+            visits.failed(words)
+            return HTMLResponse(f'<p class="hm-small">{escape(words)}</p>', 403)
         too_soon = refreshing.State(refreshing.DONE, datetime.now(UTC))
         what = of_project(project_id)
         try:
@@ -2022,22 +2045,31 @@ def create_app(
         one project in its window (`one`), or for the closest past projects of a checked
         submission (`place=check`), whose README stands for the idea: the address names the
         repository (`repo`), and the README is the one that the check saved, so its words never
-        travel in the address. Kept from the last day, or asked now and kept."""
-        if place == "check":
-            idea = readme_idea(repo)
+        travel in the address. Kept from the last day, or asked now and kept. Each answer fills
+        the places asked about, so that none keeps waiting."""
+        from_readme = place == "check"
         idea = " ".join(idea.split())[:LONGEST_IDEA]
         try:
             project_ids = [int(part) for part in ids.split(",") if part.strip()][:PAGE_SIZE]
         except ValueError:
             project_ids = []
-        place = {"one_place": one == "1", "check_place": place == "check",
-                 "prefix": "check-compare-" if place == "check" else "compare-"}  # fmt: skip
-        if not idea or not project_ids:
-            return render(request, "_compare.html", 400, found={}, failed=True, asked_ids=[],
-                          **place)  # fmt: skip
+        place = {"one_place": one == "1", "check_place": from_readme, "repo": repo,
+                 "prefix": "check-compare-" if from_readme else "compare-",
+                 "asked_ids": project_ids}  # fmt: skip
+
+        def not_compared(status: int, words: str | None = None, retry: bool = True) -> HTMLResponse:
+            """What stopped the comparison, with the button again when asking again can help."""
+            return render(request, "_compare.html", status, found={}, failed=True, refused=words,
+                          retry=retry, idea=idea, **place)  # fmt: skip
+
+        if not project_ids or not (idea or from_readme):
+            return not_compared(400, retry=False)
         if not person():
-            return render(request, "_compare.html", 403, found={}, failed=True,
-                          asked_ids=project_ids, refused=PERSON_FIRST, **place)  # fmt: skip
+            return not_compared(403, person_first())
+        if from_readme:  # only now: the README may have to be asked of GitHub
+            idea = " ".join(readme_idea(repo).split())[:LONGEST_IDEA]
+            if not idea:
+                return not_compared(400, README_GONE)
         failures = (SettingsError, psycopg.OperationalError, comparing.CompareError,
                     BudgetExceeded, *FAILED_CALLS, *rerank.NOT_ORDERED)  # fmt: skip
         # On the public copy, the comparison of the first ten counts with Gemini's order; a
@@ -2076,13 +2108,12 @@ def create_app(
                 by_stand_in = True
                 found, _ = compared(conninfo, items, by_stand_in)
         except public_copy.Refused:
-            return render(request, "_compare.html", 429, found={}, failed=True,
-                          asked_ids=project_ids, refused=used(public_copy.AI), **place)  # fmt: skip
+            return not_compared(429, used(public_copy.AI), retry=False)
         except failures as error:
             visits.failed(f"The comparison could not be generated ({type(error).__name__}).")
-            return render(request, "_compare.html", 503, found={}, failed=True,
-                          asked_ids=project_ids, **place)  # fmt: skip
-        return render(request, "_compare.html", found=found, failed=False, asked_ids=project_ids,
+            return not_compared(503)
+        return render(request, "_compare.html", found=found, failed=False,
+                      readme_cut=from_readme and len(idea) >= LONGEST_IDEA,
                       compared_by=stand_in.NAME if by_stand_in else "Gemini", **place)  # fmt: skip
 
     def about(request: Request, name: str) -> HTMLResponse:

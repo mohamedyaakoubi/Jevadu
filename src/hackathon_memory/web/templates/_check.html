@@ -132,11 +132,7 @@
             <h3 id="check-close-title">Most similar past projects{{ parts.info("closest", "the most similar past projects") }}</h3>
             {% if closest %}
             {% set close_ids = closest | map(attribute="0.hit.project_id") | join(",") %}
-            <div class="compare-ask" id="check-compare-ask">
-              <div class="hm-ai-group"><button type="button" class="btn btn-primary btn-sm" data-check-compare
-                hx-get="/compare?repo={{ result.repository | urlencode }}&amp;ids={{ close_ids }}&amp;place=check" hx-swap="none"
-                hx-indicator="#check-compare-ask" hx-disabled-elt="this">Compare these {{ closest | length }} with Gemini</button>{{ parts.info("check-compare", "comparing with Gemini") }}</div>
-            </div>
+            <div class="compare-ask" id="check-compare-ask">{{ parts.check_compare_button(result.repository, close_ids, closest | length) }}</div>
             {% endif %}
           </div>
           {% if closest %}
