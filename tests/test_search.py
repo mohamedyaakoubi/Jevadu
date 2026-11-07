@@ -123,6 +123,38 @@ def test_the_embedding_of_an_example_idea_is_kept_for_good(database: str) -> Non
     assert store.idea(typed, SEARCH_MODEL, a_year_later) is None
 
 
+def test_what_a_check_keeps_outlives_a_day(database: str) -> None:
+    """The embedding of a README and its comparisons, which a check of a submission made, are kept
+    for good; those of a typed idea still live one day (7 November 2026). A row made for a day can
+    be kept for good afterwards, and what is kept for good stays so when it is saved again."""
+    embeddings, answers = EmbeddingStore(database), AnswerStore(database)
+    project = next(iter(ids_of(database).values()))
+    old = datetime(2026, 11, 1, 9, tzinfo=UTC)
+    readme, typed, later = idea_fingerprint("a README"), idea_fingerprint("an idea"), "c" * 64
+    embeddings.save_idea(readme, SEARCH_MODEL, vector_for("vendor"), old, kept=True)
+    embeddings.save_idea(typed, SEARCH_MODEL, vector_for("vendor"), old)
+    embeddings.save_idea(later, SEARCH_MODEL, vector_for("vendor"), old)
+    embeddings.keep_idea(later, SEARCH_MODEL)
+    embeddings.save_idea(readme, SEARCH_MODEL, vector_for("coin"), old)  # saved again, not kept
+    a_month_later = old + timedelta(days=30)
+    assert embeddings.forget_old_ideas(a_month_later) == 1  # the typed idea only
+    assert embeddings.idea(readme, SEARCH_MODEL, a_month_later) is not None
+    assert embeddings.idea(later, SEARCH_MODEL, a_month_later) is not None
+    assert embeddings.idea(typed, SEARCH_MODEL, a_month_later) is None
+    texts = "b" * 64
+    one = KeptComparison("Both pay a vendor.", "This one adds a ledger.", ["short_line"])
+    answers.save_comparisons(readme, {project: (texts, one)}, SEARCH_MODEL, "LOW", "v1", old,
+                             kept=True)  # fmt: skip
+    answers.save_comparisons(typed, {project: (texts, one)}, SEARCH_MODEL, "LOW", "v1", old)
+    answers.save_comparisons(later, {project: (texts, one)}, SEARCH_MODEL, "LOW", "v1", old)
+    answers.keep_comparisons(later, [project], SEARCH_MODEL, "LOW", "v1")
+    assert answers.forget_old(a_month_later) == 1
+    for sha256, kept in ((readme, True), (later, True), (typed, False)):
+        found = answers.comparisons(sha256, {project: texts}, SEARCH_MODEL, "LOW", "v1",
+                                    a_month_later)  # fmt: skip
+        assert (project in found) is kept
+
+
 def test_the_answers_about_an_example_idea_are_kept_for_good(database: str) -> None:
     store, project = AnswerStore(database), next(iter(ids_of(database).values()))
     old = datetime(2026, 10, 10, 9, tzinfo=UTC)

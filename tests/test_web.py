@@ -1692,10 +1692,10 @@ def test_a_submission_is_checked_by_programs_with_no_model_that_writes(site) -> 
                      r"\(README\.md\) and the latest commit\.", part.text)  # fmt: skip
     page = client.get("/check", params=asked)  # without JavaScript: a page of its own
     assert page.status_code == 200 and '<h1 id="viewer-title"' in page.text
-    # The stand-in's answers are dated 11 October 2026, more than an hour old, so this check
-    # asks GitHub again (design 7.3): the facts, the README and the commit, and the archive,
-    # which the stand-in made from another commit than its newest one.
-    assert len(client.github_site.seen) == 10
+    # A check is kept for good (7 November 2026): though the stand-in's answers are dated 11
+    # October 2026, this check asks GitHub again only for the archive, which the stand-in made from
+    # another commit than its newest one; "Read again now" would ask for everything.
+    assert len(client.github_site.seen) == 7
     hidden = '<h2 class="visually-hidden">What the check found</h2>'
     assert hidden in page.text and hidden not in part.text
 
@@ -2061,6 +2061,28 @@ def test_gemini_compares_a_checked_submission_with_its_closest_projects(site) ->
     assert f'id="check-compare-{places[0]}" hx-swap-oob="true"' in unknown.text  # nothing waits
     assert "could not be read from GitHub" in unknown.text
     assert "Compare these 1 with Gemini</button>" in unknown.text  # the button comes back
+
+
+def test_a_check_shows_its_comparison_kept_for_good(site) -> None:  # noqa: ANN001
+    """A comparison with Gemini asked for a check is kept for good and shows at once on the next
+    check of the same README, with no new call and no button; a typed idea keeps one day (7
+    November 2026)."""
+    client, fake, _, database = site
+    event = checkable(database)
+    part = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    asked = re.search(r'hx-get="(/compare\?repo=[^"]+&amp;place=check)"', part.text).group(1)
+    places = re.findall(r'id="check-compare-(\d+)"', part.text)
+    fake.answer_text = compare_answer(*[(n, ["what_it_does"]) for n in range(1, len(places) + 1)])
+    assert client.get(asked.replace("&amp;", "&"), headers=HX).status_code == 200
+    before = len(fake.requests)
+    again = client.get("/check", params={"repo": REPO, "event": event}, headers=HX)
+    assert model_calls(fake, before) == 0
+    assert "Same 1." in again.text and "Kept until the check is read again." in again.text
+    assert "data-check-compare" not in again.text  # every place is filled: no button
+    with psycopg.connect(database) as conn:
+        kept = conn.execute("SELECT count(*) FROM idea_comparisons WHERE kept").fetchone()[0]
+        embedded = conn.execute("SELECT count(*) FROM idea_embeddings WHERE kept").fetchone()[0]
+    assert kept == len(places) and embedded == 1  # the README's embedding too
 
 
 def test_a_comparison_reads_the_readme_on_a_copy_that_lost_it(site, tmp_path) -> None:  # noqa: ANN001
@@ -2568,7 +2590,8 @@ def test_the_box_says_plainly_what_the_line_does_before_and_after_it_is_added(si
     assert "Only someone who can change this repository can add the line" in before
     assert "the site reads your README on GitHub again, to find the line." in before
     with_line(client, before)
-    after = client.get("/check", params=asked, headers=HX).text
+    # A check is kept for good (7 November 2026): "Read again now" reads the new README.
+    after = client.get("/check", params={**asked, "again": "1"}, headers=HX).text
     assert "Your README already has this line, so you can register now." in after
     assert "once more, to make sure the line is still there." in after
 

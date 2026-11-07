@@ -102,6 +102,7 @@ from hackathon_memory.web import (
     graph,
     hackathons,
     insights,
+    kept_answers,
     references,
     strips,
     turnstile,
@@ -800,12 +801,36 @@ def create_app(
                 clients[name] = clients[name].gated(gate)
     breaker = stand_in.Breaker()  # Gemini's failures in a row (design 8.2)
     answers = Answers(github.raw_dir(settings))  # GitHub's newest answers (design 7.3)
+    # On Vercel each copy of the site has its own folder, so the answers of GitHub that a check
+    # saved are kept in the database too, and written back by any copy that checks the same
+    # repository (web/kept_answers.py, 7 November 2026).
+    shares_answers = serverless and limits is not None
     app.state.breaker = breaker
     cache: dict[str, Any] = {"facts": None, "at": 0.0}
     graphs: dict[tuple, tuple[float, Any]] = {}  # the groups of a list, with when they were made
 
     def database() -> str:
         return make_conninfo(settings.database_conninfo(), connect_timeout=CONNECT_SECONDS)
+
+    def restored(repository: str) -> float:
+        """Before GitHub is read for `repository` on the public copy: the answers that the other
+        copies kept for it. Returns the moment after which what this copy writes is its own."""
+        if shares_answers:
+            try:
+                kept_answers.restore(database(), Path(settings.data_dir), repository)
+            except (SettingsError, psycopg.Error, OSError) as error:
+                LOG.warning("kept answers of GitHub not written back: %s", type(error).__name__)
+        return time.time()
+
+    def kept_for_others(repository: str, since: float) -> None:
+        """After GitHub was read for `repository` on the public copy: keep what this copy wrote."""
+        if not shares_answers:
+            return
+        try:
+            kept_answers.persist(database(), Path(settings.data_dir), github.raw_dir(settings),
+                                 repository, since)  # fmt: skip
+        except (SettingsError, psycopg.Error, OSError) as error:
+            LOG.warning("answers of GitHub not kept for the other copies: %s", type(error).__name__)
 
     def client(name: str, purpose: str, press: str | None = None) -> Any:
         """The client `name`, counted under `purpose`. On the public copy, it carries the ask of
@@ -862,6 +887,7 @@ def create_app(
         repository = submission.repository_link(repo[:300])
         if repository is None:
             return ""
+        since = restored(repository)
         readme = saved_readme(answers, repository)
         if readme is None:
             asker, _ = github_or_why()
@@ -869,6 +895,7 @@ def create_app(
                 asker, answers, repository,
                 collector=f"{settings.collector_name.strip()}/{__version__}",
             )  # fmt: skip
+            kept_for_others(repository, since)
         if readme is None or readme.status != README_FOUND:
             return ""
         return submission.readme_words(readme.text, longest=submission.LONGEST_COMPARED)
@@ -1436,6 +1463,7 @@ def create_app(
             ranking = engine.by_meaning(
                 EmbeddingStore(conninfo), client("google", "embed_query"), words,
                 model=settings.gemini_embedding_model, limit=CLOSEST + len(check.seen),
+                keep=True,  # a check is kept for good (7 November 2026)
             )  # fmt: skip
         except public_copy.Refused:
             return [], used(public_copy.EMBED, "the most similar past projects cannot be shown")
@@ -1464,6 +1492,7 @@ def create_app(
             if days is None and not asked.get("event"):
                 days, from_register, records = hackathon_from_register(conninfo, repository)
             asker, why = github_or_why()
+            since = restored(repository)
             result = submission.check_submission(
                 conninfo, repository, days, client=asker,
                 store=answers,
@@ -1471,6 +1500,7 @@ def create_app(
                 mirrors=mirror_nodes(), problems=[why] if why else [], progress=progress,
                 again=again,
             )  # fmt: skip
+            kept_for_others(repository, since)
             presses = ReadAgainStore(conninfo)
             if again and result.problems:
                 presses.give_back(repository)
@@ -1479,6 +1509,11 @@ def create_app(
                 return 404, {"problem": submission.NO_SUCH_CODE}
             progress(checks.COLLECTION, checks.RUNNING)
             closest, note = closest_to(conninfo, result)
+            # A comparison with Gemini that was asked for this README shows at once: kept for good.
+            close_ids = [card.hit.project_id for card, *_ in closest]
+            readme_said = submission.readme_words(result.readme_text or "",
+                                                  longest=submission.LONGEST_COMPARED)  # fmt: skip
+            compared_before = kept_comparisons(conninfo, readme_said, close_ids)
             groups = [[one.project_id] for one in result.seen]
             members = [group[0] for group in data.members(conninfo, groups)]
             progress(checks.COLLECTION, checks.DONE)
@@ -1504,6 +1539,9 @@ def create_app(
         ends_on = days.ends_on if days is not None else None
         return 200, {
             "result": result, "closest": closest, "closest_note": note,
+            "compared_before": compared_before,
+            "compared_all": bool(close_ids) and len(compared_before) == len(close_ids),
+            "readme_cut": len(readme_said) >= submission.LONGEST_COMPARED,
             "life_after": data.life_line(ends_on),
             "event_over": not (result.life and result.life.why == NOT_OVER),
             "seen_before": seen_before, "register": view, "register_offers": offers,
@@ -2083,12 +2121,13 @@ def create_app(
                 return comparing.kept_or_compared(
                     conninfo, standing_in("compare", ask), idea, items, model=stand_in.MODEL,
                     thinking_level=STAND_IN_LEVEL, timeout_seconds=STAND_IN_COMPARE_SECONDS,
+                    keep=from_readme,
                 )  # fmt: skip
             return comparing.kept_or_compared(
                 conninfo, client("llm", "compare", ask), idea, items,
                 model=settings.gemini_search_model,
                 thinking_level=settings.gemini_search_thinking_level,
-                timeout_seconds=COMPARE_SECONDS,
+                timeout_seconds=COMPARE_SECONDS, keep=from_readme,
             )  # fmt: skip
 
         by_stand_in = breaker.standing_in()

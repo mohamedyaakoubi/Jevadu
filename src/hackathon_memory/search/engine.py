@@ -140,23 +140,33 @@ def by_meaning(
     limit: int = CANDIDATES,
     now: datetime | None = None,
     only: Sequence[int] | None = None,
+    keep: bool = False,
 ) -> list[int]:
     """The projects closest in meaning to the idea, closest first, from `only` when it is given.
-    The idea is embedded once a day at most."""
-    values = idea_embedding(store, client, idea, model=model, now=now)
+    The idea is embedded once a day at most; with `keep`, once (the README of a check)."""
+    values = idea_embedding(store, client, idea, model=model, now=now, keep=keep)
     return [project for project, _ in store.nearest(values, model, limit=limit, only=only)]
 
 
 def idea_embedding(
-    store: EmbeddingStore, client: Any, idea: str, *, model: str, now: datetime | None = None
+    store: EmbeddingStore,
+    client: Any,
+    idea: str,
+    *,
+    model: str,
+    now: datetime | None = None,
+    keep: bool = False,
 ) -> list[float]:
-    """The embedding of the idea: the one made less than a day ago, or a new one, kept a day."""
+    """The embedding of the idea: the one made less than a day ago, or a new one, kept a day;
+    with `keep`, kept for good (the README of a check of a submission, 7 November 2026)."""
     store.forget_old_ideas(now)
     fingerprint = idea_fingerprint(idea)
     values = store.idea(fingerprint, model, now)
     if values is None:
         values = embed_query(client, idea, model=model).values
-        store.save_idea(fingerprint, model, values, now)
+        store.save_idea(fingerprint, model, values, now, kept=keep)
+    elif keep:
+        store.keep_idea(fingerprint, model)
     return values
 
 

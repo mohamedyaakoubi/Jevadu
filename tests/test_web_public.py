@@ -731,6 +731,37 @@ def test_the_tour_tells_the_copy_what_a_visitor_did_with_it(site) -> None:  # no
                      ("tour-decline", {}), ("tour-done", {"of": 10})]  # fmt: skip
 
 
+def test_a_check_made_on_one_copy_is_kept_for_the_others(site, tmp_path) -> None:  # noqa: ANN001, F811
+    """On Vercel each copy of the site has its own folder: a check made on one copy was asked of
+    GitHub again on another. The answers that a check saved are now kept in the database, and
+    another copy writes them back before it checks the same repository (7 November 2026)."""
+    from checkfakes import commits_answer
+    from fakes import ARCHIVE_COMMIT, Reply
+    from hackathon_memory.collect.github_commits import commits_address
+
+    client, _, _, database = site
+    event = checkable(database)
+    # The stand-in's archive comes from ARCHIVE_COMMIT: as the newest commit too, a later check has
+    # no reason to read the code again, so any request below would come from a lost answer.
+    client.github_site.pages[commits_address(REPO)] = Reply(200, commits_answer(ARCHIVE_COMMIT))
+
+    def copy(name: str):  # noqa: ANN202
+        return client.make(app_options={"public": True, "serverless": True},
+                           public_salt=SecretStr(SALT), data_dir=str(tmp_path / name))  # fmt: skip
+
+    first, second = copy("first"), copy("second")
+    asked = {"repo": REPO, "event": event}
+    one = first.get("/check", params=asked, headers=HX)
+    assert one.status_code == 200 and "Proof: found" in one.text
+    seen = len(client.github_site.seen)
+    assert seen > 0
+    with psycopg.connect(database) as conn:
+        assert conn.execute("SELECT count(*) FROM kept_answers").fetchone()[0] > 0
+    other = second.get("/check", params=asked, headers=HX)
+    assert other.status_code == 200 and "Proof: found" in other.text
+    assert len(client.github_site.seen) == seen  # nothing asked of GitHub again
+
+
 def test_a_number_that_the_site_never_writes_breaks_no_page(site) -> None:  # noqa: ANN001, F811
     """A sign such as "²" passes str.isdigit() and int() refuses it: the search page failed on
     it, and on the public copy so did the note of the visit (7 November 2026)."""

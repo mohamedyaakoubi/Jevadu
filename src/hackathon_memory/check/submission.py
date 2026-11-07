@@ -7,9 +7,11 @@ Programs read everything here, and no model writes anything:
 * GitHub's API gives the dates of the code and the README, through the polite client of the
   pipeline (collect/github.py): the tool's name and contact address in every request, the pause,
   the limit counted on disk and the switch COLLECT_GITHUB. An answer that was saved before, also
-  for a project of the collection, is used while it is younger than CHECK_AGE; an older one is
-  asked again with its ETag, so that GitHub answers 304 when nothing changed (collect/answers.py,
-  25 October 2026: a repository made public after a first check stayed "not found").
+  for a project of the collection, is used at any age: a check is kept until someone presses
+  "Read again now", which asks again with the ETag of each answer, so that GitHub answers 304 when
+  nothing changed (collect/answers.py; 7 November 2026, his words: "cached forever and not
+  24hours"). A repository that GitHub did not show is asked again at the next check: there is
+  nothing to keep, and a team may make it public after a first check (25 October 2026).
 * The Hedera IDs of the README are found by the parser's rules (parse/hedera_ids.py). The mirror
   node is asked about each one, on the network that the README names or on both, as the step of
   the pipeline asks (check/asking.py), and the proof rule judges it against the window of the
@@ -22,7 +24,7 @@ Programs read everything here, and no model writes anything:
   repository, or with the same Hedera ID on the same network that the ledger found, unless the
   ID is a shared service.
 * The ledger story (design 7.5): the history of the README's own IDs whose kind fits, read from
-  the mirror node and kept, so that a second check within MAX_AGE reads it from the table, set
+  the mirror node and kept, so that later checks read it from the table until "Read again now", set
   side by side with the README's words and what the code calls; and the depth of use of the same
   IDs, with the README in the place of the page (check/depth.py, 25 October 2026).
 
@@ -106,8 +108,10 @@ MAX_IDS = 5
 # person waits, and each one can take two questions.
 MAX_CODE_IDS = 10
 NETWORKS_WHEN_OPEN = ("testnet", "mainnet")  # as the step of the pipeline asks
-MAX_AGE = timedelta(days=7)  # an answer of the node younger than this is taken from the table
-CHECK_AGE = timedelta(hours=1)  # an answer of GitHub older than this is asked again (design 7.3)
+# What a check read is used at any age, until someone presses "Read again now" (7 November 2026,
+# his words: "cached forever and not 24hours"); before, the mirror node's answers for 7 days and
+# GitHub's for an hour. An age that no answer reaches: a hundred years.
+MAX_AGE = timedelta(days=36_500)
 AT_ONCE = timedelta(0)  # the button "Read again now": no answer is young enough
 NOT_ASKED = "not_asked"  # no network could be asked about the ID just now
 # The steps of a check, as it reports them while it runs (web/checks.py), and their states:
@@ -633,14 +637,19 @@ def check_submission(
     went wrong, such as a GitHub that may not be asked now. `progress` hears each step start and
     end, with its state. `again` asks GitHub and the ledger at once, instead of taking their
     answers from the tables: the button "Read again now", which shows what a team did a moment
-    ago, such as its registration (5 November 2026)."""
+    ago, such as its registration (5 November 2026). Without it, what was read before is used at
+    any age (7 November 2026)."""
     check = SubmissionCheck(repository, event, problems=list(problems or []))
     max_age = AT_ONCE if again else MAX_AGE
     progress(GITHUB, RUNNING)
     sent = client.requests_made if client is not None else 0
+    # Kept for good, but a repository that GitHub did not show is asked again: there is nothing to
+    # keep, and a team may make it public after a first check (25 October 2026).
+    shown = saved_facts(store, repository)
+    fresh = again or (shown is not None and shown.status != CODE_FOUND)
     check.code, check.readme, check.version, asked = read_code(
         client, store, repository, collector=collector,
-        older_than=AT_ONCE if again else CHECK_AGE, now=now,
+        older_than=AT_ONCE if fresh else None, now=now,
     )  # fmt: skip
     progress(GITHUB, DONE if client is not None and client.requests_made > sent else SAVED)
     check.problems.extend(asked)
