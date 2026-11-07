@@ -704,6 +704,15 @@ def create_app(
         opening is noted (2 November 2026)."""
         return RedirectResponse(PITCH_FILE, 302)
 
+    @app.post("/tour/{what}")
+    def tour(what: str) -> Response:
+        """What a visitor did with the tour of the page (S8), which runs in the browser, so no
+        page request tells it: its script says so here, and on the public copy the middleware
+        notes it for the copy's owner (S9). Nothing else happens (7 November 2026)."""
+        if what not in visits.TOUR:
+            raise StarletteHTTPException(404)
+        return Response(status_code=204)
+
     @app.post("/person-check")
     async def person_check(request: Request) -> Response:
         """On the public copy with Turnstile: the token that its widget gave the page, spent here
@@ -1144,8 +1153,8 @@ def create_app(
                 with_ai = False
                 public_note = used(public_copy.AI, "these results are in the search order")
         view = CHARTS if view in (CHARTS, "overview") else view if view in VIEWS else ""
-        page_number = int(page) if page.isdigit() and int(page) > 0 else 1
-        open_id = int(open) if open.isdigit() else None
+        page_number = visits.whole_number(page) or 1  # 0 is no page either
+        open_id = visits.whole_number(open)
         # A filter's values come in one parameter, or in one for each value (the page's boxes).
         asked = filtering.Filters(**{name: filtering.joined(request.query_params.getlist(name))
                                      for name in FILTERS})  # fmt: skip
@@ -1305,11 +1314,12 @@ def create_app(
         one = listed.listed(event)
         if one is not None:
             return listed_days(one), None
-        if not event.isdigit():
+        event_id = visits.whole_number(event)
+        if event_id is None:
             return None, NO_EVENT
         with psycopg.connect(conninfo) as conn:
             row = conn.execute("SELECT name, starts_at, ends_on, site, slug FROM events "
-                               "WHERE id = %s", (int(event),)).fetchone()  # fmt: skip
+                               "WHERE id = %s", (event_id,)).fetchone()  # fmt: skip
         if row is None:
             return None, NO_EVENT
         name, starts_at, ends_on, site, slug = row

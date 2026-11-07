@@ -2055,8 +2055,9 @@ def test_a_check_without_a_repository_or_with_wrong_days_says_what_to_do(site) -
     backwards = {"repo": REPO, "event": "other", "starts": "2026-03-08", "ends": "2026-03-06"}
     late = client.get("/check", params=backwards, headers=HX)
     assert late.status_code == 400 and "Enter the start and end dates" in late.text
-    unknown = client.get("/check", params={"repo": REPO, "event": "99999"}, headers=HX)
-    assert unknown.status_code == 400 and "That hackathon is not in the list" in unknown.text
+    for odd in ("99999", "²", "1" * 5000):  # "²" passes str.isdigit(), and int() refuses it
+        unknown = client.get("/check", params={"repo": REPO, "event": odd}, headers=HX)
+        assert unknown.status_code == 400 and "That hackathon is not in the list" in unknown.text
     assert client.github_site.seen == []  # nothing was asked of GitHub
     typed = {"repo": REPO, "event": "other", "starts": "2026-03-06", "ends": "2026-03-08"}
     days = client.get("/check", params=typed, headers=HX)
@@ -4219,6 +4220,19 @@ def test_an_address_with_no_account_is_shown_how_to_make_one(site, chromium) -> 
 # ------------------------------------------------------------------ the tour (design 12.1, S8)
 
 
+def told(what: str):  # noqa: ANN201
+    """The request in which the tour's script tells the copy what the visitor did (S9)."""
+
+    def asked(request) -> bool:  # noqa: ANN001
+        return request.method == "POST" and urlsplit(request.url).path == f"/tour/{what}"
+
+    return asked
+
+
+def said(request) -> dict:  # noqa: ANN001
+    return {name: value for name, (value,) in parse_qs(urlsplit(request.url).query).items()}
+
+
 def test_the_search_page_holds_the_tour_and_every_page_offers_it_again(site) -> None:  # noqa: ANN001
     client, _, _, _ = site
     page = client.get("/").text
@@ -4238,7 +4252,10 @@ def test_a_first_visit_is_offered_a_tour_that_can_be_skipped_at_any_step(site, c
     page = served(chromium, client, tour_offer=True, viewport={"width": 1440, "height": 900})
     page.goto("http://site.test/")
     page.wait_for_selector("#tour-offer:not([hidden])")
-    page.locator("[data-tour-start]").click()
+    with page.expect_request(told("start")) as started:
+        page.locator("[data-tour-start]").click()
+    assert said(started.value) == {"from": "offer"}  # noted on the public copy (S9)
+    assert started.value.response().status == 204  # the site's own answer to what was sent
     popover = page.locator(".driver-popover.hm-tour")
     popover.wait_for()
     assert page.locator("#tour-offer").is_hidden()
@@ -4248,7 +4265,10 @@ def test_a_first_visit_is_offered_a_tour_that_can_be_skipped_at_any_step(site, c
     page.wait_for_function("document.querySelector('.driver-popover-title').textContent === "
                            "'Your idea'")  # fmt: skip
     assert "driver-active-element" in (page.locator("#idea").get_attribute("class") or "")
-    popover.locator(".hm-tour-skip").click()  # on any step
+    with page.expect_request(told("skip")) as skipped:
+        popover.locator(".hm-tour-skip").click()  # on any step
+    assert said(skipped.value) == {"step": "2", "of": "10", "how": "button"}
+    assert skipped.value.response().status == 204
     page.wait_for_selector(".driver-popover", state="detached")
     assert page.evaluate("localStorage.getItem('hm-tour')") == "seen"
     page.reload()
@@ -4263,14 +4283,20 @@ def test_no_thanks_is_kept_and_the_link_at_the_bottom_starts_the_tour(site, chro
     page = served(chromium, client, tour_offer=True, viewport={"width": 1440, "height": 900})
     page.goto("http://site.test/")
     page.wait_for_selector("#tour-offer:not([hidden])")
-    page.locator("[data-tour-decline]").click()
+    with page.expect_request(told("decline")) as declined:
+        page.locator("[data-tour-decline]").click()
+    assert said(declined.value) == {}
     assert page.locator("#tour-offer").is_hidden()
     assert page.evaluate("localStorage.getItem('hm-tour')") == "declined"
     page.goto("http://site.test/about/how")  # another page: its link loads the search page
-    page.locator("[data-tour-again]").click()
+    with page.expect_request(told("start")) as started:
+        page.locator("[data-tour-again]").click()
+    assert said(started.value) == {"from": "link"}
     page.locator(".driver-popover.hm-tour").wait_for()
     assert "tour=1" not in page.url  # a reload does not start it again
-    page.keyboard.press("Escape")  # Escape skips it too
+    with page.expect_request(told("skip")) as skipped:
+        page.keyboard.press("Escape")  # Escape skips it too
+    assert said(skipped.value) == {"step": "1", "of": "10", "how": "escape"}
     page.wait_for_selector(".driver-popover", state="detached")
     assert page.evaluate("localStorage.getItem('hm-tour')") == "seen"
     page.context.close()
@@ -4296,14 +4322,43 @@ def test_a_click_anywhere_but_the_note_ends_the_tour_and_reaches_nothing(site, c
     x, y = link["x"] + 10, link["y"] + link["height"] / 2
     lit = page.locator(".driver-active-element").bounding_box()  # the point is in the lit part
     assert lit["x"] < x < lit["x"] + lit["width"] and lit["y"] < y < lit["y"] + lit["height"]
-    page.mouse.click(x, y)
+    with page.expect_request(told("skip")) as skipped:
+        page.mouse.click(x, y)
+    assert said(skipped.value) == {"step": "6", "of": "10", "how": "click"}
     page.wait_for_selector(".driver-popover", state="detached")
     page.wait_for_timeout(500)
     assert page.locator("dialog[open]").count() == 0  # no project's window opened
     page.goto("http://site.test/?tour=1")
     popover.wait_for()
-    page.mouse.click(1300, 860)  # the shade
+    with page.expect_request(told("skip")) as skipped:
+        page.mouse.click(1300, 860)  # the shade
+    assert said(skipped.value) == {"step": "1", "of": "10", "how": "click"}
     page.wait_for_selector(".driver-popover", state="detached")
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_tour_followed_to_its_last_step_is_told_as_finished(site, chromium) -> None:  # noqa: ANN001
+    """Done on the last step ends the tour as finished, once (7 November 2026)."""
+    client, _, _, _ = site
+    page = served(chromium, client, tour_offer=True, viewport={"width": 1440, "height": 900},
+                  reduced_motion="reduce")  # fmt: skip
+    endings: list[str] = []
+    page.on("request", lambda one: endings.append(urlsplit(one.url).path)
+            if one.method == "POST" and "/tour/" in one.url else None)  # fmt: skip
+    page.goto("http://site.test/?tour=1")
+    popover = page.locator(".driver-popover.hm-tour")
+    popover.wait_for()
+    for at in range(2, 11):
+        popover.locator(".driver-popover-next-btn").click()
+        page.wait_for_function("document.querySelector('.driver-popover-progress-text')"
+                               f".textContent === '{at} of 10'")  # fmt: skip
+    with page.expect_request(told("done")) as done:
+        popover.locator(".driver-popover-next-btn").click()  # it reads Done
+    assert said(done.value) == {"of": "10"}
+    page.wait_for_selector(".driver-popover", state="detached")
+    page.wait_for_timeout(300)
+    assert endings == ["/tour/start", "/tour/done"]
     page.context.close()
 
 

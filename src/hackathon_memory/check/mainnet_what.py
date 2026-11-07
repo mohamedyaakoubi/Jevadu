@@ -111,9 +111,12 @@ def network_of(value: object) -> str | None:
     """A network that a message names, as CAIP-2: a number is a chain of EIP-155."""
     if isinstance(value, bool):
         return None
-    if isinstance(value, int) or (isinstance(value, str) and value.isdigit()):
-        number = int(value)
-        return f"eip155:{number}" if 0 < number < 10**12 else None
+    # Only ASCII digits, and not too many: str.isdigit() takes signs such as "²", which int()
+    # refuses, and anyone can write such a message on a topic (7 November 2026).
+    if isinstance(value, str) and value.isascii() and value.isdigit() and len(value) <= 20:
+        value = int(value)
+    if isinstance(value, int):
+        return f"eip155:{value}" if 0 < value < 10**12 else None
     if isinstance(value, str) and _CAIP2.match(value.strip()):
         namespace, _, reference = value.strip().partition(":")
         return f"{namespace}:{reference}"
