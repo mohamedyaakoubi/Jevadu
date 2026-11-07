@@ -1,10 +1,12 @@
 """How often the button "Read again now" may be pressed (migration 0031, design 7.3).
 
 The button skips what is kept and asks GitHub and the mirror node at once, so it has a limit: one
-press every 3 hours for each repository that is checked and for each project on its card, whoever
-presses (6 November 2026). A plain check and the rounds of the website are not counted: they take
-what is kept, and ask only for what is old. A reading that failed does not count: its press is given
-back, so that the team can try again.
+press every 15 minutes for each repository that is checked and for each project on its card, whoever
+presses. It was 3 hours from 6 November 2026; since a check is kept for good (8 November 2026) the
+button is the only way it is read again, and a team's push should not wait hours to show. Each
+visitor of the public copy also has 10 presses in all (web/public.py). A plain check and the rounds
+of the website are not counted: they take what is kept. A reading that failed does not count: its
+press is given back, so that the team can try again.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 
 import psycopg
 
-EVERY = timedelta(hours=3)
+EVERY = timedelta(minutes=15)
 
 
 def of_project(project_id: int) -> str:

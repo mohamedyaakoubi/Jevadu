@@ -1570,7 +1570,7 @@ def create_app(
         `line` says whether the line was added to the README or was there, and `commit` names
         the commit that added it; both serve the words of the page only. With again=1, GitHub
         and the ledger are asked at once (the button "Read again now"), if this repository was not
-        read that way in the last 3 hours; else it is a plain check, whose button says when."""
+        read that way in the last 15 minutes; else it is a plain check, whose button says when."""
         name = "_check.html" if request.headers.get("HX-Request") == "true" else "check.html"
         repository = submission.repository_link(repo[:300])
         if repository is None:
@@ -2044,8 +2044,8 @@ def create_app(
     @app.post("/project/{project_id}/read-again", response_class=HTMLResponse)
     def read_again_now(request: Request, project_id: int) -> HTMLResponse:
         """S2: read GitHub and the mirror node again for one project, before the next round, at
-        most once every 3 hours (db/read_again.py). A press too soon asks nothing and uses nothing
-        of the visitor's allowance: the card comes back, and its button says when."""
+        most once every 15 minutes (db/read_again.py). A press too soon asks nothing and uses
+        nothing of the visitor's allowance: the card comes back, and its button says when."""
         if not person():
             words = person_first()
             visits.failed(words)
