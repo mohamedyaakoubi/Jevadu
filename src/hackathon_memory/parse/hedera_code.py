@@ -757,8 +757,10 @@ def read_file(
 
 def finish(scan: CodeScan, calls: list[_Calls], reach: _Reach | None = None) -> None:
     """Count the Hedera classes that the files name, now that the package files are known: in
-    a file that the project uses as a call, in one that nothing uses apart (`unused`)."""
-    used = reach.used() if reach is not None else None
+    a file that the project uses as a call, in one that nothing uses apart (`unused`). When the
+    reading stopped before the end, the files that were never read may import any of the
+    others, so every file counts as used."""
+    used = reach.used() if reach is not None and scan.partial is None else None
     for one in calls:
         if one.imports_hedera or scan.packages:
             place = scan.features if used is None or one.path in used else scan.unused

@@ -280,6 +280,17 @@ def test_a_limit_of_bytes_or_seconds_stops_the_reading_and_says_so() -> None:
     assert slow.partial == "the archive took longer than the limit of a live check"
 
 
+def test_a_reading_that_stopped_early_counts_every_file_as_used() -> None:
+    noise = random.Random(7)  # noqa: S311 - random bytes do not compress: a large archive
+    files = {"src/lib/token.ts": b'import { TokenCreateTransaction } from "@hashgraph/sdk";\n'}
+    files |= {f"src/f{n}.ts": noise.randbytes(50_000) for n in range(20)}
+    # The first chunk holds the whole first file; the files that were never read could import it.
+    scan = scanned(files, max_bytes=70_000)
+    assert scan.partial == "the archive is larger than the limit of a live check"
+    assert scan.features["Token Service"].examples == ["src/lib/token.ts"]
+    assert scan.unused == {}
+
+
 def test_a_broken_archive_is_said_to_be_broken() -> None:
     body = archive({"package.json": b'{"dependencies": {"@hashgraph/sdk": "2"}}'})[:-40]
     scan = scan_archive(LimitedStream(io.BytesIO(body).read))
