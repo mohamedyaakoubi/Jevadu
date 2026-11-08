@@ -1305,6 +1305,24 @@
     "page is complete.";
   var TOO_SLOW_GEMINI = "No answer came within 90 seconds, so the page stopped waiting. Everything " +
     "else on this page is complete. Try again in a minute.";
+  // The window of a project or a check, or a window of the footer, says what happened in the place
+  // of its waiting state.
+  function failedInWindow(target, words) {
+    var name = target.id === "viewer-body" ? "viewer-title" : "sheet-title";
+    target.innerHTML = '<div class="project"><h2 id="' + name + '" class="project-title" ' +
+      'tabindex="-1">This cannot be shown</h2><div class="alert alert-danger" role="alert"></div></div>';
+    target.querySelector(".alert").textContent = words;
+    if (target.id === "viewer-body") {
+      steps();
+      if ($("check-kept")) { // the check that was open stays one click away
+        var back = document.createElement("p");
+        back.className = "viewer-back";
+        back.innerHTML = '<button type="button" class="btn btn-sm hm-back" data-back-to-check>&lsaquo; Back to the check</button>';
+        target.insertBefore(back, target.firstChild);
+      }
+    }
+    $(name).focus({ preventScroll: true });
+  }
   function requestFailed(event) {
     var elt = event.detail.elt, target = event.detail.target;
     var words = event.type === "htmx:responseError" ? WENT_WRONG :
@@ -1318,20 +1336,7 @@
     if (target && target.id === "check-steps") target = $("viewer-body"); // a check that runs
     if (!target || !document.body.contains(target)) return;
     if (target.id === "viewer-body" || target.id === "sheet-body") {
-      var name = target.id === "viewer-body" ? "viewer-title" : "sheet-title";
-      target.innerHTML = '<div class="project"><h2 id="' + name + '" class="project-title" ' +
-        'tabindex="-1">This cannot be shown</h2><div class="alert alert-danger" role="alert"></div></div>';
-      target.querySelector(".alert").textContent = words;
-      if (target.id === "viewer-body") {
-        steps();
-        if ($("check-kept")) { // the check that was open stays one click away
-          var back = document.createElement("p");
-          back.className = "viewer-back";
-          back.innerHTML = '<button type="button" class="btn btn-sm hm-back" data-back-to-check>&lsaquo; Back to the check</button>';
-          target.insertBefore(back, target.firstChild);
-        }
-      }
-      $(name).focus({ preventScroll: true });
+      failedInWindow(target, words);
       return;
     }
     var line = document.createElement("div"); // the list and the forms keep what they showed
