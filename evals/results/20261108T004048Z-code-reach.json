@@ -1,0 +1,1383 @@
+{
+ "made_at": "2026-11-08T00:40:48+00:00",
+ "what": "services counted as called by the code, before and after the rule of the files that nothing uses (parse/hedera_code.py, format 4)",
+ "repositories_with_a_service": 409,
+ "sample": 80,
+ "seed": 8,
+ "read_again": 80,
+ "not_read": [],
+ "lose_a_service": 0,
+ "lose_a_service_same_commit": 0,
+ "keep_every_service": 80,
+ "services_lost": [],
+ "rows": [
+  {
+   "repository": "https://github.com/drewmanley16/equitas",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "8fd996b7961ab765a37ff1884dc386c886a6c4db",
+   "commit_after": "8fd996b7961ab765a37ff1884dc386c886a6c4db"
+  },
+  {
+   "repository": "https://github.com/jianruan-io/agent-insure",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "e88544495b7c7fb94beab5f49fd5dd63df8859a8",
+   "commit_after": "e88544495b7c7fb94beab5f49fd5dd63df8859a8"
+  },
+  {
+   "repository": "https://github.com/jmgomezl/aivy-checkout",
+   "before": [
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "8fca48afe83b9f647d1eb38beb6087911236dbe0",
+   "commit_after": "8fca48afe83b9f647d1eb38beb6087911236dbe0"
+  },
+  {
+   "repository": "https://github.com/basamasa/edgebind-oracle",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "ddadbadce388f803e282894fbbf0ef3495088e9b",
+   "commit_after": "ddadbadce388f803e282894fbbf0ef3495088e9b"
+  },
+  {
+   "repository": "https://github.com/dearkamalesh/snaptrail",
+   "before": [
+    "Token Service"
+   ],
+   "after": [
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "892b094b7e03b25889e96442eed5695932f6038f",
+   "commit_after": "892b094b7e03b25889e96442eed5695932f6038f"
+  },
+  {
+   "repository": "https://github.com/suhasdasari/s4d5",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "717b0218d1c57475b30efe99550ea301defe89f7",
+   "commit_after": "717b0218d1c57475b30efe99550ea301defe89f7"
+  },
+  {
+   "repository": "https://github.com/aditya-0037/wayfare",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "6992b3d7ee03fb311c15db370dcb4b3a9316a767",
+   "commit_after": "6992b3d7ee03fb311c15db370dcb4b3a9316a767"
+  },
+  {
+   "repository": "https://github.com/ansu555/policyprobe",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "5d211363f0d0cdb6f562af8c0e6d3d1ceaac8204",
+   "commit_after": "5d211363f0d0cdb6f562af8c0e6d3d1ceaac8204"
+  },
+  {
+   "repository": "https://github.com/branislavstojkovic70/sealsign",
+   "before": [
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "a0618f50b7c1aae7cc5706c786044ff23dd8034a",
+   "commit_after": "a0618f50b7c1aae7cc5706c786044ff23dd8034a"
+  },
+  {
+   "repository": "https://github.com/ellisosborn03/health-app",
+   "before": [
+    "File Service",
+    "Smart contracts"
+   ],
+   "after": [
+    "File Service",
+    "Smart contracts"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "c0d2527e7ef58f5384fef9ef488377fb4d1cf6f4",
+   "commit_after": "c0d2527e7ef58f5384fef9ef488377fb4d1cf6f4"
+  },
+  {
+   "repository": "https://github.com/monarchy712/siren",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "23df6e275b1bdc55641e510752497f482f744db0",
+   "commit_after": "23df6e275b1bdc55641e510752497f482f744db0"
+  },
+  {
+   "repository": "https://github.com/digix666/koven",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "1a33855cbf3f88893f124859d12183e3b22d5d0b",
+   "commit_after": "1a33855cbf3f88893f124859d12183e3b22d5d0b"
+  },
+  {
+   "repository": "https://github.com/karankoder/federated-learning",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Random numbers",
+    "Scheduled transactions",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Random numbers",
+    "Scheduled transactions",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [
+    "hiero_sdk_python/tokens/token_pause_transaction.py",
+    "hiero_sdk_python/transaction/query_payment.py",
+    "p2p/hiero_sdk_python/tokens/token_pause_transaction.py",
+    "p2p/hiero_sdk_python/transaction/query_payment.py"
+   ],
+   "commit_before": "0390743e100afadb15402dcc48fe1ea265740bc0",
+   "commit_after": "0390743e100afadb15402dcc48fe1ea265740bc0"
+  },
+  {
+   "repository": "https://github.com/rubensousadinis/preflight",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "fe6ab3bc2500f1dea0e9b684af09db9912f59f32",
+   "commit_after": "fe6ab3bc2500f1dea0e9b684af09db9912f59f32"
+  },
+  {
+   "repository": "https://github.com/aakash074/bucketreel",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "407ab2ac818ffbf8926292bb1c7d79cd5b157f24",
+   "commit_after": "407ab2ac818ffbf8926292bb1c7d79cd5b157f24"
+  },
+  {
+   "repository": "https://github.com/lucas749/trulyopenrouter",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "b0107ac38a603a6ff5d6bc06f1c20fea215c5841",
+   "commit_after": "b0107ac38a603a6ff5d6bc06f1c20fea215c5841"
+  },
+  {
+   "repository": "https://github.com/mashharuki/ethglobal-online-2026",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "e3c3feeb2c9d719f6e67e25b0efdcf24b84af496",
+   "commit_after": "e3c3feeb2c9d719f6e67e25b0efdcf24b84af496"
+  },
+  {
+   "repository": "https://github.com/linus-shyu/ether-hunt",
+   "before": [
+    "Token Service"
+   ],
+   "after": [
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "a1d1fd96a3a19500dc012e262e6c57151733d038",
+   "commit_after": "a1d1fd96a3a19500dc012e262e6c57151733d038"
+  },
+  {
+   "repository": "https://github.com/jrastit/agent-router",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Smart contracts"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Smart contracts"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [
+    "src/lib/payment/audit-sdk.ts",
+    "src/lib/payment/hedera-sdk.ts"
+   ],
+   "commit_before": "5792676937c5182f238de1bf7ab24d8d9847179e",
+   "commit_after": "5792676937c5182f238de1bf7ab24d8d9847179e"
+  },
+  {
+   "repository": "https://github.com/miguelrfernandes/chainscope",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "e4b00296c029bda84c053d79142e1be68a39582c",
+   "commit_after": "e4b00296c029bda84c053d79142e1be68a39582c"
+  },
+  {
+   "repository": "https://github.com/prasannaverse13/hederaguard-ai-agent",
+   "before": [
+    "File Service",
+    "Smart contracts"
+   ],
+   "after": [
+    "File Service",
+    "Smart contracts"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "eb8939297d6941d79bd23a3ade6db353e18a29bd",
+   "commit_after": "eb8939297d6941d79bd23a3ade6db353e18a29bd"
+  },
+  {
+   "repository": "https://github.com/karansinghbisht/klaxon",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "bc25825f93435c55d5aa60bf12d76d33ebaf10d1",
+   "commit_after": "bc25825f93435c55d5aa60bf12d76d33ebaf10d1"
+  },
+  {
+   "repository": "https://github.com/anuj-kumar-in/quantumverse",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [
+    "frontend/src/hooks/useHedera.js"
+   ],
+   "commit_before": "2730995d83bd92880193651d918aa12a99645aaf",
+   "commit_after": "2730995d83bd92880193651d918aa12a99645aaf"
+  },
+  {
+   "repository": "https://github.com/martinvibes/warrant",
+   "before": [
+    "Accounts and HBAR transfers",
+    "File Service",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "File Service",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "631160e07475a4b7b509b8cfb2e21a32fb08eee6",
+   "commit_after": "631160e07475a4b7b509b8cfb2e21a32fb08eee6"
+  },
+  {
+   "repository": "https://github.com/dxcmint868/cubic",
+   "before": [
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "6aa1d1a0e9111d16ce47c6e3bec8e90d2187af86",
+   "commit_after": "407fb2465866e1df69f17eef87f7b3d841ba980a"
+  },
+  {
+   "repository": "https://github.com/vishnu5104/easy3",
+   "before": [
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "57d9a7d14a27d0effd02e86e5193ae3ed7e3538a",
+   "commit_after": "57d9a7d14a27d0effd02e86e5193ae3ed7e3538a"
+  },
+  {
+   "repository": "https://github.com/3bood-dev/heirloom",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "d77357e626ab4339baaa0139f015308a91a9b622",
+   "commit_after": "d77357e626ab4339baaa0139f015308a91a9b622"
+  },
+  {
+   "repository": "https://github.com/stella112/lute",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "21f3b0c0e31a481296e4d34ffaf7973e0e02ba21",
+   "commit_after": "21f3b0c0e31a481296e4d34ffaf7973e0e02ba21"
+  },
+  {
+   "repository": "https://github.com/flyguy352/crosschainnftpaymaster",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "8fc806f2080973803e2b83e491eadecad9ddf95b",
+   "commit_after": "8fc806f2080973803e2b83e491eadecad9ddf95b"
+  },
+  {
+   "repository": "https://github.com/n1shanthb/ledger-gaurd",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "f6f5aa1c7b161afead95f1302fce04ee41f09316",
+   "commit_after": "f6f5aa1c7b161afead95f1302fce04ee41f09316"
+  },
+  {
+   "repository": "https://github.com/kartikvyas1604/cadence",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "d5ab5e65fb10e0a161c68f56874d335c90aa1658",
+   "commit_after": "d5ab5e65fb10e0a161c68f56874d335c90aa1658"
+  },
+  {
+   "repository": "https://github.com/mandate-run/mandate",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "dcb5874d76d76c0db416e652524c72cf7aca9e2a",
+   "commit_after": "dcb5874d76d76c0db416e652524c72cf7aca9e2a"
+  },
+  {
+   "repository": "https://github.com/jmgomezl/aivy-studio",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "6ea79e6773dd479b11c832e4f72d19b8a26a97a5",
+   "commit_after": "6ea79e6773dd479b11c832e4f72d19b8a26a97a5"
+  },
+  {
+   "repository": "https://github.com/thanos0s/eth-global01",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [
+    "apps/platform/src/lib/hedera/scheduledYield.ts"
+   ],
+   "commit_before": "67a08377a17b3bf34b9ac9e2eb5d26898087929c",
+   "commit_after": "67a08377a17b3bf34b9ac9e2eb5d26898087929c"
+  },
+  {
+   "repository": "https://github.com/atharvawaghchoure/clearing-house",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "a45e83fc3bbbe913e527c7d097ff9a09b0da7280",
+   "commit_after": "a45e83fc3bbbe913e527c7d097ff9a09b0da7280"
+  },
+  {
+   "repository": "https://github.com/sarvanth-vedula/theascentframework",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "f71b349b783146079c4c56bf5b1e84894060bdaa",
+   "commit_after": "f71b349b783146079c4c56bf5b1e84894060bdaa"
+  },
+  {
+   "repository": "https://github.com/ffelipesimoes/eth-lisbon-pixport",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "197e947671fc4a12651a249e12455995868e1011",
+   "commit_after": "197e947671fc4a12651a249e12455995868e1011"
+  },
+  {
+   "repository": "https://github.com/ariutokintumi/kpeg",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "151b99960e384b7c4d01255f5bcb6b985ce4dc0e",
+   "commit_after": "151b99960e384b7c4d01255f5bcb6b985ce4dc0e"
+  },
+  {
+   "repository": "https://github.com/alexursol2/deadman_ethonline",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "3a165a35df5166681ffb13ecbe97f459e3175884",
+   "commit_after": "3a165a35df5166681ffb13ecbe97f459e3175884"
+  },
+  {
+   "repository": "https://github.com/jonumhills/zoneproof",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "b304781e9910b6cb386782a9aeea6eb853076aa2",
+   "commit_after": "b304781e9910b6cb386782a9aeea6eb853076aa2"
+  },
+  {
+   "repository": "https://github.com/ridwannurudeen/countersign-ethonline2026",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "437a577e98151d196c9970612ed86d94c3ae4673",
+   "commit_after": "437a577e98151d196c9970612ed86d94c3ae4673"
+  },
+  {
+   "repository": "https://github.com/jmgomezl/aivy-parametric-pool",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "12398c62a087fd1d4b8c066be52c29e069112662",
+   "commit_after": "12398c62a087fd1d4b8c066be52c29e069112662"
+  },
+  {
+   "repository": "https://github.com/ashleshprabhu/veritravel",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "a5eae76e5f953fdbd90c8ae933a574140b4e3b8d",
+   "commit_after": "a5eae76e5f953fdbd90c8ae933a574140b4e3b8d"
+  },
+  {
+   "repository": "https://github.com/sanjaylicet/chainguard",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "5e7e8d3243ad88e45aac1b715df2782c495405be",
+   "commit_after": "5e7e8d3243ad88e45aac1b715df2782c495405be"
+  },
+  {
+   "repository": "https://github.com/akshat1276/kairos",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "eadfbbfae7d9bacb121016f344b6d16903047f02",
+   "commit_after": "eadfbbfae7d9bacb121016f344b6d16903047f02"
+  },
+  {
+   "repository": "https://github.com/ipastorsan/turnstile",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "8a999208f259bb9a8af696a0a7d3dbf60ca05bfd",
+   "commit_after": "8f6249a84107698028d095da6d8f55a52a2b76a8"
+  },
+  {
+   "repository": "https://github.com/dyefymenko/colony",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "9af2cae14073028917941cafbfaf014ad4929cac",
+   "commit_after": "9af2cae14073028917941cafbfaf014ad4929cac"
+  },
+  {
+   "repository": "https://github.com/smitjadav07/sentinelai",
+   "before": [
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "9c254e5ce13317c591785cc30e880403fb9e9f3e",
+   "commit_after": "9c254e5ce13317c591785cc30e880403fb9e9f3e"
+  },
+  {
+   "repository": "https://github.com/antoinehrtr/openbar",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "dee226b50afa554c38c2eaa2095fb1c27eafbd6e",
+   "commit_after": "dee226b50afa554c38c2eaa2095fb1c27eafbd6e"
+  },
+  {
+   "repository": "https://github.com/miriamlin/best-before",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "ebfcd92e01eb9121dedd66d309b0161a83e9ff0f",
+   "commit_after": "ebfcd92e01eb9121dedd66d309b0161a83e9ff0f"
+  },
+  {
+   "repository": "https://github.com/sabaazdn73/cross-border-payments-ddib2026-og04",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "0a61172be255c10d2b02ccf418b760c0f14a8fa2",
+   "commit_after": "0a61172be255c10d2b02ccf418b760c0f14a8fa2"
+  },
+  {
+   "repository": "https://github.com/myounatan/hour-backend-ethglobal-lisbon-2026",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "3c66a78adf705bd5ed1bcb7133ae2d470548eaf7",
+   "commit_after": "3c66a78adf705bd5ed1bcb7133ae2d470548eaf7"
+  },
+  {
+   "repository": "https://github.com/dhruptel/ethonline-2026-alpha-markets",
+   "before": [
+    "Token Service"
+   ],
+   "after": [
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "8560a8e5f237a81c97020114ce0d682ff6c5d432",
+   "commit_after": "8560a8e5f237a81c97020114ce0d682ff6c5d432"
+  },
+  {
+   "repository": "https://github.com/pritamp20/streamer.fun",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "95ff082dc7c6ef3228ecc122e8fda057b7770a82",
+   "commit_after": "95ff082dc7c6ef3228ecc122e8fda057b7770a82"
+  },
+  {
+   "repository": "https://github.com/brijeshagal/devconnect-ba",
+   "before": [
+    "Smart contracts"
+   ],
+   "after": [
+    "Smart contracts"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "80c4b412e8dff1e8b3a9fdff70e7b6ed1cfadcc8",
+   "commit_after": "80c4b412e8dff1e8b3a9fdff70e7b6ed1cfadcc8"
+  },
+  {
+   "repository": "https://github.com/rayyer220/plimsoll",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Smart contracts"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Smart contracts"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "4df842df6f5da4f698d622fac8e35742a7943268",
+   "commit_after": "4df842df6f5da4f698d622fac8e35742a7943268"
+  },
+  {
+   "repository": "https://github.com/nicolas6879/agro_hedera-agent",
+   "before": [
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "d114e32041d8f83f3bf5af855cf7b1cad2c5a890",
+   "commit_after": "d114e32041d8f83f3bf5af855cf7b1cad2c5a890"
+  },
+  {
+   "repository": "https://github.com/acevikings/ethglobal-online-2027",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "f0471de9cc7c2f01e10d14b522a4d67480b47804",
+   "commit_after": "f0471de9cc7c2f01e10d14b522a4d67480b47804"
+  },
+  {
+   "repository": "https://github.com/mattwong-ca/birdquest",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "052d52a053a4019542c7882f92400bf3b8b72d2e",
+   "commit_after": "052d52a053a4019542c7882f92400bf3b8b72d2e"
+  },
+  {
+   "repository": "https://github.com/subhash0x/agentnet",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "945cbb1846e7ba808defc12fb6f047a5d27e93fc",
+   "commit_after": "945cbb1846e7ba808defc12fb6f047a5d27e93fc"
+  },
+  {
+   "repository": "https://github.com/denisdi/ethglobalhacklisbon_2026",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Scheduled transactions"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Scheduled transactions"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "357c131da37d44f67b5b080896383446b48e6e74",
+   "commit_after": "357c131da37d44f67b5b080896383446b48e6e74"
+  },
+  {
+   "repository": "https://github.com/butterfliesinspacejoe/satoshi-parabox",
+   "before": [
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "5299a2cb340d3d2e52809bd9ecd271ed13f77956",
+   "commit_after": "5299a2cb340d3d2e52809bd9ecd271ed13f77956"
+  },
+  {
+   "repository": "https://github.com/pritamp20/ethonline",
+   "before": [
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "39cfe7bc19b8f89b3d6a902e3d053d1bc73b4814",
+   "commit_after": "39cfe7bc19b8f89b3d6a902e3d053d1bc73b4814"
+  },
+  {
+   "repository": "https://github.com/louissarvin/proctor",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "29055f2316dca99d672f101c2b3d40db569f8a46",
+   "commit_after": "29055f2316dca99d672f101c2b3d40db569f8a46"
+  },
+  {
+   "repository": "https://github.com/the-swarm-protocol/swarm",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "3bdc08fb21c1417e5643614e810ec6217e7d85db",
+   "commit_after": "3bdc08fb21c1417e5643614e810ec6217e7d85db"
+  },
+  {
+   "repository": "https://github.com/project-ognef/00-ognef",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "5f6beae85753f84d156fc0ac371d41c9789f5cfa",
+   "commit_after": "5f6beae85753f84d156fc0ac371d41c9789f5cfa"
+  },
+  {
+   "repository": "https://github.com/layla-lili/amanascore",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "314035021cf9e735d8f097bcd71bfd5859c83c31",
+   "commit_after": "314035021cf9e735d8f097bcd71bfd5859c83c31"
+  },
+  {
+   "repository": "https://github.com/grmkris/froggy-ethonline2026",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "214aa411997aa64251dec074ccb6d4b612112e12",
+   "commit_after": "214aa411997aa64251dec074ccb6d4b612112e12"
+  },
+  {
+   "repository": "https://github.com/optimus789/agent-bazaar",
+   "before": [
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "c841c78a87017d79b5fe18cbd6faa33bb78a6692",
+   "commit_after": "c841c78a87017d79b5fe18cbd6faa33bb78a6692"
+  },
+  {
+   "repository": "https://github.com/jazibrq/stakeclash",
+   "before": [
+    "Accounts and HBAR transfers",
+    "File Service",
+    "Scheduled transactions",
+    "Smart contracts"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "File Service",
+    "Scheduled transactions",
+    "Smart contracts"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "f94ab242bba37e1dbfd837c84080146d09ab1bbc",
+   "commit_after": "f94ab242bba37e1dbfd837c84080146d09ab1bbc"
+  },
+  {
+   "repository": "https://github.com/krishchopra/lieability",
+   "before": [
+    "File Service",
+    "Smart contracts"
+   ],
+   "after": [
+    "File Service",
+    "Smart contracts"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "dfe46a9b6b269b1279fe0920b5c62bde9f31e29e",
+   "commit_after": "dfe46a9b6b269b1279fe0920b5c62bde9f31e29e"
+  },
+  {
+   "repository": "https://github.com/bonzo-labs/bonzo-finance-contracts",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "38441b697a51c22bef6a9fb660bea46aa429c11c",
+   "commit_after": "38441b697a51c22bef6a9fb660bea46aa429c11c"
+  },
+  {
+   "repository": "https://github.com/chayan-bit/ethonline-hackathon",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Smart contracts",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "f9a05e53b8df8e12307f54d8baf75a6c5faabbde",
+   "commit_after": "f9a05e53b8df8e12307f54d8baf75a6c5faabbde"
+  },
+  {
+   "repository": "https://github.com/weownnetwork/ethdenver-submission",
+   "before": [
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [
+    "packages/hedera/src/tokens/ccc-identity-nft.ts"
+   ],
+   "commit_before": "66e408b062e3ad3c0e837fab6169c445e656d1d4",
+   "commit_after": "66e408b062e3ad3c0e837fab6169c445e656d1d4"
+  },
+  {
+   "repository": "https://github.com/rajshah1302/x402router",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "ff66912e4dc22e631625b4198213bc70df49761d",
+   "commit_after": "ff66912e4dc22e631625b4198213bc70df49761d"
+  },
+  {
+   "repository": "https://github.com/neeltron/handshake",
+   "before": [
+    "Accounts and HBAR transfers"
+   ],
+   "after": [
+    "Accounts and HBAR transfers"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "07d9ce661a26daa1eae71d48f9acd06b47ffabf8",
+   "commit_after": "07d9ce661a26daa1eae71d48f9acd06b47ffabf8"
+  },
+  {
+   "repository": "https://github.com/hitakshi02/agentrank",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Batch transactions",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Batch transactions",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "1b73d6d09b8eed1bc9111619c3e02a7992eb67ec",
+   "commit_after": "1b73d6d09b8eed1bc9111619c3e02a7992eb67ec"
+  },
+  {
+   "repository": "https://github.com/rudrabhaskar9439/common",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "Scheduled transactions"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "573650f0c73d4f0f2788a0516bcd91ee2600ea57",
+   "commit_after": "573650f0c73d4f0f2788a0516bcd91ee2600ea57"
+  },
+  {
+   "repository": "https://github.com/mohitagarwal24/tradelayer",
+   "before": [
+    "Token Service"
+   ],
+   "after": [
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [],
+   "commit_before": "1df1e8c4767c32fde85805871457d37682339a57",
+   "commit_after": "1df1e8c4767c32fde85805871457d37682339a57"
+  },
+  {
+   "repository": "https://github.com/robdgs/ethglobalcannes2026",
+   "before": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "after": [
+    "Accounts and HBAR transfers",
+    "Consensus Service (topics)",
+    "File Service",
+    "Scheduled transactions",
+    "Token Service"
+   ],
+   "lost": [],
+   "unused_only": {},
+   "unused_files": [
+    "components/AccountPanel.tsx"
+   ],
+   "commit_before": "e9d35c15026bf46fbeab84c655777b762aa36da4",
+   "commit_after": "e9d35c15026bf46fbeab84c655777b762aa36da4"
+  }
+ ]
+}
