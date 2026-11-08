@@ -1069,7 +1069,8 @@
     var near = kind === "readme" ? elt.closest(".hm-section-head") :
       kind === "one" ? elt.closest(".compare-ask") : null;
     if (near) return { parent: near.parentNode, before: near.nextSibling };
-    var list = kind === "idea" ? $("result-list") : null;
+    // the cards, or outside them the hidden places of the comparisons, under the switches
+    var list = kind === "idea" ? $("result-list") || $("compare-store") : null;
     if (list) return { parent: list.parentNode, before: list };
     var results = $("results");
     return results ? { parent: results, before: results.firstChild } : null;
@@ -1118,6 +1119,7 @@
       said.textContent = words;
       ask.appendChild(said);
     }
+    comparedInWindow(); // a window that waited for this answer offers its own button again
   }
   document.addEventListener("htmx:afterRequest", function (event) {
     // the element that asked is in the request's config: an answer may have replaced it, and then
@@ -1134,6 +1136,7 @@
     // so a filled place still looks as if it waits.
     window.setTimeout(function () {
       if (waitingPlaces(elt).length) compareFailed(elt, FAILED_NOTHING);
+      comparedInWindow();
     }, 300);
   });
   // A comparison asked in a project's window shows on the project's card in the list too, at
@@ -1156,9 +1159,41 @@
       slot.innerHTML = text.outerHTML;
     });
   }
+  // The other way: the comparison of the first ten, asked with Gemini's order in any view, shows
+  // in the window of its project, which the server made before it came. While it is asked, the
+  // window says so instead of offering its own button, a second ask for the same project; when
+  // it failed, the button comes back (9 November 2026: in the graph, the window offered to ask
+  // Gemini though Gemini had just put the list in order).
+  function comparedInWindow() {
+    document.querySelectorAll(".compare-ask[id^='one-compare-']").forEach(function (box) {
+      var place = $("compare-" + box.id.slice("one-compare-".length));
+      if (!place) return;
+      var note = box.querySelector(".hm-list-wait");
+      var asks = box.querySelectorAll(":scope > :not(.hm-list-wait)");
+      if (place.classList.contains("waiting")) {
+        asks.forEach(function (one) { one.hidden = true; });
+        if (!note) {
+          note = document.createElement("p");
+          note.className = "text-secondary hm-list-wait";
+          note.setAttribute("role", "status");
+          note.textContent = waitingModel() + " is comparing the first 10 projects of the list " +
+            "with your idea, this one included. Its answer will show here.";
+          box.appendChild(note);
+        }
+        return;
+      }
+      if (note) note.remove();
+      asks.forEach(function (one) { one.hidden = false; });
+      if (place.querySelector(".hm-compare-text")) {
+        box.className = "compare-place";
+        box.innerHTML = place.innerHTML;
+      }
+    });
+  }
   // After the settle, not the swap: htmx keeps the old attributes of an element with the same id
   // until it settles, so at the swap the place still has the class of the button's box.
   document.addEventListener("htmx:afterSettle", comparedOnCards);
+  document.addEventListener("htmx:afterSettle", comparedInWindow);
   document.addEventListener("htmx:afterSwap", function (event) {
     var target = event.detail.target;
     if (target && target.id === "viewer-body") {

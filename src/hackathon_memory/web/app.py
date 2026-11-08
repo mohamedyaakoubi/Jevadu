@@ -966,6 +966,12 @@ def create_app(
         """The comparison of the last day for this idea and project, or None: never asked here."""
         return kept_comparisons(conninfo, idea, [project_id]).get(project_id)
 
+    def not_compared_yet(ids: list[int], kept: Mapping[int, Any]) -> list[int]:
+        """The first ten of Gemini's order whose comparison with the idea is not kept: the page
+        asks for these when it loads, in every view (9 November 2026). The graph asked for none,
+        and the cards asked again for kept ones too, which showed a wait for nothing."""
+        return [pid for pid in ids if pid not in kept]
+
     def render(request: Request, name: str, status: int = 200, **values: Any) -> HTMLResponse:
         if asks_person and limits is not None and not name.startswith("_"):  # a whole page
             # the box of Cloudflare's Turnstile, until the visitor is found to be a person
@@ -1276,6 +1282,10 @@ def create_app(
             )
             # a link to a project that is not in the collection opens the window with that sentence
             shown["panel_problem"] = NO_SUCH_PROJECT if open_id and panel_card is None else None
+            # a window opened by its address shows the comparison kept for the idea, as when it is
+            # opened by a click (9 November 2026: a reload showed the button to ask Gemini)
+            shown["kept_comparison"] = (kept_comparison(conninfo, idea, open_id)
+                                        if panel_card and idea else None)  # fmt: skip
             if not idea:
                 total = len(only) if only is not None else every.projects
                 if view == CHARTS:
@@ -1312,6 +1322,11 @@ def create_app(
             if limits is not None and not ai_off and mode == MEANING:  # after this search's ask
                 shown["gemini_left"] = limits.left(public_copy.AI, public_copy.visitor.get())
             none_close = bool(only) and not ranking  # the filters match, but none is close
+            if view and ordered:  # Gemini compares the ten that it put first, in every view
+                first_ten = ranking[:PAGE_SIZE]
+                shown["compare_ids"] = not_compared_yet(
+                    first_ten, kept_comparisons(conninfo, idea, first_ten)
+                )
             if view == CHARTS:
                 built, groups, said = charts_of(conninfo, ranking)
                 return render(request, "search.html", asked=True, results=[], total=len(ranking),
@@ -1343,8 +1358,8 @@ def create_app(
         except (SettingsError, psycopg.OperationalError):
             return render(request, "search.html", 503, asked=True, **down)
         # Gemini compares the ten that it put first, on the first page only.
-        compare_ids = [card.hit.project_id for card, *_ in results] if ordered else []
-        compare_ids = compare_ids if page_number == 1 else []
+        first_page = shown_ids if ordered and page_number == 1 else []
+        compare_ids = not_compared_yet(first_page, kept_compared)
         return render(request, "search.html", asked=True, results=results, total=total,
                       pages=pages, page=page_number, first_shown=first + 1,
                       last_shown=first + len(results), nothing_matches=only == [],

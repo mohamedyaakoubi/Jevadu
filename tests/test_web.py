@@ -1547,6 +1547,76 @@ def test_a_comparison_that_fails_says_so_in_each_place(site) -> None:  # noqa: A
     assert part.text.count("could not be generated just now") == 2
 
 
+LOADER = r'id="compare-loader" hx-get="/compare\?idea=[^&]+&amp;ids=([\d,]+)"'
+
+
+def test_gemini_order_asks_the_comparison_of_its_first_ten_in_every_view(site) -> None:  # noqa: ANN001
+    """Gemini's order comes with its comparison of the first ten in every view, as on the cards.
+    In the graph only the order was asked: the window of a dot offered to ask Gemini, and the
+    cards asked for the comparison later, which looked like a second run (9 November 2026). Once
+    kept, no view asks again, the window shows it, and the cards show it with no request."""
+    client, fake, _, _ = site
+    fake.answer_queue = [json.dumps({"closest": [3, 2, 1]})]
+    asked: list[str] = []
+    for view in ("graph", "charts", "mainnet"):
+        page = client.get("/", params={"idea": VENDOR, "ai": "1", "view": view}).text
+        loader = re.search(LOADER, page)
+        assert loader, view
+        asked = loader.group(1).split(",")
+        # a hidden place for each, where the answer lands and the window finds it
+        assert 'id="compare-store" hidden' in page, view
+        waiting = re.findall(r'class="hm-compare compare waiting" id="compare-(\d+)"', page)
+        assert waiting == asked, view
+    assert len(asked) == 3
+    fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]),
+                                      (3, ["short_line"]))  # fmt: skip
+    before = len(fake.requests)
+    client.get("/compare", params={"idea": VENDOR, "ids": ",".join(asked)}, headers=HX)
+    assert model_calls(fake, before) == 1
+    graph = client.get("/", params={"idea": VENDOR, "ai": "1", "view": "graph"}).text
+    assert 'id="compare-loader"' not in graph and 'id="compare-store"' not in graph
+    window = client.get(f"/project/{asked[0]}/panel",
+                        params={"idea": VENDOR, "ai": "1", "view": "graph"}).text  # fmt: skip
+    assert "Same 1." in window and "Ask Gemini what this project shares" not in window
+    cards = client.get("/", params={"idea": VENDOR, "ai": "1"}).text
+    assert 'id="compare-loader"' not in cards
+    assert all(f"Same {number}." in cards for number in (1, 2, 3))
+    assert model_calls(fake, before) == 1  # neither the order nor the comparison again
+
+
+def test_the_list_asks_gemini_only_for_the_comparisons_that_are_not_kept(site) -> None:  # noqa: ANN001
+    """A kept comparison shows on its card, and the list asks for the others only. It asked for
+    every one of the first ten: no model was called for a kept one, but with all of them kept the
+    wait for Gemini still came and went on the screen (9 November 2026)."""
+    client, fake, ids, _ = site
+    pebble = ids["Pebble Pay"]
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    client.get("/compare", params={"idea": VENDOR, "ids": str(pebble), "one": "1"})
+    fake.answer_queue = [json.dumps({"closest": [1, 2, 3]})]
+    page = client.get("/", params={"idea": VENDOR, "ai": "1"}).text
+    loader = re.search(LOADER, page)
+    assert loader and len(order_of(page)) == 3
+    assert loader.group(1).split(",") == [pid for pid in order_of(page) if pid != str(pebble)]
+    card = page.split(f'id="result-{pebble}"', 1)[1].split("</li>", 1)[0]
+    assert "Same 1." in card
+
+
+def test_a_window_opened_by_its_address_shows_the_kept_comparison(site) -> None:  # noqa: ANN001
+    """A reload with a project's window open, whose address carries open=, showed the button to
+    ask Gemini, though a comparison was kept for the idea (9 November 2026)."""
+    client, fake, ids, _ = site
+    pebble = ids["Pebble Pay"]
+    fake.answer_text = compare_answer((1, ["what_it_does"]))
+    client.get("/compare", params={"idea": VENDOR, "ids": str(pebble), "one": "1"})
+    before = len(fake.requests)
+    for view in ("", "graph"):
+        page = client.get("/", params={"idea": VENDOR, "mode": "meaning", "view": view,
+                                       "open": pebble}).text  # fmt: skip
+        section = page.split(f'id="compare-{pebble}-title"', 1)[1].split("</section>", 1)[0]
+        assert "Same 1." in section and "Compare with my idea" not in section, view
+    assert model_calls(fake, before) == 0
+
+
 # ----------------------------------------------------------------- the filters (design 8.2)
 
 
@@ -3517,6 +3587,68 @@ def test_each_comparison_takes_its_place(site, chromium) -> None:  # noqa: ANN00
     assert "Same 2." in results.nth(1).inner_text()
     assert "No comparison for this project." in results.nth(2).inner_text()
     page.context.close()
+
+
+@pytest.mark.browser
+def test_gemini_order_in_the_graph_shows_its_comparison_in_a_window(site, chromium) -> None:  # noqa: ANN001
+    """His steps of 9 November 2026: a semantic search, the graph, Gemini's order from the switch
+    beside "Search order", then a dot. Its window offered to ask Gemini, though Gemini had just
+    put the list in order; back on the cards, Gemini was asked for the comparison only then."""
+    client, fake, _, _ = site
+    fake.answer_queue = [json.dumps({"closest": [1, 2, 3]})]
+    fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]),
+                                      (3, ["short_line"]))  # fmt: skip
+    page = served(chromium, client, viewport={"width": 1440, "height": 900})
+    page.goto(SEARCH + "&view=graph")
+    page.locator("[data-asks-gemini]").click()
+    page.wait_for_selector("#results-title:has-text('Sorted by Gemini')")
+    page.wait_for_function("!document.querySelector('.compare.waiting')")
+    calls = model_calls(fake)
+    first = page.locator('.hm-dot[data-rank="1"]')
+    pid = first.get_attribute("data-graph-id")
+    first.click()
+    section = page.locator("#viewer[open] .compare-section")
+    section.wait_for()
+    assert "Same 1." in section.inner_text() and "Ask Gemini" not in section.inner_text()
+    page.keyboard.press("Escape")
+    page.wait_for_function("!document.getElementById('viewer').open")
+    page.locator(".hm-switch a:has-text('Cards')").click()
+    page.wait_for_selector(f"#result-{pid} .hm-compare-text")
+    assert page.locator(".hm-wait").count() == 0 and model_calls(fake) == calls
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_a_window_opened_while_gemini_compares_says_so_and_fills_in(site, chromium) -> None:  # noqa: ANN001
+    """While the comparison of the first ten is asked, the window of one of them says so instead
+    of offering its own button, a second ask of Gemini for the same project; the answer fills the
+    window, and a comparison that failed gives the button back (9 November 2026)."""
+    client, fake, _, _ = site
+    for idea, fails in ((VENDOR, False), ("a coin for a market stall", True)):
+        fake.answer_queue = [json.dumps({"closest": [1, 2, 3]})]
+        fake.answer_text = compare_answer((1, ["what_it_does"]), (2, ["short_line"]),
+                                          (3, ["short_line"]))  # fmt: skip
+        fake.fail_with = None
+        failing = (lambda: setattr(fake, "fail_with", (503, "unavailable"))) if fails else None
+        page = served(chromium, client, failing or (lambda: None),
+                      viewport={"width": 1440, "height": 900})  # fmt: skip
+        held = holds_comparisons(page)
+        page.goto(f"http://site.test/?idea={idea.replace(' ', '+')}&mode=meaning&ai=1")
+        pid = page.locator("li.result").first.get_attribute("data-project")
+        page.locator(f"#result-{pid} .result-link").click()
+        box = page.locator(f"#one-compare-{pid}")
+        box.locator(".hm-list-wait").wait_for()
+        assert box.locator("button").is_hidden()
+        assert "comparing the first 10 projects" in box.inner_text()
+        held[0].fallback()
+        if fails:
+            box.locator("button").wait_for()  # it can be asked again in the window
+            assert box.locator(".hm-list-wait").count() == 0
+        else:
+            page.wait_for_selector(f"#one-compare-{pid} .hm-compare-text")
+            assert "Same 1." in box.inner_text() and box.locator("button").count() == 0
+        page.context.close()
+    fake.fail_with = None
 
 
 @pytest.mark.browser
