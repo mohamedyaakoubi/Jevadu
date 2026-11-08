@@ -103,6 +103,12 @@
         </div>
       </div>
 
+      {% if view and compare_ids %}
+      {# Gemini's order comes with its comparison of the first ten in every view (design 8.3).
+         Outside the cards, each comparison lands in a hidden place, where the window of its
+         project finds it (site.js): the graph asked for the order only (9 November 2026). #}
+      <div class="hm-compare-store" id="compare-store" hidden>{% for pid in compare_ids %}<div class="hm-compare compare waiting" id="compare-{{ pid }}" data-project="{{ pid }}" aria-busy="true"></div>{% endfor %}</div>
+      {% endif %}
       {% if view == "charts" %}
         {% include "_charts.html" %}
       {% elif view == "graph" %}
@@ -124,14 +130,14 @@
         </ol>
         {{ parts.pager(page, pages, search_query, "Pages of the results" if asked else "Pages of the list") }}
         {% if asked %}<p class="hm-come-back">Building this? Before you submit, <a href="#check-repo" data-focus-check>check your GitHub link here</a>.</p>{% endif %}
-        {% if compare_ids %}
-        <div id="compare-loader" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ compare_ids | join(',') }}"
-             hx-trigger="load" hx-swap="none" hx-target="this" data-gemini-wait="idea"></div>
-        {% endif %}
       {% elif page > 1 %}
         <div class="empty"><p class="empty-title">No more projects in this list.</p><p class="empty-subtitle"><a href="/{{ '?' ~ search_query if search_query }}">Back to the first page</a></p></div>
       {% else %}
         <div class="empty"><p class="empty-title">No project matches these filters.</p><p class="empty-subtitle text-secondary">Remove a filter to see more.</p></div>
+      {% endif %}
+      {% if compare_ids %}
+      <div id="compare-loader" hx-get="/compare?idea={{ idea | urlencode }}&amp;ids={{ compare_ids | join(',') }}"
+           hx-trigger="load" hx-swap="none" hx-target="this" data-gemini-wait="idea"></div>
       {% endif %}
     {% endif %}
     </section>
