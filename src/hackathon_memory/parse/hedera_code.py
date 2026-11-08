@@ -12,12 +12,14 @@ limit on how many. What is kept is what the plain text matching found, with no A
   Hedera's SDKs, which are the same in every language (TopicCreateTransaction and the like), in
   the files that the project uses;
 * **unused:** the same, in files that nothing in the project uses: no other file imports them,
-  and none of them is where a program starts (a file that package.json names, a Python file with
-  a __main__ block, a file at the root, a usual name such as index or main, or a usual folder such
-  as pages, api, scripts or tests). Such a file is written and never reached, like a wrapper kept
-  for later (8 November 2026: a submission named the Token and File Services only in two such
-  files, and the check counted them as called). When it is not sure, a file counts as used. Only
-  JavaScript, TypeScript and Python are read this way; in other languages every file is used;
+  and none of them is where a program starts. A program starts in a file that exports nothing (a
+  script that a person, a page or a tool runs), a Python file that runs code at its top level, a
+  file that a settings file names (package.json, a workflow), a package's __init__.py, a file at
+  the root, a usual name such as index or main, or a usual folder such as pages, api, scripts or
+  tests. Such a file is written and never reached, like a wrapper kept for later (8 November
+  2026: a submission named the Token and File Services only in two such files, and the check
+  counted them as called). When it is not sure, a file counts as used. Only JavaScript,
+  TypeScript and Python are read this way; in other languages every file is used;
 * **imports:** the source files that import a Hedera library;
 * **signs:** Hedera's JSON-RPC relay (Hashio) or its chain IDs in the code or the settings of an
   EVM project, a Hedera network taken from an EVM tool (viem, wagmi, thirdweb, or a network of
@@ -82,9 +84,11 @@ SOURCE_SUFFIXES = frozenset({
 })  # fmt: skip
 # Settings files that only show placeholders; a real .env file is never opened.
 EXAMPLE_ENV = frozenset({".env.example", ".env.sample", ".env.template", "env.example"})
-# The files whose use is read from what imports them (8 November 2026).
+# The files whose use is read from what imports them (8 November 2026), and the settings files
+# whose file names count as a use.
 JS_SUFFIXES = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".svelte")
 PY_SUFFIXES = (".py",)
+SETTINGS_SUFFIXES = (".json", ".yaml", ".yml", ".toml")
 # Where a program starts, by the usual folders and names of the frameworks: a file there is used
 # even when no other file imports it (pages and api of Next.js, routes of SvelteKit, scripts and
 # tasks of Hardhat, tests, serverless functions).
@@ -583,14 +587,21 @@ class _Calls:
 
 
 # What a file imports. JavaScript and TypeScript: import ... from "x", import "x", import("x"),
-# require("x") and export ... from "x". Python: from x import a, b; import x, y.
+# require("x") and export ... from "x". Python: from x import a, b, also in brackets over several
+# lines; import x, y.
 _JS_SPECIFIER = re.compile(r"""(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']([^"'\n]{1,300})["']""")
-_PY_FROM = re.compile(
-    r"^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import[ \t]+\(?([\w ,\t*]+)", re.MULTILINE
-)
+_JS_EXPORT = re.compile(r"^[ \t]*export\b|\bmodule\.exports\b|\bexports\.[\w$]+[ \t]*=", re.M)
+_PY_FROM = re.compile(r"^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import[ \t]+(\([^)]*\)|[^\n#;]+)", re.M)
 _PY_IMPORT = re.compile(r"^[ \t]*import[ \t]+([\w.]+(?:[ \t]*,[ \t]*[\w.]+)*)", re.MULTILINE)
+# A Python file runs code at its top level: a __main__ block, a call such as main(), or no
+# function and no class at all.
 _PY_MAIN = re.compile(r"""^[ \t]*if[ \t]+__name__[ \t]*==[ \t]*["']__main__["']""", re.MULTILINE)
+_PY_CALL = re.compile(r"^(?:await[ \t]+)?[A-Za-z_][\w.]*[ \t]*\(", re.MULTILINE)
+_PY_DEF = re.compile(r"^(?:async[ \t]+)?(?:def|class)[ \t]", re.MULTILINE)
 _NAMED_FILE = re.compile(r"[\w./@-]+\.(?:m?[jt]sx?|c[jt]s|py)\b")
+# Only a suffix of code is taken off an import: in ./hedera.service, .service is part of the name.
+_CODE_SUFFIX = re.compile(r"\.(?:[cm]?[jt]sx?|py|vue|svelte)$")
+_LEADING = re.compile(r"^(?:\.{1,2}/|/)+")
 
 
 def _bare(path: str) -> str:
@@ -610,19 +621,19 @@ class _Reach:
 
     def read(self, path: str, name: str, text: str) -> None:
         self.paths.add(path)
-        if name == "package.json":
+        if path.endswith(SETTINGS_SUFFIXES):  # package.json, a workflow, vercel.json
             for found in _NAMED_FILE.findall(text):
                 self.named.append((str(PurePosixPath(path).parent), found))
         if path.endswith(JS_SUFFIXES):
             self.imports[path] = [(found, ()) for found in _JS_SPECIFIER.findall(text)]
+            if not _JS_EXPORT.search(text):
+                self.started.add(path)  # it exports nothing: a script, run on its own
         elif path.endswith(PY_SUFFIXES):
-            asked = [(module, tuple(part.strip() for part in names.split(",") if part.strip()))
-                     for module, names in _PY_FROM.findall(text)]  # fmt: skip
-            for names in _PY_IMPORT.findall(text):
-                asked += [(part.strip(), ()) for part in names.split(",") if part.strip()]
-            self.imports[path] = asked
-            if _PY_MAIN.search(text):
+            self.imports[path] = _py_imports(text)
+            if _PY_MAIN.search(text) or _PY_CALL.search(text) or not _PY_DEF.search(text):
                 self.started.add(path)
+        elif name.endswith(".ipynb"):
+            self.imports[path] = _py_imports(_notebook_code(text))
 
     def used(self) -> set[str]:
         """The files that the project uses: those that another file imports, those where a
@@ -637,6 +648,7 @@ class _Reach:
         used |= {path for path in self.paths if _starts_a_program(path)} | self.started
         for folder, named in self.named:
             used |= _placed(posixpath.normpath(posixpath.join(folder, named)), tails)
+            used |= _placed(named, tails)  # from the root, as a workflow names it
         for source, asked in self.imports.items():
             for module, names in asked:
                 found = (_placed_js(source, module, tails) if source.endswith(JS_SUFFIXES)
@@ -645,19 +657,46 @@ class _Reach:
         return used
 
 
+def _py_imports(text: str) -> list[tuple[str, tuple[str, ...]]]:
+    """What a Python file imports: each module, with the names that it takes from it."""
+    asked = []
+    for module, names in _PY_FROM.findall(text):
+        names = re.sub(r"#[^\n]*", "", names).strip().strip("()")
+        asked.append((module, tuple(part.split()[0] for part in names.split(",") if part.split())))
+    for names in _PY_IMPORT.findall(text):
+        asked += [(part.strip(), ()) for part in names.split(",") if part.strip()]
+    return asked
+
+
+def _notebook_code(text: str) -> str:
+    """The code cells of a Jupyter notebook, one after the other."""
+    try:
+        cells = json.loads(text).get("cells")
+    except (ValueError, AttributeError):
+        return ""
+    code = []
+    for cell in cells if isinstance(cells, list) else []:
+        if isinstance(cell, dict) and cell.get("cell_type") == "code":
+            source = cell.get("source", "")
+            code.append("".join(map(str, source)) if isinstance(source, list) else str(source))
+    return "\n".join(code)
+
+
 def _starts_a_program(path: str) -> bool:
     """A file where a program usually starts: at the root of the repository, in a usual
-    folder, with a usual name, a test, a setting of a tool, or a notebook."""
+    folder, with a usual name, a test, a setting of a tool, or a notebook. And a package's
+    __init__.py, which Python runs whenever a module of the package is imported."""
     parts = PurePosixPath(path).parts
     name = parts[-1].lower()
     return (len(parts) == 1 or any(part.lower() in ENTRY_FOLDERS for part in parts[:-1])
             or name.split(".")[0] in ENTRY_STEMS or name.endswith(".ipynb")
+            or name == "__init__.py"
             or re.search(r"\.(?:test|spec|config|stories)\.", name) is not None)  # fmt: skip
 
 
 def _placed(target: str, tails: dict[str, set[str]]) -> set[str]:
     """The files that a path names, with or without its suffix, or as a folder's index."""
-    bare = _bare(target).lstrip("./").lower()
+    bare = _CODE_SUFFIX.sub("", _LEADING.sub("", target.lower()))
     return (
         tails.get(bare, set())
         | tails.get(f"{bare}/index", set())

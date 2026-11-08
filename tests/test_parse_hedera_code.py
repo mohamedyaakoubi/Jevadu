@@ -203,9 +203,12 @@ def test_a_service_in_a_file_that_nothing_uses_is_kept_apart() -> None:
         "app.js": b"const api = require('./src/routes/api');\n",
         "src/routes/api.js": b"const { anchor } = require('../agents/trustAgent');\n",
         "src/agents/trustAgent.js": b"function a() { return require('../services/hcsService'); }",
-        "src/services/hcsService.js": SDK + b"new TopicMessageSubmitTransaction();\n",
-        "src/services/htsService.js": SDK + b"new TokenCreateTransaction();\n",
-        "src/services/hfsService.js": SDK + b"new FileCreateTransaction();\n",
+        # Each exports what it does, as the submission's files do: a module that waits for an
+        # import, and not a script.
+        "src/services/hcsService.js": SDK + b"exports.send = () =>\n"
+        b"  new TopicMessageSubmitTransaction();\n",
+        "src/services/htsService.js": SDK + b"exports.mint = () => new TokenCreateTransaction();\n",
+        "src/services/hfsService.js": SDK + b"module.exports = () => new FileCreateTransaction();",
     }  # fmt: skip
     scan = scanned(files)
     assert {name: one.examples for name, one in scan.features.items()} == {
@@ -224,7 +227,8 @@ def test_a_file_is_used_when_a_program_starts_there_or_any_file_imports_it() -> 
     """When it is not sure, a file counts as used: the usual folders and names of a framework,
     a file that package.json names, a Python file with a __main__ block, an import by an alias or
     by the end of its path, and any language that is not read this way."""
-    sdk = b"import { TokenMintTransaction } from '@hashgraph/sdk';\n"
+    # Each file exports, so that only the sign under test makes it used.
+    sdk = b"import { TokenMintTransaction } from '@hashgraph/sdk';\nexport const mint = 1;\n"
     files = {
         "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"},
                                     "scripts": {"mint": "node tools/mint.js"}}).encode(),
@@ -234,7 +238,8 @@ def test_a_file_is_used_when_a_program_starts_there_or_any_file_imports_it() -> 
         "web/src/utils/pay.ts": sdk,
         "web/src/components/Pay.tsx": b"import { pay } from 'utils/pay';\n",  # by its path's end
         "tools/mint.js": sdk,  # named by package.json
-        "backend/services/topic.py": b"from hiero_sdk_python import TopicCreateTransaction\n",
+        "backend/services/topic.py": b"from hiero_sdk_python import TopicCreateTransaction\n"
+        b"def send():\n    return TopicCreateTransaction()\n",
         "backend/api.py": b"from services.topic import send\n",
         "backend/jobs/make_topic.py": b"from hiero_sdk_python import TopicCreateTransaction\n"
         b"if __name__ == '__main__':\n    main()\n",
@@ -255,6 +260,47 @@ def test_a_file_is_used_when_a_program_starts_there_or_any_file_imports_it() -> 
     ]
     assert scan.unused["Token Service"].examples == ["web/src/lib/self.ts"]
     assert scan.unused_only == {}  # a service that a used file names is called
+
+
+def test_the_files_that_the_first_rule_took_for_unused_are_used() -> None:
+    """Each kind of file that the first rule took for unused in 80 repositories of the collection
+    (evals/results/20261108T000912Z-code-reach.json): an import of a name with a dot in it, an
+    import of Python in brackets over several lines, a package's __init__.py, and scripts that
+    export nothing. And two more ways to reach a file: a workflow names it, a notebook imports
+    it."""
+    sdk = b"import { TokenCreateTransaction } from '@hashgraph/sdk';\nexport const make = 1;\n"
+    py = b"from hiero_sdk_python import TokenCreateTransaction\ndef make():\n    return 1\n"
+    notebook = {"cells": [{"cell_type": "markdown", "source": "from nowhere import x"},
+                          {"cell_type": "code", "source": ["from helpers.hedera_utils import (\n",
+                                                           "    make,\n", ")\n"]}]}  # fmt: skip
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"}}).encode(),
+        "backend/src/services/hedera.service.ts": sdk,
+        "backend/src/jobs/mint.ts": b"import { make } from '../services/hedera.service';\n",
+        "offchain/create-topic.ts": b"import { TokenCreateTransaction } from '@hashgraph/sdk';\n"
+        b"await new TokenCreateTransaction().execute(client);\n",  # a script: it exports nothing
+        "agent/hedera/tokens/create.py": py,
+        "agent/flow.py": b"from agent.hedera.tokens.create import (\n    make,  # the token\n)\n"
+        b"def run():\n    make()\n",
+        "agent/hedera/__init__.py": py,
+        "agent/setup_token.py": py + b"make()\n",  # a Python script: a call at its top level
+        "tools/check/hedera.ts": sdk,
+        ".github/workflows/ci.yml": b"steps:\n  - run: npx tsx tools/check/hedera.ts\n",
+        "lab/helpers/hedera_utils.py": py,
+        "lab/explore.ipynb": json.dumps(notebook).encode(),
+        "web/src/lib/dead.ts": sdk,  # it exports, and nothing imports it
+    }  # fmt: skip
+    scan = scanned(files)
+    assert sorted(scan.features["Token Service"].examples) == [
+        "agent/hedera/__init__.py",
+        "agent/hedera/tokens/create.py",
+        "agent/setup_token.py",
+        "backend/src/services/hedera.service.ts",
+        "lab/helpers/hedera_utils.py",
+        "offchain/create-topic.ts",
+        "tools/check/hedera.ts",
+    ]
+    assert scan.unused["Token Service"].examples == ["web/src/lib/dead.ts"]
 
 
 def test_a_go_file_names_its_classes_through_functions() -> None:
