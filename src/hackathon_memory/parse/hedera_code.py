@@ -592,17 +592,20 @@ class _Calls:
 
 # What a file imports. JavaScript and TypeScript: import ... from "x", import "x", import("x"),
 # require("x") and export ... from "x". Python: from x import a, b, also in brackets over several
-# lines; import x, y.
+# lines; import x, y. Each pattern reads a run of letters once: its time grows with the length of
+# a file, not with its square (8 November 2026). A bracket that never closes ends at the next one.
 _JS_SPECIFIER = re.compile(r"""(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']([^"'\n]{1,300})["']""")
 _JS_EXPORT = re.compile(r"^[ \t]*export\b|\bmodule\.exports\b|\bexports\.[\w$]+[ \t]*=", re.M)
-_PY_FROM = re.compile(r"^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import[ \t]+(\([^)]*\)|[^\n#;]+)", re.M)
+_PY_FROM = re.compile(r"^[ \t]*from[ \t]+([.\w]*)[ \t]+import[ \t]+(\([^()]*\)|[^\n#;]+)", re.M)
 _PY_IMPORT = re.compile(r"^[ \t]*import[ \t]+([\w.]+(?:[ \t]*,[ \t]*[\w.]+)*)", re.MULTILINE)
 # A Python file runs code at its top level: a __main__ block, a call such as main(), or no
 # function and no class at all.
 _PY_MAIN = re.compile(r"""^[ \t]*if[ \t]+__name__[ \t]*==[ \t]*["']__main__["']""", re.MULTILINE)
 _PY_CALL = re.compile(r"^(?:await[ \t]+)?[A-Za-z_][\w.]*[ \t]*\(", re.MULTILINE)
 _PY_DEF = re.compile(r"^(?:async[ \t]+)?(?:def|class)[ \t]", re.MULTILINE)
-_NAMED_FILE = re.compile(r"[\w./@-]+\.(?:m?[jt]sx?|c[jt]s|py)\b")
+# A file name starts where a run of its letters starts: tried inside a long run, such as the
+# bytecode of a contract in a settings file, it would read the rest of the run at each letter.
+_NAMED_FILE = re.compile(r"(?<![\w./@-])[\w./@-]+\.(?:m?[jt]sx?|c[jt]s|py)\b")
 # Only a suffix of code is taken off an import: in ./hedera.service, .service is part of the name.
 _CODE_SUFFIX = re.compile(r"\.(?:[cm]?[jt]sx?|py|vue|svelte)$")
 _LEADING = re.compile(r"^(?:\.{1,2}/|/)+")

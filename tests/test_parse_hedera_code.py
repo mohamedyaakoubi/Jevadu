@@ -6,6 +6,7 @@ from __future__ import annotations
 import io
 import json
 import random
+import time
 
 from fakes import ARCHIVE_COMMIT, archive
 from hackathon_memory.parse import hedera_code as hc
@@ -303,6 +304,26 @@ def test_the_files_that_the_first_rule_took_for_unused_are_used() -> None:
         "tools/check/hedera.ts",
     ]
     assert scan.unused["Token Service"].examples == ["web/src/lib/dead.ts"]
+
+
+def test_the_time_of_a_reading_grows_with_the_length_of_its_files() -> None:
+    """A settings file can hold the bytecode of a contract, one run of letters, and a Python file
+    a line that goes on and on. The first patterns of the reach read the rest of such a run again
+    at each of its letters: 40,000 letters took 7 seconds, and the re-read of the collection
+    stalled on one repository (8 November 2026). A file named after the run is still found."""
+    sdk = b"import { TokenMintTransaction } from '@hashgraph/sdk';\nexport const mint = 1;\n"
+    bytecode = "0x" + "6080604052" * 20_000
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"}}).encode(),
+        "abi/Token.json": json.dumps({"bytecode": bytecode, "deploy": "tools/mint.js"}).encode(),
+        "tools/mint.js": sdk,  # named only after the bytecode
+        "tools/long.py": b"from " + b"." * 200_000 + b" x\n" + b"from a import (\n" * 10_000,
+    }
+    started = time.perf_counter()
+    scan = scanned(files)
+    assert time.perf_counter() - started < 5  # the first patterns took about 9 minutes
+    assert scan.features["Token Service"].examples == ["tools/mint.js"]
+    assert scan.unused_only == {}
 
 
 def test_a_go_file_names_its_classes_through_functions() -> None:
