@@ -773,6 +773,26 @@ def test_a_number_that_the_site_never_writes_breaks_no_page(site) -> None:  # no
     assert noted == [("home", {})]
 
 
+def test_a_check_that_sends_its_steps_is_noted_when_its_answer_is_sent(site) -> None:  # noqa: ANN001, F811
+    """On the public copy a check sends its steps first and its answer last (web/app.py, 8
+    November 2026): its visit is noted once the answer is sent, with the answer's status and the
+    words of its refusal."""
+    from hackathon_memory.check import submission
+
+    client, _, _, database = site
+    copy = client.make(app_options={"public": True, "serverless": True},
+                       public_salt=SecretStr(SALT))  # fmt: skip
+    asked = {"repo": "https://github.com/sample-org/never-on-github", "progress": "1"}
+    streamed = copy.get("/check", params=asked, headers=HX)
+    assert streamed.headers["content-type"].startswith("text/event-stream")
+    assert "event: answer" in streamed.text
+    with psycopg.connect(database) as conn:
+        rows = conn.execute("SELECT action, detail FROM visit_actions").fetchall()
+    ((action, detail),) = rows
+    assert action == "check" and detail["status"] == 404
+    assert detail["failed"] == [" ".join(submission.NO_SUCH_CODE.split())]
+
+
 def test_a_failed_action_is_noted_with_what_went_wrong(site, monkeypatch) -> None:  # noqa: ANN001, F811
     """A refused check keeps the words of its page; a search by meaning that fell back to the
     keywords keeps the note that it showed, with the kind of the error; a page that broke keeps

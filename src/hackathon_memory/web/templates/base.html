@@ -55,7 +55,7 @@
 <script defer src="/_vercel/insights/script.js"></script>
 {% endif %}
 </head>
-<body{% if person_key %} data-person-key="{{ person_key }}"{% endif %}>
+<body{% if person_key %} data-person-key="{{ person_key }}"{% endif %}{% if CHECK_STREAM %} data-check-stream{% endif %}>
 <div class="splash" aria-hidden="true">
   <div class="splash-inner">
     {{ parts.brand_mark("splash-mark") }}

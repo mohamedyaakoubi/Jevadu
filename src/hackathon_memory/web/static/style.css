@@ -663,6 +663,10 @@ mark.hm-said.is-current { outline: 2px solid var(--tblr-primary); outline-offset
 .hm-check-steps { margin: 1rem 0 0.75rem; max-width: 46rem; }
 .hm-progress { height: 6px; border-radius: 3px; background: var(--tblr-border-color); overflow: hidden; margin: 0 0 1.125rem; }
 .hm-progress-bar { display: block; height: 100%; background: var(--tblr-primary); transition: width 450ms linear; }
+/* The seconds of a check beside its bar, in figures of one width, so that the count does not shake. */
+.hm-progress-row { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1.125rem; }
+.hm-progress-row .hm-progress { flex: 1; margin: 0; }
+.hm-check-time { font-size: 0.8125rem; color: var(--tblr-secondary); font-variant-numeric: tabular-nums; min-width: 3.5ch; text-align: right; }
 .hm-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
 .hm-step { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) auto; column-gap: 0.75rem; row-gap: 0.125rem; align-items: start; }
 .hm-step-mark { grid-row: 1; width: 1.125rem; height: 1.125rem; margin-top: 0.125rem; border-radius: 50%; border: 2px solid var(--tblr-border-color); box-sizing: border-box; }

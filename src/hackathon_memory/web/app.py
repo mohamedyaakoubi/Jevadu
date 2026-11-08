@@ -16,20 +16,23 @@ are searched and the page says so.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
+import json
 import logging
 import math
 import re
 import secrets
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode
 
+import anyio
 import httpx
 import psycopg
 from fastapi import FastAPI, Request
@@ -40,6 +43,7 @@ from fastapi.responses import (
     PlainTextResponse,
     RedirectResponse,
     Response,
+    StreamingResponse,
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -608,6 +612,20 @@ def create_app(
     gate = limits.admit if limits is not None else None  # the meter asks it before each call
     salt = settings.public_salt.get_secret_value()
 
+    async def noted_at_the_end(
+        body: AsyncIterator[Any], request: Request, key: str, failed: list[str]
+    ) -> AsyncIterator[Any]:
+        """A stream, passed on as it comes and noted when it ends, also when the visitor left
+        before: with the status of the answer that it carried, and what that answer said failed
+        (the words reach `failed` while the stream is made)."""
+        try:
+            async for chunk in body:
+                yield chunk
+        finally:
+            with anyio.CancelScope(shield=True):
+                status = getattr(request.state, "answer_status", 200)
+                await run_in_threadpool(note_visit, request, key, status, failed)
+
     def note_visit(request: Request, key: str, status: int, failed: Sequence[str] = ()) -> None:
         """One action of a visitor of the public copy, kept for the copy's owner (design 12.5,
         S9), with what failed for the visitor. A visit that cannot be noted never stops the
@@ -665,7 +683,11 @@ def create_app(
                 vercel_token.reset(signed)
             if listed is not None:
                 visits.failures.reset(listed)
-        if noted:
+        if noted and response.headers.get("content-type", "").startswith("text/event-stream"):
+            # the steps of a check come first and its answer last: noted when the stream ends
+            response.body_iterator = noted_at_the_end(response.body_iterator, request, who.key,
+                                                      failed)  # fmt: skip
+        elif noted:
             await run_in_threadpool(note_visit, request, who.key, response.status_code, failed)
         extra = public_copy.PUBLIC_HEADERS if limits is not None else {}
         for name, value in {**public_copy.HEADERS, **extra}.items():
@@ -1566,7 +1588,8 @@ def create_app(
         """S3: the check of one submission (design 12.1), in the window over the page, or as a
         page of its own without JavaScript. Programs read every fact; no model writes. Asked by
         the page's script with progress=1, it runs in a thread of its own, and the window shows
-        its steps until the answer is there (/check/progress). Back from Jevadu's GitHub App,
+        its steps until the answer is there (/check/progress); on the public copy, the same
+        request sends the steps as they come, then the answer. Back from Jevadu's GitHub App,
         `line` says whether the line was added to the README or was there, and `commit` names
         the commit that added it; both serve the words of the page only. With again=1, GitHub
         and the ledger are asked at once (the button "Read again now"), if this repository was not
@@ -1591,12 +1614,15 @@ def create_app(
             read_now = again == "1" and ReadAgainStore(conninfo).take(repository)
         except psycopg.OperationalError:
             return render(request, name, 503, problem=DATABASE_DOWN)
-        if name == "_check.html" and progress == "1" and not serverless:
+        if name == "_check.html" and progress == "1":
             job = jobs.start(lambda report: check_answer(conninfo, repository, days, asked, report,
                                                          read_now))  # fmt: skip
+            shown = {"repository": repository, "event_name": days.name if days else None,
+                     "step_notes": evidence.check_notes()}  # fmt: skip
+            if serverless:  # the copies on Vercel share no memory: the steps come with the answer
+                return steps_as_they_come(request, job, shown)
             return render(request, "_check_progress.html", view=jobs.view(job, announce=False),
-                          repository=repository, event_name=days.name if days else None,
-                          step_notes=evidence.check_notes())  # fmt: skip
+                          **shown)  # fmt: skip
         status, shown = check_answer(conninfo, repository, days, asked, again=read_now)
         added = None
         if line in ("added", "there"):
@@ -1617,6 +1643,43 @@ def create_app(
         status, shown = running.answer
         return in_window(render(request, "_check.html", status, **(shown or
                                 {"problem": SERVER_FAILED})))  # fmt: skip
+
+    def steps_as_they_come(
+        request: Request, job: checks.CheckJob, shown: dict[str, Any]
+    ) -> StreamingResponse:
+        """The steps of a check on the public copy, sent by the request that runs it (design
+        12.1, S3, 8 November 2026). On Vercel a request may land on any copy of the site, and the
+        copies share no memory, so no other request can say how far the check is. As server-sent
+        events: the window first, then its steps as often as the page asks for them elsewhere,
+        then the answer in the place of the whole window."""
+
+        def event(kind: str, html: str) -> str:
+            return f"event: {kind}\ndata: {json.dumps(html)}\n\n"
+
+        def text(name: str, status: int = 200, **values: Any) -> str:
+            return bytes(render(request, name, status, **values).body).decode("utf-8")
+
+        async def events() -> AsyncIterator[str]:
+            try:
+                first = jobs.view(job, announce=False)
+                yield event("frame", text("_check_progress.html", streamed=True, view=first,
+                                          **shown))  # fmt: skip
+                while job.answer is None:
+                    await asyncio.sleep(checks.STREAM_SECONDS)
+                    if job.answer is None:
+                        yield event("steps", text("_check_steps.html", streamed=True,
+                                                  view=jobs.view(job),
+                                                  step_notes=shown["step_notes"]))  # fmt: skip
+                status, values = job.answer
+                request.state.answer_status = status  # the status that the visit is noted with
+                yield event("answer", text("_check.html", status,
+                                           **(values or {"problem": SERVER_FAILED})))  # fmt: skip
+            finally:
+                jobs.forget(job.id)
+
+        return StreamingResponse(events(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache, no-transform",
+                                          "X-Accel-Buffering": "no"})  # fmt: skip
 
     def in_window(response: HTMLResponse) -> HTMLResponse:
         """The answer takes the place of the whole window, not only of the steps."""
@@ -2212,6 +2275,7 @@ def create_app(
 
     templates.env.globals |= {
         "analytics": analytics,
+        "CHECK_STREAM": serverless,  # the page reads the steps of a check from its own answer
         "READING_BY": READING_BY,
         "READING_STEPS": list(refresh_step.STEPS),
         "READING_STEP_WORDS": READING_STEP_WORDS,

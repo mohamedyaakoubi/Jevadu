@@ -2036,6 +2036,7 @@ def test_a_check_asked_by_the_script_shows_its_steps_until_the_answer(site) -> N
     assert first.status_code == 200 and 'id="check-steps"' in first.text
     assert '<h2 id="viewer-title"' in first.text and 'id="check-said"' in first.text
     assert first.text.count('class="hm-step ') == 5
+    assert re.search(r'class="hm-check-time">\d+ s<', first.text)  # the seconds of the check
     answer = answer_of(client, first)
     assert answer.headers["HX-Retarget"] == "#viewer-body"
     assert (
@@ -2045,6 +2046,32 @@ def test_a_check_asked_by_the_script_shows_its_steps_until_the_answer(site) -> N
     lost = client.get("/check/progress", params={"job": job}, headers=HX)  # taken already
     assert lost.status_code == 404 and "This check is no longer kept" in lost.text
     page = client.get("/check", params=asked)  # without the script: a page of its own
+    assert page.status_code == 200 and "Proof: found" in page.text
+
+
+def test_a_check_on_the_public_copy_sends_its_steps_then_its_answer(site) -> None:  # noqa: ANN001
+    """On Vercel the copies of the site share no memory, so no other request can say how far a
+    check is: the request that runs it sends its window, then its steps, then the answer, as
+    server-sent events (design 12.1, S3, 8 November 2026). Its page tells its script so; the
+    laptop's page does not."""
+    client, _, _, database = site
+    event = checkable(database)
+    public = client.make({"serverless": True})
+    assert "data-check-stream" in public.get("/").text
+    assert "data-check-stream" not in client.get("/").text
+    asked = {"repo": REPO, "event": event, "progress": "1"}
+    streamed = public.get("/check", params=asked, headers=HX)
+    assert streamed.status_code == 200
+    assert streamed.headers["content-type"].startswith("text/event-stream")
+    found = re.findall(r"event: (\w+)\ndata: (.+)\n\n", streamed.text)
+    parts = [(kind, json.loads(data)) for kind, data in found]
+    kinds = [kind for kind, _ in parts]
+    assert kinds[0] == "frame" and kinds[-1] == "answer" and set(kinds[1:-1]) <= {"steps"}
+    frame, answer = parts[0][1], parts[-1][1]
+    assert '<h2 id="viewer-title"' in frame and frame.count('class="hm-step ') == 5
+    assert "/check/progress" not in frame  # its steps come by themselves
+    assert "Proof: found" in answer and "Hedera services: README, code and ledger" in answer
+    page = public.get("/check", params={"repo": REPO, "event": event})  # without the script
     assert page.status_code == 200 and "Proof: found" in page.text
 
 
@@ -2368,6 +2395,33 @@ def test_the_window_shows_the_steps_of_a_check_and_then_its_answer(site, chromiu
     assert page.locator("#check-steps .hm-step").count() == 5
     assert page.locator("#check-bar").count() == 1
     page.wait_for_selector("#viewer[open] .check-result")
+    assert page.locator("#check-steps").count() == 0
+    assert page.evaluate("document.activeElement.id") == "viewer-title"
+    assert "Hedera services: README, code and ledger" in page.locator("#viewer-body").inner_text()
+    page.context.close()
+
+
+@pytest.mark.browser
+def test_the_public_copy_shows_the_steps_its_check_sends_then_the_answer(site, chromium) -> None:  # noqa: ANN001
+    """On the public copy the page reads the steps of a check from the answer of its own request
+    (8 November 2026): the window shows them, then the answer in their place, with its title in
+    focus, as on the laptop. The test client sends the whole stream at once, so a watcher notes
+    that the steps were put in the window on the way."""
+    client, _, _, database = site
+    checkable(database)
+    page = served(chromium, client.make({"serverless": True}), reduced_motion="reduce")
+    page.add_init_script(
+        "window.hmSawSteps = false; new MutationObserver(function (records) {"
+        " records.forEach(function (record) { record.addedNodes.forEach(function (node) {"
+        " if (node.querySelector && (node.id === 'check-steps' ||"
+        " node.querySelector('#check-steps'))) window.hmSawSteps = true; }); }); })"
+        ".observe(document, {childList: true, subtree: true});"
+    )
+    page.goto("http://site.test/")
+    page.fill("#check-repo", "github.com/sample-org/pebble-pay")
+    page.locator("#check button[type=submit]").click()
+    page.wait_for_selector("#viewer[open] .check-result")
+    assert page.evaluate("window.hmSawSteps") is True
     assert page.locator("#check-steps").count() == 0
     assert page.evaluate("document.activeElement.id") == "viewer-title"
     assert "Hedera services: README, code and ledger" in page.locator("#viewer-body").inner_text()

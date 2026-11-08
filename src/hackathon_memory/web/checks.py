@@ -3,8 +3,10 @@
 A check runs in a thread of its own and reports each of its steps as it starts and ends. The page
 asks for the steps about twice a second and shows them: waiting, running, done, done at once
 from the tool's tables, or nothing to read. One bar moves with the time that each step usually
-takes, and never fills before the answer is there. When the answer is there, the page takes it
-and the check is forgotten; a check that nobody asks for again is forgotten after KEEP_SECONDS.
+takes, and never fills before the answer is there, and the seconds of the check stand beside it.
+When the answer is there, the page takes it and the check is forgotten; a check that nobody asks
+for again is forgotten after KEEP_SECONDS. On the public copy, whose copies on Vercel share no
+memory, the request that runs the check sends its steps itself, as often (web/app.py).
 """
 
 from __future__ import annotations
@@ -56,6 +58,9 @@ STATE_WORDS = {
 PACE = {GITHUB: 3.5, CODE: 6.0, LEDGER: 3.0, HISTORY: 3.0, COLLECTION: 3.0}
 KEEP_SECONDS = 600
 MOST = 0.97  # the bar never passes this before the answer is there
+# How often a check that streams its steps (the public copy) sends them: as often as the page
+# asks for them where it can (hx-trigger "load delay:450ms" in _check_steps.html).
+STREAM_SECONDS = 0.45
 
 Answer = tuple[int, dict]  # the status of the page, and what it shows
 Progress = Callable[[str, str], None]
@@ -98,6 +103,7 @@ class JobView:
     percent: int  # how far the bar is, from the steps done and the time of the running one
     say: str | None  # the step to read out, when it changed since the page last asked
     running: str | None  # the key of the running step
+    seconds: int = 0  # how long the check has run, shown beside the bar
 
 
 def still_to_come(states: dict[str, str], running_for: float) -> float:
@@ -178,7 +184,7 @@ class CheckJobs:
             since = {key: now - job.since.get(key, job.started) for key, _ in STEPS}
         steps = tuple(StepView(key, label, states[key], round(1000 * since[key]))
                       for key, label in STEPS)  # fmt: skip
-        return JobView(job.id, steps, percent, say, running)
+        return JobView(job.id, steps, percent, say, running, int(now - job.started))
 
     def _forget_old(self) -> None:
         old = [key for key, job in self._jobs.items()

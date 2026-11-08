@@ -1008,6 +1008,7 @@
     if (title) title.focus({ preventScroll: true });
   });
   function closed() {
+    stopStream(); // a check that was sending its steps has nothing to show them in now
     dropCheck();
     var row = document.querySelector(".result[aria-current] .result-link");
     if (!pushed && new URL(window.location.href).searchParams.has("open")) {
@@ -1350,6 +1351,106 @@
   document.addEventListener("htmx:responseError", requestFailed);
   document.addEventListener("htmx:beforeRequest", function () {
     document.querySelectorAll(".hm-failed").forEach(function (line) { line.remove(); });
+  });
+
+  // ------------------------------------------------------ a check that sends its own steps
+  // On the public copy, whose copies on Vercel share no memory, no other request can say how far a
+  // check is, so the request that runs it sends its steps as they come, then its answer, as
+  // server-sent events (design 12.1, S3, 8 November 2026). Each part is put in place by htmx's own
+  // swap, so the window behaves as when htmx asked: the focus, the line that a screen reader
+  // follows, and what runs after a swap.
+  var STREAM_SILENCE = 30000; // a part comes about twice a second: this long without one, it broke
+  var STREAM_STOPPED = "No news of the check came for 30 seconds, so the page stopped waiting. " +
+    "Try again in a minute.";
+  var streaming = null; // the check that sends its steps now
+  function stopStream() {
+    if (streaming) { streaming.abort(); streaming = null; }
+  }
+  function streamCheck(url, body) {
+    var asking = new AbortController();
+    var silence = 0;
+    var answered = false;
+    streaming = asking;
+    function mine() { return streaming === asking; }
+    function finish() { window.clearTimeout(silence); if (mine()) streaming = null; }
+    function failed(words) {
+      if (!mine()) return; // another request took the window, or the window was closed
+      finish();
+      asking.abort();
+      failedInWindow(body, words);
+    }
+    function waitMore() {
+      window.clearTimeout(silence);
+      silence = window.setTimeout(function () { failed(STREAM_STOPPED); }, STREAM_SILENCE);
+    }
+    function swap(html, where, style) {
+      window.htmx.swap(where, html, { swapStyle: style, settleDelay: 20 },
+        { eventInfo: { target: where, elt: where } });
+    }
+    function part(text) {
+      var kind = "", data = [];
+      text.split("\n").forEach(function (line) {
+        if (line.indexOf("event: ") === 0) kind = line.slice(7);
+        else if (line.indexOf("data: ") === 0) data.push(line.slice(6));
+      });
+      if (!data.length || !mine()) return;
+      var html = JSON.parse(data.join("\n"));
+      if (kind === "frame") swap(html, body, "innerHTML");
+      else if (kind === "steps") { var old = $("check-steps"); if (old) swap(html, old, "outerHTML"); }
+      else if (kind === "answer") { answered = true; finish(); swap(html, body, "innerHTML"); }
+    }
+    waitMore();
+    window.fetch(url, { headers: { "HX-Request": "true", "Accept": "text/event-stream" },
+      credentials: "same-origin", signal: asking.signal })
+      .then(function (response) {
+        if (!mine()) return;
+        if (response.headers.get("x-vercel-mitigated") === "challenge") {
+          finish();
+          asking.abort();
+          checkpoint();
+          return;
+        }
+        if ((response.headers.get("content-type") || "").indexOf("text/event-stream") !== 0) {
+          // stopped before the check ran, such as a used allowance: a part of its own, as htmx shows it
+          return response.text().then(function (html) {
+            if (!mine()) return;
+            finish();
+            if (response.ok || [400, 403, 404, 429, 500, 503].indexOf(response.status) >= 0) {
+              swap(html, body, "innerHTML");
+              if (response.status === 403) checkPerson(true);
+            } else {
+              failedInWindow(body, WENT_WRONG);
+            }
+          });
+        }
+        var reader = response.body.getReader(), decoder = new TextDecoder(), buffer = "";
+        function read() {
+          return reader.read().then(function (next) {
+            if (!mine()) { reader.cancel(); return; }
+            if (next.done) { if (!answered) failed(NO_ANSWER); return; }
+            waitMore();
+            buffer += decoder.decode(next.value, { stream: true });
+            var parts = buffer.split("\n\n");
+            buffer = parts.pop();
+            parts.forEach(part);
+            if (!answered) return read();
+          });
+        }
+        return read();
+      })
+      .catch(function () { failed(NO_ANSWER); });
+  }
+  document.addEventListener("htmx:beforeRequest", function (event) {
+    var target = event.detail.target, elt = event.detail.elt;
+    if (!target || target.id !== "viewer-body") return;
+    stopStream(); // what comes into the window now takes the place of a check that streams
+    if (!document.body.hasAttribute("data-check-stream") || !window.fetch || !elt) return;
+    if (!(elt.id === "check" || elt.hasAttribute("data-check-again"))) return;
+    var info = event.detail.pathInfo; // the address with its query (htmx 2.0.11)
+    var path = info && info.finalRequestPath;
+    if (!path) return;
+    event.preventDefault(); // htmx asks nothing: the page reads the steps of its own request
+    streamCheck(path, target);
   });
   // A clicked link or button keeps the focus, and the browser's scroll anchoring follows the
   // focused element: while htmx put the new part above the old one, the page went down with the
