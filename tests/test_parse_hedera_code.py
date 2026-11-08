@@ -217,8 +217,10 @@ def test_a_service_in_a_file_that_nothing_uses_is_kept_apart() -> None:
         "File Service": ["src/services/hfsService.js"],
         "Token Service": ["src/services/htsService.js"],
     }
-    assert [one.name for one in scan.found() if one.kind == hc.FEATURE] == [
-        "Consensus Service (topics)"]  # fmt: skip
+    assert [(one.kind, one.name) for one in scan.found() if one.kind != hc.PACKAGE] == [
+        (hc.FEATURE, "Consensus Service (topics)"), (hc.UNUSED, "File Service"),
+        (hc.UNUSED, "Token Service"), (hc.IMPORT, hc.IMPORT_NAME),
+        (hc.MENTION, hc.MENTION_NAME)]  # fmt: skip
     again = CodeScan.from_json(scan.to_json())
     assert again.unused_only.keys() == scan.unused_only.keys() and again.format == hc.FORMAT
 

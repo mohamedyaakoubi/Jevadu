@@ -21,9 +21,10 @@ from hackathon_memory.parse.hedera_code import (
     PACKAGE,
     SIGN,
     UNREADABLE,
+    UNUSED,
 )
 
-KINDS = (PACKAGE, FEATURE, SIGN, IMPORT, MENTION)  # their order on the screen
+KINDS = (PACKAGE, FEATURE, UNUSED, SIGN, IMPORT, MENTION)  # their order on the screen
 # Why a reading stopped before the end of the archive, in plain words.
 PARTIAL_WORDS = {
     UNREADABLE: "GitHub's archive could not be read to its end, so this is what its readable "

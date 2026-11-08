@@ -375,8 +375,10 @@ class Seen:
             self.examples.append(path)
 
 
-# The kinds of things found, as the table hedera_in_code names them (migration 0014).
+# The kinds of things found, as the table hedera_in_code names them (migrations 0014 and 0034):
+# UNUSED is a service that only files that nothing uses name, and is not a call.
 PACKAGE, FEATURE, SIGN, IMPORT, MENTION = "package", "feature", "sign", "import", "mention"
+UNUSED = "unused"
 IMPORT_NAME = "a Hedera library"
 MENTION_NAME = "the word Hedera, Hashgraph or Hiero"
 
@@ -434,11 +436,13 @@ class CodeScan:
         return bool(self.packages or self.features or self.signs or self.imports.files)
 
     def found(self) -> list[Found]:
-        """What was found, one item for each thing: the packages, the features, the signs, the
-        files that import a Hedera library and the files that mention it, in this order."""
+        """What was found, one item for each thing: the packages, the features, the services
+        that only unused files name, the signs, the files that import a Hedera library and the
+        files that mention it, in this order."""
         items = [Found(PACKAGE, name, len(files), tuple(files[:EXAMPLES]))
                  for name, files in sorted(self.packages.items())]  # fmt: skip
-        for kind, things in ((FEATURE, self.features), (SIGN, self.signs)):
+        for kind, things in ((FEATURE, self.features), (UNUSED, self.unused_only),
+                             (SIGN, self.signs)):  # fmt: skip
             items += [Found(kind, name, one.files, tuple(one.examples))
                       for name, one in sorted(things.items())]  # fmt: skip
         for kind, name, one in ((IMPORT, IMPORT_NAME, self.imports),

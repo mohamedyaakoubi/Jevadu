@@ -525,6 +525,8 @@ def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: 
                     packages={"@hashgraph/sdk": ["package.json"]},
                     features={"Consensus Service (topics)": Seen(12, [f"src/t{n}.ts"
                                                                      for n in range(10)])},
+                    unused={"Token Service": Seen(1, ["src/lib/old token.ts"]),
+                            "Consensus Service (topics)": Seen(1, ["src/lib/old token.ts"])},
                     signs={MIRROR_NODE: Seen(1, ["src/mirror ledger.ts"])})  # fmt: skip
     store.save_code(REPO, CodeRead("read", scan, "2026-10-21T20:00:00Z"))
     part = client.get(f"/project/{pebble}/panel").text
@@ -534,6 +536,15 @@ def test_the_card_says_what_the_code_shows_about_hedera(site) -> None:  # noqa: 
     assert "Consensus Service (topics) &middot; 12 files" in block and "and 2 more" in block
     assert f'href="{REPO}/blob/{ARCHIVE_COMMIT}/src/mirror%20ledger.ts"' in block
     assert "Files that import a Hedera library" not in block  # nothing of that kind
+    # A service that only files that nothing uses name is shown apart, with its (i); one that
+    # a used file calls is shown once, among the calls (design 7.3, 8 November 2026).
+    calls, apart = block.split("Services in files that nothing uses", 1)
+    assert 'popovertarget="tip-code-unused"' in apart.split("</li>", 1)[0]
+    assert "Token Service &middot; 1 file<" in apart and "Token Service" not in calls
+    assert "Consensus Service (topics)" not in apart.split("Other signs of Hedera", 1)[0]
+    page = client.get("/").text
+    assert page.count('id="tip-code-unused" popover') == 1
+    assert "are not counted as calls" in page.split('id="tip-code-unused" popover', 1)[1]
     store.save_code(REPO, CodeRead("read", CodeScan(files=3, commit=ARCHIVE_COMMIT),
                                    "2026-10-21T20:00:00Z"))  # fmt: skip
     nothing = client.get(f"/project/{pebble}/panel").text

@@ -275,7 +275,10 @@ def test_what_the_code_says_about_hedera_is_written_and_replaced(database: str) 
     ids = three_projects(database)
     store = RepositoryStore(database)
     store.link({ids[PROJECT_PAGE]: PEBBLE, ids[SECOND_PAGE]: QUARTZ})
-    store.save_code(PEBBLE, code_read())
+    # Two services in a file that nothing uses: the one that a used file also calls is a call.
+    unused = {"Token Service": Seen(1, ["src/old.ts"]),
+              "Consensus Service (topics)": Seen(1, ["src/old.ts"])}  # fmt: skip
+    store.save_code(PEBBLE, code_read(unused=unused))
     store.save_code(QUARTZ, code_read(github_code.GONE))
     store.save_code("https://github.com/sample-org/linked-by-nobody", code_read())
     assert rows(
@@ -299,6 +302,7 @@ def test_what_the_code_says_about_hedera_is_written_and_replaced(database: str) 
         ),
         ("package", "@hashgraph/sdk", 2, ["package.json", "web/package.json"]),
         ("sign", MIRROR_NODE, 1, ["src/mirror.ts"]),
+        ("unused", "Token Service", 1, ["src/old.ts"]),  # migration 0034
     ]
 
     # A newer reading of the same repository replaces what the older one found.
