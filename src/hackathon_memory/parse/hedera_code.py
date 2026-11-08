@@ -9,7 +9,15 @@ limit on how many. What is kept is what the plain text matching found, with no A
   .csproj. The names of all their dependencies are kept too, so that a later rule can read them
   again; no other part of a package file is kept (it can name its authors);
 * **features:** the Hedera services that the source code calls, by the names of the classes of
-  Hedera's SDKs, which are the same in every language (TopicCreateTransaction and the like);
+  Hedera's SDKs, which are the same in every language (TopicCreateTransaction and the like), in
+  the files that the project uses;
+* **unused:** the same, in files that nothing in the project uses: no other file imports them,
+  and none of them is where a program starts (a file that package.json names, a Python file with
+  a __main__ block, a file at the root, a usual name such as index or main, or a usual folder such
+  as pages, api, scripts or tests). Such a file is written and never reached, like a wrapper kept
+  for later (8 November 2026: a submission named the Token and File Services only in two such
+  files, and the check counted them as called). When it is not sure, a file counts as used. Only
+  JavaScript, TypeScript and Python are read this way; in other languages every file is used;
 * **imports:** the source files that import a Hedera library;
 * **signs:** Hedera's JSON-RPC relay (Hashio) or its chain IDs in the code or the settings of an
   EVM project, a Hedera network taken from an EVM tool (viem, wagmi, thirdweb, or a network of
@@ -25,9 +33,9 @@ limit on how many. What is kept is what the plain text matching found, with no A
   (pipeline/code_ids.py): code also names things that many teams use, such as a public token.
 
 It says what the code names. It does not run the code, and it cannot tell whether a line is ever
-executed. Folders of other people's code (node_modules, vendor) and generated files are left
-out: they are not the project's own code. Files named .env are never opened: they may hold
-secrets.
+executed: only whether a file is ever imported, or starts a program. Folders of other people's
+code (node_modules, vendor) and generated files are left out: they are not the project's own
+code. Files named .env are never opened: they may hold secrets.
 """
 
 from __future__ import annotations
@@ -35,6 +43,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import posixpath
 import re
 import tarfile
 import time
@@ -46,8 +55,8 @@ from pathlib import PurePosixPath
 from hackathon_memory.parse.hedera_ids import find_ids
 
 # 2 (21 October 2026): the Hedera networks of EVM tools, and the mentions. 3 (24 October 2026):
-# the Hedera IDs that the code names.
-FORMAT = 3
+# the Hedera IDs that the code names. 4 (8 November 2026): the services in files that nothing uses.
+FORMAT = 4
 EXAMPLES = 10  # the files kept as examples for each thing found; the count is always complete
 # The most IDs kept for one repository. In 40 repositories of the collection the code named 161
 # IDs in all, 23 at most in one (evals/results/20261023T224559Z-ids-in-code.json); more than this
@@ -73,6 +82,21 @@ SOURCE_SUFFIXES = frozenset({
 })  # fmt: skip
 # Settings files that only show placeholders; a real .env file is never opened.
 EXAMPLE_ENV = frozenset({".env.example", ".env.sample", ".env.template", "env.example"})
+# The files whose use is read from what imports them (8 November 2026).
+JS_SUFFIXES = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".svelte")
+PY_SUFFIXES = (".py",)
+# Where a program starts, by the usual folders and names of the frameworks: a file there is used
+# even when no other file imports it (pages and api of Next.js, routes of SvelteKit, scripts and
+# tasks of Hardhat, tests, serverless functions).
+ENTRY_FOLDERS = frozenset({
+    "pages", "app", "api", "routes", "scripts", "script", "bin", "cmd", "test", "tests",
+    "__tests__", "spec", "specs", "e2e", "cypress", "examples", "example", "demo", "demos",
+    "tasks", "deploy", "migrations", "functions", "netlify", "supabase", "notebooks",
+})  # fmt: skip
+ENTRY_STEMS = frozenset({
+    "index", "main", "app", "server", "cli", "bot", "worker", "start", "run", "manage", "wsgi",
+    "asgi", "setup", "deploy", "seed", "agent", "page", "layout", "route", "middleware",
+})  # fmt: skip
 
 # --------------------------------------------------------------------------- the rules
 
@@ -387,12 +411,18 @@ class CodeScan:
     packages: dict[str, list[str]] = field(default_factory=dict)  # a package: its files
     dependencies: dict[str, list[str]] = field(default_factory=dict)  # a package file: names
     unreadable: list[str] = field(default_factory=list)  # package files that could not be read
-    features: dict[str, Seen] = field(default_factory=dict)
+    features: dict[str, Seen] = field(default_factory=dict)  # in files that the project uses
+    unused: dict[str, Seen] = field(default_factory=dict)  # in files that nothing uses
     signs: dict[str, Seen] = field(default_factory=dict)
     imports: Seen = field(default_factory=Seen)
     mentions: Seen = field(default_factory=Seen)  # files that name Hedera at all
     ids: dict[tuple[str, str | None], IdInCode] = field(default_factory=dict)
     ids_cut: bool = False  # more than MOST_IDS IDs: the first ones are kept
+
+    @property
+    def unused_only(self) -> dict[str, Seen]:
+        """The services that only files that nothing uses name: none is called."""
+        return {name: one for name, one in self.unused.items() if name not in self.features}
 
     @property
     def uses_hedera(self) -> bool:
@@ -425,7 +455,7 @@ class CodeScan:
             "packages": dict(sorted(self.packages.items())),
             "dependencies": dict(sorted(self.dependencies.items())),
             "unreadable": self.unreadable, "features": seen(self.features),
-            "signs": seen(self.signs),
+            "unused": seen(self.unused), "signs": seen(self.signs),
             "imports": {"files": self.imports.files, "examples": self.imports.examples},
             "mentions": {"files": self.mentions.files, "examples": self.mentions.examples},
             "ids": [one.to_record() for one in self.ids.values()], "ids_cut": self.ids_cut,
@@ -450,7 +480,7 @@ class CodeScan:
             archive_sha256=record.get("archive_sha256", ""), partial=record.get("partial"),
             packages=record.get("packages") or {}, dependencies=record.get("dependencies") or {},
             unreadable=record.get("unreadable") or [], features=seen(record.get("features") or {}),
-            signs=seen(record.get("signs") or {}),
+            unused=seen(record.get("unused") or {}), signs=seen(record.get("signs") or {}),
             imports=Seen(imports.get("files", 0), list(imports.get("examples", []))),
             mentions=Seen(mentions.get("files", 0), list(mentions.get("examples", []))),
             ids=ids, ids_cut=record.get("ids_cut", False),
@@ -552,13 +582,135 @@ class _Calls:
     imports_hedera: bool
 
 
-def read_file(scan: CodeScan, path: str, data: bytes, calls: list[_Calls]) -> None:
+# What a file imports. JavaScript and TypeScript: import ... from "x", import "x", import("x"),
+# require("x") and export ... from "x". Python: from x import a, b; import x, y.
+_JS_SPECIFIER = re.compile(r"""(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']([^"'\n]{1,300})["']""")
+_PY_FROM = re.compile(
+    r"^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import[ \t]+\(?([\w ,\t*]+)", re.MULTILINE
+)
+_PY_IMPORT = re.compile(r"^[ \t]*import[ \t]+([\w.]+(?:[ \t]*,[ \t]*[\w.]+)*)", re.MULTILINE)
+_PY_MAIN = re.compile(r"""^[ \t]*if[ \t]+__name__[ \t]*==[ \t]*["']__main__["']""", re.MULTILINE)
+_NAMED_FILE = re.compile(r"[\w./@-]+\.(?:m?[jt]sx?|c[jt]s|py)\b")
+
+
+def _bare(path: str) -> str:
+    """A path without its suffix: what an import names."""
+    return path.rsplit(".", 1)[0] if "." in PurePosixPath(path).name else path
+
+
+@dataclass
+class _Reach:
+    """What tells whether a file is used, kept only while the archive is read: every file of the
+    code, what each one imports, and the files where a program starts."""
+
+    paths: set[str] = field(default_factory=set)
+    imports: dict[str, list[tuple[str, tuple[str, ...]]]] = field(default_factory=dict)
+    started: set[str] = field(default_factory=set)  # a Python file with a __main__ block
+    named: list[tuple[str, str]] = field(default_factory=list)  # a package.json's folder, a file
+
+    def read(self, path: str, name: str, text: str) -> None:
+        self.paths.add(path)
+        if name == "package.json":
+            for found in _NAMED_FILE.findall(text):
+                self.named.append((str(PurePosixPath(path).parent), found))
+        if path.endswith(JS_SUFFIXES):
+            self.imports[path] = [(found, ()) for found in _JS_SPECIFIER.findall(text)]
+        elif path.endswith(PY_SUFFIXES):
+            asked = [(module, tuple(part.strip() for part in names.split(",") if part.strip()))
+                     for module, names in _PY_FROM.findall(text)]  # fmt: skip
+            for names in _PY_IMPORT.findall(text):
+                asked += [(part.strip(), ()) for part in names.split(",") if part.strip()]
+            self.imports[path] = asked
+            if _PY_MAIN.search(text):
+                self.started.add(path)
+
+    def used(self) -> set[str]:
+        """The files that the project uses: those that another file imports, those where a
+        program starts, and every file of a language that is not read this way. When an import
+        cannot be placed exactly, every file with its last name counts as imported."""
+        tails: dict[str, set[str]] = {}
+        for path in self.paths:
+            parts = _bare(path).split("/")
+            for size in range(1, len(parts) + 1):
+                tails.setdefault("/".join(parts[-size:]).lower(), set()).add(path)
+        used = {path for path in self.paths if not path.endswith(JS_SUFFIXES + PY_SUFFIXES)}
+        used |= {path for path in self.paths if _starts_a_program(path)} | self.started
+        for folder, named in self.named:
+            used |= _placed(posixpath.normpath(posixpath.join(folder, named)), tails)
+        for source, asked in self.imports.items():
+            for module, names in asked:
+                found = (_placed_js(source, module, tails) if source.endswith(JS_SUFFIXES)
+                         else _placed_py(source, module, names, tails))  # fmt: skip
+                used |= found - {source}
+        return used
+
+
+def _starts_a_program(path: str) -> bool:
+    """A file where a program usually starts: at the root of the repository, in a usual
+    folder, with a usual name, a test, a setting of a tool, or a notebook."""
+    parts = PurePosixPath(path).parts
+    name = parts[-1].lower()
+    return (len(parts) == 1 or any(part.lower() in ENTRY_FOLDERS for part in parts[:-1])
+            or name.split(".")[0] in ENTRY_STEMS or name.endswith(".ipynb")
+            or re.search(r"\.(?:test|spec|config|stories)\.", name) is not None)  # fmt: skip
+
+
+def _placed(target: str, tails: dict[str, set[str]]) -> set[str]:
+    """The files that a path names, with or without its suffix, or as a folder's index."""
+    bare = _bare(target).lstrip("./").lower()
+    return (
+        tails.get(bare, set())
+        | tails.get(f"{bare}/index", set())
+        | tails.get(f"{bare}/__init__", set())
+    )
+
+
+def _placed_js(source: str, module: str, tails: dict[str, set[str]]) -> set[str]:
+    """The files that an import of JavaScript or TypeScript names: by its path when it starts
+    with a dot, by the end of its path otherwise (aliases such as @/lib/x), and by its last
+    name when neither finds a file."""
+    if module.startswith("."):
+        found = _placed(posixpath.normpath(posixpath.join(posixpath.dirname(source), module)),
+                        tails)  # fmt: skip
+    else:
+        found = _placed(module.lstrip("@~#/"), tails)
+    if not found:
+        last = module.rstrip("/").split("/")[-1]
+        found = _placed(last, tails) if last and last not in (".", "..") else set()
+    return found
+
+
+def _placed_py(
+    source: str, module: str, names: tuple[str, ...], tails: dict[str, set[str]]
+) -> set[str]:
+    """The files that an import of Python names: the module, relative to the file when it
+    starts with dots, and each name taken from it that is a module of its own."""
+    dots = len(module) - len(module.lstrip("."))
+    rest = module.lstrip(".").replace(".", "/")
+    base = posixpath.dirname(source)
+    for _ in range(max(dots - 1, 0)):
+        base = posixpath.dirname(base)
+    root = posixpath.join(base, rest) if dots else rest
+    found = _placed(root, tails) if root else set()
+    for name in names:
+        if name != "*":
+            found |= _placed(posixpath.join(root, name) if root else name, tails)
+    if not found and rest:
+        found = _placed(rest.split("/")[-1], tails)
+    return found
+
+
+def read_file(
+    scan: CodeScan, path: str, data: bytes, calls: list[_Calls], reach: _Reach | None = None
+) -> None:
     """What one file of the project's code says about Hedera. The classes that it names are
     kept in `calls` and counted at the end (finish), because a class name such as
     TransferTransaction counts only in a file that imports a Hedera library, or in a
     repository whose package files name one."""
     name = PurePosixPath(path).name
     text = data.decode("utf-8", errors="ignore")
+    if reach is not None:
+        reach.read(path, name, text)
     kind = package_file(name)
     if kind is not None:
         ecosystem, reader = kind
@@ -603,12 +755,15 @@ def read_file(scan: CodeScan, path: str, data: bytes, calls: list[_Calls]) -> No
         scan.ids[key].seen.add(path)
 
 
-def finish(scan: CodeScan, calls: list[_Calls]) -> None:
-    """Count the Hedera classes that the files name, now that the package files are known."""
+def finish(scan: CodeScan, calls: list[_Calls], reach: _Reach | None = None) -> None:
+    """Count the Hedera classes that the files name, now that the package files are known: in
+    a file that the project uses as a call, in one that nothing uses apart (`unused`)."""
+    used = reach.used() if reach is not None else None
     for one in calls:
         if one.imports_hedera or scan.packages:
+            place = scan.features if used is None or one.path in used else scan.unused
             for feature in one.features:
-                scan.features.setdefault(feature, Seen()).add(one.path)
+                place.setdefault(feature, Seen()).add(one.path)
 
 
 def scan_archive(stream: LimitedStream) -> CodeScan:
@@ -616,6 +771,7 @@ def scan_archive(stream: LimitedStream) -> CodeScan:
     Hedera. Stops early at the limit of the stream, and says so in `partial`."""
     scan = CodeScan()
     calls: list[_Calls] = []
+    reach = _Reach()
     try:
         with tarfile.open(fileobj=io.BufferedReader(stream, 1 << 16), mode="r|gz") as archive:
             scan.commit = _commit_of(archive.pax_headers)
@@ -629,14 +785,14 @@ def scan_archive(stream: LimitedStream) -> CodeScan:
                 if handle is None:
                     continue
                 scan.files += 1
-                read_file(scan, path, handle.read(), calls)
+                read_file(scan, path, handle.read(), calls, reach)
     except ReadLimit as limit:
         scan.partial = LIMIT_BYTES if str(limit) == "bytes" else LIMIT_SECONDS
     except DownloadBroken:
         scan.partial = BROKE_OFF
     except (tarfile.TarError, EOFError, OSError):
         scan.partial = UNREADABLE
-    finish(scan, calls)
+    finish(scan, calls, reach)
     scan.archive_bytes = stream.bytes
     scan.archive_sha256 = stream.digest.hexdigest()
     return scan

@@ -112,6 +112,7 @@ DOWNLOAD = "https://codeload.github.com/sample-org/pebble-pay/legacy.tar.gz/refs
 CODE_FILES = {
     "package.json": b'{"dependencies": {"@hashgraph/sdk": "^2"}}',
     "src/topic.ts": b'import { TopicMessageSubmitTransaction } from "@hashgraph/sdk";\n',
+    "src/index.ts": b'import "./topic";\n',  # the app uses it (parse/hedera_code.py, format 4)
 }
 
 

@@ -95,6 +95,7 @@ def test_an_archive_says_where_hedera_stands_and_skips_what_is_not_the_projects(
         "src/topic.ts": b'import { Client, TopicCreateTransaction } from "@hashgraph/sdk";\n'
         b"await new TopicCreateTransaction().execute(client);\n",
         "src/pay.ts": b"const tx = new TransferTransaction();\n",  # no import: the package counts
+        "src/main.ts": b'import "./topic";\nimport { pay } from "./pay";\n',  # both are used
         "hardhat.config.ts": b'networks: { hedera: { url: "https://testnet.hashio.io/api", '
         b"chainId: 296 } }",
         "contracts/IHederaTokenService.sol": b"interface IHederaTokenService {}\n",
@@ -120,7 +121,7 @@ def test_an_archive_says_where_hedera_stands_and_skips_what_is_not_the_projects(
     assert scan.signs[CHAIN_ID].examples == ["hardhat.config.ts"]
     assert scan.signs[SYSTEM_CONTRACTS].files == 2
     assert sorted(scan.signs[MIRROR_NODE].examples) == [".env.example", "scripts/mirror.py"]
-    assert scan.files == 8  # neither node_modules, nor dist, nor .env, nor the huge file
+    assert scan.files == 9  # neither node_modules, nor dist, nor .env, nor the huge file
     assert scan.commit == ARCHIVE_COMMIT
     assert scan.uses_hedera and scan.archive_bytes > 0 and len(scan.archive_sha256) == 64
     record = scan.to_json().decode()
@@ -139,6 +140,7 @@ def test_what_was_found_is_listed_kind_after_kind() -> None:
         f"app{n}/package.json": b'{"dependencies": {"@hashgraph/sdk": "2"}}' for n in range(12)
     }
     files["src/topic.py"] = b"from hiero_sdk_python import TopicCreateTransaction\n"
+    files["main.py"] = b"import src.topic\n"  # the file is used
     found = scanned(files).found()
     assert [(one.kind, one.name, one.files) for one in found] == [
         (hc.PACKAGE, "@hashgraph/sdk", 12),
@@ -182,9 +184,77 @@ def test_a_class_name_counts_only_with_a_hedera_library() -> None:
     plain = scanned({"package.json": b'{"dependencies": {"ethers": "6"}}',
                      "src/pay.ts": b"class TransferTransaction {}"})  # fmt: skip
     assert plain.features == {} and not plain.uses_hedera
-    imported = scanned({"src/pay.py": b"from hiero_sdk_python import TransferTransaction\n"})
+    imported = scanned({"pay.py": b"from hiero_sdk_python import TransferTransaction\n"})
     assert imported.features["Accounts and HBAR transfers"].files == 1
     assert imported.imports.files == 1
+
+
+SDK = b"const sdk = require('@hashgraph/sdk');\n"
+
+
+def test_a_service_in_a_file_that_nothing_uses_is_kept_apart() -> None:
+    """A wrapper that no file imports, and that starts no program, is code written and never
+    reached: its services are not called (8 November 2026, a submission whose check listed the
+    Token and File Services from two such files)."""
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"},
+                                    "scripts": {"start": "node server.js"}}).encode(),
+        "server.js": b"const app = require('./app');\napp.listen(3000);\n",
+        "app.js": b"const api = require('./src/routes/api');\n",
+        "src/routes/api.js": b"const { anchor } = require('../agents/trustAgent');\n",
+        "src/agents/trustAgent.js": b"function a() { return require('../services/hcsService'); }",
+        "src/services/hcsService.js": SDK + b"new TopicMessageSubmitTransaction();\n",
+        "src/services/htsService.js": SDK + b"new TokenCreateTransaction();\n",
+        "src/services/hfsService.js": SDK + b"new FileCreateTransaction();\n",
+    }  # fmt: skip
+    scan = scanned(files)
+    assert {name: one.examples for name, one in scan.features.items()} == {
+        "Consensus Service (topics)": ["src/services/hcsService.js"]}  # fmt: skip
+    assert {name: one.examples for name, one in scan.unused_only.items()} == {
+        "File Service": ["src/services/hfsService.js"],
+        "Token Service": ["src/services/htsService.js"],
+    }
+    assert [one.name for one in scan.found() if one.kind == hc.FEATURE] == [
+        "Consensus Service (topics)"]  # fmt: skip
+    again = CodeScan.from_json(scan.to_json())
+    assert again.unused_only.keys() == scan.unused_only.keys() and again.format == hc.FORMAT
+
+
+def test_a_file_is_used_when_a_program_starts_there_or_any_file_imports_it() -> None:
+    """When it is not sure, a file counts as used: the usual folders and names of a framework,
+    a file that package.json names, a Python file with a __main__ block, an import by an alias or
+    by the end of its path, and any language that is not read this way."""
+    sdk = b"import { TokenMintTransaction } from '@hashgraph/sdk';\n"
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"},
+                                    "scripts": {"mint": "node tools/mint.js"}}).encode(),
+        "web/pages/api/mint.ts": sdk,  # a route of Next.js
+        "web/src/app/page.tsx": b"import { mint } from '@/lib/hedera';\n",
+        "web/src/lib/hedera.ts": sdk,  # by an alias
+        "web/src/utils/pay.ts": sdk,
+        "web/src/components/Pay.tsx": b"import { pay } from 'utils/pay';\n",  # by its path's end
+        "tools/mint.js": sdk,  # named by package.json
+        "backend/services/topic.py": b"from hiero_sdk_python import TopicCreateTransaction\n",
+        "backend/api.py": b"from services.topic import send\n",
+        "backend/jobs/make_topic.py": b"from hiero_sdk_python import TopicCreateTransaction\n"
+        b"if __name__ == '__main__':\n    main()\n",
+        "go/topic.go": b'import "github.com/hiero-ledger/x"\nNewTopicCreateTransaction()',
+        "web/src/lib/self.ts": sdk + b"import './self';\n",  # only itself: nothing uses it
+    }  # fmt: skip
+    scan = scanned(files)
+    assert sorted(scan.features["Token Service"].examples) == [
+        "tools/mint.js",
+        "web/pages/api/mint.ts",
+        "web/src/lib/hedera.ts",
+        "web/src/utils/pay.ts",
+    ]
+    assert sorted(scan.features["Consensus Service (topics)"].examples) == [
+        "backend/jobs/make_topic.py",
+        "backend/services/topic.py",
+        "go/topic.go",
+    ]
+    assert scan.unused["Token Service"].examples == ["web/src/lib/self.ts"]
+    assert scan.unused_only == {}  # a service that a used file names is called
 
 
 def test_a_go_file_names_its_classes_through_functions() -> None:

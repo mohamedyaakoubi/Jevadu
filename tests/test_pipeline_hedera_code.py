@@ -38,7 +38,7 @@ COLLECTOR = "TestTool/0.1.0"
 FILES = {
     "package.json": b'{"dependencies": {"@hashgraph/sdk": "^2"}}',
     "src/topic.ts": b'import { TopicCreateTransaction } from "@hashgraph/sdk";\n',
-    "src/plain.ts": b"export const one = 1;\n",
+    "src/plain.ts": b'import "./topic";\nexport const one = 1;\n',  # the app uses it
 }
 
 

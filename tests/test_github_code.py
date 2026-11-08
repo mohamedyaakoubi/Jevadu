@@ -45,7 +45,7 @@ FILES = {
                                 "author": "Quill Invented <quill@example.test>"}).encode(),
     "src/topic.ts": b'import { TopicCreateTransaction } from "@hashgraph/sdk";\n'
                     b"await new TopicCreateTransaction().execute(client);\n",
-    "config/keys.ts": b'export const KEY = "302e-INVENTED-KEY";\n',
+    "config/keys.ts": b'import "../src/topic";\nexport const KEY = "302e-INVENTED-KEY";\n',
 }  # fmt: skip
 
 
@@ -293,7 +293,8 @@ def test_a_reading_of_an_older_reader_is_made_again_once_into_its_own_folder(
     again = fetch_code_again(client, store, [PEBBLE, EEL], collector=COLLECTOR)
     assert again.asked == 1  # the repository that is gone has no code to read again
     newest = saved_code(store, PEBBLE)
-    assert newest is not None and newest.scan is not None and newest.scan.format == 3
+    assert newest is not None and newest.scan is not None
+    assert newest.scan.format == hedera_code.FORMAT
     assert ("0.0.4870201", None) in newest.scan.ids
     assert store.load(archive_address(PEBBLE), SUFFIX).meta == first_meta  # never edited
     assert again_store(store).load(archive_address(PEBBLE), SUFFIX) is not None
@@ -315,5 +316,6 @@ def test_a_check_reads_again_the_code_that_an_older_reader_read(
     assert problem is None and read is not None and read.scan.format == 2  # type: ignore[union-attr]
     read, problem = read_code_now(client_for(site, tmp_path / "now"), store, PEBBLE,
                                   collector=COLLECTOR)  # fmt: skip
-    assert problem is None and read is not None and read.scan.format == 3  # type: ignore[union-attr]
+    assert problem is None and read is not None
+    assert read.scan.format == hedera_code.FORMAT  # type: ignore[union-attr]
     assert saved_code(store, PEBBLE) == read
