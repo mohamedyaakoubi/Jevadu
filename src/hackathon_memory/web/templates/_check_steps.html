@@ -1,11 +1,15 @@
 {# The steps of a check that runs (design 12.1, S3), asked for again about twice a second: each
-   step with its state as the server reports it, and one bar that moves with the time that each
-   step usually takes. `view` is a JobView of web/checks.py. The bar and the steps keep their ids,
-   so that htmx moves them from their old place to the new one; a turning mark starts where the
-   running step stands. The step to read out comes as its own part, into the line that a screen
-   reader follows. #}
-<div id="check-steps" class="hm-check-steps" hx-get="/check/progress?job={{ view.id }}" hx-trigger="load delay:450ms" hx-swap="outerHTML">
-  <div class="hm-progress" aria-hidden="true"><span id="check-bar" class="hm-progress-bar" style="width: {{ view.percent }}%"></span></div>
+   step with its state as the server reports it, one bar that moves with the time that each step
+   usually takes, and the seconds of the check. `view` is a JobView of web/checks.py. The bar and
+   the steps keep their ids, so that htmx moves them from their old place to the new one; a turning
+   mark starts where the running step stands. The step to read out comes as its own part, into the
+   line that a screen reader follows. With `streamed` (the public copy), the request that runs the
+   check sends these steps itself, so they ask for nothing. #}
+<div id="check-steps" class="hm-check-steps"{% if not streamed %} hx-get="/check/progress?job={{ view.id }}" hx-trigger="load delay:450ms" hx-swap="outerHTML"{% endif %}>
+  <div class="hm-progress-row">
+    <div class="hm-progress" aria-hidden="true"><span id="check-bar" class="hm-progress-bar" style="width: {{ view.percent }}%"></span></div>
+    <span class="hm-check-time">{{ view.seconds }} s</span>
+  </div>
   <ol class="hm-steps">
     {% for step in view.steps %}
     <li id="check-step-{{ step.key }}" class="hm-step is-{{ step.state }}"{% if step.state == "running" %} aria-current="step"{% endif %}>

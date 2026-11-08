@@ -225,8 +225,13 @@
 {% endcall %}
 
 {% call tip("hedera-code", "Hedera in the code") %}
-<p>We read every file of the project's own code once, from the archive of its default branch on GitHub{{ parts.ref("repository") }}, and keep what we find: the Hedera packages that its package files name, the Hedera services that it calls (by the class names of Hedera's SDKs{{ parts.ref("hedera") }}, such as TopicCreateTransaction), other signs such as Hedera's JSON-RPC relay, a Hedera chain ID, a Hedera network of viem, wagmi or Hardhat, Hedera's system contracts or the mirror node{{ parts.ref("mirror") }}, the files that import a Hedera library, and the files that only name Hedera. Each file opens on GitHub as it was read.</p>
+<p>We read every file of the project's own code once, from the archive of its default branch on GitHub{{ parts.ref("repository") }}, and keep what we find: the Hedera packages that its package files name, the Hedera services that it calls (by the class names of Hedera's SDKs{{ parts.ref("hedera") }}, such as TopicCreateTransaction; those named only in files that nothing uses are listed apart), other signs such as Hedera's JSON-RPC relay, a Hedera chain ID, a Hedera network of viem, wagmi or Hardhat, Hedera's system contracts or the mirror node{{ parts.ref("mirror") }}, the files that import a Hedera library, and the files that only name Hedera. Each file opens on GitHub as it was read.</p>
 <p>Folders of other people's code, such as node_modules, are skipped, and .env files are never opened. This shows what the code names, not whether it runs, and it cannot see Hedera used from another repository.</p>
+{% endcall %}
+
+{% call tip("code-unused", "Services in files that nothing uses") %}
+<p>No other file of the code imports these files, and none of them is where a program starts. So the services they name are not counted as calls. Jevadu reads the code as text; it does not run it.</p>
+<p>A program starts in a file that exports nothing, such as a script that a person runs; in a file that package.json or a workflow names; in a file with a usual name, such as index or main; or in a usual folder, such as pages, api, scripts or tests. When Jevadu is not sure, it counts a file as used. Only JavaScript, TypeScript and Python files are read this way.</p>
 {% endcall %}
 
 {% call tip("page", "From the project page") %}

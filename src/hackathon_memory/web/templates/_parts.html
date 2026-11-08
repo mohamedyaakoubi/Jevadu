@@ -64,10 +64,10 @@
   <p class="hm-small">Read {{ view.read_at | day }}{% if view.commit %} at commit <span class="id">{{ view.commit[:7] }}</span>{% endif %}{% if view.files is not none %}: {{ view.files }} file{{ "s" if view.files != 1 }} of the project's own code{% endif %}.{% if view.partial %} {{ view.partial }}{% endif %}</p>
   {% if view.found %}
   <ul class="hm-code-list">
-    {% for title, kind in (("Hedera packages", "package"), ("Hedera services the code calls", "feature"), ("Other signs of Hedera", "sign"), ("Files that import a Hedera library", "import"), ("Files that name Hedera, Hashgraph or Hiero", "mention")) %}
+    {% for title, kind in (("Hedera packages", "package"), ("Hedera services the code calls", "feature"), ("Services in files that nothing uses", "unused"), ("Other signs of Hedera", "sign"), ("Files that import a Hedera library", "import"), ("Files that name Hedera, Hashgraph or Hiero", "mention")) %}
     {% set lines = view.of(kind) %}
     {% if lines %}
-    <li><span class="hm-code-kind">{{ title }}</span>
+    <li><span class="hm-code-kind">{{ title }}</span>{% if kind == "unused" %}{{ info("code-unused", "services in files that nothing uses") }}{% endif %}
       {% for one in lines %}
       <details class="hm-code-files">
         <summary>{% if kind not in ("import", "mention") %}{{ one.name }} &middot; {% endif %}{{ one.files }} file{{ "s" if one.files != 1 }}</summary>

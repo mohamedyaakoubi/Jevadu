@@ -6,6 +6,7 @@ from __future__ import annotations
 import io
 import json
 import random
+import time
 
 from fakes import ARCHIVE_COMMIT, archive
 from hackathon_memory.parse import hedera_code as hc
@@ -95,6 +96,7 @@ def test_an_archive_says_where_hedera_stands_and_skips_what_is_not_the_projects(
         "src/topic.ts": b'import { Client, TopicCreateTransaction } from "@hashgraph/sdk";\n'
         b"await new TopicCreateTransaction().execute(client);\n",
         "src/pay.ts": b"const tx = new TransferTransaction();\n",  # no import: the package counts
+        "src/main.ts": b'import "./topic";\nimport { pay } from "./pay";\n',  # both are used
         "hardhat.config.ts": b'networks: { hedera: { url: "https://testnet.hashio.io/api", '
         b"chainId: 296 } }",
         "contracts/IHederaTokenService.sol": b"interface IHederaTokenService {}\n",
@@ -120,7 +122,7 @@ def test_an_archive_says_where_hedera_stands_and_skips_what_is_not_the_projects(
     assert scan.signs[CHAIN_ID].examples == ["hardhat.config.ts"]
     assert scan.signs[SYSTEM_CONTRACTS].files == 2
     assert sorted(scan.signs[MIRROR_NODE].examples) == [".env.example", "scripts/mirror.py"]
-    assert scan.files == 8  # neither node_modules, nor dist, nor .env, nor the huge file
+    assert scan.files == 9  # neither node_modules, nor dist, nor .env, nor the huge file
     assert scan.commit == ARCHIVE_COMMIT
     assert scan.uses_hedera and scan.archive_bytes > 0 and len(scan.archive_sha256) == 64
     record = scan.to_json().decode()
@@ -139,6 +141,7 @@ def test_what_was_found_is_listed_kind_after_kind() -> None:
         f"app{n}/package.json": b'{"dependencies": {"@hashgraph/sdk": "2"}}' for n in range(12)
     }
     files["src/topic.py"] = b"from hiero_sdk_python import TopicCreateTransaction\n"
+    files["main.py"] = b"import src.topic\n"  # the file is used
     found = scanned(files).found()
     assert [(one.kind, one.name, one.files) for one in found] == [
         (hc.PACKAGE, "@hashgraph/sdk", 12),
@@ -182,9 +185,145 @@ def test_a_class_name_counts_only_with_a_hedera_library() -> None:
     plain = scanned({"package.json": b'{"dependencies": {"ethers": "6"}}',
                      "src/pay.ts": b"class TransferTransaction {}"})  # fmt: skip
     assert plain.features == {} and not plain.uses_hedera
-    imported = scanned({"src/pay.py": b"from hiero_sdk_python import TransferTransaction\n"})
+    imported = scanned({"pay.py": b"from hiero_sdk_python import TransferTransaction\n"})
     assert imported.features["Accounts and HBAR transfers"].files == 1
     assert imported.imports.files == 1
+
+
+SDK = b"const sdk = require('@hashgraph/sdk');\n"
+
+
+def test_a_service_in_a_file_that_nothing_uses_is_kept_apart() -> None:
+    """A wrapper that no file imports, and that starts no program, is code written and never
+    reached: its services are not called (8 November 2026, a submission whose check listed the
+    Token and File Services from two such files)."""
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"},
+                                    "scripts": {"start": "node server.js"}}).encode(),
+        "server.js": b"const app = require('./app');\napp.listen(3000);\n",
+        "app.js": b"const api = require('./src/routes/api');\n",
+        "src/routes/api.js": b"const { anchor } = require('../agents/trustAgent');\n",
+        "src/agents/trustAgent.js": b"function a() { return require('../services/hcsService'); }",
+        # Each exports what it does, as the submission's files do: a module that waits for an
+        # import, and not a script.
+        "src/services/hcsService.js": SDK + b"exports.send = () =>\n"
+        b"  new TopicMessageSubmitTransaction();\n",
+        "src/services/htsService.js": SDK + b"exports.mint = () => new TokenCreateTransaction();\n",
+        "src/services/hfsService.js": SDK + b"module.exports = () => new FileCreateTransaction();",
+    }  # fmt: skip
+    scan = scanned(files)
+    assert {name: one.examples for name, one in scan.features.items()} == {
+        "Consensus Service (topics)": ["src/services/hcsService.js"]}  # fmt: skip
+    assert {name: one.examples for name, one in scan.unused_only.items()} == {
+        "File Service": ["src/services/hfsService.js"],
+        "Token Service": ["src/services/htsService.js"],
+    }
+    assert [(one.kind, one.name) for one in scan.found() if one.kind != hc.PACKAGE] == [
+        (hc.FEATURE, "Consensus Service (topics)"), (hc.UNUSED, "File Service"),
+        (hc.UNUSED, "Token Service"), (hc.IMPORT, hc.IMPORT_NAME),
+        (hc.MENTION, hc.MENTION_NAME)]  # fmt: skip
+    again = CodeScan.from_json(scan.to_json())
+    assert again.unused_only.keys() == scan.unused_only.keys() and again.format == hc.FORMAT
+
+
+def test_a_file_is_used_when_a_program_starts_there_or_any_file_imports_it() -> None:
+    """When it is not sure, a file counts as used: the usual folders and names of a framework,
+    a file that package.json names, a Python file with a __main__ block, an import by an alias or
+    by the end of its path, and any language that is not read this way."""
+    # Each file exports, so that only the sign under test makes it used.
+    sdk = b"import { TokenMintTransaction } from '@hashgraph/sdk';\nexport const mint = 1;\n"
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"},
+                                    "scripts": {"mint": "node tools/mint.js"}}).encode(),
+        "web/pages/api/mint.ts": sdk,  # a route of Next.js
+        "web/src/app/page.tsx": b"import { mint } from '@/lib/hedera';\n",
+        "web/src/lib/hedera.ts": sdk,  # by an alias
+        "web/src/utils/pay.ts": sdk,
+        "web/src/components/Pay.tsx": b"import { pay } from 'utils/pay';\n",  # by its path's end
+        "tools/mint.js": sdk,  # named by package.json
+        "backend/services/topic.py": b"from hiero_sdk_python import TopicCreateTransaction\n"
+        b"def send():\n    return TopicCreateTransaction()\n",
+        "backend/api.py": b"from services.topic import send\n",
+        "backend/jobs/make_topic.py": b"from hiero_sdk_python import TopicCreateTransaction\n"
+        b"if __name__ == '__main__':\n    main()\n",
+        "go/topic.go": b'import "github.com/hiero-ledger/x"\nNewTopicCreateTransaction()',
+        "web/src/lib/self.ts": sdk + b"import './self';\n",  # only itself: nothing uses it
+    }  # fmt: skip
+    scan = scanned(files)
+    assert sorted(scan.features["Token Service"].examples) == [
+        "tools/mint.js",
+        "web/pages/api/mint.ts",
+        "web/src/lib/hedera.ts",
+        "web/src/utils/pay.ts",
+    ]
+    assert sorted(scan.features["Consensus Service (topics)"].examples) == [
+        "backend/jobs/make_topic.py",
+        "backend/services/topic.py",
+        "go/topic.go",
+    ]
+    assert scan.unused["Token Service"].examples == ["web/src/lib/self.ts"]
+    assert scan.unused_only == {}  # a service that a used file names is called
+
+
+def test_the_files_that_the_first_rule_took_for_unused_are_used() -> None:
+    """Each kind of file that the first rule took for unused in 80 repositories of the collection
+    (evals/results/20261108T000912Z-code-reach.json): an import of a name with a dot in it, an
+    import of Python in brackets over several lines, a package's __init__.py, and scripts that
+    export nothing. And two more ways to reach a file: a workflow names it, a notebook imports
+    it."""
+    sdk = b"import { TokenCreateTransaction } from '@hashgraph/sdk';\nexport const make = 1;\n"
+    py = b"from hiero_sdk_python import TokenCreateTransaction\ndef make():\n    return 1\n"
+    notebook = {"cells": [{"cell_type": "markdown", "source": "from nowhere import x"},
+                          {"cell_type": "code", "source": ["from helpers.hedera_utils import (\n",
+                                                           "    make,\n", ")\n"]}]}  # fmt: skip
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"}}).encode(),
+        "backend/src/services/hedera.service.ts": sdk,
+        "backend/src/jobs/mint.ts": b"import { make } from '../services/hedera.service';\n",
+        "offchain/create-topic.ts": b"import { TokenCreateTransaction } from '@hashgraph/sdk';\n"
+        b"await new TokenCreateTransaction().execute(client);\n",  # a script: it exports nothing
+        "agent/hedera/tokens/create.py": py,
+        "agent/flow.py": b"from agent.hedera.tokens.create import (\n    make,  # the token\n)\n"
+        b"def run():\n    make()\n",
+        "agent/hedera/__init__.py": py,
+        "agent/setup_token.py": py + b"make()\n",  # a Python script: a call at its top level
+        "tools/check/hedera.ts": sdk,
+        ".github/workflows/ci.yml": b"steps:\n  - run: npx tsx tools/check/hedera.ts\n",
+        "lab/helpers/hedera_utils.py": py,
+        "lab/explore.ipynb": json.dumps(notebook).encode(),
+        "web/src/lib/dead.ts": sdk,  # it exports, and nothing imports it
+    }  # fmt: skip
+    scan = scanned(files)
+    assert sorted(scan.features["Token Service"].examples) == [
+        "agent/hedera/__init__.py",
+        "agent/hedera/tokens/create.py",
+        "agent/setup_token.py",
+        "backend/src/services/hedera.service.ts",
+        "lab/helpers/hedera_utils.py",
+        "offchain/create-topic.ts",
+        "tools/check/hedera.ts",
+    ]
+    assert scan.unused["Token Service"].examples == ["web/src/lib/dead.ts"]
+
+
+def test_the_time_of_a_reading_grows_with_the_length_of_its_files() -> None:
+    """A settings file can hold the bytecode of a contract, one run of letters, and a Python file
+    a line that goes on and on. The first patterns of the reach read the rest of such a run again
+    at each of its letters: 40,000 letters took 7 seconds, and the re-read of the collection
+    stalled on one repository (8 November 2026). A file named after the run is still found."""
+    sdk = b"import { TokenMintTransaction } from '@hashgraph/sdk';\nexport const mint = 1;\n"
+    bytecode = "0x" + "6080604052" * 20_000
+    files = {
+        "package.json": json.dumps({"dependencies": {"@hashgraph/sdk": "2"}}).encode(),
+        "abi/Token.json": json.dumps({"bytecode": bytecode, "deploy": "tools/mint.js"}).encode(),
+        "tools/mint.js": sdk,  # named only after the bytecode
+        "tools/long.py": b"from " + b"." * 200_000 + b" x\n" + b"from a import (\n" * 10_000,
+    }
+    started = time.perf_counter()
+    scan = scanned(files)
+    assert time.perf_counter() - started < 5  # the first patterns took about 9 minutes
+    assert scan.features["Token Service"].examples == ["tools/mint.js"]
+    assert scan.unused_only == {}
 
 
 def test_a_go_file_names_its_classes_through_functions() -> None:
@@ -208,6 +347,17 @@ def test_a_limit_of_bytes_or_seconds_stops_the_reading_and_says_so() -> None:
     moments = iter([0.0, 0.0, 99.0, 99.0, 99.0, 99.0])
     slow = scanned(files, seconds=10.0, clock=lambda: next(moments, 99.0))
     assert slow.partial == "the archive took longer than the limit of a live check"
+
+
+def test_a_reading_that_stopped_early_counts_every_file_as_used() -> None:
+    noise = random.Random(7)  # noqa: S311 - random bytes do not compress: a large archive
+    files = {"src/lib/token.ts": b'import { TokenCreateTransaction } from "@hashgraph/sdk";\n'}
+    files |= {f"src/f{n}.ts": noise.randbytes(50_000) for n in range(20)}
+    # The first chunk holds the whole first file; the files that were never read could import it.
+    scan = scanned(files, max_bytes=70_000)
+    assert scan.partial == "the archive is larger than the limit of a live check"
+    assert scan.features["Token Service"].examples == ["src/lib/token.ts"]
+    assert scan.unused == {}
 
 
 def test_a_broken_archive_is_said_to_be_broken() -> None:

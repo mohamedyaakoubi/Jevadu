@@ -23,7 +23,15 @@ from hackathon_memory.collect.github_once import AnswersRun
 from hackathon_memory.collect.rawstore import RawStore
 from hackathon_memory.db.repositories import RepositoryStore
 from hackathon_memory.db.runs import Run
-from hackathon_memory.parse.hedera_code import FEATURE, FORMAT, IMPORT, MENTION, PACKAGE, SIGN
+from hackathon_memory.parse.hedera_code import (
+    FEATURE,
+    FORMAT,
+    IMPORT,
+    MENTION,
+    PACKAGE,
+    SIGN,
+    UNUSED,
+)
 from hackathon_memory.pipeline.readmes import count_the_fetch, link_repositories
 
 STEP = "hedera_code"
@@ -33,6 +41,7 @@ KIND_WORDS = {
     PACKAGE: "a Hedera package in a package file",
     IMPORT: "a file that imports a Hedera library",
     FEATURE: "a call to a Hedera service",
+    UNUSED: "a Hedera service named only in files that nothing uses",
     SIGN: "a sign of Hedera (its relay, a chain ID, a network of an EVM tool, a system contract "
     "or the mirror node)",
     MENTION: "a file that names Hedera, Hashgraph or Hiero",
